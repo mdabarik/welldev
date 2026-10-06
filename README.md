@@ -27,6 +27,7 @@ _শীঘ্রই আসছে।_
 - [Idempotency](03-dbms-sql/dbms/index.html) — retry-তে duplicate charge ঠেকানো: idempotency key, ON CONFLICT, UNIQUE, conditional update, D3 simulation
 - [DBMS Keys](03-dbms-sql/dbms/keys/index.html) — super, candidate, primary, alternate, composite, unique, foreign, surrogate key; interactive key checker
 - [Normalization](03-dbms-sql/dbms/normalization/index.html) — 1NF, 2NF, 3NF, BCNF: definition, সমস্যা ও সমাধান আসল table-এ, step-through demo আর quiz
+- [Indexing](03-dbms-sql/dbms/indexing/index.html) — index কোথায় থাকে, B-tree / B+ tree animation, unique, hash, partial, GIN index, EXPLAIN
 
 ## 04 · Resume Projects
 
@@ -38,6 +39,7 @@ _শীঘ্রই আসছে।_
 
 - [OS, Kernel, Process ও Thread](05-operating-system/01-os-kernel-process-thread.html) — boot থেকে context switch পর্যন্ত, ২৫টি diagram
 - [CPU Scheduling](05-operating-system/os-scheduling-algo/index.html) — FCFS, SJF/SRTF, Priority, Round Robin; convoy effect, starvation, time quantum, Gantt chart simulator
+- [Thread Scheduling · Multi-core CPU](05-operating-system/thread/index.html) — process-এর thread কীভাবে ready queue, scheduler আর context switch পেরিয়ে multi-core CPU-তে চলে, 3D simulation
 - [Deadlock](05-operating-system/deadlock/index.html) — DB আর thread-এর উদাহরণ, ৪টি necessary condition, Banker's algorithm simulator, multiprogramming বনাম multitasking
 
 ## 06 · Networking

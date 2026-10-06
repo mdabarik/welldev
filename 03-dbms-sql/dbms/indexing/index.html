@@ -1,0 +1,1829 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Indexing</title>
+<meta name="description" content="PostgreSQL index — disk-এ কোথায় থাকে, কীভাবে বানায়, B-tree ও B+ tree animation, EXPLAIN, Hash, Partial আর GIN index; সব উদাহরণ PostgreSQL 18-এ চালানো আসল output সহ।">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Layout: one numbered section per topic. SQL blocks are highlighted by the small tokenizer at the
+   bottom; hand-marked <span class="o"> (output) / <span class="e"> (error) spans are kept as-is.
+   The two tree widgets (B-tree, B+ tree) are drawn with D3 from precomputed insert/search steps. */
+:root{
+  --bg:#f5f7fc; --surface:#ffffff; --surface-2:#f1f4fa; --fg:#0f172a; --muted:#5b6478; --faint:#94a0b8; --line:#e4e8f1;
+  --accent:#6366f1; --sa:#4f46e5; --sb:#db2777;
+  --pa:#e11d48; --pc:#d97706; --pi:#0284c7; --pd:#059669;
+  --ok:#059669; --bad:#e11d48; --warn:#d97706;
+  --hero:linear-gradient(135deg,#4f46e5 0%,#7c3aed 45%,#db2777 100%);
+  --shadow:0 1px 2px rgba(15,23,42,.04),0 10px 30px -12px rgba(15,23,42,.14);
+  --code-bg:#ffffff; --code-line:#e6e9f1;
+  --t-kw:#0000ff; --t-str:#a31515; --t-num:#098658; --t-com:#008000; --t-type:#267f99;
+  --sans:"Inter","Hind Siliguri",system-ui,sans-serif; --bn:"Hind Siliguri","Inter",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0b0f1a; --surface:#121827; --surface-2:#182033; --fg:#e7ecf6; --muted:#9aa6bf; --faint:#66728c; --line:#232c42;
+  --accent:#818cf8; --sa:#818cf8; --sb:#f472b6; --pa:#fb7185; --pc:#fbbf24; --pi:#38bdf8; --pd:#34d399;
+  --ok:#34d399; --bad:#fb7185; --warn:#fbbf24;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6);
+  --code-bg:#1e1e1e; --code-line:#2d2d30; --t-kw:#569cd6; --t-str:#ce9178; --t-num:#b5cea8; --t-com:#6a9955; --t-type:#4ec9b0;
+}}
+:root[data-theme="dark"]{
+  --bg:#0b0f1a; --surface:#121827; --surface-2:#182033; --fg:#e7ecf6; --muted:#9aa6bf; --faint:#66728c; --line:#232c42;
+  --accent:#818cf8; --sa:#818cf8; --sb:#f472b6; --pa:#fb7185; --pc:#fbbf24; --pi:#38bdf8; --pd:#34d399;
+  --ok:#34d399; --bad:#fb7185; --warn:#fbbf24;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6);
+  --code-bg:#1e1e1e; --code-line:#2d2d30; --t-kw:#569cd6; --t-str:#ce9178; --t-num:#b5cea8; --t-com:#6a9955; --t-type:#4ec9b0;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 var(--bn);-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto 0;height:420px;z-index:-1;pointer-events:none;
+  background:radial-gradient(620px 260px at 20% -40px,color-mix(in srgb,#6366f1 14%,transparent),transparent 70%),
+             radial-gradient(540px 240px at 90% -60px,color-mix(in srgb,#ec4899 11%,transparent),transparent 70%)}
+a{color:var(--accent)}
+button{font:inherit;color:inherit}
+code{font-family:var(--mono);font-size:.86em;font-weight:500;background:color-mix(in srgb,var(--accent) 10%,var(--surface));color:color-mix(in srgb,var(--accent) 72%,var(--fg));padding:.1em .4em;border-radius:6px;overflow-wrap:anywhere}
+.wrap{max-width:1040px;margin:0 auto;padding:20px 18px 70px}
+section{margin-top:56px;scroll-margin-top:16px}
+
+.topnav{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;color:var(--fg);text-decoration:none;font:800 16px var(--sans);letter-spacing:-.02em}
+.logo{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:#fff;font:800 13px var(--mono);background:var(--hero)}
+.topnav .sp{flex:1}
+.pill{border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:6px 14px;font:600 13px var(--sans);cursor:pointer;text-decoration:none}
+.pill:hover{color:var(--fg)}
+
+.hero{margin-top:22px;border-radius:22px;padding:30px 32px;color:#fff;background:var(--hero);position:relative;overflow:hidden}
+.hero::after{content:"";position:absolute;right:-70px;top:-90px;width:320px;height:320px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.2),transparent 65%);pointer-events:none}
+.eyebrow{font:600 12px var(--sans);letter-spacing:.1em;text-transform:uppercase;opacity:.85}
+.hero h1{margin:8px 0 10px;font:800 clamp(28px,4.4vw,42px)/1.12 var(--sans);letter-spacing:-.03em}
+.hero p{margin:0;max-width:720px;font-size:16.5px;opacity:.94}
+
+.letters{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:22px}
+@media (max-width:860px){.letters{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:480px){.letters{grid-template-columns:minmax(0,1fr)}}
+.letter{display:block;text-decoration:none;color:inherit;padding:16px 18px;border-top:3px solid var(--c)}
+.letter .big{font:800 34px/1 var(--sans);color:var(--c)}
+.letter b{display:block;margin-top:8px;font:700 15.5px var(--sans)}
+.letter p{margin:4px 0 0;font-size:14.5px;color:var(--muted);line-height:1.55}
+.letter small{display:block;margin-top:10px;font:500 11.5px var(--mono);color:var(--faint)}
+.letter:hover{border-color:var(--c)}
+
+.toc{margin-top:14px;padding:12px 16px;font-size:14px;color:var(--muted)}
+.toc ol{margin:0;padding-left:22px;columns:2;column-gap:28px}
+@media (max-width:600px){.toc ol{columns:1}}
+.toc a{color:var(--fg);text-decoration:none}
+.toc a:hover{color:var(--accent)}
+
+h2{display:flex;align-items:center;gap:12px;margin:0 0 6px;font:800 clamp(21px,2.8vw,26px)/1.25 var(--sans);letter-spacing:-.025em}
+.num{flex:none;width:38px;height:38px;border-radius:11px;display:grid;place-items:center;color:#fff;font:800 17px var(--sans);background:var(--c,var(--accent))}
+.motto{display:inline-block;margin:2px 0 14px;font:600 13.5px var(--sans);color:var(--c);background:color-mix(in srgb,var(--c) 10%,transparent);padding:4px 12px;border-radius:999px}
+.lead{margin:0 0 18px;color:var(--muted);max-width:820px}
+.lead b{color:var(--fg)}
+h3{margin:26px 0 10px;font:700 17px var(--sans);letter-spacing:-.015em}
+p.x{margin:10px 0 0;color:var(--muted);font-size:15px;max-width:860px}
+p.x b{color:var(--fg)}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow)}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:start}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;align-items:start}
+@media (max-width:760px){.grid2,.grid3{grid-template-columns:minmax(0,1fr)}}
+.grid2 > *,.grid3 > *{min-width:0}
+
+.story{padding:14px 16px;font-size:15px;border-left:4px solid var(--c)}
+.story b{color:var(--fg)}
+.story p{margin:0;color:var(--muted)}
+.story p + p{margin-top:8px}
+
+.kind{padding:16px 18px;border-top:3px solid var(--c)}
+.kind .tagline{font:700 12px var(--sans);letter-spacing:.06em;text-transform:uppercase;color:var(--c)}
+.kind b.t{display:block;margin:4px 0 6px;font:700 16.5px var(--sans)}
+.kind p{margin:0;color:var(--muted);font-size:14.5px}
+.kind ul{margin:8px 0 0;padding-left:18px;color:var(--muted);font-size:14.5px}
+.kind li{margin:2px 0}
+
+pre.code{margin:0;padding:12px 14px;border-radius:12px;background:var(--code-bg);border:1px solid var(--code-line);font:13px/1.65 var(--mono);white-space:pre-wrap;word-break:break-word;font-variant-ligatures:none;overflow-x:auto}
+.k{color:var(--t-kw);font-weight:600}.s{color:var(--t-str)}.d{color:var(--t-num)}.c{color:var(--t-com);font-style:italic}.t{color:var(--t-type)}
+pre.code .o{color:var(--muted);font-style:normal}
+pre.code .e{color:var(--bad);font-style:normal}
+pre.code .g{color:var(--ok);font-style:normal;font-weight:600}
+pre.code .o b,pre.code .hl{color:var(--fg);font-weight:700}
+.file{display:flex;align-items:center;gap:8px;margin:0 0 6px;font:600 12px var(--mono);color:var(--muted);flex-wrap:wrap}
+.file i{width:8px;height:8px;border-radius:50%;background:var(--dot,var(--accent))}
+.file .r{margin-left:auto;font:600 11px var(--sans);padding:1px 8px;border-radius:6px;color:var(--tc);background:color-mix(in srgb,var(--tc) 12%,transparent)}
+.blk + .blk{margin-top:14px}
+
+.how{margin-top:14px;padding:14px 16px;border-radius:12px;background:color-mix(in srgb,var(--c) 7%,var(--surface));border:1px solid color-mix(in srgb,var(--c) 22%,var(--line));font-size:15px}
+.how b{color:var(--fg)}
+.how ul,.how ol{margin:6px 0 0;padding-left:20px;color:var(--muted)}
+.how li{margin:3px 0}
+.how p{margin:6px 0 0;color:var(--muted)}
+
+.tscroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:640px;font-size:14.5px}
+th,td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font:600 12px var(--sans);text-transform:uppercase;letter-spacing:.05em;color:var(--muted);background:var(--surface-2)}
+tr:last-child td{border-bottom:0}
+td.p{font:700 14px var(--sans);white-space:nowrap}
+.foot{margin:10px 2px 0;font-size:13.5px;color:var(--muted)}
+.yes{color:var(--ok);font-weight:700}.no{color:var(--bad);font-weight:700}
+
+details{border-bottom:1px solid var(--line);padding:12px 2px}
+details:last-child{border-bottom:0}
+summary{cursor:pointer;font:600 15.5px var(--bn);list-style:none;display:flex;gap:10px}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"+";font:700 15px var(--mono);color:var(--accent);width:14px;flex:none}
+details[open] summary::before{content:"−"}
+details p{margin:8px 0 0 24px;color:var(--muted);font-size:15px}
+
+/* diagrams */
+.diag{padding:14px;overflow-x:auto}
+.diag svg{display:block;width:100%;min-width:720px;height:auto}
+.diag svg text{white-space:pre}
+.diag .cap{margin:10px 2px 0;font-size:13.5px;color:var(--muted)}
+.sv-band{fill:var(--surface-2);stroke:var(--line)}
+.sv-box{fill:var(--surface);stroke:var(--line);stroke-width:1.2}
+.sv-page{fill:var(--bg);stroke:var(--line)}
+.sv-T{fill:var(--fg);font:700 13px var(--sans)}
+.sv-L{fill:var(--faint);font:800 12px var(--sans);letter-spacing:.08em}
+.sv-t{fill:var(--fg);font:600 12px var(--mono)}
+.sv-m{fill:var(--muted);font:500 11px var(--mono)}
+.sv-b{fill:var(--muted);font:500 11.5px var(--bn)}
+.sv-hlA{fill:color-mix(in srgb,var(--accent) 16%,transparent);stroke:var(--accent)}
+.sv-hlG{fill:color-mix(in srgb,var(--pd) 16%,transparent);stroke:var(--pd)}
+.sv-hlW{fill:color-mix(in srgb,var(--pc) 14%,transparent);stroke:var(--pc)}
+.sv-ar{fill:none;stroke:var(--accent);stroke-width:2}
+.sv-arG{fill:none;stroke:var(--pd);stroke-width:2}
+.sv-arW{fill:none;stroke:var(--pc);stroke-width:2;stroke-dasharray:5 4}
+.sv-ah{fill:var(--accent)} .sv-ahG{fill:var(--pd)} .sv-ahW{fill:var(--pc)}
+.sv-n{fill:var(--accent)} .sv-nG{fill:var(--pd)} .sv-nW{fill:var(--pc)}
+.sv-nt{fill:#fff;font:800 11px var(--sans)}
+
+/* tree widgets */
+.viz{padding:14px 16px}
+.vbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.vsp{flex:1}
+.btn{border:1px solid var(--line);background:var(--surface-2);color:var(--fg);border-radius:9px;padding:5px 12px;font:600 13px var(--sans);cursor:pointer}
+.btn:hover{border-color:var(--accent)}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn:disabled{opacity:.45;cursor:default}
+.vin{display:inline-flex;align-items:center;gap:6px;font:600 12.5px var(--mono);color:var(--muted)}
+.vin input{width:58px;padding:4px 6px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--fg);font:600 13px var(--mono)}
+.seq{display:flex;flex-wrap:wrap;gap:5px;margin-top:12px;font:600 12px var(--mono);color:var(--faint);align-items:center}
+.seq span{padding:1px 7px;border-radius:6px;border:1px solid var(--line)}
+.seq span.done{color:var(--fg);background:var(--surface-2)}
+.seq span.cur{color:#fff;background:var(--accent);border-color:var(--accent)}
+.svgwrap{margin-top:10px;overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--bg)}
+.svgwrap svg{display:block;width:100%;min-width:560px;height:auto}
+.vmsg{margin-top:10px;min-height:52px;padding:10px 12px;border-radius:10px;background:color-mix(in srgb,var(--accent) 7%,var(--surface));border:1px solid color-mix(in srgb,var(--accent) 20%,var(--line));font-size:14.5px}
+.vmsg .vstep{display:inline-block;margin-right:8px;font:700 11.5px var(--mono);color:var(--accent)}
+.vmsg .vsql{display:block;font:600 12.5px var(--mono);color:var(--muted);margin-bottom:2px}
+.heap{margin-top:10px}
+.heap-h{font:600 12px var(--mono);color:var(--muted);margin-bottom:6px}
+.chips{display:flex;flex-wrap:wrap;gap:5px}
+.chips span{font:500 11.5px var(--mono);padding:2px 7px;border-radius:6px;border:1px solid var(--line);color:var(--muted);transition:background .25s,color .25s}
+.chips span.off{opacity:.35}
+.chips span.on{background:var(--pd);border-color:var(--pd);color:#fff}
+.chips span.new{border-color:var(--ok);color:var(--fg)}
+.tw .box{fill:var(--surface);stroke:var(--faint);stroke-width:1.3}
+.tw .route .box{fill:var(--surface-2)}
+.tw .visit .box{stroke:var(--accent);stroke-width:2.6}
+.tw .over .box{stroke:var(--bad);stroke-width:2.6;fill:color-mix(in srgb,var(--bad) 9%,var(--surface))}
+.tw .sep{stroke:var(--line);stroke-width:1}
+.tw .kt{fill:var(--fg);font:700 13px var(--mono);text-anchor:middle}
+.tw .ct{fill:var(--muted);font:500 9.5px var(--mono);text-anchor:middle}
+.tw .cell{fill:transparent}
+.tw .cell.new{fill:color-mix(in srgb,var(--ok) 26%,transparent)}
+.tw .cell.found{fill:var(--accent)}
+.tw .found-t{fill:#fff}
+.tw .ed{fill:none;stroke:var(--faint);stroke-width:1.4}
+.tw .ed.on{stroke:var(--accent);stroke-width:2.6}
+.tw .lk{fill:none;stroke:var(--pd);stroke-width:1.5;stroke-dasharray:3 3}
+.tw .lk.on{stroke-width:2.8;stroke-dasharray:none}
+.tw .lkh{fill:var(--pd)}
+.tw .probe rect{fill:var(--accent)}
+.tw .probe text{fill:#fff;font:700 12px var(--mono);text-anchor:middle}
+.tw .lvl{fill:var(--faint);font:600 10px var(--sans)}
+.tw .empty{fill:var(--faint);font:500 13px var(--bn);text-anchor:middle}
+
+/* GIN inverted-index picture */
+.inv{display:grid;grid-template-columns:minmax(0,1fr) 40px minmax(0,1.2fr);gap:10px;align-items:center;padding:16px}
+@media (max-width:640px){.inv{grid-template-columns:minmax(0,1fr)}.inv .arrow{transform:rotate(90deg);justify-self:center}}
+.inv .arrow{font:800 22px var(--sans);color:var(--faint);text-align:center}
+.inv h4{margin:0 0 8px;font:700 13px var(--sans);color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.inv .r{display:flex;gap:8px;align-items:baseline;font:500 12.5px var(--mono);padding:3px 0;border-bottom:1px dashed var(--line)}
+.inv .r:last-child{border-bottom:0}
+.inv .r b{min-width:76px;color:var(--fg)}
+.inv .r .ids{color:var(--muted);overflow-wrap:anywhere}
+.inv .r.q b{color:var(--pa)}
+.inv .r .m{color:#fff;background:var(--pa);border-radius:5px;padding:0 5px}
+
+footer{margin-top:56px;padding-top:16px;border-top:1px solid var(--line);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;font-size:13px;color:var(--faint)}
+footer a{text-decoration:none}
+@media (max-width:640px){.hero{padding:24px 20px;border-radius:18px}}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="topnav">
+    <a class="brand" href="../../../index.html"><span class="logo">W</span>WellDev</a>
+    <span class="sp"></span>
+    <a class="pill" href="../keys/index.html">Keys</a>
+    <a class="pill" href="../normalization/index.html">Normalization →</a>
+    <button class="pill" id="theme" type="button">Theme</button>
+  </nav>
+
+  <header class="hero">
+    <div class="eyebrow">DBMS · PostgreSQL</div>
+    <h1>Indexing — ডেটা খুঁজে পাওয়ার শর্টকাট</h1>
+    <p>Index ছাড়া database প্রতিটা query-তে পুরো table পড়ে। Index থাকলে কয়েকটা page পড়েই row পেয়ে যায়। এই গাইডে দেখব index disk-এর কোথায় থাকে, কীভাবে বানায়, B-tree আর B+ tree ভেতরে কীভাবে কাজ করে (animation সহ), planner কখন index নেয় আর কখন নেয় না, আর Hash, Partial ও GIN index। প্রতিটা উদাহরণ PostgreSQL 18-এ চালিয়ে আসল output দেওয়া।</p>
+  </header>
+
+  <div class="letters">
+    <a class="card letter" href="#btree" style="--c:var(--accent)"><span class="big">B+</span><b>B-tree index</b><p>default index। sorted, balanced — <code>=</code>, range, ORDER BY সব পারে।</p><small>CREATE INDEX … (col)</small></a>
+    <a class="card letter" href="#hash" style="--c:var(--pc)"><span class="big">#</span><b>Hash index</b><p>শুধু <code>=</code>। hash → bucket → row।</p><small>USING hash</small></a>
+    <a class="card letter" href="#partial" style="--c:var(--pd)"><span class="big">⊂</span><b>Partial index</b><p>শুধু দরকারি row-এর index — ছোট আর দ্রুত।</p><small>… WHERE status = 'pending'</small></a>
+    <a class="card letter" href="#gin" style="--c:var(--pa)"><span class="big">GIN</span><b>GIN index</b><p>jsonb, array, full-text — "কোন row-এ এই শব্দ আছে?"</p><small>USING gin</small></a>
+  </div>
+
+  <nav class="card toc" aria-label="সূচিপত্র">
+    <ol>
+      <li><a href="#what">Index কী, কেন — আর এর দাম</a></li>
+      <li><a href="#disk">Disk-এ table আর index কোথায় থাকে</a></li>
+      <li><a href="#create">Index তৈরি, দেখা, মোছা</a></li>
+      <li><a href="#kinds">৩ ধরনের index + PostgreSQL index type</a></li>
+      <li><a href="#pk">PRIMARY KEY / UNIQUE কি B-tree?</a></li>
+      <li><a href="#btree">B-tree ও B+ tree — animation</a></li>
+      <li><a href="#explain">Query কীভাবে index ব্যবহার করে (EXPLAIN)</a></li>
+      <li><a href="#hash">Hash index</a></li>
+      <li><a href="#partial">Partial index</a></li>
+      <li><a href="#gin">GIN index</a></li>
+      <li><a href="#summary">এক নজরে + কখন index দেবে না</a></li>
+      <li><a href="#qa">Interview প্রশ্ন</a></li>
+    </ol>
+  </nav>
+
+  <!-- 0 setup -->
+  <section id="setup">
+    <h2><span class="num">0</span>Setup — দুইটা table</h2>
+    <p class="lead">ছোট <b>users</b> table (15 row) দিয়ে দেখব disk-এর ভেতরটা আর B-tree animation; বড় <b>orders</b> table (1 লাখ row) দিয়ে দেখব planner আসলে কী করে। ছোট table-এ planner index নেয়ই না (কেন, সেটা পরে) — তাই বাস্তব plan দেখতে বড় table লাগে।</p>
+    <div class="grid2">
+      <div>
+        <div class="file"><i></i>users — 15 row, id গুলো এলোমেলো ক্রমে ঢোকানো</div>
+<pre class="code" data-lang="sql">CREATE TABLE users (
+  id    int  PRIMARY KEY,
+  name  text NOT NULL,
+  email text UNIQUE,
+  city  text
+);
+INSERT INTO users VALUES
+ (42,'Rahim','rahim@mail.com','Dhaka'),
+ (17,'Karim','karim@mail.com','Chattogram'),
+ (88,'Nadia','nadia@mail.com','Sylhet'),
+ (5,'Tanvir','tanvir@mail.com','Dhaka'),
+ (63,'Mitu','mitu@mail.com','Khulna'),
+ -- … মোট 15 row: 42 17 88 5 63 29 71 11 95 36 54 8 23 80 47
+ (47,'Priya','priya@mail.com','Mymensingh');</pre>
+      </div>
+      <div>
+        <div class="file"><i></i>orders — generate_series দিয়ে 100,000 row</div>
+<pre class="code" data-lang="sql">CREATE TABLE orders (
+  id          bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  customer_id int           NOT NULL,
+  status      text          NOT NULL,
+  amount      numeric(10,2) NOT NULL,
+  email       text          NOT NULL,
+  created_at  timestamptz   NOT NULL
+);
+INSERT INTO orders (customer_id, status, amount, email, created_at)
+SELECT c,
+       CASE WHEN r &lt; 0.90 THEN 'delivered' WHEN r &lt; 0.97 THEN 'shipped'
+            WHEN r &lt; 0.99 THEN 'pending'   ELSE 'cancelled' END,
+       round((random() * 5000)::numeric, 2),
+       'user' || c || '@mail.com',
+       timestamptz '2025-01-01' + g * interval '5 minutes'
+FROM (SELECT g, (random() * 9999)::int + 1 AS c, random() AS r
+      FROM generate_series(1, 100000) AS g) s;
+VACUUM ANALYZE orders;
+
+SELECT status, count(*) FROM orders GROUP BY status ORDER BY 2 DESC;
+<span class="o"> delivered | 89867
+ shipped   |  7072
+ pending   |  2065
+ cancelled |   996</span></pre>
+      </div>
+    </div>
+    <p class="x">প্রায় 10,000 আলাদা customer, তাই প্রতি customer-এর গড়ে ~10টা order। Status-এর 90% <code>delivered</code> — এই অসম ভাগটা পরে "low selectivity" বোঝাতে কাজে লাগবে।</p>
+  </section>
+
+  <!-- 1 what -->
+  <section id="what" style="--c:var(--accent)">
+    <h2><span class="num">1</span>Index কী, কেন</h2>
+    <span class="motto">বইয়ের পেছনের সূচি — sorted key + পাতার ঠিকানা</span>
+    <p class="lead">Index হলো table-এর একটা বা কয়েকটা column-এর <b>আলাদা, sorted একটা data structure</b>, যার প্রতিটা entry বলে দেয় সেই value-র row-টা disk-এর <b>কোন page-এর কোন slot-এ</b> আছে। Table নিজে কোনো ক্রমে সাজানো থাকে না, index থাকে।</p>
+    <div class="card story"><p><b>বইয়ের উদাহরণ:</b> ৬০০ পাতার DBMS বইয়ে "Normalization" খুঁজছ। Index না থাকলে পাতা ১ থেকে ৬০০ পর্যন্ত উল্টাতে হবে — এটাই <b>Seq Scan</b>। বইয়ের শেষে alphabetical সূচিতে "Normalization … 213" দেখে সরাসরি ২১৩ নম্বর পাতায় যাওয়া — এটাই <b>Index Scan</b>। সূচিটা sorted বলে "N" খুঁজে পাওয়া সহজ, আর "213" হলো row-এর ঠিকানা (PostgreSQL-এ যাকে বলে <code>ctid</code>)।</p></div>
+
+    <h3>প্রমাণ — একই query, index ছাড়া আর index সহ</h3>
+    <div class="grid2">
+      <div>
+        <div class="file" style="--dot:var(--bad)"><i></i>index নেই<span class="r" style="--tc:var(--bad)">পুরো table পড়ল</span></div>
+<pre class="code" data-lang="sql">EXPLAIN ANALYZE
+SELECT * FROM orders WHERE customer_id = 4242;
+<span class="o">Seq Scan on orders  (cost=0.00..2281.00 rows=10)
+                    (actual time=0.458..4.716 rows=8.00)
+  Filter: (customer_id = 4242)
+  <b>Rows Removed by Filter: 99992</b>
+  <b>Buffers: shared hit=1031</b>
+Execution Time: <b>4.722 ms</b></span></pre>
+        <p class="x"><code>Seq Scan</code> মানে table-এর প্রতিটা page প্রথম থেকে শেষ পর্যন্ত পড়া। 1 লাখ row-এর প্রতিটায় <code>customer_id = 4242</code> চেক করে 99,992টা বাদ দিয়ে মাত্র 8টা পেল। <code>Buffers: shared hit=1031</code> — table-এর সব 1031টা page (প্রতিটা 8 KB) ছুঁতে হয়েছে।</p>
+      </div>
+      <div>
+        <div class="file" style="--dot:var(--ok)"><i></i>index সহ<span class="r" style="--tc:var(--ok)">~10টা page</span></div>
+<pre class="code" data-lang="sql">CREATE INDEX orders_customer_id_idx ON orders (customer_id);
+<span class="o">CREATE INDEX          -- Time: 62 ms</span>
+
+EXPLAIN ANALYZE
+SELECT * FROM orders WHERE customer_id = 4242;
+<span class="o">Bitmap Heap Scan on orders  (actual rows=8.00)
+  Recheck Cond: (customer_id = 4242)
+  Heap Blocks: exact=8
+  <b>Buffers: shared hit=8 read=2</b>
+  ->  Bitmap Index Scan on orders_customer_id_idx
+        Index Cond: (customer_id = 4242)
+        Buffers: shared read=2
+Execution Time: <b>0.040 ms</b></span></pre>
+        <p class="x">এবার index-এর 2টা page পড়ে 8টা row-এর ঠিকানা পেল, তারপর heap-এর ঠিক সেই 8টা page পড়ল — মোট 10টা page, 1031-এর বদলে। সময় 4.7 ms থেকে 0.04 ms — <b>~100 গুণ দ্রুত</b>। Table যত বড় হবে, পার্থক্য তত বাড়বে, কারণ Seq Scan বাড়ে row-এর সাথে সমানুপাতে (O(n)), আর B-tree search বাড়ে log(n) হারে।</p>
+      </div>
+    </div>
+
+    <h3>Index-এর দাম — free lunch নেই</h3>
+    <div class="grid2">
+      <div>
+        <div class="file" style="--dot:var(--warn)"><i></i>একই 100,000 row insert — 0 বনাম 5টা index</div>
+<pre class="code" data-lang="sql">CREATE TABLE t_noidx (id bigint, customer_id int, email text,
+                      amount numeric, created_at timestamptz);
+CREATE TABLE t_5idx  (LIKE t_noidx);   -- একই column
+CREATE INDEX ON t_5idx (id);     CREATE INDEX ON t_5idx (customer_id);
+CREATE INDEX ON t_5idx (email);  CREATE INDEX ON t_5idx (amount);
+CREATE INDEX ON t_5idx (created_at);
+
+\timing on
+INSERT INTO t_noidx SELECT id, customer_id, email, amount, created_at FROM orders;
+<span class="o">Time: 141.858 ms</span>
+INSERT INTO t_5idx  SELECT id, customer_id, email, amount, created_at FROM orders;
+<span class="o">Time: <b>1406.990 ms</b>   ← প্রায় 10 গুণ ধীর</span>
+
+SELECT pg_size_pretty(pg_relation_size('t_5idx'))  AS heap,
+       pg_size_pretty(pg_indexes_size('t_5idx'))   AS idx;
+<span class="o">  heap   |   idx
+ 7480 kB | <b>9496 kB</b>     ← index গুলো table-এর চেয়েও বড়!</span></pre>
+      </div>
+      <div class="how" style="margin-top:0"><b>খরচগুলো কোথায়:</b>
+        <ul>
+          <li><b>Write amplification:</b> একটা <code>INSERT</code> মানে heap-এ একটা লেখা + <b>প্রতিটা index-এ</b> একটা করে লেখা (সঠিক sorted জায়গা খুঁজে, দরকারে page split করে)। 5টা index = একটা row-এ 6 জায়গায় লেখা, আর প্রতিটা লেখা WAL-এও যায়।</li>
+          <li><b>UPDATE:</b> PostgreSQL UPDATE-এ নতুন row version লেখে, তার ctid নতুন — তাই সাধারণত সব index-এ নতুন entry লাগে। ব্যতিক্রম <b>HOT update</b>: কোনো indexed column বদলায়নি আর একই page-এ জায়গা আছে, তাহলে index ছোঁয়াই লাগে না। বেশি index = HOT কম সম্ভব।</li>
+          <li><b>DELETE:</b> index entry সাথে সাথে মোছে না; পরে <code>VACUUM</code> dead entry পরিষ্কার করে। ততক্ষণ index ফুলে থাকে (bloat)।</li>
+          <li><b>Disk ও RAM:</b> index-ও disk-এ জায়গা নেয়, আর <code>shared_buffers</code>-এ cache হওয়ার জন্য table-এর page-এর সাথে প্রতিযোগিতা করে।</li>
+          <li><b>Planner-এর কাজ:</b> প্রতিটা query-তে planner সব প্রাসঙ্গিক index বিবেচনা করে — অপ্রয়োজনীয় index planning time বাড়ায়।</li>
+        </ul>
+        <p>তাই নিয়ম: <b>যে query আসলে চলে, তার জন্য index</b> — "প্রতিটা column-এ একটা" না।</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2 disk -->
+  <section id="disk" style="--c:var(--pi)">
+    <h2><span class="num">2</span>Disk-এ table আর index কোথায় থাকে</h2>
+    <span class="motto">প্রতিটা table আর প্রতিটা index = disk-এ আলাদা file</span>
+    <p class="lead">PostgreSQL-এর সব data থাকে একটা folder-এ — <b>data directory</b> (<code>$PGDATA</code>)। তার ভেতর <code>base/&lt;database oid&gt;/</code> folder-এ প্রতিটা table আর প্রতিটা index একটা করে <b>আলাদা file</b>, নাম একটা সংখ্যা (<code>relfilenode</code>)। প্রতিটা file <b>8 KB page</b>-এ ভাগ করা — disk থেকে পড়া, RAM-এ রাখা, সব কিছুর একক এই page।</p>
+
+    <div class="card diag">
+      <svg viewBox="0 0 960 612" role="img" aria-label="Disk-এর data directory-তে users table-এর heap file আর users_pkey index file আলাদা; index leaf entry ctid দিয়ে heap tuple-কে point করে; মাঝে RAM-এ shared_buffers">
+        <defs>
+          <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="sv-ah"/></marker>
+          <marker id="ahG" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="sv-ahG"/></marker>
+          <marker id="ahW" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="sv-ahW"/></marker>
+        </defs>
+        <!-- RAM band -->
+        <rect x="10" y="10" width="940" height="160" rx="14" class="sv-band"/>
+        <text x="28" y="34" class="sv-L">RAM</text>
+        <rect x="28" y="46" width="250" height="110" rx="10" class="sv-box"/>
+        <text x="44" y="70" class="sv-T">postgres backend process</text>
+        <text x="44" y="94" class="sv-t">SELECT * FROM users</text>
+        <text x="44" y="112" class="sv-t">WHERE id = 63;</text>
+        <text x="44" y="138" class="sv-m">plan: Index Scan using users_pkey</text>
+        <rect x="300" y="46" width="410" height="110" rx="10" class="sv-box"/>
+        <text x="316" y="70" class="sv-T">shared_buffers (128 MB) — 8 KB page cache</text>
+        <rect x="316" y="84" width="88" height="56" rx="7" class="sv-hlA"/>
+        <text x="324" y="106" class="sv-t">users_pkey</text><text x="324" y="126" class="sv-m">page 1</text>
+        <rect x="414" y="84" width="88" height="56" rx="7" class="sv-hlG"/>
+        <text x="422" y="106" class="sv-t">users</text><text x="422" y="126" class="sv-m">page 0</text>
+        <rect x="512" y="84" width="88" height="56" rx="7" class="sv-page"/>
+        <text x="520" y="106" class="sv-t">orders</text><text x="520" y="126" class="sv-m">page 17</text>
+        <rect x="610" y="84" width="88" height="56" rx="7" class="sv-page"/>
+        <text x="618" y="106" class="sv-t">…</text><text x="618" y="126" class="sv-m">free slot</text>
+        <rect x="732" y="46" width="200" height="110" rx="10" class="sv-box"/>
+        <text x="748" y="70" class="sv-T">WAL buffers</text>
+        <text x="748" y="94" class="sv-b">INSERT / UPDATE / DELETE —</text>
+        <text x="748" y="112" class="sv-b">table আর index দুটোরই</text>
+        <text x="748" y="130" class="sv-b">পরিবর্তন আগে এখানে লেখা হয়</text>
+
+        <!-- Disk band -->
+        <rect x="10" y="194" width="940" height="408" rx="14" class="sv-band"/>
+        <text x="28" y="218" class="sv-L">DISK (SSD / HDD)</text>
+        <text x="482" y="218" class="sv-m">$PGDATA/base/16384/  ← 16384 = shop-এর oid</text>
+
+        <!-- heap file -->
+        <rect x="28" y="232" width="424" height="356" rx="10" class="sv-box"/>
+        <text x="44" y="256" class="sv-T">16385 — users table (heap file)</text>
+        <text x="44" y="274" class="sv-m">pg_relation_filepath('users') = base/16384/16385</text>
+        <rect x="44" y="286" width="392" height="234" rx="8" class="sv-page"/>
+        <text x="58" y="306" class="sv-t">page 0 · 8 KB</text><text x="180" y="306" class="sv-m">ctid    id  name    email</text>
+        <text x="58" y="332" class="sv-m">(0,1)   42  Rahim   rahim@mail.com</text>
+        <text x="58" y="354" class="sv-m">(0,2)   17  Karim   karim@mail.com</text>
+        <text x="58" y="376" class="sv-m">(0,3)   88  Nadia   nadia@mail.com</text>
+        <text x="58" y="398" class="sv-m">(0,4)    5  Tanvir  tanvir@mail.com</text>
+        <rect x="52" y="406" width="376" height="22" rx="5" class="sv-hlG"/>
+        <text x="58" y="421" class="sv-t">(0,5)   63  Mitu    mitu@mail.com</text>
+        <text x="58" y="446" class="sv-m">(0,6)   29  Sakib   sakib@mail.com</text>
+        <text x="58" y="468" class="sv-m">  …     (0,15)  47  Priya</text>
+        <text x="58" y="504" class="sv-b">row গুলো insert-এর ক্রমে বসে — id অনুযায়ী sorted না</text>
+        <rect x="44" y="532" width="118" height="40" rx="7" class="sv-page"/><text x="58" y="557" class="sv-m">page 1</text>
+        <rect x="170" y="532" width="118" height="40" rx="7" class="sv-page"/><text x="184" y="557" class="sv-m">page 2 …</text>
+        <rect x="296" y="532" width="140" height="40" rx="7" class="sv-page"/><text x="306" y="550" class="sv-m">1 GB পেরোলে</text><text x="306" y="564" class="sv-m">→ 16385.1, .2 …</text>
+
+        <!-- index file -->
+        <rect x="474" y="232" width="276" height="356" rx="10" class="sv-box"/>
+        <text x="490" y="256" class="sv-T">16392 — users_pkey (B-tree)</text>
+        <text x="490" y="274" class="sv-m">pg_relation_filepath('users_pkey')</text>
+        <rect x="490" y="286" width="244" height="34" rx="7" class="sv-page"/>
+        <text x="502" y="308" class="sv-m">page 0 · meta → root = page 1</text>
+        <rect x="490" y="330" width="244" height="244" rx="8" class="sv-page"/>
+        <text x="502" y="350" class="sv-t">page 1 · leaf (এখানে root-ও)</text>
+        <text x="502" y="374" class="sv-m">  5 → (0,4)</text>
+        <text x="502" y="394" class="sv-m">  8 → (0,12)</text>
+        <text x="502" y="414" class="sv-m"> 11 → (0,8)</text>
+        <text x="502" y="434" class="sv-m"> 17 → (0,2)</text>
+        <text x="502" y="454" class="sv-m">  …  sorted ক্রমে …</text>
+        <text x="502" y="474" class="sv-m"> 54 → (0,11)</text>
+        <rect x="496" y="482" width="232" height="22" rx="5" class="sv-hlA"/>
+        <text x="502" y="497" class="sv-t"> 63 → (0,5)</text>
+        <text x="502" y="522" class="sv-m"> 71 → (0,7)</text>
+        <text x="502" y="542" class="sv-m">  …  95 → (0,9)</text>
+        <text x="502" y="564" class="sv-b">key sorted · প্রতিটার সাথে ctid</text>
+
+        <!-- side files -->
+        <rect x="772" y="232" width="160" height="50" rx="8" class="sv-box"/><text x="786" y="253" class="sv-t">16385_fsm</text><text x="786" y="271" class="sv-b">free space map</text>
+        <rect x="772" y="290" width="160" height="50" rx="8" class="sv-box"/><text x="786" y="311" class="sv-t">16385_vm</text><text x="786" y="329" class="sv-b">visibility map</text>
+        <rect x="772" y="348" width="160" height="50" rx="8" class="sv-box"/><text x="786" y="369" class="sv-t">16394</text><text x="786" y="387" class="sv-b">users_email_key index</text>
+        <rect x="772" y="406" width="160" height="70" rx="8" class="sv-box"/><text x="786" y="427" class="sv-t">pg_wal/</text><text x="786" y="445" class="sv-m">0000000100…01</text><text x="786" y="463" class="sv-b">16 MB করে segment</text>
+        <text x="776" y="504" class="sv-b">সব file-ই 8 KB page-এ</text>
+        <text x="776" y="522" class="sv-b">ভাগ করা; একটা page-ই</text>
+        <text x="776" y="540" class="sv-b">disk ↔ RAM-এর একক</text>
+
+        <!-- arrows -->
+        <path d="M278,100 C290,100 300,112 314,112" class="sv-ar" marker-end="url(#ah)"/>
+        <circle cx="290" cy="88" r="10" class="sv-n"/><text x="290" y="92" text-anchor="middle" class="sv-nt">1</text>
+        <path d="M360,142 C360,250 560,260 600,328" class="sv-ar" marker-start="url(#ah)"/>
+        <circle cx="404" cy="217" r="10" class="sv-n"/><text x="404" y="221" text-anchor="middle" class="sv-nt">2</text>
+        <path d="M496,493 C470,493 466,417 430,417" class="sv-ar" marker-end="url(#ah)"/>
+        <circle cx="462" cy="452" r="10" class="sv-n"/><text x="462" y="456" text-anchor="middle" class="sv-nt">3</text>
+        <path d="M240,286 C240,226 458,214 458,142" class="sv-arG" marker-end="url(#ahG)"/>
+        <circle cx="300" cy="238" r="10" class="sv-nG"/><text x="300" y="242" text-anchor="middle" class="sv-nt">4</text>
+        <path d="M932,120 C952,200 952,360 934,430" class="sv-arW" marker-end="url(#ahW)"/>
+        <circle cx="944" cy="300" r="10" class="sv-nW"/><text x="944" y="304" text-anchor="middle" class="sv-nt">W</text>
+      </svg>
+      <p class="cap"><b style="color:var(--fg)">একটা index lookup:</b> ① planner <code>users_pkey</code> দিয়ে Index Scan ঠিক করে → ② B-tree-র page গুলো (meta → root → … → leaf) <code>shared_buffers</code> থেকে পড়ে; না থাকলে disk-এর file <code>16392</code> থেকে এনে cache-এ রাখে → ③ leaf-এ <code>63</code> পেয়ে তার পাশের ctid <code>(0,5)</code> = heap-এর page 0, slot 5 → ④ heap file <code>16385</code>-এর page 0 (cache-এ না থাকলে disk থেকে) পড়ে slot 5-এর row ফেরত দেয়। <b style="color:var(--pc)">W</b> — যেকোনো লেখা আগে WAL-এ যায়, <code>COMMIT</code>-এ WAL fsync হয়; table/index page পরে checkpoint-এ disk-এ লেখা হয়।</p>
+    </div>
+
+    <h3>নিজের চোখে দেখো — file গুলো খুঁজে বের করা</h3>
+    <div class="grid2">
+      <div>
+<pre class="code" data-lang="sql">SHOW data_directory;
+<span class="o"> …/indexing/pgdata
+ <span class="c">-- Homebrew-এ সাধারণত /opt/homebrew/var/postgresql@18,
+ -- Debian/Ubuntu-তে /var/lib/postgresql/18/main</span></span>
+
+SELECT oid, datname FROM pg_database WHERE datname = 'shop';
+<span class="o">  oid  | datname
+ 16384 | shop</span>
+
+SELECT pg_relation_filepath('users');
+<span class="o"> base/16384/16385</span>
+SELECT pg_relation_filepath('users_pkey');
+<span class="o"> base/16384/16392</span>
+SELECT pg_relation_filepath('users_email_key');
+<span class="o"> base/16384/16394</span>
+
+SELECT relname, relkind, relfilenode
+FROM pg_class WHERE relname LIKE 'users%';
+<span class="o">     relname     | relkind | relfilenode
+ users           | r       |       16385     <span class="c">-- r = table (relation)</span>
+ users_email_key | i       |       16394     <span class="c">-- i = index</span>
+ users_pkey      | i       |       16392</span></pre>
+        <p class="x"><code>pg_relation_filepath()</code> data directory-র সাপেক্ষে path দেয়। File-এর নাম (<code>relfilenode</code>) সবসময় table-এর oid-এর সমান থাকে না — <code>TRUNCATE</code>, <code>VACUUM FULL</code>, <code>REINDEX</code>, <code>CLUSTER</code> নতুন file লিখে পুরনোটা ফেলে দেয়, তখন নাম বদলায়। তাই সবসময় function দিয়ে খুঁজবে।</p>
+      </div>
+      <div>
+<pre class="code" data-lang="sh">$ cd $PGDATA/base/16384
+$ ls -l 16385* 16392 16394
+<span class="o">-rw-------  1 barik  wheel   8192  16385      ← users heap: 1 page
+-rw-------  1 barik  wheel  24576  16385_fsm  ← free space map
+-rw-------  1 barik  wheel   8192  16385_vm   ← visibility map
+-rw-------  1 barik  wheel  16384  16392      ← users_pkey: 2 page
+-rw-------  1 barik  wheel  16384  16394      ← users_email_key</span></pre>
+<pre class="code" data-lang="sql" style="margin-top:14px">SHOW block_size;     <span class="o">-- 8192   (page = 8 KB)</span>
+SHOW segment_size;   <span class="o">-- 1GB    (এর বেশি হলে 16385.1, 16385.2 …)</span>
+SHOW shared_buffers; <span class="o">-- 128MB  (RAM-এর page cache)</span>
+
+SELECT pg_size_pretty(pg_relation_size('orders'))       AS heap,
+       pg_size_pretty(pg_indexes_size('orders'))        AS all_indexes,
+       pg_size_pretty(pg_total_relation_size('orders')) AS total;
+<span class="o">  heap   | all_indexes | total
+ 8248 kB | 5312 kB     | 13 MB</span></pre>
+        <p class="x">Index file 16384 byte = 2 page: page 0 হলো <b>meta page</b> (root কোথায় লেখা), page 1-এ 15টা key — এত কম যে একটা page-ই root আর leaf দুটোই। <code>_fsm</code> (কোন page-এ কত খালি জায়গা) আর <code>_vm</code> (কোন page-এর সব row সবার কাছে visible) হলো <b>fork</b> — প্রথম <code>VACUUM</code>-এর পর তৈরি হয়েছে; আগে শুধু main file ছিল। <code>pg_relation_size</code> একটা relation, <code>pg_indexes_size</code> একটা table-এর সব index মিলিয়ে, <code>pg_total_relation_size</code> সব মিলিয়ে।</p>
+      </div>
+    </div>
+
+    <h3>Heap row-এর ঠিকানা (ctid) আর index-এর leaf — আসল byte</h3>
+    <div class="grid2">
+      <div>
+<pre class="code" data-lang="sql">SELECT ctid, id, name FROM users;
+<span class="o">  ctid  | id |  name
+ (0,1)  | 42 | Rahim
+ (0,2)  | 17 | Karim
+ (0,3)  | 88 | Nadia
+ (0,4)  |  5 | Tanvir
+ <b>(0,5)  | 63 | Mitu</b>
+ (0,6)  | 29 | Sakib
+ …
+ (0,15) | 47 | Priya</span></pre>
+        <p class="x"><code>ctid = (page নম্বর, page-এর ভেতর slot নম্বর)</code>। সব row page 0-তে, insert-এর ক্রমে — id 42 আগে, 17 পরে। Heap কোনো ক্রম মানে না।</p>
+      </div>
+      <div>
+<pre class="code" data-lang="sql">CREATE EXTENSION pageinspect;   -- index page-এর ভেতর দেখার tool
+SELECT itemoffset, ctid, data FROM bt_page_items('users_pkey', 1);
+<span class="o"> itemoffset |  ctid  |          data
+          1 | (0,4)  | 05 00 00 00 00 00 00 00
+          2 | (0,12) | 08 00 00 00 00 00 00 00
+          3 | (0,8)  | 0b 00 00 00 00 00 00 00
+          4 | (0,2)  | 11 00 00 00 00 00 00 00
+          …
+         10 | (0,11) | 36 00 00 00 00 00 00 00
+         <b>11 | (0,5)  | 3f 00 00 00 00 00 00 00</b>
+         12 | (0,7)  | 47 00 00 00 00 00 00 00
+          …
+         15 | (0,9)  | 5f 00 00 00 00 00 00 00</span></pre>
+        <p class="x">এটা disk-এ index page-এর আসল ভেতরটা। <code>data</code> হলো key — hex-এ, little-endian: <code>3f</code> = 63, <code>05</code> = 5। Key গুলো <b>sorted</b> (5, 8, 11, 17 …) আর প্রতিটার পাশে heap-এর ctid। Index-এ 63 পেলেই জানা যায় row-টা <code>(0,5)</code>-এ।</p>
+      </div>
+    </div>
+    <div class="how"><b>তাহলে index lookup-এর পুরো ধাপ:</b>
+      <ol>
+        <li>Index-এর meta page → root page → (মাঝের page) → leaf page পড়া। বড় table-এও এটা সাধারণত 3–4টা page।</li>
+        <li>Leaf-এ key খুঁজে ctid নেওয়া।</li>
+        <li>ctid-এর page নম্বর ধরে <b>heap page</b> পড়া, slot থেকে row বের করা।</li>
+        <li>Row-টা এই transaction-এর কাছে visible কিনা (MVCC: <code>xmin</code>/<code>xmax</code>) চেক করা — এই তথ্য শুধু heap-এ থাকে, index-এ না।</li>
+      </ol>
+      <p>৩-৪ নম্বর ধাপ এড়ানো যায় যদি দরকারি সব column index-এই থাকে <b>আর</b> visibility map বলে ওই heap page-এর সব row সবার কাছে visible — তখন হয় <b>Index Only Scan</b> (<a href="#explain">section 7</a>-এ প্রমাণ)।</p>
+    </div>
+  </section>
+
+  <!-- 3 create -->
+  <section id="create" style="--c:var(--pd)">
+    <h2><span class="num">3</span>Index তৈরি, দেখা, মোছা</h2>
+    <span class="motto">CREATE INDEX name ON table [USING method] (columns) [WHERE …]</span>
+    <p class="lead">Syntax ছোট, কিন্তু প্রতিটা অংশের মানে আছে। নিচের প্রতিটা command <b>orders</b> আর <b>users</b> table-এ চালানো।</p>
+
+    <div class="grid2">
+      <div>
+        <div class="file"><i></i>সাধারণ index</div>
+<pre class="code" data-lang="sql">CREATE INDEX orders_customer_id_idx ON orders (customer_id);
+<span class="o">CREATE INDEX</span></pre>
+        <p class="x"><code>USING</code> না লিখলে <b>B-tree</b>। নামের convention: <code>&lt;table&gt;_&lt;column&gt;_idx</code> — না দিলে PostgreSQL নিজে <code>orders_customer_id_idx</code> জাতীয় নাম বানায়। সাধারণ <code>CREATE INDEX</code> চলাকালীন table-এ <b>SHARE lock</b> থাকে: SELECT চলবে, কিন্তু INSERT/UPDATE/DELETE অপেক্ষা করবে যতক্ষণ index বানানো শেষ না হয়। বড় production table-এ সেটা মিনিটের পর মিনিট লেখা বন্ধ।</p>
+      </div>
+      <div>
+        <div class="file"><i></i>UNIQUE index — duplicate ঠেকায়</div>
+<pre class="code" data-lang="sql">CREATE UNIQUE INDEX users_name_city_uq ON users (name, city);
+INSERT INTO users VALUES (100, 'Rahim', 'rahim2@mail.com', 'Dhaka');
+<span class="e">ERROR:  duplicate key value violates unique constraint "users_name_city_uq"
+DETAIL:  Key (name, city)=(Rahim, Dhaka) already exists.</span></pre>
+        <p class="x">Unique index দ্রুত খোঁজার সাথে একটা <b>নিয়মও</b> চাপায়: একই value দুবার ঢুকবে না। Insert-এর সময় B-tree-তে ঠিক জায়গায় গিয়ে আগে দেখে নেয় একই key আছে কিনা — তাই uniqueness check-ও O(log n)।</p>
+      </div>
+    </div>
+
+    <h3>Multicolumn (composite) index — column-এর ক্রম গুরুত্বপূর্ণ</h3>
+    <div class="card story" style="--c:var(--pd)"><p><b>ফোনবুকের মতো:</b> ফোনবুক সাজানো (পদবি, নাম) ক্রমে। "পদবি = Hossain" খোঁজা সহজ, "Hossain, Rafi" আরো সহজ। কিন্তু শুধু "নাম = Rafi" খুঁজতে পুরো বই দেখতে হবে — কারণ Rafi-রা সব পদবির নিচে ছড়ানো। Index <code>(a, b)</code> আগে <code>a</code> দিয়ে sorted, একই <code>a</code>-র ভেতরে <code>b</code> দিয়ে। এটাকে বলে <b>leftmost prefix rule</b>।</p></div>
+    <div class="grid2" style="margin-top:14px">
+<pre class="code" data-lang="sql">CREATE INDEX orders_cust_created_idx ON orders (customer_id, created_at);
+
+-- দুই column-ই ব্যবহার → index
+EXPLAIN SELECT * FROM orders
+WHERE customer_id = 4242 AND created_at >= '2025-06-01';
+<span class="o">Bitmap Heap Scan on orders  (rows=6)
+  ->  Bitmap Index Scan on <b>orders_cust_created_idx</b>
+        Index Cond: ((customer_id = 4242) AND (created_at >= '2025-06-01 …'))</span>
+
+-- শুধু প্রথম column (leftmost prefix) → index
+EXPLAIN SELECT * FROM orders WHERE customer_id = 4242;
+<span class="o">Bitmap Heap Scan on orders  (rows=10)
+  ->  Bitmap Index Scan on <b>orders_cust_created_idx</b>
+        Index Cond: (customer_id = 4242)</span>
+
+-- শুধু দ্বিতীয় column → index কাজে লাগে না
+EXPLAIN SELECT * FROM orders
+WHERE created_at >= '2025-06-01' AND created_at &lt; '2025-06-02';
+<span class="o"><b>Seq Scan on orders</b>  (rows=286)
+  Filter: ((created_at >= …) AND (created_at &lt; …))</span></pre>
+      <div>
+<pre class="code" data-lang="sql">-- bonus: index-এর ক্রমেই sorted, তাই আলাদা Sort লাগে না
+EXPLAIN SELECT * FROM orders WHERE customer_id = 4242
+ORDER BY created_at DESC LIMIT 5;
+<span class="o">Limit
+  ->  <b>Index Scan Backward</b> using orders_cust_created_idx on orders
+        Index Cond: (customer_id = 4242)</span></pre>
+        <p class="x">Customer 4242-এর order গুলো index-এ <code>created_at</code> ক্রমে পাশাপাশি সাজানো। শেষ থেকে উল্টো দিকে (<code>Backward</code>) 5টা পড়লেই সবচেয়ে নতুন 5টা — কোনো sort নেই। B-tree-র leaf page গুলো দুই দিকেই linked বলে উল্টো দিকে হাঁটা যায়।</p>
+<pre class="code" data-lang="sql" style="margin-top:14px">-- PostgreSQL 18-এ নতুন: B-tree skip scan
+CREATE INDEX orders_status_created_idx ON orders (status, created_at);
+EXPLAIN (ANALYZE, COSTS OFF) SELECT * FROM orders
+WHERE created_at >= '2025-06-01' AND created_at &lt; '2025-06-02';
+<span class="o"><b>Index Scan using orders_status_created_idx</b> on orders (actual rows=288.00)
+  Index Cond: ((created_at >= …) AND (created_at &lt; …))
+  <b>Index Searches: 9</b></span></pre>
+        <p class="x">প্রথম column <code>status</code>-এর মাত্র 4টা আলাদা value। PG 18 তখন প্রতিটা status-এর জন্য আলাদা করে index-এ নামে ("skip" করে) — <code>Index Searches: 9</code> মানে index-এ 9 বার descend করেছে। কিন্তু <code>customer_id</code>-এর মতো 10,000 value-র column আগে থাকলে এটা লাভজনক না, তখন Seq Scan। <b>Interview উত্তর:</b> "সাধারণত leftmost prefix লাগে; PG 18+ low-cardinality leading column-এ skip scan করতে পারে।"</p>
+      </div>
+    </div>
+    <div class="how"><b>Column-এর ক্রম কীভাবে ঠিক করবে:</b>
+      <ul>
+        <li><code>=</code> দিয়ে filter হওয়া column আগে, range (<code>&gt;</code>, <code>BETWEEN</code>) বা <code>ORDER BY</code>-এর column পরে — যেমন <code>(customer_id, created_at)</code>।</li>
+        <li><code>(a, b)</code> থাকলে আলাদা <code>(a)</code> index সাধারণত বাড়তি। আমরা <code>orders_customer_id_idx</code> drop করার পরেও <code>customer_id = 4242</code> composite index ব্যবহার করেছে।</li>
+        <li>শুধু index থেকে উত্তর দিতে চাইলে বাড়তি column <code>INCLUDE</code> করা যায়: <code>CREATE INDEX ON orders (customer_id) INCLUDE (amount)</code> — <code>amount</code> leaf-এ থাকে কিন্তু sort/search-এ অংশ নেয় না (covering index)।</li>
+      </ul>
+    </div>
+
+    <h3>CONCURRENTLY — production-এ লেখা বন্ধ না করে</h3>
+    <div class="grid2">
+<pre class="code" data-lang="sql">CREATE INDEX CONCURRENTLY orders_amount_idx ON orders (amount);
+<span class="o">CREATE INDEX</span>
+
+BEGIN;
+CREATE INDEX CONCURRENTLY orders_amount_idx2 ON orders (amount);
+<span class="e">ERROR:  CREATE INDEX CONCURRENTLY cannot run inside a transaction block</span>
+ROLLBACK;
+
+DROP INDEX CONCURRENTLY orders_amount_idx;
+<span class="o">DROP INDEX</span>
+DROP INDEX IF EXISTS orders_amount_idx;
+<span class="o">NOTICE:  index "orders_amount_idx" does not exist, skipping</span></pre>
+      <div class="how" style="margin-top:0"><b>CONCURRENTLY কী করে:</b>
+        <ul>
+          <li>দুইবার table scan করে: প্রথমবার index বানায়, দ্বিতীয়বার এর মধ্যে আসা নতুন row যোগ করে। মাঝে চলমান transaction শেষ হওয়ার অপেক্ষা করে। তাই <b>ধীর</b>, কিন্তু পুরো সময় INSERT/UPDATE/DELETE চলতে থাকে।</li>
+          <li>Transaction block-এর ভেতরে চলে না (উপরের error)। Migration tool-এ আলাদা non-transactional step লাগে।</li>
+          <li>মাঝপথে fail করলে (যেমন unique violation) একটা <b>INVALID</b> index থেকে যায় — <code>\d</code>-এ দেখা যায়; সেটা <code>DROP INDEX</code> করে আবার চালাতে হয়।</li>
+          <li><code>DROP INDEX</code> table-এ exclusive lock নেয়; <code>DROP INDEX CONCURRENTLY</code> চলমান query-কে আটকায় না।</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>কোন index আছে, কতটা ব্যবহার হচ্ছে</h3>
+    <div class="grid2">
+<pre class="code" data-lang="sql">\d orders
+<span class="o">                    Table "public.orders"
+   Column    |           Type           | Nullable |           Default
+-------------+--------------------------+----------+------------------------------
+ id          | bigint                   | not null | generated always as identity
+ customer_id | integer                  | not null |
+ …
+Indexes:
+    "orders_pkey" PRIMARY KEY, btree (id)
+    "orders_cust_created_idx" btree (customer_id, created_at)</span>
+
+\di
+<span class="o"> Schema |          Name           | Type  |  Owner   | Table
+ public | orders_cust_created_idx | index | postgres | orders
+ public | orders_pkey             | index | postgres | orders
+ public | users_email_key         | index | postgres | users
+ public | users_pkey              | index | postgres | users</span></pre>
+      <div>
+<pre class="code" data-lang="sql">SELECT indexname, indexdef FROM pg_indexes WHERE tablename = 'orders';
+<span class="o">        indexname        |                 indexdef
+ orders_pkey             | CREATE UNIQUE INDEX orders_pkey ON public.orders
+                         |   USING btree (id)
+ orders_cust_created_idx | CREATE INDEX orders_cust_created_idx ON public.orders
+                         |   USING btree (customer_id, created_at)</span>
+
+SELECT indexrelname, idx_scan,
+       pg_size_pretty(pg_relation_size(indexrelid))
+FROM pg_stat_user_indexes WHERE relname = 'orders';
+<span class="o">      indexrelname       | idx_scan | pg_size_pretty
+ orders_pkey             |        3 | 2208 kB
+ orders_cust_created_idx |        0 | 3104 kB</span></pre>
+        <p class="x"><code>\d table</code> (psql) এক নজরে সব index; <code>pg_indexes</code> view থেকে SQL দিয়ে পুরো definition। <code>pg_stat_user_indexes.idx_scan</code> বলে index-টা কতবার আসলে ব্যবহার হয়েছে — production-এ মাসের পর মাস <code>0</code> থাকলে সেটা শুধু write ধীর করছে, drop-এর প্রার্থী (শুধু <code>EXPLAIN</code> চালালে গোনা হয় না, তাই এখানে 0)।</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4 kinds -->
+  <section id="kinds" style="--c:var(--pc)">
+    <h2><span class="num">4</span>৩ ধরনের index</h2>
+    <span class="motto">Primary · Secondary · Unique — আর composite</span>
+    <p class="lead">Textbook আর interview-এ index-কে সাধারণত এই তিন ভাগে ভাগ করা হয়। এটা <b>ভূমিকা অনুযায়ী</b> ভাগ — ভেতরের data structure (B-tree, Hash …) আলাদা প্রশ্ন, সেটা এই section-এর শেষে।</p>
+    <div class="grid3">
+      <div class="card kind" style="--c:var(--pc)">
+        <span class="tagline">1 · Primary / clustered</span>
+        <b class="t">Primary index</b>
+        <p>Primary key-র উপর index। Table-এ একটাই। Classic সংজ্ঞায় data file নিজেই এই key অনুযায়ী <b>sorted</b> থাকে, তাই একে clustered index-ও বলে।</p>
+        <ul><li>PostgreSQL-এ: <code>PRIMARY KEY</code> দিলে নিজে থেকে <code>users_pkey</code> (unique B-tree) বানায়।</li><li>কিন্তু PostgreSQL-এ table <b>আসলে sorted থাকে না</b> — নিচে দেখো।</li></ul>
+      </div>
+      <div class="card kind" style="--c:var(--pi)">
+        <span class="tagline">2 · Secondary / non-clustered</span>
+        <b class="t">Secondary index</b>
+        <p>অন্য যেকোনো column-এ index (<code>customer_id</code>, <code>email</code> …)। যতগুলো দরকার বানানো যায়। Data file-এর ক্রমের সাথে কোনো সম্পর্ক নেই — index আলাদা sorted structure, row-কে pointer দিয়ে দেখায়।</p>
+        <ul><li>Duplicate value থাকতে পারে (এক customer-এর অনেক order)।</li><li>প্রতিটা lookup-এ index → heap, দুই জায়গায় যেতে হয়।</li></ul>
+      </div>
+      <div class="card kind" style="--c:var(--pa)">
+        <span class="tagline">3 · Unique</span>
+        <b class="t">Unique index</b>
+        <p>Secondary index + নিয়ম: একই value দুবার না। <code>UNIQUE</code> constraint বা <code>CREATE UNIQUE INDEX</code>।</p>
+        <ul><li>NULL একাধিকবার থাকতে পারে (NULL ≠ NULL) — PG 15+-এ <code>NULLS NOT DISTINCT</code> দিলে একটাই।</li><li>PK = unique + NOT NULL।</li></ul>
+      </div>
+    </div>
+    <p class="x"><b>Composite (multicolumn) index</b> আলাদা "ধরন" না — উপরের যেকোনোটাই একাধিক column-এ হতে পারে: composite primary key <code>PRIMARY KEY (order_id, product_id)</code>, composite secondary <code>(customer_id, created_at)</code>, composite unique <code>(name, city)</code>। নিয়ম একটাই: leftmost prefix (section 3)।</p>
+
+    <h3>PostgreSQL-এ clustered index নেই — প্রমাণ</h3>
+    <div class="grid2">
+<pre class="code" data-lang="sql">CREATE TABLE people AS
+  SELECT id, name, city FROM users WHERE id &lt; 100 AND deleted_at IS NULL;
+ALTER TABLE people ADD PRIMARY KEY (id);
+SELECT ctid, id, name FROM people LIMIT 6;
+<span class="o"> ctid  | id |  name
+ (0,1) | 17 | Karim      ← PK থাকলেও heap insert-এর ক্রমে
+ (0,2) | 88 | Nadia
+ (0,3) |  5 | Tanvir
+ …</span>
+
+CLUSTER people USING people_pkey;     -- একবার PK ক্রমে নতুন করে লেখো
+SELECT ctid, id, name FROM people LIMIT 6;
+<span class="o"> ctid  | id |  name
+ (0,1) |  5 | Tanvir     ← এখন sorted
+ (0,2) |  8 | Imran
+ (0,3) | 11 | Jamal
+ (0,4) | 17 | Karim
+ …</span>
+
+INSERT INTO people VALUES (1, 'Nabil', 'Dhaka');
+SELECT ctid, id, name FROM people WHERE id = 1;
+<span class="o">  ctid  | id | name
+ <b>(0,15)</b> |  1 | Nabil      ← id 1 সবার আগে না, শেষে বসল</span></pre>
+      <div class="how" style="margin-top:0"><b>PostgreSQL বনাম MySQL InnoDB / SQL Server:</b>
+        <ul>
+          <li><b>PostgreSQL:</b> table হলো <b>heap</b> — যেখানে খালি জায়গা, row সেখানে বসে। Primary key সহ <b>সব</b> index আলাদা file, সবার leaf-এ heap-এর ctid। এই অর্থে PostgreSQL-এর সব index-ই "secondary"।</li>
+          <li><code>CLUSTER</code> একবারের জন্য heap-কে index-এর ক্রমে নতুন করে লেখে (<code>ACCESS EXCLUSIVE</code> lock — পড়াও বন্ধ)। পরের insert/update সেই ক্রম মানে না, উপরে id 1 গিয়ে বসল <code>(0,15)</code>-এ। <code>\d people</code>-এ index-এর পাশে শুধু <code>CLUSTER</code> চিহ্ন থাকে, পরে আবার চালানোর জন্য।</li>
+          <li><b>MySQL InnoDB:</b> table <b>নিজেই</b> primary key-র B+ tree — leaf-এ পুরো row। এটাই আসল clustered index। Secondary index-এর leaf-এ ctid না, <b>primary key-র value</b> থাকে; তাই secondary lookup = secondary tree → PK tree, দুইবার tree নামা। এজন্য InnoDB-তে ছোট, ক্রমবর্ধমান PK (auto-increment) ভালো; random UUID PK দিলে page split বেশি।</li>
+          <li><b>SQL Server:</b> একটা clustered index বেছে নেওয়া যায় (default PK); বাকিগুলো non-clustered।</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>Data structure অনুযায়ী — PostgreSQL index type</h3>
+    <div class="card tscroll">
+      <table>
+        <thead><tr><th>Type</th><th>ভেতরে কী</th><th>কোন operator</th><th>কখন</th></tr></thead>
+        <tbody>
+          <tr><td class="p">B-tree <small style="color:var(--muted)">default</small></td><td>Sorted, balanced tree (Lehman-Yao B+ tree)</td><td><code>= &lt; &lt;= &gt; &gt;= BETWEEN IN</code>, <code>IS NULL</code>, <code>LIKE 'abc%'</code>*, ORDER BY</td><td>প্রায় সব কিছু — id, email, date, foreign key</td></tr>
+          <tr><td class="p">Hash</td><td>hash(value) → bucket</td><td>শুধু <code>=</code></td><td>লম্বা key-তে শুধু equality (token, URL) — <a href="#hash">section 8</a></td></tr>
+          <tr><td class="p">GIN</td><td>Inverted index: element → row-list</td><td><code>@&gt; &lt;@ &amp;&amp; ? @@</code></td><td>jsonb, array, full-text search — <a href="#gin">section 10</a></td></tr>
+          <tr><td class="p">GiST</td><td>Balanced tree of bounding boxes / ranges</td><td><code>&amp;&amp; @&gt; &lt;-&gt;</code> (overlap, contains, nearest)</td><td>Geometry/PostGIS, range type, exclusion constraint (double booking ঠেকানো)</td></tr>
+          <tr><td class="p">SP-GiST</td><td>Space-partitioned tree (quad-tree, trie)</td><td>point, IP, text prefix</td><td>অসমভাবে ছড়ানো data — phone prefix, IP range</td></tr>
+          <tr><td class="p">BRIN</td><td>প্রতি block-range-এর min/max শুধু</td><td><code>&lt; = &gt;</code> range</td><td>বিশাল append-only table যেখানে value disk-এর ক্রমের সাথে মেলে (log, time-series)</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="foot">* non-C collation-এ <code>LIKE 'abc%'</code>-এর জন্য <code>text_pattern_ops</code> লাগে — section 7-এ প্রমাণ। BRIN-এর নমুনা: <code>orders.created_at</code>-এ BRIN index মাত্র <b>24 kB</b> (একই table-এ <code>orders_pkey</code> B-tree 2208 kB), আর 7 দিনের range query-তে <code>Bitmap Index Scan on orders_created_brin</code> নিয়েছে — কারণ created_at insert-এর ক্রমেই বাড়ে।</p>
+  </section>
+
+  <!-- 5 pk -->
+  <section id="pk" style="--c:var(--pa)">
+    <h2><span class="num">5</span>PRIMARY KEY কি B-tree? UNIQUE কি B-tree?</h2>
+    <span class="motto">হ্যাঁ — দুটোই নিজে থেকে একটা unique B-tree index বানায়</span>
+    <p class="lead">PostgreSQL-এ <code>PRIMARY KEY</code> বা <code>UNIQUE</code> constraint আলাদা কোনো জাদু না — constraint enforce করতে PostgreSQL নিজেই একটা <b>unique B-tree index</b> তৈরি করে। Users table-এ আমরা কোনো <code>CREATE INDEX</code> লিখিনি, তবু:</p>
+    <div class="grid2">
+<pre class="code" data-lang="sql">\d users
+<span class="o">               Table "public.users"
+ Column |  Type   | Collation | Nullable | Default
+--------+---------+-----------+----------+---------
+ id     | integer |           | not null |
+ name   | text    |           | not null |
+ email  | text    |           |          |
+ city   | text    |           |          |
+Indexes:
+    "users_pkey" PRIMARY KEY, <b>btree</b> (id)
+    "users_email_key" UNIQUE CONSTRAINT, <b>btree</b> (email)</span>
+
+SELECT indexname, indexdef FROM pg_indexes WHERE tablename = 'users';
+<span class="o">    indexname    |                         indexdef
+ users_pkey      | CREATE <b>UNIQUE</b> INDEX users_pkey ON public.users USING <b>btree</b> (id)
+ users_email_key | CREATE <b>UNIQUE</b> INDEX users_email_key ON public.users USING <b>btree</b> (email)</span></pre>
+      <div>
+<pre class="code" data-lang="sql">-- B-tree ছাড়া আর কেউ unique পারে?
+CREATE UNIQUE INDEX users_email_hash ON users USING hash (email);
+<span class="e">ERROR:  access method "hash" does not support unique indexes</span>
+
+SELECT amname,
+       pg_indexam_has_property(oid, 'can_unique')    AS can_unique,
+       pg_indexam_has_property(oid, 'can_multi_col') AS multi_col,
+       pg_indexam_has_property(oid, 'can_order')     AS can_order
+FROM pg_am WHERE amtype = 'i' ORDER BY 1;
+<span class="o"> amname | can_unique | multi_col | can_order
+ brin   | f          | t         | f
+ <b>btree  | t          | t         | t</b>
+ gin    | f          | t         | f
+ gist   | f          | t         | f
+ hash   | f          | f         | f
+ spgist | f          | f         | f</span></pre>
+        <p class="x">PostgreSQL 18-এ <b>শুধু B-tree</b> unique index সমর্থন করে, আর শুধু B-tree-ই sorted ক্রমে row দিতে পারে (<code>can_order</code>)। তাই PK আর UNIQUE সবসময় B-tree।</p>
+      </div>
+    </div>
+    <div class="how"><b>মনে রাখার মতো:</b>
+      <ul>
+        <li><b>PRIMARY KEY = UNIQUE + NOT NULL</b>, table-এ একটাই। নাম হয় <code>&lt;table&gt;_pkey</code>। <code>UNIQUE</code> যতগুলো খুশি, নাম <code>&lt;table&gt;_&lt;column&gt;_key</code>।</li>
+        <li>UNIQUE column-এ NULL একাধিক থাকতে পারে — যাচাই করা: <code>UNIQUE</code> column-এ দুইটা NULL insert → <code>INSERT 0 2</code>; <code>UNIQUE NULLS NOT DISTINCT</code> দিলে দ্বিতীয়টায় <code>ERROR: duplicate key … Key (email)=(null) already exists</code>।</li>
+        <li>PK/UNIQUE-এর জন্য আলাদা করে আরেকটা index বানানো অপচয় — একই column-এ দুটো B-tree, দ্বিগুণ write।</li>
+        <li><b>Foreign key</b> column-এ PostgreSQL নিজে index বানায় না (MySQL InnoDB বানায়)। <code>orders.customer_id REFERENCES customers</code> থাকলে join আর parent row delete দ্রুত করতে নিজে index দিতে হয় — বিস্তারিত <a href="../keys/index.html">Keys গাইডে</a>।</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 6 btree -->
+  <section id="btree" style="--c:var(--accent)">
+    <h2><span class="num">6</span>B-tree — গঠন আর কীভাবে তৈরি হয়</h2>
+    <span class="motto">Sorted · balanced · প্রতিটা node = একটা disk page</span>
+    <p class="lead">B-tree হলো এমন একটা search tree যার প্রতিটা node-এ <b>অনেকগুলো sorted key</b> আর key-গুলোর মাঝখানে child pointer। Binary tree-তে প্রতি node-এ 1টা key আর 2টা child; B-tree-তে শত শত — কারণ একটা node = একটা 8 KB page, আর disk থেকে একটা page পড়তে যে সময়, তাতে 1টা key না পড়ে 300টা পড়াই লাভ।</p>
+    <div class="grid2">
+      <div class="how" style="margin-top:0"><b>B-tree-র নিয়ম (order m — প্রতি node-এ সর্বোচ্চ m টা child):</b>
+        <ul>
+          <li>প্রতিটা node-এ key গুলো sorted; সর্বোচ্চ <b>m − 1</b>টা key।</li>
+          <li>Root ছাড়া প্রতিটা node অন্তত অর্ধেক ভরা (⌈m/2⌉ − 1 key)।</li>
+          <li>k টা key থাকলে k + 1 টা child। Key <code>K</code>-এর বামের subtree-তে সব &lt; K, ডানে সব &gt; K।</li>
+          <li><b>সব leaf একই গভীরতায়</b> — tree সবসময় balanced। তাই যেকোনো key খুঁজতে একই সংখ্যক page: O(log<sub>m</sub> n)।</li>
+          <li>Tree নিচে না, <b>উপরের দিকে বাড়ে</b>: leaf ভরে গেলে split হয়, মাঝের key উপরে ওঠে; root split হলে নতুন root — তখনই height ১ বাড়ে।</li>
+        </ul>
+      </div>
+      <div>
+<pre class="code" data-lang="sql">-- 1 লাখ row-এর orders_pkey কত তলা?
+SELECT root, level FROM bt_metap('orders_pkey');
+<span class="o"> root | level
+    3 |     <b>1</b>        ← level 0 = leaf, তাই মাত্র 2 তলা</span>
+
+SELECT live_items, avg_item_size, type
+FROM bt_page_stats('orders_pkey', 3);   -- root page
+<span class="o"> live_items | avg_item_size | type
+        <b>274</b> |            15 | r     ← root থেকে 274টা child</span></pre>
+        <p class="x">Root page-এ 274টা entry, প্রতিটা একটা leaf page-এ যায়, প্রতি leaf-এ ~365টা key → 1 লাখ row মাত্র <b>2 তলায়</b>। Fan-out ~300 ধরলে 3 তলায় ~2.7 কোটি, 4 তলায় ~800 কোটি row। এজন্যই বাস্তবে index lookup প্রায় সবসময় 3–4 page — আর root ও উপরের তলা সাধারণত RAM-এ থাকেই।</p>
+      </div>
+    </div>
+
+    <h3>Animation — users table-এর id দিয়ে B-tree বানানো</h3>
+    <p class="x">বোঝার সুবিধার জন্য খুব ছোট order: <b>order 4 — প্রতি node-এ সর্বোচ্চ 3টা key, 4টা child</b> (আসল PostgreSQL-এ শত শত)। Setup-এর <code>users</code> table-এর 15টা row যে ক্রমে insert হয়েছিল, সেই ক্রমে id গুলো ঢুকবে। প্রতিটা key-র নিচে ছোট করে লেখা heap-এর <b>ctid</b> — section 2-এর আসল ctid-ই। Classic B-tree-তে <b>প্রতিটা node-এ</b> (internal-ও) key-র সাথে data pointer থাকে। Overflow হলে (4টা key) node লাল হবে, তারপর split: মাঝের key উপরে উঠবে।</p>
+    <div class="card viz" id="vizB" data-mode="btree">
+      <div class="vbar">
+        <button class="btn pri" data-act="play" type="button">▶ Play</button>
+        <button class="btn" data-act="step" type="button">Step →</button>
+        <button class="btn" data-act="reset" type="button">↺ Reset</button>
+        <span class="vsp"></span>
+        <label class="vin">WHERE id = <input type="number" value="63" min="1" max="999" data-in="key"></label>
+        <button class="btn" data-act="search" type="button">Search</button>
+      </div>
+      <div class="seq"></div>
+      <div class="svgwrap"><svg class="tw" role="img" aria-label="B-tree insert আর search animation"></svg></div>
+      <div class="vmsg"><span class="vstep"></span><span class="vtext"></span></div>
+      <div class="heap"><div class="heap-h">users heap · page 0 (insert-এর ক্রমে, sorted না) — ctid id name</div><div class="chips"></div></div>
+    </div>
+    <div class="how"><b>Insert algorithm, ধাপে ধাপে:</b>
+      <ol>
+        <li>Root থেকে শুরু করে প্রতিটা node-এ key-গুলোর সাথে তুলনা করে সঠিক child-এ নামো, যতক্ষণ না leaf-এ পৌঁছাও।</li>
+        <li>Leaf-এ sorted জায়গায় key বসাও (সাথে ctid)।</li>
+        <li>Leaf-এ key সংখ্যা max ছাড়ালে <b>split</b>: মাঝের key parent-এ উঠে যায়, বাম আর ডান অর্ধেক দুইটা আলাদা node হয়।</li>
+        <li>Parent-ও overflow হলে একই ভাবে split, উপরের দিকে চলতে থাকে। Root split হলে নতুন root তৈরি — height +1। উপরের animation-এ id 5 (৪র্থ insert) আর id 80 (১৪তম) root split ঘটায়; id 80-তে split leaf থেকে root পর্যন্ত দুই তলা ছড়ায় (cascade)।</li>
+      </ol>
+      <p><b>Search</b> (<code>WHERE id = 63</code>): root <code>[71]</code> → 63 &lt; 71, বামে → <code>[17 | 42]</code> → 63 ≥ 42, ডানে → leaf-এ 63, ctid <code>(0,5)</code> → heap-এর সবুজ row। 15টা row-এর বদলে 3টা node। Search 71 দিয়ে দেখো — classic B-tree-তে root-এই পাওয়া যায়, নিচে নামতে হয় না।</p>
+    </div>
+
+    <h3>B+ tree — database আসলে যেটা ব্যবহার করে</h3>
+    <p class="lead">B+ tree হলো B-tree-র একটা রূপ যেখানে দুইটা বড় পার্থক্য: (১) <b>সব data pointer (ctid) শুধু leaf-এ</b> — internal node শুধু রাস্তা দেখায় (routing key), (২) <b>leaf গুলো একে অপরের সাথে linked</b> — বাম থেকে ডানে একটা sorted list। তাই প্রতিটা key leaf-এ অবশ্যই থাকে; internal node-এর key হলো শুধু একটা "copy"।</p>
+    <div class="card viz" id="vizP" data-mode="bplus">
+      <div class="vbar">
+        <button class="btn pri" data-act="play" type="button">▶ Play</button>
+        <button class="btn" data-act="step" type="button">Step →</button>
+        <button class="btn" data-act="reset" type="button">↺ Reset</button>
+        <span class="vsp"></span>
+        <label class="vin">id = <input type="number" value="63" min="1" max="999" data-in="key"></label>
+        <button class="btn" data-act="search" type="button">Search</button>
+        <label class="vin">BETWEEN <input type="number" value="20" min="1" max="999" data-in="lo"> AND <input type="number" value="60" min="1" max="999" data-in="hi"></label>
+        <button class="btn" data-act="range" type="button">Range scan</button>
+      </div>
+      <div class="seq"></div>
+      <div class="svgwrap"><svg class="tw" role="img" aria-label="B+ tree insert, search আর range scan animation"></svg></div>
+      <div class="vmsg"><span class="vstep"></span><span class="vtext"></span></div>
+      <div class="heap"><div class="heap-h">users heap · page 0 — range scan-এ পাওয়া row গুলো সবুজ হবে</div><div class="chips"></div></div>
+    </div>
+    <div class="grid2" style="margin-top:14px">
+      <div class="how" style="margin-top:0"><b>B+ tree-তে insert আর split:</b>
+        <ul>
+          <li>Search সবসময় leaf পর্যন্ত যায় (internal-এ key মিললেও থামে না)। নিয়ম: key ≥ separator হলে ডানে।</li>
+          <li><b>Leaf split:</b> 4টা key → বাম 2 + ডান 2। ডান leaf-এর প্রথম key-র <b>copy</b> parent-এ যায় — leaf-এও থেকে যায়, কারণ data শুধু leaf-এ। নতুন leaf-টা linked list-এ ঢোকে (বাম → নতুন → পুরনো ডান)।</li>
+          <li><b>Internal split:</b> classic B-tree-র মতো — মাঝের key উপরে <b>move</b> হয় (copy না), কারণ internal key শুধু রাস্তা।</li>
+          <li><b>Range scan</b> (<code>BETWEEN 20 AND 60</code>): একবার নেমে 20-এর leaf খুঁজে নাও, তারপর <b>উপরে না উঠে</b> sibling link ধরে ডানে হাঁটো যতক্ষণ key ≤ 60। Animation-এ সবুজ dashed arrow গুলো এই link।</li>
+        </ul>
+      </div>
+      <div class="how" style="margin-top:0;--c:var(--pd)"><b>Database কেন B+ tree নেয়:</b>
+        <ul>
+          <li><b>বেশি fan-out, কম তলা:</b> internal page-এ ctid/row রাখতে হয় না, শুধু key + child pointer — একই 8 KB-তে বেশি key, tree আরো চ্যাপ্টা, কম disk read।</li>
+          <li><b>Range আর ORDER BY:</b> leaf chain ধরে sequential হাঁটা — <code>BETWEEN</code>, <code>&gt;</code>, <code>ORDER BY … LIMIT</code> সব সস্তা। Classic B-tree-তে range-এর জন্য tree-তে উপরে-নিচে in-order traversal লাগত।</li>
+          <li><b>অনুমানযোগ্য খরচ:</b> সব lookup একই সংখ্যক page — query planner-এর হিসাব সহজ।</li>
+          <li><b>PostgreSQL-এর nbtree</b> হলো <b>Lehman &amp; Yao</b>-র B-link tree: প্রতিটা page-এ (শুধু leaf না, প্রতিটা level-এ) ডান-sibling link আর একটা "high key"। Split চলাকালীন কোনো reader ভুল page-এ নামলে high key দেখে বোঝে আর ডানে সরে যায় — তাই পুরো tree lock না করেই অনেক session একসাথে পড়া-লেখা করতে পারে। Leaf-এ বাম link-ও আছে (<code>Index Scan Backward</code>)। এছাড়া PG 13+-এ duplicate key-র <b>deduplication</b> আর internal key-র suffix truncation।</li>
+        </ul>
+      </div>
+    </div>
+    <h3>B-tree বনাম B+ tree</h3>
+    <div class="card tscroll">
+      <table>
+        <thead><tr><th></th><th>B-tree (classic)</th><th>B+ tree</th></tr></thead>
+        <tbody>
+          <tr><td class="p">Data pointer (ctid/row)</td><td>প্রতিটা node-এ, প্রতিটা key-র সাথে</td><td>শুধু leaf-এ</td></tr>
+          <tr><td class="p">Internal node-এ</td><td>key + data + child pointer</td><td>শুধু routing key + child pointer</td></tr>
+          <tr><td class="p">Key duplicate?</td><td>প্রতিটা key ঠিক একবার</td><td>separator key internal-এ আর leaf-এ দুই জায়গায়</td></tr>
+          <tr><td class="p">Search শেষ হয়</td><td>যেকোনো level-এ (root-এও হতে পারে)</td><td>সবসময় leaf-এ</td></tr>
+          <tr><td class="p">Leaf link</td><td>নেই</td><td>আছে (sorted linked list)</td></tr>
+          <tr><td class="p">Range / ORDER BY</td><td>tree-তে উপর-নিচ traversal</td><td>একবার নেমে leaf chain ধরে হাঁটা</td></tr>
+          <tr><td class="p">Fan-out / height</td><td>কম fan-out, একটু উঁচু</td><td>বেশি fan-out, চ্যাপ্টা</td></tr>
+          <tr><td class="p">Leaf split</td><td>মাঝের key উপরে move</td><td>ডান leaf-এর প্রথম key-র copy উপরে</td></tr>
+          <tr><td class="p">কোথায়</td><td>পাঠ্যবই, কিছু in-memory structure</td><td>PostgreSQL, MySQL InnoDB, SQL Server, Oracle, SQLite, file system</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="foot">PostgreSQL docs এটাকে "B-tree" বলে, কিন্তু গঠন B+ tree-র: ctid শুধু leaf tuple-এ, internal (pivot) tuple-এ child page-এর link। Interview-এ "PostgreSQL B-tree index" আর "B+ tree" প্রায় একই অর্থে ব্যবহার হয়।</p>
+  </section>
+
+  <!-- 7 explain -->
+  <section id="explain" style="--c:var(--pi)">
+    <h2><span class="num">7</span>Query কীভাবে index ব্যবহার করে</h2>
+    <span class="motto">EXPLAIN = planner-এর পরিকল্পনা · EXPLAIN ANALYZE = আসলে চালিয়ে দেখা</span>
+    <p class="lead">Index বানালেই query সেটা ব্যবহার করবে, এমন না। প্রতিটা query-তে <b>planner</b> statistics দেখে আন্দাজ করে কতগুলো row আসবে, তারপর প্রতিটা সম্ভাব্য পথের খরচ (cost) হিসাব করে সবচেয়ে সস্তাটা নেয়। <code>EXPLAIN</code> সেই plan দেখায়।</p>
+    <div class="grid2">
+      <div class="how" style="margin-top:0"><b>Plan পড়তে শেখো:</b>
+        <ul>
+          <li><code>cost=4.37..41.54</code> — প্রথম row দেওয়ার আগের খরচ .. মোট খরচ। একক কাল্পনিক (একটা sequential page পড়া = 1.0)।</li>
+          <li><code>rows=10</code> — planner-এর <b>আন্দাজ</b>। <code>actual … rows=8.00</code> — আসলে কত (শুধু ANALYZE-এ)। দুটো খুব আলাদা হলে statistics পুরনো।</li>
+          <li><code>Buffers: shared hit=8 read=2</code> — 8টা page RAM-এ পেয়েছে, 2টা disk/OS থেকে পড়েছে (<code>BUFFERS</code> PG 18-এ ANALYZE-এর সাথে default)।</li>
+          <li><code>Index Searches: 1</code> — PG 18-এ নতুন: index-এ কতবার নামতে হয়েছে।</li>
+          <li><b>সাবধান:</b> <code>EXPLAIN ANALYZE</code> query <b>সত্যিই চালায়</b>। UPDATE/DELETE-এ <code>BEGIN; EXPLAIN ANALYZE …; ROLLBACK;</code>।</li>
+        </ul>
+      </div>
+      <div>
+<pre class="code" data-lang="sql">-- Index Scan: অল্প row, index ধরে একটা একটা করে heap
+EXPLAIN ANALYZE SELECT * FROM orders WHERE id = 50000;
+<span class="o"><b>Index Scan using orders_pkey</b> on orders  (cost=0.29..8.31 rows=1)
+                                     (actual rows=1.00)
+  Index Cond: (id = 50000)
+  Index Searches: 1
+  Buffers: shared hit=6</span>
+
+EXPLAIN ANALYZE SELECT * FROM orders WHERE id &lt; 200;
+<span class="o"><b>Index Scan using orders_pkey</b> on orders  (rows=204) (actual rows=199.00)
+  Index Cond: (id &lt; 200)
+  Buffers: shared hit=5</span></pre>
+        <p class="x"><b>Index Scan:</b> index-এর leaf ধরে হাঁটে, প্রতিটা entry-র ctid দিয়ে সাথে সাথে heap থেকে row আনে। <code>id &lt; 200</code>-এ 199 row মাত্র 5 page — কারণ id ক্রমেই row গুলো heap-এ পাশাপাশি লেখা (<code>correlation = 1</code>)।</p>
+      </div>
+    </div>
+
+    <h3>চার ধরনের scan — selectivity অনুযায়ী</h3>
+    <div class="grid2">
+      <div>
+        <div class="file" style="--dot:var(--pd)"><i></i>Index Only Scan — heap-এ যেতেই হয়নি</div>
+<pre class="code" data-lang="sql">-- orders_customer_id_idx (customer_id) আবার তৈরি করে VACUUM করা
+EXPLAIN (ANALYZE, COSTS OFF)
+SELECT customer_id FROM orders WHERE customer_id BETWEEN 100 AND 110;
+<span class="o"><b>Index Only Scan</b> using orders_customer_id_idx on orders (actual rows=111.00)
+  Index Cond: ((customer_id >= 100) AND (customer_id &lt;= 110))
+  <b>Heap Fetches: 0</b></span>
+
+UPDATE orders SET amount = amount + 1 WHERE customer_id BETWEEN 100 AND 110;
+<span class="o">UPDATE 111</span>
+EXPLAIN (ANALYZE, COSTS OFF) SELECT customer_id …;   -- একই query
+<span class="o">Index Only Scan using orders_customer_id_idx on orders (actual rows=111.00)
+  <b>Heap Fetches: 222</b></span>
+
+VACUUM orders;
+EXPLAIN (ANALYZE, COSTS OFF) SELECT customer_id …;
+<span class="o">  <b>Heap Fetches: 0</b></span></pre>
+        <p class="x">শুধু <code>customer_id</code> চাওয়া হয়েছে, আর সেটা index-এই আছে — heap লাগবে না, <i>যদি</i> জানা থাকে row-টা visible। UPDATE-এর পর ওই page গুলো visibility map-এ আর "all-visible" না, তাই প্রতিটা entry-র জন্য heap-এ গিয়ে চেক (222 = পুরনো 111 + নতুন 111 version-এর index entry)। <code>VACUUM</code> visibility map আবার set করলে 0। এজন্য autovacuum ঠিকমতো চলা জরুরি।</p>
+      </div>
+      <div>
+        <div class="file" style="--dot:var(--pi)"><i></i>Bitmap Index Scan → Bitmap Heap Scan</div>
+<pre class="code" data-lang="sql">EXPLAIN ANALYZE
+SELECT * FROM orders WHERE customer_id BETWEEN 100 AND 300;
+<span class="o"><b>Bitmap Heap Scan</b> on orders  (rows=1868) (actual rows=1947.00)
+  Recheck Cond: ((customer_id >= 100) AND (customer_id &lt;= 300))
+  <b>Heap Blocks: exact=889</b>
+  ->  <b>Bitmap Index Scan</b> on orders_customer_id_idx  (actual rows=1947.00)
+        Index Cond: ((customer_id >= 100) AND (customer_id &lt;= 300))
+Execution Time: 0.851 ms</span>
+
+-- 59% row চাইলে?
+EXPLAIN ANALYZE
+SELECT * FROM orders WHERE customer_id BETWEEN 100 AND 6000;
+<span class="o"><b>Seq Scan on orders</b>  (rows=58641) (actual rows=58709.00)
+  Filter: ((customer_id >= 100) AND (customer_id &lt;= 6000))
+  Rows Removed by Filter: 41291
+Execution Time: 8.330 ms</span></pre>
+        <p class="x"><b>Bitmap scan</b> দুই ধাপে: আগে index থেকে সব মিলে যাওয়া ctid নিয়ে RAM-এ একটা <b>page-এর bitmap</b> বানায়, তারপর heap page গুলো <b>disk-এর ক্রমে</b>, প্রতিটা একবারই পড়ে। 1947 row ছড়ানো 889টা page-এ — Index Scan হলে একই page বারবার, এলোমেলো ক্রমে পড়ত। Bitmap খুব বড় হলে শুধু page মনে রাখে (lossy), তাই <code>Recheck Cond</code> দিয়ে আবার মিলিয়ে নেয়। দুইটা index-এর bitmap <code>AND</code>/<code>OR</code> করেও জোড়া লাগাতে পারে।</p>
+      </div>
+    </div>
+    <div class="how"><b>Planner-এর মোটামুটি নিয়ম (selectivity = কত % row আসবে):</b>
+      <ul>
+        <li>খুব কম row (1–কয়েকটা) → <b>Index Scan</b>; দরকারি সব column index-এ + page all-visible → <b>Index Only Scan</b>।</li>
+        <li>মাঝারি (কয়েকশো–কয়েক হাজার, অনেক page-এ ছড়ানো) → <b>Bitmap Heap Scan</b>।</li>
+        <li>অনেক row (মোটামুটি ১০–২০%-এর বেশি, data-র উপর নির্ভর) → <b>Seq Scan</b>। পুরো table sequential পড়া, অর্ধেক table random পড়ার চেয়ে সস্তা — <code>random_page_cost = 4</code> বনাম <code>seq_page_cost = 1</code>।</li>
+      </ul>
+    </div>
+
+    <h3>Index থাকলেও planner যখন নেয় না</h3>
+    <div class="grid2">
+      <div class="blk">
+        <div class="file" style="--dot:var(--warn)"><i></i>① ছোট table</div>
+<pre class="code" data-lang="sql">VACUUM ANALYZE users;            -- 15 row, 1 page
+EXPLAIN SELECT * FROM users WHERE id = 63;
+<span class="o"><b>Seq Scan on users</b>  (cost=0.00..1.19 rows=1)
+  Filter: (id = 63)</span></pre>
+        <p class="x">পুরো table একটাই page। Index দিয়ে গেলে index-এর 2 page + heap-এর 1 page = 3 page; সরাসরি পড়লে 1 page। Seq Scan-ই সস্তা — এটা bug না। (ANALYZE-এর আগে <code>relpages = 0</code> ছিল, তখন planner অনুমান করে Index Scan নিয়েছিল — statistics কত গুরুত্বপূর্ণ।)</p>
+      </div>
+      <div class="blk">
+        <div class="file" style="--dot:var(--warn)"><i></i>② Low selectivity — বেশিরভাগ row মেলে</div>
+<pre class="code" data-lang="sql">CREATE INDEX orders_status_idx ON orders (status);
+EXPLAIN SELECT * FROM orders WHERE status = 'delivered';   -- 90%
+<span class="o"><b>Seq Scan on orders</b>  (rows=89810)
+  Filter: (status = 'delivered'::text)</span>
+EXPLAIN SELECT * FROM orders WHERE status = 'cancelled';   -- 1%
+<span class="o"><b>Index Scan using orders_status_idx</b> on orders  (rows=1057)
+  Index Cond: (status = 'cancelled'::text)</span></pre>
+        <p class="x">একই index, একই column — value-ভেদে plan আলাদা। Planner জানে কোন value কত ঘন ঘন আছে (নিচে <code>pg_stats</code>)। এমন column-এ পুরো index-এর বদলে <a href="#partial">partial index</a> ভালো।</p>
+      </div>
+      <div class="blk">
+        <div class="file" style="--dot:var(--warn)"><i></i>③ Column-এর উপর function / হিসাব</div>
+<pre class="code" data-lang="sql">-- orders_email_idx ON orders (email) আছে
+EXPLAIN SELECT * FROM orders WHERE lower(email) = 'user4242@mail.com';
+<span class="o"><b>Seq Scan on orders</b>  (rows=500)
+  Filter: (lower(email) = 'user4242@mail.com'::text)</span>
+EXPLAIN SELECT * FROM orders WHERE customer_id + 1 = 4243;
+<span class="o"><b>Seq Scan on orders</b>  Filter: ((customer_id + 1) = 4243)</span>
+
+-- সমাধান: expression index
+CREATE INDEX orders_lower_email_idx ON orders (lower(email));
+EXPLAIN SELECT * FROM orders WHERE lower(email) = 'user4242@mail.com';
+<span class="o">Bitmap Heap Scan on orders  (rows=10)
+  ->  <b>Bitmap Index Scan on orders_lower_email_idx</b>
+        Index Cond: (lower(email) = 'user4242@mail.com'::text)</span></pre>
+        <p class="x">Index-এ sorted আছে <code>email</code>, <code>lower(email)</code> না — সেই ক্রমে খোঁজা যায় না। হয় query লেখো <code>customer_id = 4242</code> ভাবে (হিসাব ডান দিকে), নয়তো ঠিক একই expression-এ index বানাও। (<code>rows=500</code> খেয়াল করো — expression-এর statistics নেই বলে planner 0.5% ধরে নেয়; index বানিয়ে ANALYZE করলে ঠিক হয়ে 10।)</p>
+      </div>
+      <div class="blk">
+        <div class="file" style="--dot:var(--warn)"><i></i>④ LIKE — শুরুতে wildcard, আর collation</div>
+<pre class="code" data-lang="sql">EXPLAIN SELECT * FROM orders WHERE email LIKE '%4242@mail.com';
+<span class="o"><b>Seq Scan on orders</b>  Filter: (email ~~ '%4242@mail.com'::text)</span>
+
+-- prefix LIKE-ও! (database locale en_US.UTF-8)
+EXPLAIN SELECT * FROM orders WHERE email LIKE 'user4242%';
+<span class="o"><b>Seq Scan on orders</b>  Filter: (email ~~ 'user4242%'::text)</span>
+
+CREATE INDEX orders_email_pattern_idx ON orders (email text_pattern_ops);
+EXPLAIN SELECT * FROM orders WHERE email LIKE 'user4242%';
+<span class="o"><b>Index Scan using orders_email_pattern_idx</b> on orders
+  Index Cond: ((email ~>=~ 'user4242'::text) AND (email ~&lt;~ 'user4243'::text))
+  Filter: (email ~~ 'user4242%'::text)</span>
+
+-- '%…' এর জন্য: pg_trgm extension + GIN
+CREATE EXTENSION pg_trgm;
+CREATE INDEX orders_email_trgm ON orders USING gin (email gin_trgm_ops);
+EXPLAIN SELECT * FROM orders WHERE email LIKE '%4242@mail.com';
+<span class="o">Bitmap Heap Scan on orders
+  ->  <b>Bitmap Index Scan on orders_email_trgm</b></span></pre>
+        <p class="x">শুরুতে <code>%</code> মানে "যেকোনো কিছু দিয়ে শুরু" — sorted list-এ কোথা থেকে খুঁজবে জানা নেই। ফোনবুকে "নামের শেষে -uddin" খোঁজার মতো। আর <code>'user4242%'</code>-কে planner <code>&gt;= 'user4242' AND &lt; 'user4243'</code> range-এ বদলায় — কিন্তু <code>en_US</code> collation-এর sort ক্রম byte ক্রম না, তাই সাধারণ index দিয়ে এটা নিরাপদ না। <code>text_pattern_ops</code> byte ক্রমে sort করা index বানায় (বা database/column <code>C</code> collation-এ হলে সাধারণ index-ই চলে)।</p>
+      </div>
+      <div class="blk">
+        <div class="file" style="--dot:var(--warn)"><i></i>⑤ Type mismatch — implicit cast column-এর উপর পড়ে</div>
+<pre class="code" data-lang="sql">-- id bigint, orders_pkey আছে
+EXPLAIN SELECT * FROM orders WHERE id = 500.0;
+<span class="o"><b>Seq Scan on orders</b>  (rows=500)
+  Filter: (<b>(id)::numeric</b> = 500.0)</span>
+
+EXPLAIN SELECT * FROM orders WHERE customer_id::text = '4242';
+<span class="o"><b>Seq Scan on orders</b>
+  Filter: ((customer_id)::text = '4242'::text)</span></pre>
+        <p class="x"><code>500.0</code> একটা <code>numeric</code>। Bigint আর numeric তুলনা করতে PostgreSQL <b>column-কে</b> numeric-এ cast করে — ঠিক ③-এর মতো, column-এর উপর function, index অচল। ORM/driver যখন parameter ভুল type-এ পাঠায় (যেমন সব কিছু string বা decimal হিসেবে), তখন এটাই হয়। Plan-এ <code>(id)::numeric</code> জাতীয় cast দেখলেই সন্দেহ করবে।</p>
+      </div>
+      <div class="blk">
+        <div class="file" style="--dot:var(--pi)"><i></i>Statistics — planner-এর চোখ</div>
+<pre class="code" data-lang="sql">ANALYZE orders;   -- sample নিয়ে statistics হালনাগাদ
+SELECT attname, n_distinct, most_common_vals, most_common_freqs
+FROM pg_stats WHERE tablename = 'orders' AND attname = 'status';
+<span class="o"> attname | n_distinct |           most_common_vals
+ status  |          4 | {delivered,shipped,pending,cancelled}
+         most_common_freqs
+ {0.89853334,0.070933335,0.020066667,0.010466667}</span>
+
+SELECT relpages, reltuples FROM pg_class WHERE relname = 'orders';
+<span class="o"> relpages | reltuples
+     1031 |    100000</span></pre>
+        <p class="x">Planner এই সংখ্যা দেখেই জানে <code>'delivered'</code> ≈ 90%, <code>'cancelled'</code> ≈ 1%। Autovacuum নিজে থেকে মাঝে মাঝে ANALYZE চালায়, কিন্তু বড় bulk load বা বড় delete-এর পর নিজে <code>ANALYZE</code> চালানো ভালো অভ্যাস — নাহলে planner পুরনো হিসাবে ভুল plan বেছে নেয়।</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8 hash -->
+  <section id="hash" style="--c:var(--pc)">
+    <h2><span class="num">8</span>Hash index</h2>
+    <span class="motto">hash(value) → bucket → ctid · শুধু “=”</span>
+    <p class="lead">Hash index প্রতিটা value-কে একটা hash function দিয়ে 32-bit সংখ্যায় বদলায়, সেই সংখ্যা দিয়ে ঠিক করে কোন <b>bucket</b>-এ যাবে। Search-এ একই hash বের করে সরাসরি সেই bucket-এর page — tree-তে নামার দরকার নেই। কিন্তু hash value-র কোনো ক্রম নেই, তাই <b>শুধু সমান (<code>=</code>) খোঁজা</b> সম্ভব।</p>
+    <div class="grid2">
+      <div>
+<pre class="code" data-lang="sql">CREATE TABLE sessions (
+  token      text NOT NULL,        -- 32-অক্ষরের md5 token
+  user_id    int  NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+INSERT INTO sessions (token, user_id)
+SELECT md5(g::text), (g % 5000) + 1 FROM generate_series(1, 100000) g;
+
+CREATE INDEX sessions_token_hash ON sessions USING hash (token);
+VACUUM ANALYZE sessions;
+
+EXPLAIN SELECT * FROM sessions
+WHERE token = 'c4ca4238a0b923820dcc509a6f75849b';
+<span class="o"><b>Index Scan using sessions_token_hash</b> on sessions  (cost=0.00..8.02 rows=1)
+  Index Cond: (token = 'c4ca4238a0b923820dcc509a6f75849b'::text)</span>
+
+EXPLAIN SELECT * FROM sessions WHERE token IN ('c4ca…849b', 'c81e…862c');
+<span class="o">Bitmap Heap Scan on sessions  (rows=2)
+  ->  <b>Bitmap Index Scan on sessions_token_hash</b>
+        Index Cond: (token = ANY ('{…}'::text[]))</span></pre>
+        <p class="x"><code>=</code> আর <code>IN</code> (যেটা আসলে কয়েকটা <code>=</code>) — দুটোতেই hash index কাজ করে।</p>
+      </div>
+      <div>
+<pre class="code" data-lang="sql">-- range? sort? — পারে না
+EXPLAIN SELECT * FROM sessions WHERE token > 'ffff';
+<span class="o"><b>Seq Scan on sessions</b>  (rows=10)
+  Filter: (token > 'ffff'::text)</span>
+
+EXPLAIN SELECT * FROM sessions ORDER BY token LIMIT 5;
+<span class="o">Limit
+  ->  <b>Sort</b>  Sort Key: token
+        ->  Seq Scan on sessions</span>
+
+-- ভেতরে কী আছে (pageinspect)
+SELECT ntuples, ffactor, maxbucket
+FROM hash_metapage_info(get_raw_page('sessions_token_hash', 0));
+<span class="o"> ntuples | ffactor | maxbucket
+  100000 |     307 |       <b>511</b>       ← 512টা bucket</span>
+
+-- একই column-এ B-tree বনাম hash
+<span class="o">     indexrelname     | size
+ sessions_token_btree | 5792 kB
+ sessions_token_hash  | <b>4112 kB</b></span></pre>
+        <p class="x">Hash index value-টা নিজে রাখে না, শুধু 4-byte hash code + ctid। তাই লম্বা key-তে B-tree-র চেয়ে ছোট (32-অক্ষরের token-এ 4.1 MB বনাম 5.8 MB)। আবার এজন্যই heap-এ গিয়ে আসল value মিলিয়ে দেখতে হয় (দুই value-র hash একই হতে পারে — collision)।</p>
+      </div>
+    </div>
+    <div class="grid2" style="margin-top:14px">
+      <div class="how" style="margin-top:0"><b>ভেতরে কীভাবে কাজ করে:</b>
+        <ul>
+          <li><code>bucket = hash(token) &amp; mask</code> — এখানে 512টা bucket। প্রতিটা bucket এক বা একাধিক 8 KB page; ভরে গেলে <b>overflow page</b> chain-এ যোগ হয়।</li>
+          <li><code>ffactor = 307</code> — প্রতি bucket-এ গড়ে যত tuple রাখার লক্ষ্য। Row বাড়লে একবারে সব না, <b>একটা একটা bucket split</b> করে বাড়ে (linear hashing), যাতে বড় হঠাৎ বিরতি না হয়।</li>
+          <li>Search: hash বের করো → bucket page → সেখানে hash code মেলাও → ctid → heap-এ value recheck।</li>
+          <li>PostgreSQL 10-এর আগে hash index WAL-logged ছিল না — crash-এর পর নষ্ট হতে পারত, replication-এ যেত না। পুরনো ব্লগে "hash index ব্যবহার কোরো না" এই কারণে। 10+-এ নিরাপদ।</li>
+        </ul>
+      </div>
+      <div class="how" style="margin-top:0;--c:var(--bad)"><b>সীমাবদ্ধতা (PG 18-এ যাচাই করা):</b>
+        <ul>
+          <li>শুধু <code>=</code>; <code>&lt; &gt; BETWEEN LIKE</code> না, <code>ORDER BY</code>-এ কাজে লাগে না।</li>
+          <li><b>Unique হয় না</b>: <code>ERROR: access method "hash" does not support unique indexes</code></li>
+          <li><b>Multicolumn হয় না</b>: <code>ERROR: access method "hash" does not support multicolumn indexes</code></li>
+          <li>Index Only Scan হয় না (value রাখে না)।</li>
+          <li><b>কখন নেবে:</b> খুব বড় table, লম্বা key (UUID-string, token, URL), আর query শুধুই <code>=</code>। বাকি প্রায় সব ক্ষেত্রে B-tree-ই যথেষ্ট আর বহুমুখী — বাস্তবে hash index কমই দেখা যায়।</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 9 partial -->
+  <section id="partial" style="--c:var(--pd)">
+    <h2><span class="num">9</span>Partial index</h2>
+    <span class="motto">CREATE INDEX … WHERE condition — শুধু যে row-গুলো দরকার</span>
+    <p class="lead">Partial index-এ <code>WHERE</code> দিয়ে বলে দাও কোন row index-এ ঢুকবে। বাকি row index-এ থাকেই না — তাই index <b>অনেক ছোট</b>, RAM-এ সহজে থাকে, আর যেসব row-এ condition মেলে না তাদের INSERT/UPDATE-এ index ছোঁয়াই লাগে না।</p>
+    <div class="card story" style="--c:var(--pd)"><p><b>বাস্তবে:</b> Daraz-এর মতো e-commerce-এ admin panel সারাদিন দেখে "কোন order এখনো pending, পুরনোটা আগে"। 1 লাখ order-এর মাত্র 2% pending। বাকি 98% delivered/shipped order-এর জন্য index রাখা অপচয় — সেগুলো এই query কখনো চায় না।</p></div>
+    <div class="grid2" style="margin-top:14px">
+      <div>
+<pre class="code" data-lang="sql">CREATE INDEX orders_status_full_idx ON orders (status, created_at);
+CREATE INDEX orders_pending_idx     ON orders (created_at)
+  WHERE status = 'pending';
+
+SELECT indexrelname, pg_size_pretty(pg_relation_size(indexrelid))
+FROM pg_stat_user_indexes
+WHERE indexrelname IN ('orders_status_full_idx', 'orders_pending_idx');
+<span class="o">      indexrelname      |  size
+ orders_status_full_idx | 3904 kB
+ orders_pending_idx     | <b>64 kB</b>     ← ৬০ গুণ ছোট</span>
+
+-- (full index drop করে) admin panel-এর query:
+EXPLAIN SELECT * FROM orders
+WHERE status = 'pending' ORDER BY created_at LIMIT 20;
+<span class="o">Limit  (cost=0.28..1.13 rows=20)
+  ->  <b>Index Scan using orders_pending_idx</b> on orders  (rows=2087)</span>
+
+EXPLAIN SELECT count(*) FROM orders
+WHERE status = 'pending' AND created_at >= '2025-09-01';
+<span class="o">Aggregate
+  ->  <b>Index Only Scan using orders_pending_idx</b> on orders  (rows=630)
+        Index Cond: (created_at >= '2025-09-01 …')</span></pre>
+        <p class="x">প্রথম query-তে কোনো <code>Index Cond</code>-ও নেই — index-এর প্রতিটা entry-ই pending, আর সেগুলো <code>created_at</code> ক্রমে সাজানো; প্রথম 20টা পড়লেই উত্তর, Sort নেই। দ্বিতীয়টায় <code>status</code> column index-এ না থাকলেও Index Only Scan — কারণ index-এর সংজ্ঞাই বলে সব row pending।</p>
+      </div>
+      <div>
+<pre class="code" data-lang="sql">-- predicate মেলে না → partial index অচল
+EXPLAIN SELECT * FROM orders
+WHERE status = 'shipped' ORDER BY created_at LIMIT 20;
+<span class="o">Limit
+  ->  Sort  Sort Key: created_at
+        ->  <b>Seq Scan on orders</b>  Filter: (status = 'shipped'::text)</span>
+
+EXPLAIN SELECT * FROM orders
+WHERE status IN ('pending', 'shipped') ORDER BY created_at LIMIT 20;
+<span class="o">  ->  <b>Seq Scan on orders</b>  Filter: (status = ANY ('{pending,shipped}'::text[]))</span>
+
+-- prepared statement-এর generic plan: value plan-এর সময় অজানা
+PREPARE q(text) AS
+  SELECT * FROM orders WHERE status = $1 ORDER BY created_at LIMIT 20;
+SET plan_cache_mode = force_generic_plan;
+EXPLAIN EXECUTE q('pending');
+<span class="o">  ->  <b>Seq Scan on orders</b>  Filter: (status = $1)</span></pre>
+        <div class="how" style="margin-top:12px"><b>Planner কখন partial index নিতে পারে:</b>
+          <p>Query-র <code>WHERE</code> থেকে যদি <b>প্রমাণ করা যায়</b> যে index-এর condition সত্য (query predicate ⟹ index predicate)। <code>status = 'pending'</code> ⟹ <code>status = 'pending'</code> ✓। <code>status IN ('pending','shipped')</code> থেকে সেটা প্রমাণ হয় না — shipped row index-এ নেই। <code>$1</code> parameter-ওয়ালা generic plan-এ value-ই অজানা, তাই প্রমাণ করা যায় না। ORM-এ এই কারণে partial index "কাজ করছে না" মনে হয় — status-টা query-তে literal হিসেবে লেখো।</p>
+        </div>
+      </div>
+    </div>
+
+    <h3>Partial UNIQUE index — শর্তসাপেক্ষ uniqueness</h3>
+    <div class="grid2">
+      <div>
+        <div class="file"><i></i>প্রতি user-এর একটাই active subscription</div>
+<pre class="code" data-lang="sql">CREATE TABLE subscriptions (
+  id      int GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  user_id int  NOT NULL,
+  plan    text NOT NULL,
+  status  text NOT NULL     -- 'active' | 'cancelled' | 'expired'
+);
+CREATE UNIQUE INDEX one_active_sub_per_user
+  ON subscriptions (user_id) WHERE status = 'active';
+
+INSERT INTO subscriptions (user_id, plan, status) VALUES (1, 'basic', 'cancelled');
+<span class="o">INSERT 0 1</span>
+INSERT INTO subscriptions (user_id, plan, status) VALUES (1, 'basic', 'expired');
+<span class="o">INSERT 0 1</span>
+INSERT INTO subscriptions (user_id, plan, status) VALUES (1, 'pro', 'active');
+<span class="o">INSERT 0 1</span>
+INSERT INTO subscriptions (user_id, plan, status) VALUES (1, 'premium', 'active');
+<span class="e">ERROR:  duplicate key value violates unique constraint "one_active_sub_per_user"
+DETAIL:  Key (user_id)=(1) already exists.</span></pre>
+        <p class="x">পুরনো cancelled/expired যতগুলো খুশি, কিন্তু active একটাই। App code-এ "আগে check করে তারপর insert" করলে দুইটা request একসাথে এলে race condition — database-এর unique index সেটা নিশ্চিতভাবে ঠেকায়।</p>
+      </div>
+      <div>
+        <div class="file"><i></i>Soft delete — মুছে ফেলা user-এর email আবার ব্যবহার করা যাবে</div>
+<pre class="code" data-lang="sql">ALTER TABLE users ADD COLUMN deleted_at timestamptz;
+ALTER TABLE users DROP CONSTRAINT users_email_key;
+CREATE UNIQUE INDEX users_email_alive_uq
+  ON users (email) WHERE deleted_at IS NULL;
+
+UPDATE users SET deleted_at = now() WHERE id = 42;   -- Rahim account মুছল
+INSERT INTO users (id, name, email, city)
+VALUES (101, 'Rahim (new)', 'rahim@mail.com', 'Dhaka');
+<span class="o">INSERT 0 1                ← একই email, পুরনোটা deleted</span>
+INSERT INTO users (id, name, email, city)
+VALUES (102, 'Rahim again', 'rahim@mail.com', 'Dhaka');
+<span class="e">ERROR:  duplicate key value violates unique constraint "users_email_alive_uq"
+DETAIL:  Key (email)=(rahim@mail.com) already exists.</span></pre>
+        <p class="x">সাধারণ <code>UNIQUE(email)</code> হলে deleted row-ও email আটকে রাখত। Partial unique index শুধু "জীবিত" row-গুলোর মধ্যে uniqueness চাপায়। মনে রেখো, partial unique index দিয়ে <code>ON CONFLICT</code> ব্যবহার করতে হলে conflict target-এ একই <code>WHERE</code> লিখতে হয়।</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 10 gin -->
+  <section id="gin" style="--c:var(--pa)">
+    <h2><span class="num">10</span>GIN index</h2>
+    <span class="motto">Generalized Inverted Index — element → কোন কোন row-এ আছে</span>
+    <p class="lead">B-tree প্রতিটা row-এর <b>একটা</b> value index করে। কিন্তু একটা row-এ যদি অনেকগুলো জিনিস থাকে — array-তে কয়েকটা tag, jsonb-তে কয়েকটা key-value, একটা লেখায় অনেক শব্দ — আর প্রশ্ন হয় "কোন row-এ <code>'watch'</code> tag আছে?", তখন দরকার <b>inverted index</b>: প্রতিটা element-এর জন্য একটা entry, তার সাথে সেই element থাকা সব row-এর sorted list (<b>posting list</b>)। বইয়ের শেষের সূচিও আসলে inverted index — শব্দ → পাতার তালিকা।</p>
+    <div class="card inv">
+      <div>
+        <h4>products (heap) — প্রথম 8 row</h4>
+        <div class="r"><b>row 1</b><span class="ids">{laptop, sale}</span></div>
+        <div class="r"><b>row 2</b><span class="ids">{tablet, sale}</span></div>
+        <div class="r"><b>row 3</b><span class="ids">{watch, sale}</span></div>
+        <div class="r"><b>row 4</b><span class="ids">{camera, sale}</span></div>
+        <div class="r"><b>row 5</b><span class="ids">{phone, new}</span></div>
+        <div class="r"><b>row 6</b><span class="ids">{laptop, new}</span></div>
+        <div class="r"><b>row 7</b><span class="ids">{tablet, new}</span></div>
+        <div class="r"><b>row 8</b><span class="ids">{watch, new}</span></div>
+      </div>
+      <div class="arrow" aria-hidden="true">→</div>
+      <div>
+        <h4>GIN (tags) — key B-tree + posting list</h4>
+        <div class="r"><b>camera</b><span class="ids">4</span></div>
+        <div class="r"><b>laptop</b><span class="ids">1, 6</span></div>
+        <div class="r q"><b>new</b><span class="ids">5, 6, 7, <span class="m">8</span></span></div>
+        <div class="r"><b>phone</b><span class="ids">5</span></div>
+        <div class="r"><b>sale</b><span class="ids">1, 2, 3, 4</span></div>
+        <div class="r"><b>tablet</b><span class="ids">2, 7</span></div>
+        <div class="r q"><b>watch</b><span class="ids">3, <span class="m">8</span></span></div>
+        <p class="foot" style="margin:8px 0 0"><code>tags @&gt; '{watch,new}'</code> = দুইটা list-এর intersection → row 8। আসলে list-এ row নম্বর না, ctid থাকে (sorted, compress করা)।</p>
+      </div>
+    </div>
+
+    <h3>তিনটা ব্যবহার — jsonb, array, full-text search</h3>
+    <div class="grid2">
+      <div>
+<pre class="code" data-lang="sql">CREATE TABLE products (
+  id    int GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  name  text   NOT NULL,
+  tags  text[] NOT NULL,
+  attrs jsonb  NOT NULL,
+  description text NOT NULL
+);
+-- generate_series দিয়ে 100,000 row
+SELECT id, tags, attrs FROM products LIMIT 2;
+<span class="o"> id |     tags      |                       attrs
+  1 | {laptop,sale} | {"brand": "Samsung", "color": "black", "ram_gb": 2, "warranty": false}
+  2 | {tablet,sale} | {"brand": "Xiaomi", "color": "black", "ram_gb": 2, "warranty": false}</span>
+
+-- index ছাড়া
+EXPLAIN SELECT id, name FROM products
+WHERE attrs @> '{"brand": "Walton", "color": "red"}';
+<span class="o"><b>Seq Scan on products</b>  (cost=0.00..4028.00 rows=1986)
+  Filter: (attrs @> '{"brand": "Walton", "color": "red"}'::jsonb)</span>
+
+CREATE INDEX products_attrs_gin ON products USING gin (attrs);
+CREATE INDEX products_tags_gin  ON products USING gin (tags);
+CREATE INDEX products_fts_gin   ON products
+  USING gin (to_tsvector('english', description));
+
+EXPLAIN ANALYZE SELECT id, name FROM products
+WHERE attrs @> '{"brand": "Walton", "color": "red"}';
+<span class="o"><b>Bitmap Heap Scan</b> on products  (actual rows=2083.00)
+  Recheck Cond: (attrs @> '{"brand": "Walton", "color": "red"}'::jsonb)
+  ->  <b>Bitmap Index Scan on products_attrs_gin</b>  (actual rows=2083.00)
+        Index Cond: (attrs @> '{"brand": "Walton", "color": "red"}'::jsonb)
+        Buffers: shared hit=62</span>
+
+-- কিন্তু ->> দিয়ে লিখলে GIN কাজে লাগে না
+EXPLAIN SELECT id, name FROM products WHERE attrs ->> 'brand' = 'Walton';
+<span class="o"><b>Seq Scan on products</b>
+  Filter: ((attrs ->> 'brand'::text) = 'Walton'::text)</span></pre>
+        <p class="x"><code>@&gt;</code> = "বাম দিকের jsonb কি ডানেরটা ধারণ করে?" GIN-এ jsonb-র প্রতিটা key আর value আলাদা entry; দুইটা শর্তের posting list মিলিয়ে row খোঁজে। <code>attrs -&gt;&gt; 'brand' = …</code> একটা text expression-এর তুলনা — GIN-এর operator না, তাই Seq Scan। হয় query <code>@&gt;</code> দিয়ে লেখো, নয়তো <code>((attrs -&gt;&gt; 'brand'))</code>-এ B-tree expression index দাও।</p>
+      </div>
+      <div>
+<pre class="code" data-lang="sql">-- array: সব আছে (@>) / যেকোনোটা আছে (&&)
+EXPLAIN SELECT id FROM products WHERE tags @> ARRAY['watch','eco'];
+<span class="o">Bitmap Heap Scan on products  (rows=2846)
+  ->  <b>Bitmap Index Scan on products_tags_gin</b>
+        Index Cond: (tags @> '{watch,eco}'::text[])</span>
+EXPLAIN SELECT id FROM products WHERE tags && ARRAY['refurbished','gift'];
+<span class="o">Bitmap Heap Scan on products  (rows=26518)
+  ->  <b>Bitmap Index Scan on products_tags_gin</b>
+        Index Cond: (tags && '{refurbished,gift}'::text[])</span>
+
+-- full-text search
+SELECT to_tsvector('english', 'Waterproof design with dual cameras');
+<span class="o"> 'camera':5 'design':2 'dual':4 'waterproof':1</span>
+
+EXPLAIN SELECT id FROM products
+WHERE to_tsvector('english', description) @@ to_tsquery('english', 'waterproof &amp; camera');
+<span class="o">Bitmap Heap Scan on products  (rows=2728)
+  ->  <b>Bitmap Index Scan on products_fts_gin</b>
+        Index Cond: (to_tsvector('english'::regconfig, description) @@ '''waterproof'' &amp; ''camera'''::tsquery)</span>
+
+-- ভুল: expression index-এর সাথে মেলে না
+EXPLAIN SELECT id FROM products
+WHERE description @@ to_tsquery('english', 'waterproof &amp; camera');
+<span class="o">Gather
+  ->  <b>Parallel Seq Scan on products</b>
+        Filter: (description @@ '''waterproof'' &amp; ''camera'''::tsquery)</span></pre>
+        <p class="x"><code>to_tsvector</code> লেখাকে শব্দে ভাঙে, stop-word (with) বাদ দেয়, আর মূল রূপে আনে (cameras → camera)। GIN সেই প্রতিটা শব্দ → row-list রাখে, তাই <code>LIKE '%camera%'</code>-এর মতো পুরো table পড়তে হয় না। Index বানানো হয়েছে <code>to_tsvector('english', description)</code>-এ — query-তে হুবহু একই expression না লিখলে (শেষ উদাহরণ) index অচল। সহজ উপায়: একটা <code>tsvector</code> generated column রাখো আর তাতে GIN দাও।</p>
+      </div>
+    </div>
+
+    <h3>কীভাবে তৈরি ও হালনাগাদ হয় — আর দাম</h3>
+    <div class="grid2">
+      <div>
+<pre class="code" data-lang="sql">SELECT n_entries, n_pending_pages, n_pending_tuples
+FROM gin_metapage_info(get_raw_page('products_tags_gin', 0));
+<span class="o"> n_entries | n_pending_pages | n_pending_tuples
+        <b>12</b> |               0 |                0</span>
+<span class="c">-- 12 = 5 category + 7 tag — 1 লাখ row, কিন্তু entry মাত্র 12টা</span>
+
+SHOW gin_pending_list_limit;   <span class="o">-- 4MB</span>
+
+INSERT INTO products (name, tags, attrs, description)
+SELECT name, tags, attrs, description FROM products WHERE id &lt;= 20000;
+<span class="o">INSERT 0 20000</span>
+
+SELECT n_pending_pages, n_pending_tuples
+FROM gin_metapage_info(get_raw_page('products_tags_gin', 0));
+<span class="o"> n_pending_pages | n_pending_tuples
+             <b>101</b> |            <b>20000</b>    ← মূল index-এ এখনো ঢোকেনি</span>
+
+VACUUM products;
+<span class="o"> n_pending_pages | n_pending_tuples
+               0 |                0    ← pending list মূল tree-তে merge</span>
+
+SELECT indexrelname, pg_size_pretty(pg_relation_size(indexrelid))
+FROM pg_stat_user_indexes WHERE relname = 'products';
+<span class="o">    indexrelname    | size        <span class="c">-- heap: 22 MB</span>
+ products_attrs_gin | 1200 kB
+ products_fts_gin   | <b>6416 kB</b>
+ products_pkey      | 2208 kB
+ products_tags_gin  |  400 kB</span></pre>
+      </div>
+      <div class="how" style="margin-top:0"><b>GIN-এর ভেতর:</b>
+        <ul>
+          <li><b>Entry tree:</b> সব আলাদা element (tag, jsonb key/value, শব্দ) একটা B-tree-তে sorted। প্রতিটা entry-র সাথে <b>posting list</b> (কম row হলে) বা <b>posting tree</b> (অনেক row হলে আলাদা B-tree) — ctid-গুলো sorted ও compress করা।</li>
+          <li><b>লেখা কেন ধীর:</b> একটা row insert = তার প্রতিটা element-এর posting list-এ একটা করে যোগ। একটা লেখায় ৩০টা শব্দ থাকলে ৩০ জায়গায় লেখা।</li>
+          <li><b>fastupdate / pending list</b> (default on): নতুন row-গুলো আগে একটা unsorted <b>pending list</b>-এ জমে (উপরে 20,000 tuple, 101 page)। পরে <code>VACUUM</code>/autovacuum, pending list <code>gin_pending_list_limit</code> (4 MB) ছাড়ালে, বা <code>gin_clean_pending_list()</code> ডাকলে একসাথে মূল tree-তে merge — bulk-এ করলে সস্তা। দাম: search-এর সময় pending list পুরোটা scan করতে হয়, আর মাঝে মাঝে কোনো এক INSERT হঠাৎ ধীর হয় (সেই flush করে)। <code>WITH (fastupdate = off)</code> দিলে প্রতিটা insert সরাসরি tree-তে।</li>
+          <li><b>শুধু Bitmap scan:</b> GIN row-গুলো কোনো ক্রমে দিতে পারে না, Index Scan/ORDER BY হয় না — সব plan-এ <code>Bitmap Index Scan</code> খেয়াল করো। Unique-ও হয় না।</li>
+          <li><b>আকার:</b> full-text index (6.4 MB) সবচেয়ে বড় — প্রতিটা লেখায় অনেক শব্দ। এই 20,000 row insert-এর পর <code>products_attrs_gin</code> 1200 kB থেকে বেড়ে 4760 kB হয়েছিল; <code>REINDEX</code>-এ আবার 1352 kB — ঘন ঘন লেখা হয় এমন GIN ফুলে ওঠে।</li>
+          <li><b>jsonb_path_ops:</b> <code>USING gin (attrs jsonb_path_ops)</code> — শুধু <code>@&gt;</code> সমর্থন করে, কিন্তু ছোট (এখানে 808 kB বনাম 1352 kB)। <code>?</code> (key আছে কিনা) লাগলে default <code>jsonb_ops</code>।</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 11 summary -->
+  <section id="summary">
+    <h2><span class="num" style="--c:var(--accent)">Σ</span>এক নজরে</h2>
+    <div class="card tscroll">
+      <table>
+        <thead><tr><th>Index</th><th>Operator</th><th>সবচেয়ে ভালো</th><th>Unique?</th><th>মনে রাখো</th></tr></thead>
+        <tbody>
+          <tr><td class="p">B-tree</td><td><code>= &lt; &gt; BETWEEN IN</code>, <code>IS NULL</code>, prefix <code>LIKE</code>, ORDER BY</td><td>প্রায় সব — PK, FK, email, date</td><td class="yes">হ্যাঁ</td><td>Default; multicolumn-এ leftmost prefix; Index Only Scan পারে</td></tr>
+          <tr><td class="p">Hash</td><td><code>=</code></td><td>লম্বা key-তে শুধু equality</td><td class="no">না</td><td>Multicolumn না, range/sort না; PG 10+ থেকে crash-safe</td></tr>
+          <tr><td class="p">Partial (যেকোনো type + WHERE)</td><td>মূল type-এর মতো</td><td>অসম data — pending, active, not deleted</td><td class="yes">হ্যাঁ (B-tree হলে)</td><td>Query-র WHERE থেকে index-এর WHERE প্রমাণ হতে হবে; generic plan-এ সাবধান</td></tr>
+          <tr><td class="p">Expression</td><td>expression-এর উপর</td><td><code>lower(email)</code>, <code>(attrs-&gt;&gt;'brand')</code></td><td class="yes">হ্যাঁ</td><td>Query-তে হুবহু একই expression</td></tr>
+          <tr><td class="p">GIN</td><td><code>@&gt; &lt;@ &amp;&amp; ? @@</code>, trigram <code>LIKE '%x%'</code></td><td>jsonb, array, full-text</td><td class="no">না</td><td>Write ধীর, বড়; শুধু bitmap scan; pending list</td></tr>
+          <tr><td class="p">GiST / SP-GiST</td><td>overlap, contains, nearest (<code>&lt;-&gt;</code>)</td><td>geo, range, IP</td><td class="no">না*</td><td>*exclusion constraint দিয়ে "overlap না" নিয়ম</td></tr>
+          <tr><td class="p">BRIN</td><td>range</td><td>বিশাল time-series/log</td><td class="no">না</td><td>KB-তে আকার; data disk-এ sorted হলেই কাজের</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="grid2" style="margin-top:14px">
+      <div class="how" style="--c:var(--bad);margin-top:0"><b>কখন index দেবে না:</b>
+        <ul>
+          <li><b>ছোট table</b> — কয়েক page-এর table-এ Seq Scan-ই দ্রুত, index শুধু write বাড়ায়।</li>
+          <li><b>Low cardinality column একা</b> — <code>gender</code>, <code>is_active</code>, 90% <code>delivered</code>। দরকারে partial index।</li>
+          <li><b>Write-heavy, কম পড়া table</b> — log/event table-এ প্রতিটা index insert ধীর করে (উপরে 10 গুণ)।</li>
+          <li><b>যে column কখনো WHERE / JOIN / ORDER BY-তে আসে না।</b></li>
+          <li><b>Duplicate / বাড়তি index</b> — PK/UNIQUE-এর উপর আরেকটা, বা <code>(a, b)</code> থাকতে আলাদা <code>(a)</code>।</li>
+          <li><b>খুব ঘন ঘন বদলায় এমন column</b> — HOT update বন্ধ হয়ে যায়, প্রতি UPDATE-এ সব index-এ লেখা।</li>
+          <li><b>Bulk load-এর আগে</b> — লাখ লাখ row load করার সময় index drop করে পরে বানানো দ্রুত।</li>
+        </ul>
+      </div>
+      <div class="how" style="--c:var(--ok);margin-top:0"><b>কখন অবশ্যই দেবে:</b>
+        <ul>
+          <li>Primary key, unique নিয়ম (নিজে থেকেই হয়)।</li>
+          <li><b>Foreign key column</b> — PostgreSQL নিজে দেয় না; join আর parent delete-এ লাগে।</li>
+          <li>ঘন ঘন চলা query-র selective <code>WHERE</code> column, বিশেষ করে <code>WHERE a = ? ORDER BY b LIMIT n</code> → <code>(a, b)</code>।</li>
+          <li><code>pg_stat_statements</code> দিয়ে সবচেয়ে ধীর query খুঁজে, <code>EXPLAIN (ANALYZE, BUFFERS)</code> দেখে, তারপর index — অনুমানে না।</li>
+          <li>Production-এ সবসময় <code>CREATE INDEX CONCURRENTLY</code>।</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 12 qa -->
+  <section id="qa">
+    <h2><span class="num" style="--c:var(--accent)">Q</span>Interview-এ যা আসে</h2>
+    <div class="card" style="padding:4px 18px">
+      <details><summary>Clustered আর non-clustered index-এর পার্থক্য কী? PostgreSQL-এ clustered index আছে?</summary><p>Clustered index-এ table-এর row-গুলো নিজেই index-এর ক্রমে রাখা থাকে (index-এর leaf-ই data), তাই table-এ একটাই হতে পারে — MySQL InnoDB-তে primary key। Non-clustered index আলাদা structure, leaf-এ row-এর ঠিকানা। PostgreSQL-এ table সবসময় unordered heap, সব index (PK সহ) non-clustered, leaf-এ ctid। <code>CLUSTER</code> command একবার heap-কে index ক্রমে সাজায়, কিন্তু পরের লেখায় সেই ক্রম রক্ষা হয় না।</p></details>
+      <details><summary>Index থাকা সত্ত্বেও PostgreSQL Seq Scan করছে কেন?</summary><p>সম্ভাব্য কারণ: (১) table ছোট, (২) query অনেক row ফেরত দেবে (low selectivity) — তখন sequential পড়াই সস্তা, (৩) column-এ function বা cast (<code>lower(email)</code>, <code>id = 500.0</code> → <code>(id)::numeric</code>), (৪) <code>LIKE '%x'</code> বা non-C collation-এ prefix LIKE, (৫) composite index-এর প্রথম column query-তে নেই, (৬) statistics পুরনো — <code>ANALYZE</code> চালাও, (৭) partial index-এর শর্ত query থেকে প্রমাণ হয় না। <code>EXPLAIN ANALYZE</code>-এ estimated বনাম actual rows মিলিয়ে দেখো।</p></details>
+      <details><summary>B-tree আর B+ tree-র পার্থক্য কী? Database কেন B+ tree ব্যবহার করে?</summary><p>B+ tree-তে data pointer শুধু leaf-এ, internal node শুধু routing key রাখে, আর leaf-গুলো linked list। ফলে internal page-এ বেশি key ধরে (বেশি fan-out, কম height, কম disk I/O), range query আর ORDER BY একবার নেমে leaf chain ধরে হাঁটলেই হয়, আর সব lookup সমান খরচের। PostgreSQL-এর nbtree হলো Lehman-Yao B-link tree — প্রতিটা level-এ right-link আর high key থাকায় split চলাকালীনও lock ছাড়া concurrent search চলে।</p></details>
+      <details><summary>Composite index (a, b) থাকলে WHERE b = ? কি index ব্যবহার করবে?</summary><p>সাধারণত না — index আগে <code>a</code> দিয়ে sorted, <code>b</code>-র মানগুলো সব <code>a</code>-র নিচে ছড়ানো (leftmost prefix rule)। <code>WHERE a = ?</code> আর <code>WHERE a = ? AND b = ?</code> ব্যবহার করবে। PostgreSQL 18-এ নতুন <b>skip scan</b>: <code>a</code>-র distinct value কম হলে planner প্রতিটা <code>a</code>-র জন্য আলাদা করে নেমে <code>b</code> খুঁজতে পারে (আমাদের <code>(status, created_at)</code> উদাহরণে <code>Index Searches: 9</code>)। Column ক্রম: equality column আগে, range/sort column পরে।</p></details>
+      <details><summary>Index Only Scan কী? Heap Fetches শূন্য না হলে কী বুঝবে?</summary><p>Query-র দরকারি সব column index-এ থাকলে PostgreSQL heap না পড়েই উত্তর দিতে পারে। কিন্তু row visible কিনা সেই তথ্য heap-এ, তাই visibility map দেখে — page "all-visible" হলে heap বাদ, না হলে heap-এ গিয়ে চেক (Heap Fetches)। Heap Fetches বেশি মানে সম্প্রতি অনেক UPDATE/DELETE হয়েছে আর VACUUM এখনো চলেনি। <code>INCLUDE</code> দিয়ে বাড়তি column যোগ করে covering index বানানো যায়।</p></details>
+      <details><summary>Hash index কখন B-tree-র চেয়ে ভালো?</summary><p>শুধু equality (<code>=</code>) query, লম্বা key (token, URL, UUID-string), বড় table — hash index শুধু 4-byte hash code রাখে বলে ছোট হয় (আমাদের উদাহরণে 4.1 MB বনাম 5.8 MB)। কিন্তু range, ORDER BY, unique, multicolumn, Index Only Scan কোনোটাই পারে না। তাই default উত্তর B-tree; hash একটা বিশেষ ক্ষেত্রের optimization।</p></details>
+      <details><summary>Partial index কী, কখন দেবে? ORM-এ কাজ না করার কারণ?</summary><p><code>CREATE INDEX … WHERE condition</code> — শুধু শর্ত মেলা row index-এ। অসম data-তে (2% pending, শুধু active subscription, not-deleted user) index ছোট আর দ্রুত হয়; partial unique index দিয়ে শর্তসাপেক্ষ uniqueness ("প্রতি user-এর একটাই active subscription")। Planner তখনই নেয় যখন query-র WHERE থেকে index-এর WHERE প্রমাণ হয়। ORM যদি <code>status = $1</code> parameter দিয়ে generic plan বানায়, value অজানা বলে partial index বাদ পড়ে — literal লেখো।</p></details>
+      <details><summary>GIN index কী, write ধীর কেন?</summary><p>Inverted index — প্রতিটা element (array item, jsonb key/value, শব্দ) থেকে সেই element থাকা row-গুলোর sorted list। jsonb <code>@&gt;</code>, array <code>@&gt;</code>/<code>&amp;&amp;</code>, full-text <code>@@</code>-এর জন্য। একটা row-এ অনেক element থাকলে insert-এ অনেক posting list হালনাগাদ লাগে — তাই ধীর; এজন্য fastupdate pending list-এ জমিয়ে পরে একসাথে merge করে। শুধু bitmap scan, unique হয় না।</p></details>
+      <details><summary>বেশি index দিলে সমস্যা কী?</summary><p>প্রতিটা INSERT/UPDATE/DELETE সব index-এ লেখে (আমাদের পরীক্ষায় 5টা index-এ insert প্রায় 10 গুণ ধীর, index-এর মোট আকার table-এর চেয়েও বড়), WAL বাড়ে, HOT update কমে, RAM-এ cache-এর জায়গা নিয়ে প্রতিযোগিতা, planning time বাড়ে। <code>pg_stat_user_indexes.idx_scan = 0</code> থাকা index খুঁজে drop করো।</p></details>
+    </div>
+    <p class="foot">সব output PostgreSQL 18.6-এ চালানো (locale en_US.UTF-8)। Cost, সময় আর আকার মেশিন ও data-ভেদে আলাদা হবে — plan-এর ধরনটাই আসল শিক্ষা।</p>
+  </section>
+
+  <footer><span>WellDev · DBMS &amp; SQL · <a href="../../acid/index.html">ACID</a> · <a href="../../transactions/index.html">Isolation</a> · <a href="../keys/index.html">Keys</a></span><a href="../normalization/index.html">পরের গাইড: Normalization →</a></footer>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script>
+// ---------- SQL highlighter (same tokenizer as the other guides) ----------
+const esc = s => s.replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+const KW = {
+  sql: "BEGIN|COMMIT|ROLLBACK|SELECT|FROM|WHERE|UPDATE|SET|INSERT|INTO|VALUES|CREATE|TABLE|INDEX|UNIQUE|CONCURRENTLY|ON|USING|INCLUDE|DROP|IF|EXISTS|ALTER|ADD|CONSTRAINT|PRIMARY|KEY|NOT|NULL|NULLS|DISTINCT|DEFAULT|GENERATED|ALWAYS|AS|IDENTITY|EXPLAIN|ANALYZE|COSTS|OFF|VACUUM|CLUSTER|REINDEX|SHOW|ORDER|BY|GROUP|DESC|LIMIT|AND|OR|IN|IS|LIKE|BETWEEN|CASE|WHEN|THEN|ELSE|END|LATERAL|EXTENSION|PREPARE|EXECUTE|WITH|ARRAY|interval|timestamptz|count|int|bigint|text|numeric|jsonb",
+  sh: "cd|ls",
+};
+function highlight(src, lang) {
+  const com = lang === "sh" ? "#[^\\n]*" : "--[^\\n]*";
+  const str = "'(?:[^']|'')*'";
+  const re = new RegExp(`(${com})|(${str})|\\b(\\d+)\\b|\\b(${KW[lang]})\\b`, "g");
+  return esc(src).replace(re, (m, c, s, d, k) =>
+    c ? `<span class="c">${c}</span>` : s ? `<span class="s">${s}</span>` : d ? `<span class="d">${d}</span>` : `<span class="k">${k}</span>`);
+}
+document.querySelectorAll("pre.code").forEach(pre => {
+  const lang = pre.dataset.lang;
+  if (!KW[lang]) return;
+  // Highlight only the plain-text parts; leave hand-marked output/error spans untouched.
+  [...pre.childNodes].forEach(node => {
+    if (node.nodeType !== 3) return;
+    const span = document.createElement("span");
+    span.innerHTML = highlight(node.textContent, lang);
+    node.replaceWith(...span.childNodes);
+  });
+});
+
+// ---------- theme toggle ----------
+const root = document.documentElement;
+try { const t = localStorage.getItem("welldev-theme"); if (t) root.dataset.theme = t; } catch (e) {}
+document.getElementById("theme").addEventListener("click", () => {
+  const dark = root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  root.dataset.theme = dark ? "light" : "dark";
+  try { localStorage.setItem("welldev-theme", root.dataset.theme); } catch (e) {}
+});
+
+// ---------- B-tree / B+ tree step engine (pure; verified in node) ----------
+// Order 4: max 3 keys per node. Every step stores a full snapshot so the player can jump around.
+function TreeSim(mode, maxKeys) {
+  const MAX = maxKeys || 3;
+  const nodes = {}; let nid = 0; let rootId = null;
+  const mk = leaf => { const n = { id: "n" + (nid++), leaf, keys: [], ptr: [], kids: [], next: null }; nodes[n.id] = n; return n; };
+  const snap = () => ({ root: rootId, nodes: JSON.parse(JSON.stringify(nodes)) });
+  const fmt = a => "[" + a.join(" | ") + "]";
+  const steps = [];
+  const push = (msg, hl) => steps.push({ s: snap(), msg, hl: hl || {} });
+  // child to follow for key k (keys ≥ separator go right)
+  const childIdx = (n, k) => { let i = 0; while (i < n.keys.length && k >= n.keys[i]) i++; return i; };
+  function explain(n, k, i) {
+    if (i === 0) return `${k} &lt; ${n.keys[0]} → বাম দিকের child`;
+    if (i === n.keys.length) return `${k} ≥ ${n.keys[n.keys.length - 1]} → ডান দিকের child`;
+    return `${n.keys[i - 1]} ≤ ${k} &lt; ${n.keys[i]} → মাঝের child #${i + 1}`;
+  }
+  function insert(k, ctid) {
+    if (!rootId) { const r = mk(true); r.keys = [k]; r.ptr = [ctid]; rootId = r.id;
+      push(`<b>INSERT id=${k}</b> — tree খালি, প্রথম node তৈরি (এটাই root, এটাই leaf)। ${k} → heap ctid ${ctid}`, { cur: r.id, nodes: [r.id], newKey: k }); return; }
+    const path = []; let n = nodes[rootId];
+    while (!n.leaf) {
+      const i = childIdx(n, k); path.push([n, i]);
+      push(`<b>INSERT id=${k}</b> — node ${fmt(n.keys)}: ${explain(n, k, i)}`, { cur: n.id, nodes: path.map(p => p[0].id), cmp: k });
+      n = nodes[n.kids[i]];
+    }
+    let pos = 0; while (pos < n.keys.length && n.keys[pos] < k) pos++;
+    n.keys.splice(pos, 0, k); n.ptr.splice(pos, 0, ctid);
+    if (n.keys.length <= MAX) { push(`<b>id=${k}</b> leaf ${fmt(n.keys)}-এ sorted জায়গায় বসল (ctid ${ctid})। জায়গা আছে — split লাগবে না।`, { cur: n.id, nodes: [n.id], newKey: k }); return; }
+    push(`<b>id=${k}</b> বসানোর পর leaf ${fmt(n.keys)}-এ ${n.keys.length}টা key, কিন্তু max ${MAX}। <b>Overflow!</b> Split করতে হবে।`, { over: [n.id], newKey: k });
+    let cur = n;
+    while (cur.keys.length > MAX) {
+      const right = mk(cur.leaf); let up, upPtr, upMsg;
+      if (mode === "bplus" && cur.leaf) {
+        const m = Math.floor(cur.keys.length / 2);              // 4 keys → 2 | 2
+        right.keys = cur.keys.splice(m); right.ptr = cur.ptr.splice(m);
+        right.next = cur.next; cur.next = right.id; up = right.keys[0];
+        upMsg = `Leaf split: ${fmt(cur.keys)} আর ${fmt(right.keys)}। ডান leaf-এর প্রথম key <b>${up}</b>-এর একটা <b>copy</b> parent-এ যায় (leaf-এও থেকে যায়), আর নতুন leaf linked list-এ ঢোকে।`;
+      } else {
+        const m = Math.floor(cur.keys.length / 2);              // 4 keys → 2 | up | 1
+        up = cur.keys[m]; upPtr = cur.ptr[m];
+        right.keys = cur.keys.splice(m + 1); cur.keys.splice(m, 1);
+        if (mode === "btree") { right.ptr = cur.ptr.splice(m + 1); cur.ptr.splice(m, 1); }
+        if (!cur.leaf) right.kids = cur.kids.splice(m + 1);
+        upMsg = mode === "btree"
+          ? `Split: মাঝের key <b>${up}</b> (তার ctid সহ) উপরে <b>উঠে যায়</b>; বাকি ${fmt(cur.keys)} আর ${fmt(right.keys)} দুইটা আলাদা node।`
+          : `Internal node split: মাঝের key <b>${up}</b> উপরে <b>move</b> হয় (copy না); থাকে ${fmt(cur.keys)} আর ${fmt(right.keys)}।`;
+      }
+      const parentEntry = path.pop();
+      if (!parentEntry) {
+        const r = mk(false); r.keys = [up]; r.ptr = mode === "btree" ? [upPtr] : []; r.kids = [cur.id, right.id]; rootId = r.id;
+        push(upMsg + ` Parent নেই — নতুন root <b>[${up}]</b>, tree-র উচ্চতা ১ বাড়ল।`, { nodes: [r.id, cur.id, right.id], newKey: up });
+        return;
+      }
+      const [p, i] = parentEntry;
+      p.keys.splice(i, 0, up); if (mode === "btree") p.ptr.splice(i, 0, upPtr); p.kids.splice(i + 1, 0, right.id);
+      if (p.keys.length <= MAX) { push(upMsg + ` Parent এখন ${fmt(p.keys)} — জায়গা আছে, শেষ।`, { nodes: [p.id, cur.id, right.id], newKey: up }); return; }
+      push(upMsg + ` Parent ${fmt(p.keys)} — এটাও overflow! উপরে আবার split।`, { over: [p.id], nodes: [cur.id, right.id], newKey: up });
+      cur = p;
+    }
+  }
+  function search(k) {
+    const out = []; let n = nodes[rootId]; let level = 0; const s = snap(); const trail = [];
+    while (n) {
+      level++; trail.push(n.id);
+      const j = n.keys.indexOf(k);
+      if (j >= 0 && (mode === "btree" || n.leaf)) {
+        out.push({ s, msg: mode === "btree"
+          ? `Level ${level}: node ${fmt(n.keys)}-এ <b>${k} পাওয়া গেছে!</b> পাশের pointer → heap ctid <b>${n.ptr[j]}</b>। এখন heap page 0-এর সেই slot থেকে পুরো row (সবুজ)।`
+          : `Level ${level} (leaf): <b>${k} পাওয়া গেছে</b> → heap ctid <b>${n.ptr[j]}</b>। B+ tree-তে search সবসময় leaf পর্যন্ত যায়।`,
+          hl: { nodes: trail.slice(), cur: n.id, found: [[n.id, j]], ctids: [n.ptr[j]] } });
+        return out;
+      }
+      if (n.leaf) { out.push({ s, msg: `Level ${level}: leaf ${fmt(n.keys)}-এ ${k} নেই — এমন row নেই। মাত্র ${level}টা node পড়েই নিশ্চিত, পুরো table দেখতে হয়নি।`, hl: { nodes: trail.slice(), over: [n.id] } }); return out; }
+      const i = childIdx(n, k);
+      const note = (mode === "bplus" && j >= 0) ? ` (internal-এ ${k} মিলেছে, কিন্তু এটা শুধু routing key — leaf-এ নামতে হবে)` : "";
+      out.push({ s, msg: `Level ${level}: node ${fmt(n.keys)} — ${explain(n, k, i)}${note}`, hl: { nodes: trail.slice(), cur: n.id, cmp: k } });
+      n = nodes[n.kids[i]];
+    }
+    return out;
+  }
+  function range(lo, hi) {             // B+ only: descend once, then walk the leaf chain
+    const out = []; let n = nodes[rootId]; const s = snap(); let level = 0; const trail = [];
+    while (!n.leaf) { level++; trail.push(n.id); const i = childIdx(n, lo);
+      out.push({ s, msg: `id ≥ ${lo} কোথা থেকে শুরু? level ${level}: ${fmt(n.keys)} — ${explain(n, lo, i)}`, hl: { nodes: trail.slice(), cur: n.id, cmp: lo } });
+      n = nodes[n.kids[i]]; }
+    const found = [], ctids = [], seen = [];
+    while (n) {
+      seen.push(n.id); trail.push(n.id);
+      let stop = false;
+      n.keys.forEach((key, j) => { if (key > hi) stop = true; else if (key >= lo) { found.push([n.id, j]); ctids.push(n.ptr[j]); } });
+      const got = found.map(f => nodes[f[0]].keys[f[1]]);
+      const hl = { nodes: trail.slice(), found: found.slice(), ctids: ctids.slice(), links: seen.slice(), cur: n.id };
+      if (stop || !n.next) {
+        out.push({ s, msg: (stop ? `Leaf ${fmt(n.keys)}-এ ${hi}-এর বড় key — <b>scan শেষ</b>।` : `শেষ leaf — <b>scan শেষ</b>।`) + (got.length ? ` মোট ${got.length}টা row: ${got.join(", ")}। একবারও উপরে উঠতে হয়নি।` : " এই range-এ কোনো row নেই।"), hl });
+        break;
+      }
+      out.push({ s, msg: `Leaf ${fmt(n.keys)} — এ পর্যন্ত পাওয়া: ${got.join(", ") || "—"}। উপরে না উঠে sibling link ধরে ডানের leaf-এ →`, hl });
+      n = nodes[n.next];
+    }
+    return out;
+  }
+  return { insert, search, range, steps };
+}
+
+// ---------- D3 tree widget ----------
+const USERS = [[42,"Rahim"],[17,"Karim"],[88,"Nadia"],[5,"Tanvir"],[63,"Mitu"],[29,"Sakib"],[71,"Farhana"],[11,"Jamal"],[95,"Ritu"],[36,"Arif"],[54,"Sumaiya"],[8,"Imran"],[23,"Lima"],[80,"Hasan"],[47,"Priya"]];
+const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+function TreeWidget(box) {
+  const mode = box.dataset.mode;
+  const KW = 33, GAP = 14, LH = 84, TOP = 34, PAD = 16;
+  const hasPtr = n => mode === "btree" || n.leaf;
+  const nodeH = n => hasPtr(n) ? 42 : 28;
+  const sim = TreeSim(mode, 3);
+  USERS.forEach(([id], i) => { const from = sim.steps.length; sim.insert(id, `(0,${i + 1})`); for (let j = from; j < sim.steps.length; j++) sim.steps[j].ins = i + 1; });
+  const build = sim.steps;
+  let script = build, idx = -1, timer = null, sqlLine = "";
+
+  const svg = d3.select(box).select("svg");
+  const seqEl = box.querySelector(".seq"), msgEl = box.querySelector(".vtext"), stepEl = box.querySelector(".vstep");
+  const chipsEl = box.querySelector(".chips"), playBtn = box.querySelector('[data-act="play"]');
+  seqEl.innerHTML = '<span style="border:0;padding:0">insert ক্রম:</span>' + USERS.map(([id]) => `<span>${id}</span>`).join("");
+  chipsEl.innerHTML = USERS.map(([id, nm], i) => `<span data-ctid="(0,${i + 1})">(0,${i + 1}) ${id} ${nm}</span>`).join("");
+
+  function layout(s) {
+    const pos = {}; if (!s.root) return { pos, w: 0, depth: 0 };
+    let x = 0, depth = 0;
+    (function place(id, d) {
+      const n = s.nodes[id], w = Math.max(1, n.keys.length) * KW; depth = Math.max(depth, d);
+      if (n.leaf) { pos[id] = { x: x + w / 2, y: d * LH, w, h: nodeH(n) }; x += w + GAP; return; }
+      n.kids.forEach(c => place(c, d + 1));
+      const a = pos[n.kids[0]], b = pos[n.kids[n.kids.length - 1]];
+      pos[id] = { x: (a.x + b.x) / 2, y: d * LH, w, h: nodeH(n) };
+    })(s.root, 0);
+    return { pos, w: x - GAP, depth };
+  }
+  // fixed canvas: big enough for every build step
+  let VW = 560, VH = 200;
+  build.forEach(st => { const L = layout(st.s); VW = Math.max(VW, L.w + PAD * 2); VH = Math.max(VH, TOP + L.depth * LH + 42 + 16); });
+  svg.attr("viewBox", `0 0 ${VW} ${VH}`);
+  const defs = svg.append("defs");
+  const mid = "lk-" + mode;
+  defs.append("marker").attr("id", mid).attr("viewBox", "0 0 10 10").attr("refX", 9).attr("refY", 5)
+    .attr("markerWidth", 6).attr("markerHeight", 6).attr("orient", "auto")
+    .append("path").attr("d", "M0,0 L10,5 L0,10 z").attr("class", "lkh");
+  const gE = svg.append("g"), gL = svg.append("g"), gN = svg.append("g"), gP = svg.append("g");
+  const emptyT = svg.append("text").attr("class", "empty").attr("x", VW / 2).attr("y", VH / 2);
+  const dur = () => reduceMotion ? 0 : 420;
+
+  function render() {
+    const st = idx >= 0 ? script[idx] : null;
+    const s = st ? st.s : { root: null, nodes: {} };
+    const hl = st ? st.hl : {};
+    const L = layout(s), off = (VW - L.w) / 2;
+    const P = id => { const p = L.pos[id]; return { x: p.x + off, y: p.y + TOP, w: p.w, h: p.h }; };
+    const on = new Set(hl.nodes || []), over = new Set(hl.over || []);
+    const found = new Set((hl.found || []).map(f => f[0] + ":" + f[1]));
+    emptyT.text(s.root ? "" : "▶ Play চাপো — users-এর 15টা id একটা একটা করে ঢুকবে");
+
+    // edges (parent key-gap → child top)
+    const edges = [];
+    Object.values(s.nodes).forEach(n => { if (!n.leaf && L.pos[n.id]) n.kids.forEach((c, i) => {
+      const p = P(n.id), q = P(c), x1 = p.x - p.w / 2 + i * KW, y1 = p.y + p.h, ym = (y1 + q.y) / 2;
+      edges.push({ id: n.id + ">" + c, d: `M${x1},${y1} C${x1},${ym} ${q.x},${ym} ${q.x},${q.y}`, on: on.has(n.id) && on.has(c) });
+    }); });
+    gE.selectAll("path").data(edges, d => d.id).join(
+      e => e.append("path").attr("class", "ed").attr("d", d => d.d).attr("opacity", 0).call(e => e.transition("fade").duration(dur()).attr("opacity", 1)),
+      u => u, x => x.remove())
+      .classed("on", d => d.on).transition().duration(dur()).attr("d", d => d.d);
+
+    // B+ leaf links
+    const links = [];
+    if (mode === "bplus") Object.values(s.nodes).forEach(n => { if (n.leaf && n.next && L.pos[n.id] && L.pos[n.next]) {
+      const a = P(n.id), b = P(n.next), y = a.y + 14;
+      links.push({ id: n.id + "~" + n.next, d: `M${a.x + a.w / 2 + 1},${y} L${b.x - b.w / 2 - 2},${y}`, on: (hl.links || []).includes(n.id) && (hl.links || []).includes(n.next) });
+    } });
+    gL.selectAll("path").data(links, d => d.id).join(
+      e => e.append("path").attr("class", "lk").attr("marker-end", `url(#${mid})`).attr("d", d => d.d),
+      u => u, x => x.remove())
+      .classed("on", d => d.on).transition().duration(dur()).attr("d", d => d.d);
+
+    // nodes
+    const data = Object.values(s.nodes).filter(n => L.pos[n.id]).map(n => ({ n, p: P(n.id) }));
+    const g = gN.selectAll("g.nd").data(data, d => d.n.id).join(
+      e => e.append("g").attr("class", "nd").attr("opacity", 0).attr("transform", d => `translate(${d.p.x - d.p.w / 2},${d.p.y})`)
+             .call(e => e.transition("fade").duration(dur()).attr("opacity", 1)),
+      u => u, x => x.remove());
+    g.attr("class", d => "nd" + (hasPtr(d.n) ? "" : " route") + (on.has(d.n.id) ? " visit" : "") + (over.has(d.n.id) ? " over" : ""))
+     .transition().duration(dur()).attr("transform", d => `translate(${d.p.x - d.p.w / 2},${d.p.y})`);
+    g.each(function (d) {
+      const el = d3.select(this); el.selectAll("*").remove();
+      const { n, p } = d;
+      n.keys.forEach((k, i) => {
+        const f = found.has(n.id + ":" + i), nw = hl.newKey === k && !f;
+        el.append("rect").attr("class", "cell" + (f ? " found" : nw ? " new" : "")).attr("x", i * KW).attr("y", 0).attr("width", KW).attr("height", p.h).attr("rx", 4);
+      });
+      el.insert("rect", ":first-child").attr("class", "box").attr("width", p.w).attr("height", p.h).attr("rx", 6);
+      for (let i = 1; i < n.keys.length; i++) el.append("line").attr("class", "sep").attr("x1", i * KW).attr("x2", i * KW).attr("y1", 0).attr("y2", p.h);
+      if (hasPtr(n)) el.append("line").attr("class", "sep").attr("x1", 0).attr("x2", p.w).attr("y1", 25).attr("y2", 25);
+      n.keys.forEach((k, i) => {
+        const f = found.has(n.id + ":" + i);
+        el.append("text").attr("class", "kt" + (f ? " found-t" : "")).attr("x", i * KW + KW / 2).attr("y", hasPtr(n) ? 18 : 19).text(k);
+        if (hasPtr(n)) el.append("text").attr("class", "ct" + (f ? " found-t" : "")).attr("x", i * KW + KW / 2).attr("y", 37).text(n.ptr[i]);
+      });
+      // keep outline on top for highlight visibility
+      el.append("rect").attr("class", "box").attr("width", p.w).attr("height", p.h).attr("rx", 6).style("fill", "none");
+    });
+
+    // probe badge ("63?") above the node being compared
+    const probe = (hl.cmp != null && hl.cur && L.pos[hl.cur]) ? [{ k: hl.cmp, p: P(hl.cur) }] : [];
+    gP.selectAll("g.probe").data(probe, () => "p").join(
+      e => { const pg = e.append("g").attr("class", "probe"); pg.append("rect").attr("width", 44).attr("height", 20).attr("rx", 10).attr("x", -22); pg.append("text").attr("y", 14); pg.attr("transform", d => `translate(${d.p.x},${d.p.y - 26})`); return pg; },
+      u => u, x => x.remove())
+      .call(sel => sel.select("text").text(d => d.k + "?"))
+      .transition().duration(dur()).attr("transform", d => `translate(${d.p.x},${d.p.y - 26})`);
+
+    // side panels
+    const ins = st && st.ins != null ? st.ins : (script === build ? 0 : USERS.length);
+    const curIns = script === build && st ? st.ins : -1;
+    [...seqEl.children].slice(1).forEach((c, i) => { c.className = i + 1 === curIns ? "cur" : i < ins ? "done" : ""; });
+    const lit = new Set(hl.ctids || []);
+    const newCtid = curIns > 0 ? `(0,${curIns})` : null;     // heap row written by the current INSERT
+    [...chipsEl.children].forEach((c, i) => {
+      c.className = lit.has(c.dataset.ctid) ? "on" : i >= ins ? "off" : c.dataset.ctid === newCtid ? "new" : "";
+    });
+    stepEl.textContent = idx >= 0 ? `${script === build ? "build" : "query"} ${idx + 1}/${script.length}` : "";
+    msgEl.innerHTML = (sqlLine && script !== build ? `<span class="vsql">${sqlLine}</span>` : "") +
+      (st ? st.msg : (mode === "btree" ? "Classic B-tree: প্রতিটা node-এ key + ctid। ▶ Play বা Step চাপো।" : "B+ tree: ctid শুধু leaf-এ, internal node ধূসর (শুধু রাস্তা দেখায়), leaf-গুলো সবুজ arrow-এ linked।"));
+  }
+
+  function stop() { clearInterval(timer); timer = null; playBtn.textContent = "▶ Play"; }
+  function step() { if (idx < script.length - 1) { idx++; render(); } if (idx >= script.length - 1) stop(); }
+  function play() {
+    if (timer) return stop();
+    if (idx >= script.length - 1) { script = build; idx = -1; sqlLine = ""; render(); }
+    playBtn.textContent = "❚❚ Pause";
+    step(); timer = setInterval(step, reduceMotion ? 1600 : 1250);
+  }
+  function runScript(steps, sql) {
+    stop(); script = steps; idx = -1; sqlLine = sql; step();
+    if (script.length > 1) { playBtn.textContent = "❚❚ Pause"; timer = setInterval(step, reduceMotion ? 1600 : 1250); }
+  }
+  const num = name => { const v = parseInt(box.querySelector(`[data-in="${name}"]`).value, 10); return Number.isFinite(v) ? v : null; };
+  box.addEventListener("click", e => {
+    const act = e.target.closest("[data-act]")?.dataset.act; if (!act) return;
+    if (act === "play") play();
+    else if (act === "step") { stop(); if (idx >= script.length - 1 && script !== build) { script = build; idx = build.length - 2; sqlLine = ""; } step(); }
+    else if (act === "reset") { stop(); script = build; idx = -1; sqlLine = ""; render(); }
+    else if (act === "search") { const k = num("key"); if (k == null) return; runScript(sim.search(k), `SELECT * FROM users WHERE id = ${k};`); }
+    else if (act === "range") { let lo = num("lo"), hi = num("hi"); if (lo == null || hi == null) return; if (lo > hi) [lo, hi] = [hi, lo];
+      runScript(sim.range(lo, hi), `SELECT * FROM users WHERE id BETWEEN ${lo} AND ${hi} ORDER BY id;`); }
+  });
+  box.addEventListener("keydown", e => { if (e.key === "Enter" && e.target.matches("input")) { e.preventDefault(); box.querySelector(e.target.dataset.in === "key" ? '[data-act="search"]' : '[data-act="range"]').click(); } });
+  render();
+  // on narrow screens the canvas scrolls sideways — start centred on the root
+  const wrapEl = box.querySelector(".svgwrap");
+  const centre = () => { wrapEl.scrollLeft = (wrapEl.scrollWidth - wrapEl.clientWidth) / 2; };
+  centre(); addEventListener("resize", centre);
+}
+
+if (window.d3) document.querySelectorAll(".viz[data-mode]").forEach(TreeWidget);
+else document.querySelectorAll(".viz .vtext").forEach(el => { el.textContent = "Animation-এর জন্য D3 load হয়নি (internet সংযোগ দেখো)।"; });
+</script>
+</body>
+</html>
