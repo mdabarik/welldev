@@ -26,6 +26,7 @@ _শীঘ্রই আসছে।_
 - [Optimistic vs Pessimistic Locking](03-dbms-sql/optimistic-pessimistic/index.html) — lost update, FOR UPDATE / NOWAIT / SKIP LOCKED আর version column, A/B animation সহ
 - [Idempotency](03-dbms-sql/dbms/index.html) — retry-তে duplicate charge ঠেকানো: idempotency key, ON CONFLICT, UNIQUE, conditional update, D3 simulation
 - [DBMS Keys](03-dbms-sql/dbms/keys/index.html) — super, candidate, primary, alternate, composite, unique, foreign, surrogate key; interactive key checker
+- [Normalization](03-dbms-sql/dbms/normalization/index.html) — 1NF, 2NF, 3NF, BCNF: definition, সমস্যা ও সমাধান আসল table-এ, step-through demo আর quiz
 
 ## 04 · Resume Projects
 

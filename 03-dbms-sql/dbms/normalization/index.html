@@ -1,0 +1,1172 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Normalization</title>
+<meta name="description" content="1NF, 2NF, 3NF আর BCNF (3.5NF) — একটা university enrollment sheet ধাপে ধাপে ভেঙে: official definition, functional dependency, anomaly, decomposition, PostgreSQL DDL আর JOIN, step-through demo ও quiz সহ।">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Layout: primer → one section per normal form (definition, problem table, decomposition,
+   PostgreSQL DDL + JOIN with real psql output) → step-through demo → quiz → summary → Q&A.
+   Code blocks are highlighted by the small tokenizer at the bottom. */
+:root{
+  --bg:#f5f7fc; --surface:#ffffff; --surface-2:#f1f4fa; --fg:#0f172a; --muted:#5b6478; --faint:#94a0b8; --line:#e4e8f1;
+  --accent:#6366f1; --sa:#4f46e5; --sb:#db2777;
+  --pa:#e11d48; --pc:#d97706; --pi:#0284c7; --pd:#059669;
+  --ok:#059669; --bad:#e11d48; --warn:#d97706;
+  --hero:linear-gradient(135deg,#4f46e5 0%,#7c3aed 45%,#db2777 100%);
+  --shadow:0 1px 2px rgba(15,23,42,.04),0 10px 30px -12px rgba(15,23,42,.14);
+  --code-bg:#ffffff; --code-line:#e6e9f1;
+  --t-kw:#0000ff; --t-str:#a31515; --t-num:#098658; --t-com:#008000; --t-type:#267f99;
+  --sans:"Inter","Hind Siliguri",system-ui,sans-serif; --bn:"Hind Siliguri","Inter",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0b0f1a; --surface:#121827; --surface-2:#182033; --fg:#e7ecf6; --muted:#9aa6bf; --faint:#66728c; --line:#232c42;
+  --accent:#818cf8; --sa:#818cf8; --sb:#f472b6; --pa:#fb7185; --pc:#fbbf24; --pi:#38bdf8; --pd:#34d399;
+  --ok:#34d399; --bad:#fb7185; --warn:#fbbf24;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6);
+  --code-bg:#1e1e1e; --code-line:#2d2d30; --t-kw:#569cd6; --t-str:#ce9178; --t-num:#b5cea8; --t-com:#6a9955; --t-type:#4ec9b0;
+}}
+:root[data-theme="dark"]{
+  --bg:#0b0f1a; --surface:#121827; --surface-2:#182033; --fg:#e7ecf6; --muted:#9aa6bf; --faint:#66728c; --line:#232c42;
+  --accent:#818cf8; --sa:#818cf8; --sb:#f472b6; --pa:#fb7185; --pc:#fbbf24; --pi:#38bdf8; --pd:#34d399;
+  --ok:#34d399; --bad:#fb7185; --warn:#fbbf24;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6);
+  --code-bg:#1e1e1e; --code-line:#2d2d30; --t-kw:#569cd6; --t-str:#ce9178; --t-num:#b5cea8; --t-com:#6a9955; --t-type:#4ec9b0;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 var(--bn);-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto 0;height:420px;z-index:-1;pointer-events:none;
+  background:radial-gradient(620px 260px at 20% -40px,color-mix(in srgb,#6366f1 14%,transparent),transparent 70%),
+             radial-gradient(540px 240px at 90% -60px,color-mix(in srgb,#ec4899 11%,transparent),transparent 70%)}
+a{color:var(--accent)}
+button{font:inherit;color:inherit}
+code{font-family:var(--mono);font-size:.86em;font-weight:500;background:color-mix(in srgb,var(--accent) 10%,var(--surface));color:color-mix(in srgb,var(--accent) 72%,var(--fg));padding:.1em .4em;border-radius:6px}
+.wrap{max-width:1040px;margin:0 auto;padding:20px 18px 70px}
+section{margin-top:56px;scroll-margin-top:16px}
+
+.topnav{display:flex;align-items:center;gap:10px}
+.brand{display:flex;align-items:center;gap:10px;color:var(--fg);text-decoration:none;font:800 16px var(--sans);letter-spacing:-.02em}
+.logo{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:#fff;font:800 13px var(--mono);background:var(--hero)}
+.topnav .sp{flex:1}
+.pill{border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:6px 14px;font:600 13px var(--sans);cursor:pointer;text-decoration:none}
+.pill:hover{color:var(--fg)}
+
+.hero{margin-top:22px;border-radius:22px;padding:30px 32px;color:#fff;background:var(--hero);position:relative;overflow:hidden}
+.hero::after{content:"";position:absolute;right:-70px;top:-90px;width:320px;height:320px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.2),transparent 65%);pointer-events:none}
+.eyebrow{font:600 12px var(--sans);letter-spacing:.1em;text-transform:uppercase;opacity:.85}
+.hero h1{margin:8px 0 10px;font:800 clamp(28px,4.4vw,42px)/1.12 var(--sans);letter-spacing:-.03em}
+.hero p{margin:0;max-width:720px;font-size:16.5px;opacity:.94}
+
+/* the four normal forms */
+.letters{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:22px}
+@media (max-width:860px){.letters{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:480px){.letters{grid-template-columns:minmax(0,1fr)}}
+.letter{display:block;text-decoration:none;color:inherit;padding:16px 18px;border-top:3px solid var(--c)}
+.letter .big{font:800 34px/1 var(--sans);color:var(--c)}
+.letter b{display:block;margin-top:8px;font:700 15.5px var(--sans)}
+.letter p{margin:4px 0 0;font-size:14.5px;color:var(--muted);line-height:1.55}
+.letter small{display:block;margin-top:10px;font:500 11.5px var(--mono);color:var(--faint)}
+.letter:hover{border-color:var(--c)}
+
+h2{display:flex;align-items:center;gap:12px;margin:0 0 6px;font:800 clamp(21px,2.8vw,26px)/1.25 var(--sans);letter-spacing:-.025em}
+.num{flex:none;width:38px;height:38px;border-radius:11px;display:grid;place-items:center;color:#fff;font:800 17px var(--sans);background:var(--c,var(--accent))}
+.num.w{width:auto;padding:0 10px;font-size:14px}
+.motto{display:inline-block;margin:2px 0 14px;font:600 13.5px var(--sans);color:var(--c);background:color-mix(in srgb,var(--c) 10%,transparent);padding:4px 12px;border-radius:999px}
+.lead{margin:0 0 18px;color:var(--muted);max-width:820px}
+.lead b{color:var(--fg)}
+h3{margin:30px 0 10px;font:700 17px var(--sans);letter-spacing:-.015em;display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.st{font:700 11px var(--sans);letter-spacing:.06em;text-transform:uppercase;color:#fff;background:var(--c,var(--accent));padding:3px 9px;border-radius:7px}
+p.txt{margin:0 0 12px;color:var(--muted);max-width:860px}
+p.txt b{color:var(--fg)}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow)}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:start}
+@media (max-width:760px){.grid2{grid-template-columns:minmax(0,1fr)}}
+
+.story{padding:14px 16px;font-size:15px;border-left:4px solid var(--c)}
+.story b{color:var(--fg)}
+.story p{margin:0;color:var(--muted)}
+
+/* official definition box */
+.def{margin:0 0 12px;padding:14px 18px;border-radius:14px;border:1px solid color-mix(in srgb,var(--c) 26%,var(--line));border-left:4px solid var(--c);background:color-mix(in srgb,var(--c) 6%,var(--surface))}
+.def figcaption{font:700 11px var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--c)}
+.def blockquote{margin:6px 0 0;font:500 15.5px/1.65 var(--sans);color:var(--fg)}
+.def blockquote + blockquote{margin-top:10px;padding-top:10px;border-top:1px dashed color-mix(in srgb,var(--c) 30%,var(--line))}
+.def small{display:block;margin-top:8px;font:500 12.5px var(--sans);color:var(--muted)}
+
+pre.code{margin:0;padding:12px 14px;border-radius:12px;background:var(--code-bg);border:1px solid var(--code-line);font:13px/1.65 var(--mono);white-space:pre-wrap;word-break:break-word;font-variant-ligatures:none;overflow-x:auto}
+pre.code.wide{white-space:pre}
+.k{color:var(--t-kw);font-weight:600}.s{color:var(--t-str)}.d{color:var(--t-num)}.c{color:var(--t-com);font-style:italic}.t{color:var(--t-type)}
+pre.code .o{color:var(--muted);font-style:normal}
+pre.code .e{color:var(--bad);font-style:normal}
+pre.code .g{color:var(--ok);font-style:normal;font-weight:600}
+.file{display:flex;align-items:center;gap:8px;margin:0 0 6px;font:600 12px var(--mono);color:var(--muted)}
+.file i{width:8px;height:8px;border-radius:50%;background:var(--dot,var(--accent))}
+.file .r{margin-left:auto;font:600 11px var(--sans);padding:1px 8px;border-radius:6px;color:var(--tc);background:color-mix(in srgb,var(--tc) 12%,transparent)}
+
+.how{margin-top:14px;padding:14px 16px;border-radius:12px;background:color-mix(in srgb,var(--c) 7%,var(--surface));border:1px solid color-mix(in srgb,var(--c) 22%,var(--line));font-size:15px}
+.how b{color:var(--fg)}
+.how ul{margin:6px 0 0;padding-left:20px;color:var(--muted)}
+.how li{margin:3px 0}
+.how p{margin:4px 0 0;color:var(--muted)}
+
+.tag{display:inline-block;font:600 12px var(--sans);padding:2px 9px;border-radius:7px;background:color-mix(in srgb,var(--tc) 12%,transparent);color:var(--tc);white-space:nowrap}
+.tag.ok{--tc:var(--ok)} .tag.bad{--tc:var(--bad)} .tag.info{--tc:var(--muted)} .tag.warn{--tc:var(--warn)}
+
+.tscroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:640px;font-size:14.5px}
+th,td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font:600 12px var(--sans);text-transform:uppercase;letter-spacing:.05em;color:var(--muted);background:var(--surface-2)}
+tr:last-child td{border-bottom:0}
+td.p{font:700 14px var(--sans);white-space:nowrap}
+td.p span{display:inline-grid;place-items:center;min-width:24px;height:24px;padding:0 5px;margin-right:8px;border-radius:7px;color:#fff;font-size:11px;background:var(--c)}
+.foot{margin:10px 2px 0;font-size:13.5px;color:var(--muted)}
+
+/* data tables (example relations) */
+table.data{font-size:13.5px}
+table.data th{font:600 12px var(--mono);text-transform:none;letter-spacing:0;color:var(--fg);white-space:nowrap}
+table.data td{padding:8px 14px;white-space:nowrap}
+table.data th,table.data td{padding-left:12px;padding-right:12px}
+table.sm{min-width:0}
+table.md{min-width:460px}
+th.pk{text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:4px}
+.kb{display:inline-block;margin-left:5px;font:700 9.5px var(--sans);letter-spacing:.04em;padding:1px 5px;border-radius:5px;color:#fff;background:var(--fg);vertical-align:2px;text-decoration:none}
+.kb.fk{background:var(--muted)}
+td.x{background:color-mix(in srgb,var(--hc,var(--c)) 15%,transparent);color:var(--fg);font-weight:500}
+td.x1{--hc:var(--sa)} td.x2{--hc:var(--sb)}
+td.det{box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--c) 70%,transparent)}
+.tbox{overflow:hidden}
+.tcap{display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:9px 14px;border-bottom:1px solid var(--line);font:600 13px var(--mono)}
+.tcap .tag{margin-left:auto}
+.tcap em{font:500 12px var(--sans);font-style:normal;color:var(--muted)}
+.tables{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr));gap:14px;align-items:start}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;margin:10px 2px 0;font-size:13.5px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:14px;height:14px;border-radius:4px;background:color-mix(in srgb,var(--hc,var(--c)) 22%,transparent)}
+.legend i.o{background:transparent;box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--c) 70%,transparent)}
+
+/* functional dependency list + chains */
+.fds{list-style:none;margin:0;padding:6px 16px}
+.fds li{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:9px 0;border-bottom:1px solid var(--line);font-size:14.5px;color:var(--muted)}
+.fds li:last-child{border-bottom:0}
+.fds code{font-size:13px}
+.fds .tag{margin-left:auto}
+.chain{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:8px 0}
+.at{display:inline-block;font:600 12.5px var(--mono);padding:3px 9px;border-radius:8px;border:1px solid var(--line);background:var(--surface-2)}
+.at.key{border-color:color-mix(in srgb,var(--c) 55%,var(--line));background:color-mix(in srgb,var(--c) 12%,var(--surface))}
+.at.bad{border-color:color-mix(in srgb,var(--bad) 55%,var(--line));background:color-mix(in srgb,var(--bad) 10%,var(--surface))}
+.grp{display:inline-flex;gap:4px;padding:3px;border-radius:10px;border:1px dashed color-mix(in srgb,var(--c) 55%,var(--line))}
+.ar{font:700 15px var(--mono);color:var(--muted)}
+
+.anoms{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:12px}
+.anom{padding:13px 15px;font-size:14.5px;border-top:3px solid var(--bad)}
+.anom b{display:block;font:700 13px var(--sans);color:var(--bad);text-transform:uppercase;letter-spacing:.05em}
+.anom p{margin:4px 0 0;color:var(--muted)}
+.anom p strong{color:var(--fg)}
+
+/* staircase */
+.stair{padding:18px}
+.steps{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;align-items:end}
+.stp{min-width:0;height:calc(96px + var(--h) * 38px);padding:12px 12px 10px;border-radius:12px 12px 4px 4px;border-top:4px solid var(--c);background:color-mix(in srgb,var(--c) 11%,var(--surface));display:flex;flex-direction:column;text-decoration:none;color:inherit}
+.stp b{font:800 22px/1.1 var(--sans);color:var(--c);letter-spacing:-.02em}
+.stp small{display:block;margin-top:6px;font:600 10.5px var(--sans);letter-spacing:.06em;text-transform:uppercase;color:var(--faint)}
+.stp span{font-size:13.5px;line-height:1.45;color:var(--fg)}
+.stp:hover{background:color-mix(in srgb,var(--c) 17%,var(--surface))}
+.stair-base{height:6px;margin-top:0;border-radius:0 0 8px 8px;background:var(--line)}
+@media (max-width:700px){
+  .steps{grid-template-columns:minmax(0,1fr);gap:6px}
+  .stp{height:auto;margin-left:calc(var(--h) * 14px);border-top:0;border-left:4px solid var(--c);border-radius:10px}
+  .stair-base{display:none}
+}
+
+/* step-through demo */
+.demo{padding:16px}
+.dctl{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.btn{border:1px solid var(--line);background:var(--surface-2);color:var(--fg);border-radius:10px;padding:7px 14px;font:600 13.5px var(--sans);cursor:pointer}
+.btn:hover:not(:disabled){border-color:var(--accent)}
+.btn:disabled{opacity:.45;cursor:default}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+.dots{display:flex;flex-wrap:wrap;gap:6px;margin-left:auto}
+.dot{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:3px 11px;font:700 12px var(--sans);color:var(--muted);cursor:pointer}
+.dot.on{color:#fff;background:var(--c);border-color:var(--c)}
+.dcap{margin:14px 0 4px;padding:12px 14px;border-radius:12px;background:color-mix(in srgb,var(--c) 8%,var(--surface));border:1px solid color-mix(in srgb,var(--c) 24%,var(--line));font-size:15px;color:var(--muted);transition:background .3s,border-color .3s}
+.dcap b{color:var(--fg)}
+.dstat{display:flex;flex-wrap:wrap;gap:6px 14px;margin:8px 2px 12px;font:600 12.5px var(--sans);color:var(--muted)}
+.dstat i{font-style:normal;color:var(--fg)}
+.dtables{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,250px),1fr));gap:12px;align-items:start}
+.dtables.one{grid-template-columns:minmax(0,1fr)}
+.dt{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--surface);animation:rise .5s cubic-bezier(.2,.7,.2,1) both;animation-delay:calc(var(--i) * 110ms)}
+@keyframes rise{from{opacity:0;transform:translateY(14px) scale(.97)}to{opacity:1;transform:none}}
+.dt table{min-width:0;font-size:12.5px}
+.dt th{font:600 11.5px var(--mono);text-transform:none;letter-spacing:0;color:var(--fg);white-space:nowrap;padding:7px 10px;border-bottom:2px solid var(--gc)}
+.dt td{padding:6px 10px;white-space:nowrap;background:color-mix(in srgb,var(--gc) 5%,transparent)}
+.dt td.dup{color:var(--faint);background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--bad) 9%,transparent) 0 5px,transparent 5px 10px)}
+.dt td.mv{background:color-mix(in srgb,var(--pa) 16%,transparent);color:var(--fg)}
+.g-s{--gc:var(--sa)} .g-d{--gc:var(--pc)} .g-c{--gc:var(--pi)} .g-g{--gc:var(--pd)}
+@media (prefers-reduced-motion:reduce){.dt{animation:none}}
+
+/* quiz */
+.quiz{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:14px}
+.qz{padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+.qz .qn{font:700 11.5px var(--sans);letter-spacing:.06em;text-transform:uppercase;color:var(--faint)}
+.qz .sch{font:600 13px/1.5 var(--mono);color:var(--fg);word-break:break-word}
+.qz .sch u{text-decoration-thickness:2px;text-underline-offset:3px}
+.qz ul{margin:0;padding-left:18px;font-size:13.5px;color:var(--muted)}
+.qz ul code{font-size:12px}
+.opts{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px}
+.opt{border:1px solid var(--line);background:var(--surface-2);border-radius:9px;padding:5px 11px;font:600 13px var(--sans);cursor:pointer;color:var(--fg)}
+.opt:hover:not(:disabled){border-color:var(--accent)}
+.opt:disabled{cursor:default}
+.opt.right{background:color-mix(in srgb,var(--ok) 16%,var(--surface));border-color:var(--ok);color:var(--fg)}
+.opt.wrong{background:color-mix(in srgb,var(--bad) 14%,var(--surface));border-color:var(--bad);text-decoration:line-through}
+.qz .ex{display:none;margin:0;font-size:14px;color:var(--muted);padding:9px 11px;border-radius:9px;background:var(--surface-2)}
+.qz .ex b{color:var(--fg)}
+.qz.done .ex{display:block}
+.score{font:700 14px var(--sans);color:var(--muted)}
+.score b{color:var(--fg)}
+
+details{border-bottom:1px solid var(--line);padding:12px 2px}
+details:last-child{border-bottom:0}
+summary{cursor:pointer;font:600 15.5px var(--bn);list-style:none;display:flex;gap:10px}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"+";font:700 15px var(--mono);color:var(--accent);width:14px;flex:none}
+details[open] summary::before{content:"−"}
+details p{margin:8px 0 0 24px;color:var(--muted);font-size:15px}
+
+footer{margin-top:56px;padding-top:16px;border-top:1px solid var(--line);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;font-size:13px;color:var(--faint)}
+@media (max-width:640px){.hero{padding:24px 20px;border-radius:18px}}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="topnav">
+    <a class="brand" href="../../../index.html"><span class="logo">W</span>WellDev</a>
+    <span class="sp"></span>
+    <a class="pill" href="../indexing/index.html">Indexing →</a>
+    <button class="pill" id="theme" type="button">Theme</button>
+  </nav>
+
+  <header class="hero">
+    <div class="eyebrow">DBMS</div>
+    <h1>Normalization — 1NF থেকে BCNF</h1>
+    <p>Registrar office-এর একটা Excel sheet — এক cell-এ "CSE220, CSE221", একই department head-এর নাম বারবার। সেটাকে ধাপে ধাপে ভেঙে এমন table বানানো যেখানে প্রতিটা তথ্য থাকে ঠিক এক জায়গায়। প্রতিটা normal form-এর official definition, ভাঙা table, সমাধান আর PostgreSQL 18-এ চালানো DDL + JOIN।</p>
+  </header>
+
+  <div class="letters">
+    <a class="card letter" href="#nf1" style="--c:var(--pa)"><span class="big">1NF</span><b>Atomic values</b><p>প্রতিটা cell-এ একটাই মান, কোনো list না।</p><small>সরায়: repeating group</small></a>
+    <a class="card letter" href="#nf2" style="--c:var(--pc)"><span class="big">2NF</span><b>Whole key</b><p>Non-key column পুরো key-র উপর নির্ভর করবে।</p><small>সরায়: partial dependency</small></a>
+    <a class="card letter" href="#nf3" style="--c:var(--pi)"><span class="big">3NF</span><b>Nothing but the key</b><p>Non-key column অন্য non-key-র উপর নির্ভর করবে না।</p><small>সরায়: transitive dependency</small></a>
+    <a class="card letter" href="#bcnf" style="--c:var(--pd)"><span class="big">BCNF</span><b>3.5NF</b><p>যে-ই কিছু determine করে, সে super key।</p><small>সরায়: non-superkey determinant</small></a>
+  </div>
+
+  <!-- staircase -->
+  <section id="map">
+    <h2><span class="num" style="--c:var(--accent)">↗</span>সিঁড়ি — প্রতি ধাপে কী সরে</h2>
+    <p class="lead">প্রতিটা normal form আগেরটার সব শর্ত মানে, সাথে একটা নতুন শর্ত যোগ করে। তাই BCNF table মানেই 3NF, 3NF মানেই 2NF — উল্টোটা সবসময় না।</p>
+    <div class="card stair">
+      <div class="steps">
+        <a class="stp" href="#nf1" style="--c:var(--faint);--h:0"><b>UNF</b><small>শুরু</small><span>এক cell-এ list — "CSE220, CSE221"</span></a>
+        <a class="stp" href="#nf1" style="--c:var(--pa);--h:1"><b>1NF</b><small>সরায়</small><span>repeating group, multi-valued cell</span></a>
+        <a class="stp" href="#nf2" style="--c:var(--pc);--h:2"><b>2NF</b><small>সরায়</small><span>partial dependency — key-র অংশ → non-key</span></a>
+        <a class="stp" href="#nf3" style="--c:var(--pi);--h:3"><b>3NF</b><small>সরায়</small><span>transitive dependency — non-key → non-key</span></a>
+        <a class="stp" href="#bcnf" style="--c:var(--pd);--h:4"><b>BCNF</b><small>সরায়</small><span>যেকোনো determinant যা super key না</span></a>
+      </div>
+      <div class="stair-base"></div>
+    </div>
+  </section>
+
+  <!-- primer -->
+  <section id="primer" style="--c:var(--accent)">
+    <h2><span class="num">0</span>শুরুর আগে — চারটা ধারণা</h2>
+    <p class="lead">Normalization মানে table-কে এমনভাবে ভাগ করা যাতে <b>একটা তথ্য একবারই লেখা থাকে</b>। এর ভাষা হলো functional dependency আর key — এই দুটো পরিষ্কার থাকলে সব normal form এক লাইনে বোঝা যায়।</p>
+
+    <h3>কেন normalize — redundancy থেকে তিনটা anomaly</h3>
+    <p class="txt">একই তথ্য (যেমন "CSE-এর head Dr. Nazmul Hasan") যদি ১০০টা row-তে থাকে, শুধু জায়গা নষ্ট না — তিন রকম bug-এর দরজা খোলে:</p>
+    <div class="anoms">
+      <div class="card anom"><b>Insertion anomaly</b><p>একটা তথ্য রাখতে গিয়ে অন্য, অপ্রাসঙ্গিক তথ্য লাগে — নতুন course খুলতে কোনো student লাগবে কেন?</p></div>
+      <div class="card anom"><b>Update anomaly</b><p>একটা fact বদলাতে অনেক row বদলাতে হয়; একটা বাদ পড়লেই database নিজের সাথে নিজে অমিল।</p></div>
+      <div class="card anom"><b>Deletion anomaly</b><p>একটা তথ্য মুছতে গিয়ে অন্য দরকারি তথ্যও মুছে যায় — শেষ student চলে গেলে course-টাই হারিয়ে যায়।</p></div>
+    </div>
+
+    <h3>Functional dependency — <code>X → Y</code></h3>
+    <div class="grid2">
+      <div class="card story" style="--c:var(--accent)"><p><b><code>X → Y</code></b> পড়ো "X determines Y"। মানে: দুইটা row-তে X-এর মান এক হলে Y-এর মানও অবশ্যই এক। <code>student_id → student_name</code> — 101 যেখানেই থাকুক, নাম সবসময় Rahim Uddin।</p></div>
+      <div class="card story" style="--c:var(--accent)"><p><b>FD আসে business rule থেকে,</b> data দেখে না। Data শুধু কোনো FD-কে <b>ভুল প্রমাণ</b> করতে পারে। আর <code>X → Y</code> যেখানে Y ⊆ X (যেমন <code>{a, b} → a</code>) — সেটা <b>trivial FD</b>, normalization-এ গোনা হয় না।</p></div>
+    </div>
+
+    <h3>Keys recap</h3>
+    <p class="txt">বিস্তারিত আছে <a href="../keys/index.html">Keys গাইডে</a>। এখানে শুধু যা লাগবে — নিচের <code>enrollment</code> table (একটা row = একজন student-এর একটা course) দিয়ে:</p>
+    <div class="card tscroll">
+      <table>
+        <thead><tr><th>Term</th><th>মানে</th><th>enrollment-এ উদাহরণ</th></tr></thead>
+        <tbody>
+          <tr><td><b>Super key</b></td><td>যে column set একটা row-কে unique ভাবে চেনায়</td><td><code>{student_id, course_code, grade}</code></td></tr>
+          <tr><td><b>Candidate key</b></td><td>Minimal super key — একটা column সরালেই আর unique না</td><td><code>{student_id, course_code}</code></td></tr>
+          <tr><td><b>Primary key</b></td><td>Candidate key-গুলোর মধ্যে যেটা বেছে নেওয়া হলো</td><td><code>(student_id, course_code)</code></td></tr>
+          <tr><td><b>Prime attribute</b></td><td>যে column <b>কোনো একটা</b> candidate key-র অংশ</td><td><code>student_id</code>, <code>course_code</code></td></tr>
+          <tr><td><b>Non-prime attribute</b></td><td>কোনো candidate key-তেই নেই</td><td><code>student_name</code>, <code>dept</code>, <code>course_title</code>, <code>grade</code> …</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Partial vs transitive dependency</h3>
+    <div class="grid2">
+      <div class="card story" style="--c:var(--pc)">
+        <p><b>Partial dependency</b> — non-prime column composite candidate key-র <b>একটা অংশের</b> উপর নির্ভর করে।</p>
+        <div class="chain" style="--c:var(--pc)"><span class="grp"><span class="at key">student_id</span><span class="at key">course_code</span></span><span class="ar">→</span><span class="at">grade</span><span class="tag ok">full ✓</span></div>
+        <div class="chain" style="--c:var(--pc)"><span class="at key">student_id</span><span class="ar">→</span><span class="at bad">student_name</span><span class="tag bad">partial ✗</span></div>
+        <p>Key এক column-এর হলে partial dependency হওয়া সম্ভবই না। <b>2NF</b> এটা সরায়।</p>
+      </div>
+      <div class="card story" style="--c:var(--pi)">
+        <p><b>Transitive dependency</b> — key একটা non-key column-কে determine করে, আর সেটা আরেকটাকে: <code>A → B → C</code>, যেখানে B কোনো key না।</p>
+        <div class="chain" style="--c:var(--pi)"><span class="at key">student_id</span><span class="ar">→</span><span class="at">dept</span><span class="ar">→</span><span class="at bad">dept_head</span><span class="tag bad">transitive ✗</span></div>
+        <p>dept_head আসলে student-এর তথ্য না, department-এর তথ্য — ভুল table-এ বসে আছে। <b>3NF</b> এটা সরায়।</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 1NF -->
+  <section id="nf1" style="--c:var(--pa)">
+    <h2><span class="num w">1NF</span>First Normal Form</h2>
+    <span class="motto">প্রতিটা cell-এ একটা, ভাঙা যায় না এমন মান</span>
+
+    <h3><span class="st">Definition</span></h3>
+    <figure class="def">
+      <figcaption>Official definition · 1NF</figcaption>
+      <blockquote>A relation is in first normal form (1NF) if the domain of every attribute contains only atomic (indivisible) values, and the value of each attribute in a tuple is a single value from that domain.</blockquote>
+      <small>অর্থাৎ: no multivalued attributes, no composite attributes, no repeating groups (no "relations within relations").</small>
+    </figure>
+    <p class="txt"><b>সহজ বাংলায়:</b> table-এর প্রতিটা ঘরে একটাই মান থাকবে — comma দিয়ে list না, <code>course1, course2, course3</code> নামে একই জিনিসের জন্য বারবার column না। আর relation-এ duplicate row থাকে না, তাই প্রতিটা row আলাদা করে চেনার মতো একটা key থাকতে হবে।</p>
+
+    <h3><span class="st">Problem</span>Registrar-এর enrollment sheet (UNF)</h3>
+    <div class="card tbox">
+      <div class="tcap">enrollment_sheet <em>একজন student = এক row</em><span class="tag bad">1NF ✗</span></div>
+      <div class="tscroll">
+        <table class="data">
+          <thead><tr><th>student_id</th><th>student_name</th><th>dept</th><th>dept_head</th><th>course_code</th><th>course_title</th><th>credit</th><th>grade</th></tr></thead>
+          <tbody>
+            <tr><td>101</td><td>Rahim Uddin</td><td>CSE</td><td>Dr. Nazmul Hasan</td><td class="x">CSE220, CSE221</td><td class="x">Database Systems, Operating Systems</td><td class="x">3, 3</td><td class="x">A, B+</td></tr>
+            <tr><td>102</td><td>Karima Begum</td><td>CSE</td><td>Dr. Nazmul Hasan</td><td>CSE220</td><td>Database Systems</td><td>3</td><td>A-</td></tr>
+            <tr><td>103</td><td>Tanvir Ahmed</td><td>EEE</td><td>Dr. Farhana Akter</td><td class="x">CSE220, EEE201</td><td class="x">Database Systems, Electrical Circuits</td><td class="x">3, 4</td><td class="x">B, A</td></tr>
+            <tr><td>104</td><td>Nusrat Jahan</td><td>EEE</td><td>Dr. Farhana Akter</td><td>EEE201</td><td>Electrical Circuits</td><td>4</td><td>A+</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="legend"><span><i></i>multi-valued cell — একটা cell-এ একাধিক মান (repeating group)</span></div>
+
+    <p class="txt" style="margin-top:16px">এই sheet-এর পেছনের <b>business rule (FD)</b> — পরের সব ধাপ এগুলোর উপরেই দাঁড়িয়ে:</p>
+    <div class="card"><ul class="fds">
+      <li><code>student_id → student_name, dept</code><span>প্রতিটা student-এর একটা নাম, একটা department</span></li>
+      <li><code>dept → dept_head</code><span>প্রতিটা department-এর একজন head</span></li>
+      <li><code>course_code → course_title, credit</code><span>course code দিলেই নাম আর credit জানা</span></li>
+      <li><code>{student_id, course_code} → grade</code><span>একজন student একটা course-এ একটা grade পায়</span></li>
+    </ul></div>
+    <p class="txt" style="margin-top:12px">কিন্তু এই sheet-এ <code>grade</code> কোন course-এর, সেটা বোঝা যায় শুধু list-এর <b>position</b> মিলিয়ে — "A, B+"-এর দ্বিতীয়টা "CSE220, CSE221"-এর দ্বিতীয়টার। Database এই সম্পর্ক জানে না।</p>
+    <div class="anoms">
+      <div class="card anom"><b>Insertion</b><p>Rahim নতুন course নিলে চারটা cell-এ (<code>course_code</code>, <code>course_title</code>, <code>credit</code>, <code>grade</code>) একসাথে append করতে হবে। একটায় ভুলে গেলে list-এর ক্রম আর মেলে না।</p></div>
+      <div class="card anom"><b>Update</b><p>Rahim-এর OS grade <strong>B+ → A-</strong> করতে হলে <code>'A, B+'</code> string parse করে দ্বিতীয় item বদলাতে হবে — SQL-এ সহজ <code>UPDATE … WHERE</code> দিয়ে হয় না।</p></div>
+      <div class="card anom"><b>Deletion</b><p>Tanvir (103) CSE220 drop করলে চারটা cell থেকেই প্রথম item কাটতে হবে। একটায় বাদ পড়লে Circuits-এর grade গিয়ে বসে DBMS-এর পাশে।</p></div>
+      <div class="card anom"><b>Query &amp; integrity</b><p>"CSE221 কারা নিয়েছে?" → <code>LIKE '%CSE221%'</code> — index কাজ করে না, "CSE2210"-ও মিলে যাবে। আর <code>FOREIGN KEY</code> দিয়ে যাচাই করা যায় না যে list-এর প্রতিটা code আসল course।</p></div>
+    </div>
+
+    <h3><span class="st">Solution</span>List ভেঙে প্রতিটা (student, course)-এর জন্য একটা row</h3>
+    <div class="card tbox">
+      <div class="tcap">enrollment <em>key = (student_id, course_code)</em><span class="tag ok">1NF ✓</span></div>
+      <div class="tscroll">
+        <table class="data">
+          <thead><tr><th class="pk">student_id<span class="kb">PK</span></th><th>student_name</th><th>dept</th><th>dept_head</th><th class="pk">course_code<span class="kb">PK</span></th><th>course_title</th><th>credit</th><th>grade</th></tr></thead>
+          <tbody>
+            <tr><td>101</td><td>Rahim Uddin</td><td>CSE</td><td>Dr. Nazmul Hasan</td><td>CSE220</td><td>Database Systems</td><td>3</td><td>A</td></tr>
+            <tr><td>101</td><td>Rahim Uddin</td><td>CSE</td><td>Dr. Nazmul Hasan</td><td>CSE221</td><td>Operating Systems</td><td>3</td><td>B+</td></tr>
+            <tr><td>102</td><td>Karima Begum</td><td>CSE</td><td>Dr. Nazmul Hasan</td><td>CSE220</td><td>Database Systems</td><td>3</td><td>A-</td></tr>
+            <tr><td>103</td><td>Tanvir Ahmed</td><td>EEE</td><td>Dr. Farhana Akter</td><td>CSE220</td><td>Database Systems</td><td>3</td><td>B</td></tr>
+            <tr><td>103</td><td>Tanvir Ahmed</td><td>EEE</td><td>Dr. Farhana Akter</td><td>EEE201</td><td>Electrical Circuits</td><td>4</td><td>A</td></tr>
+            <tr><td>104</td><td>Nusrat Jahan</td><td>EEE</td><td>Dr. Farhana Akter</td><td>EEE201</td><td>Electrical Circuits</td><td>4</td><td>A+</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="how"><b>কেন এখন 1NF:</b>
+      <ul>
+        <li>প্রতিটা cell-এ একটাই মান; grade এখন নিজের row-তে নিজের course-এর পাশে — position মেলানোর ঝামেলা নেই।</li>
+        <li>Key <code>(student_id, course_code)</code> — কোনো দুইটা row একই না। "CSE221 কারা নিয়েছে" এখন সাধারণ <code>WHERE course_code = 'CSE221'</code>, index-ও কাজ করে।</li>
+        <li><b>কিন্তু</b> redundancy বেড়ে গেল: "Rahim Uddin" ২ বার, "Database Systems" ৩ বার, "Dr. Nazmul Hasan" ৩ বার। 1NF শুধু গঠন ঠিক করে, redundancy সরায় না — সেটা 2NF আর 3NF-এর কাজ।</li>
+        <li>বিকল্প পথ: repeating group-টাকে শুরুতেই আলাদা table-এ সরানো (<code>student</code> + <code>student_course</code>)। সেটাও 1NF, আর পরের ধাপে আমরা ঠিক সেখানেই পৌঁছাব।</li>
+      </ul>
+    </div>
+
+    <h3><span class="st">PostgreSQL</span>DDL আর পুরনো sheet ফিরিয়ে আনা</h3>
+    <div class="grid2">
+      <div>
+        <div class="file" style="--dot:var(--pa)"><i></i>1NF table</div>
+<pre class="code" data-lang="sql">CREATE TABLE enrollment (
+  student_id   int,
+  student_name text NOT NULL,
+  dept         text NOT NULL,
+  dept_head    text NOT NULL,
+  course_code  text,
+  course_title text NOT NULL,
+  credit       int  NOT NULL,
+  grade        text NOT NULL,
+  PRIMARY KEY (student_id, course_code)
+);
+INSERT INTO enrollment VALUES
+ (101, 'Rahim Uddin',  'CSE', 'Dr. Nazmul Hasan',  'CSE220', 'Database Systems',    3, 'A'),
+ (101, 'Rahim Uddin',  'CSE', 'Dr. Nazmul Hasan',  'CSE221', 'Operating Systems',   3, 'B+'),
+ (102, 'Karima Begum', 'CSE', 'Dr. Nazmul Hasan',  'CSE220', 'Database Systems',    3, 'A-'),
+ (103, 'Tanvir Ahmed', 'EEE', 'Dr. Farhana Akter', 'CSE220', 'Database Systems',    3, 'B'),
+ (103, 'Tanvir Ahmed', 'EEE', 'Dr. Farhana Akter', 'EEE201', 'Electrical Circuits', 4, 'A'),
+ (104, 'Nusrat Jahan', 'EEE', 'Dr. Farhana Akter', 'EEE201', 'Electrical Circuits', 4, 'A+');</pre>
+      </div>
+      <div>
+        <div class="file" style="--dot:var(--pa)"><i></i>string_agg — UNF view আবার বানানো<span class="r" style="--tc:var(--ok)">কিছু হারায়নি</span></div>
+<pre class="code" data-lang="sql">SELECT student_id, student_name,
+       string_agg(course_code, ', ' ORDER BY course_code) AS courses,
+       string_agg(grade,       ', ' ORDER BY course_code) AS grades
+FROM enrollment
+GROUP BY student_id, student_name
+ORDER BY student_id;
+<span class="o"> student_id | student_name |    courses     | grades
+------------+--------------+----------------+--------
+        101 | Rahim Uddin  | CSE220, CSE221 | A, B+
+        102 | Karima Begum | CSE220         | A-
+        103 | Tanvir Ahmed | CSE220, EEE201 | B, A
+        104 | Nusrat Jahan | EEE201         | A+</span></pre>
+        <div class="file" style="--dot:var(--pa);margin-top:12px"><i></i>এখনো যা পারে না<span class="r" style="--tc:var(--bad)">insertion anomaly</span></div>
+<pre class="code" data-lang="sql"><span class="c">-- নতুন course CSE310 খুলতে চাই, কেউ এখনো নেয়নি</span>
+INSERT INTO enrollment (student_id, student_name, dept, dept_head,
+                        course_code, course_title, credit, grade)
+VALUES (NULL, '-', '-', '-', 'CSE310', 'Machine Learning', 3, '-');
+<span class="e">ERROR:  null value in column "student_id" of relation "enrollment"
+        violates not-null constraint</span></pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2NF -->
+  <section id="nf2" style="--c:var(--pc)">
+    <h2><span class="num w">2NF</span>Second Normal Form</h2>
+    <span class="motto">Non-key column নির্ভর করবে পুরো key-র উপর — অর্ধেকের উপর না</span>
+
+    <h3><span class="st">Definition</span></h3>
+    <figure class="def">
+      <figcaption>Official definition · 2NF</figcaption>
+      <blockquote>A relation schema R is in second normal form (2NF) if it is in 1NF and every non-prime attribute of R is fully functionally dependent on every candidate key of R.</blockquote>
+      <blockquote>A functional dependency X → Y is a full functional dependency if removing any attribute from X means the dependency no longer holds; otherwise it is a partial dependency.</blockquote>
+    </figure>
+    <p class="txt"><b>সহজ বাংলায়:</b> key যদি একাধিক column মিলে হয় (composite), তাহলে প্রতিটা non-key column-কে জানতে <b>key-র সব column লাগবে</b>। শুধু <code>student_id</code> জানলেই যদি <code>student_name</code> জানা যায়, তাহলে নামটা (student_id, course_code)-ওয়ালা table-এ থাকার কথা না — সেটা student-এর তথ্য, enrollment-এর না।</p>
+
+    <h3><span class="st">Problem</span>1NF table-এ partial dependency</h3>
+    <div class="card tbox">
+      <div class="tcap">enrollment <em>key = (student_id, course_code)</em><span class="tag warn">1NF ✓ · 2NF ✗</span></div>
+      <div class="tscroll">
+        <table class="data">
+          <thead><tr><th class="pk">student_id<span class="kb">PK</span></th><th>student_name</th><th>dept</th><th>dept_head</th><th class="pk">course_code<span class="kb">PK</span></th><th>course_title</th><th>credit</th><th>grade</th></tr></thead>
+          <tbody>
+            <tr><td>101</td><td class="x x1">Rahim Uddin</td><td class="x x1">CSE</td><td class="x x1">Dr. Nazmul Hasan</td><td>CSE220</td><td class="x x2">Database Systems</td><td class="x x2">3</td><td>A</td></tr>
+            <tr><td>101</td><td class="x x1">Rahim Uddin</td><td class="x x1">CSE</td><td class="x x1">Dr. Nazmul Hasan</td><td>CSE221</td><td class="x x2">Operating Systems</td><td class="x x2">3</td><td>B+</td></tr>
+            <tr><td>102</td><td class="x x1">Karima Begum</td><td class="x x1">CSE</td><td class="x x1">Dr. Nazmul Hasan</td><td>CSE220</td><td class="x x2">Database Systems</td><td class="x x2">3</td><td>A-</td></tr>
+            <tr><td>103</td><td class="x x1">Tanvir Ahmed</td><td class="x x1">EEE</td><td class="x x1">Dr. Farhana Akter</td><td>CSE220</td><td class="x x2">Database Systems</td><td class="x x2">3</td><td>B</td></tr>
+            <tr><td>103</td><td class="x x1">Tanvir Ahmed</td><td class="x x1">EEE</td><td class="x x1">Dr. Farhana Akter</td><td>EEE201</td><td class="x x2">Electrical Circuits</td><td class="x x2">4</td><td>A</td></tr>
+            <tr><td>104</td><td class="x x1">Nusrat Jahan</td><td class="x x1">EEE</td><td class="x x1">Dr. Farhana Akter</td><td>EEE201</td><td class="x x2">Electrical Circuits</td><td class="x x2">4</td><td>A+</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="legend"><span><i style="--hc:var(--sa)"></i>শুধু <code>student_id</code>-এর উপর নির্ভর</span><span><i style="--hc:var(--sb)"></i>শুধু <code>course_code</code>-এর উপর নির্ভর</span><span>সাদা <code>grade</code> — পুরো key লাগে</span></div>
+
+    <div class="card" style="margin-top:14px"><ul class="fds">
+      <li><code>{student_id, course_code} → grade</code><span class="tag ok">full ✓</span></li>
+      <li><code>student_id → student_name, dept</code><span>key-র অর্ধেক থেকেই</span><span class="tag bad">partial ✗</span></li>
+      <li><code>student_id → dept → dept_head</code><span>তাই dept_head-ও শুধু student_id দিয়ে জানা যায়</span><span class="tag bad">partial ✗</span></li>
+      <li><code>course_code → course_title, credit</code><span>key-র বাকি অর্ধেক থেকে</span><span class="tag bad">partial ✗</span></li>
+    </ul></div>
+
+    <div class="anoms" style="margin-top:14px">
+      <div class="card anom"><b>Insertion</b><p>নতুন course <strong>CSE310 Machine Learning</strong> খোলা যায় না যতক্ষণ না কেউ enroll করে — <code>student_id</code> key-র অংশ, NULL হতে পারে না (উপরের error)। একইভাবে কোনো course নেয়নি এমন নতুন student-কেও রাখা যায় না।</p></div>
+      <div class="card anom"><b>Update</b><p>CSE220-এর নাম "Database Systems" → "Database Management Systems" করতে <strong>৩টা row</strong> (101, 102, 103) বদলাতে হবে। একটা বাদ পড়লে একই course code-এর দুইটা নাম।</p></div>
+      <div class="card anom"><b>Deletion</b><p>Rahim CSE221 drop করল → row <strong>(101, CSE221)</strong> delete। সেটাই ছিল Operating Systems-এর একমাত্র row — course-এর নাম আর credit-ও মুছে গেল।</p></div>
+    </div>
+
+    <h3><span class="st">Solution</span>যে যার key-র সাথে — তিনটা table</h3>
+    <div class="tables">
+      <div class="card tbox">
+        <div class="tcap">student<span class="tag ok">2NF ✓</span></div>
+        <div class="tscroll"><table class="data sm">
+          <thead><tr><th class="pk">student_id<span class="kb">PK</span></th><th>student_name</th><th>dept</th><th>dept_head</th></tr></thead>
+          <tbody>
+            <tr><td>101</td><td>Rahim Uddin</td><td>CSE</td><td>Dr. Nazmul Hasan</td></tr>
+            <tr><td>102</td><td>Karima Begum</td><td>CSE</td><td>Dr. Nazmul Hasan</td></tr>
+            <tr><td>103</td><td>Tanvir Ahmed</td><td>EEE</td><td>Dr. Farhana Akter</td></tr>
+            <tr><td>104</td><td>Nusrat Jahan</td><td>EEE</td><td>Dr. Farhana Akter</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+      <div class="card tbox">
+        <div class="tcap">course<span class="tag ok">2NF ✓</span></div>
+        <div class="tscroll"><table class="data sm">
+          <thead><tr><th class="pk">course_code<span class="kb">PK</span></th><th>course_title</th><th>credit</th></tr></thead>
+          <tbody>
+            <tr><td>CSE220</td><td>Database Systems</td><td>3</td></tr>
+            <tr><td>CSE221</td><td>Operating Systems</td><td>3</td></tr>
+            <tr><td>EEE201</td><td>Electrical Circuits</td><td>4</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+      <div class="card tbox">
+        <div class="tcap">enrollment<span class="tag ok">2NF ✓</span></div>
+        <div class="tscroll"><table class="data sm">
+          <thead><tr><th class="pk">student_id<span class="kb">PK</span><span class="kb fk">FK</span></th><th class="pk">course_code<span class="kb">PK</span><span class="kb fk">FK</span></th><th>grade</th></tr></thead>
+          <tbody>
+            <tr><td>101</td><td>CSE220</td><td>A</td></tr>
+            <tr><td>101</td><td>CSE221</td><td>B+</td></tr>
+            <tr><td>102</td><td>CSE220</td><td>A-</td></tr>
+            <tr><td>103</td><td>CSE220</td><td>B</td></tr>
+            <tr><td>103</td><td>EEE201</td><td>A</td></tr>
+            <tr><td>104</td><td>EEE201</td><td>A+</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+    </div>
+    <div class="how"><b>কেন এখন 2NF:</b>
+      <ul>
+        <li><code>student</code> আর <code>course</code>-এর key এক column-এর — partial dependency হওয়ার মতো "অংশ"-ই নেই।</li>
+        <li><code>enrollment</code>-এর একমাত্র non-key <code>grade</code>, যেটা পুরো <code>(student_id, course_code)</code>-এর উপর নির্ভর করে।</li>
+        <li><b>Lossless join:</b> <code>enrollment ∩ student = {student_id}</code>, যেটা <code>student</code>-এর key; <code>enrollment ∩ course = {course_code}</code>, <code>course</code>-এর key। তাই JOIN করলে ঠিক আগের ৬টা row ফেরে — একটাও বাড়তি (spurious) row না।</li>
+        <li><b>Dependency preservation:</b> প্রতিটা FD পুরোপুরি একটা table-এর ভেতরে — PK দিয়েই enforce হয়।</li>
+        <li><b>যা বাকি:</b> <code>student</code>-এ "Dr. Nazmul Hasan" এখনো প্রতিটা CSE student-এর row-তে। কারণ <code>dept → dept_head</code> — পরের ধাপ।</li>
+      </ul>
+    </div>
+
+    <h3><span class="st">PostgreSQL</span>DDL + JOIN দিয়ে আগের table</h3>
+    <div class="grid2">
+      <div>
+        <div class="file" style="--dot:var(--pc)"><i></i>2NF schema</div>
+<pre class="code" data-lang="sql">CREATE TABLE student (
+  student_id   int  PRIMARY KEY,
+  student_name text NOT NULL,
+  dept         text NOT NULL,
+  dept_head    text NOT NULL
+);
+CREATE TABLE course (
+  course_code  text PRIMARY KEY,
+  course_title text NOT NULL,
+  credit       int  NOT NULL
+);
+CREATE TABLE enrollment (
+  student_id  int  REFERENCES student,
+  course_code text REFERENCES course,
+  grade       text NOT NULL,
+  PRIMARY KEY (student_id, course_code)
+);
+
+<span class="c">-- এখন course একা খোলা যায়</span>
+INSERT INTO course VALUES ('CSE310', 'Machine Learning', 3);
+<span class="o">INSERT 0 1</span> <span class="g">✓</span></pre>
+      </div>
+      <div>
+        <div class="file" style="--dot:var(--pc)"><i></i>3-table JOIN<span class="r" style="--tc:var(--ok)">১NF table হুবহু</span></div>
+<pre class="code wide" data-lang="sql">SELECT e.student_id, s.student_name, s.dept, s.dept_head,
+       e.course_code, c.course_title, c.credit, e.grade
+FROM enrollment e
+JOIN student s USING (student_id)
+JOIN course  c USING (course_code)
+ORDER BY e.student_id, e.course_code;
+<span class="o"> student_id | student_name | dept |     dept_head     | course_code |    course_title     | credit | grade
+------------+--------------+------+-------------------+-------------+---------------------+--------+-------
+        101 | Rahim Uddin  | CSE  | Dr. Nazmul Hasan  | CSE220      | Database Systems    |      3 | A
+        101 | Rahim Uddin  | CSE  | Dr. Nazmul Hasan  | CSE221      | Operating Systems   |      3 | B+
+        102 | Karima Begum | CSE  | Dr. Nazmul Hasan  | CSE220      | Database Systems    |      3 | A-
+        103 | Tanvir Ahmed | EEE  | Dr. Farhana Akter | CSE220      | Database Systems    |      3 | B
+        103 | Tanvir Ahmed | EEE  | Dr. Farhana Akter | EEE201      | Electrical Circuits |      4 | A
+        104 | Nusrat Jahan | EEE  | Dr. Farhana Akter | EEE201      | Electrical Circuits |      4 | A+
+(6 rows)</span></pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3NF -->
+  <section id="nf3" style="--c:var(--pi)">
+    <h2><span class="num w">3NF</span>Third Normal Form</h2>
+    <span class="motto">Non-key column শুধু key-র কথা বলবে — অন্য non-key-র না</span>
+
+    <h3><span class="st">Definition</span></h3>
+    <figure class="def">
+      <figcaption>Official definition · 3NF</figcaption>
+      <blockquote>A relation schema R is in third normal form (3NF) if, for every nontrivial functional dependency X → A that holds in R, either (a) X is a superkey of R, or (b) A is a prime attribute of R.</blockquote>
+      <blockquote>Equivalently (Codd): R is in 2NF and no non-prime attribute of R is transitively dependent on any candidate key of R.</blockquote>
+    </figure>
+    <p class="txt"><b>সহজ বাংলায়:</b> কোনো non-key column যেন অন্য একটা non-key column দিয়ে নির্ধারিত না হয়। <code>dept_head</code> জানতে <code>student_id</code> লাগে না, <code>dept</code> জানলেই হয় — মানে এটা department-এর তথ্য, student table-এ বসে আছে। মনে রাখার লাইন (William Kent): প্রতিটা non-key column নির্ভর করবে <b>"the key, the whole key, and nothing but the key"</b>-এর উপর। "whole key" = 2NF, "nothing but the key" = 3NF।</p>
+
+    <h3><span class="st">Problem</span>2NF-এর <code>student</code> table-এ transitive dependency</h3>
+    <div class="grid2">
+      <div class="card tbox">
+        <div class="tcap">student <em>key = student_id</em><span class="tag warn">2NF ✓ · 3NF ✗</span></div>
+        <div class="tscroll"><table class="data sm">
+          <thead><tr><th class="pk">student_id<span class="kb">PK</span></th><th>student_name</th><th>dept</th><th>dept_head</th></tr></thead>
+          <tbody>
+            <tr><td>101</td><td>Rahim Uddin</td><td class="det">CSE</td><td class="x">Dr. Nazmul Hasan</td></tr>
+            <tr><td>102</td><td>Karima Begum</td><td class="det">CSE</td><td class="x">Dr. Nazmul Hasan</td></tr>
+            <tr><td>103</td><td>Tanvir Ahmed</td><td class="det">EEE</td><td class="x">Dr. Farhana Akter</td></tr>
+            <tr><td>104</td><td>Nusrat Jahan</td><td class="det">EEE</td><td class="x">Dr. Farhana Akter</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+      <div>
+        <div class="card"><ul class="fds">
+          <li><code>student_id → student_name, dept</code><span class="tag ok">key থেকে ✓</span></li>
+          <li><code>dept → dept_head</code><span>dept super key না, dept_head non-prime</span><span class="tag bad">3NF ✗</span></li>
+        </ul></div>
+        <div class="chain" style="margin-top:12px"><span class="at key">student_id</span><span class="ar">→</span><span class="at">dept</span><span class="ar">→</span><span class="at bad">dept_head</span><span class="tag bad">transitive</span></div>
+        <div class="legend" style="margin-top:4px"><span><i class="o"></i>determinant (non-key)</span><span><i></i>transitive ভাবে নির্ভরশীল</span></div>
+      </div>
+    </div>
+    <div class="anoms" style="margin-top:14px">
+      <div class="card anom"><b>Insertion</b><p>নতুন department <strong>BBA</strong>, head <strong>Dr. Sabina Yasmin</strong> — কোনো BBA student ভর্তি না হওয়া পর্যন্ত রাখার জায়গা নেই; <code>student_id</code> ছাড়া row হয় না।</p></div>
+      <div class="card anom"><b>Update</b><p>CSE-এর head বদলে <strong>Dr. Shahidul Islam</strong> হলেন → 101 আর 102 দুটো row বদলাতে হবে (আসল university-তে হাজারখানেক)। একটা বাদ পড়লে CSE-এর দুইজন head।</p></div>
+      <div class="card anom"><b>Deletion</b><p>EEE-র দুইজন student (103, 104) পাশ করে গেল, তাদের row delete → EEE-র head কে ছিলেন, সেই তথ্যও গেল।</p></div>
+    </div>
+
+    <h3><span class="st">Solution</span>Department-কে নিজের table দাও</h3>
+    <div class="tables">
+      <div class="card tbox">
+        <div class="tcap">student<span class="tag ok">3NF ✓</span></div>
+        <div class="tscroll"><table class="data sm">
+          <thead><tr><th class="pk">student_id<span class="kb">PK</span></th><th>student_name</th><th>dept<span class="kb fk">FK</span></th></tr></thead>
+          <tbody>
+            <tr><td>101</td><td>Rahim Uddin</td><td>CSE</td></tr>
+            <tr><td>102</td><td>Karima Begum</td><td>CSE</td></tr>
+            <tr><td>103</td><td>Tanvir Ahmed</td><td>EEE</td></tr>
+            <tr><td>104</td><td>Nusrat Jahan</td><td>EEE</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+      <div class="card tbox">
+        <div class="tcap">department<span class="tag ok">3NF ✓</span></div>
+        <div class="tscroll"><table class="data sm">
+          <thead><tr><th class="pk">dept<span class="kb">PK</span></th><th>dept_head</th></tr></thead>
+          <tbody>
+            <tr><td>CSE</td><td>Dr. Nazmul Hasan</td></tr>
+            <tr><td>EEE</td><td>Dr. Farhana Akter</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+    </div>
+    <p class="foot"><code>course</code> আর <code>enrollment</code> 2NF ধাপের মতোই থাকে — ওদের কোনো transitive dependency ছিল না। মোট চারটা table।</p>
+    <div class="how"><b>কেন এখন 3NF:</b>
+      <ul>
+        <li><code>student</code>-এ একমাত্র determinant <code>student_id</code> (key)। <code>dept</code> এখানে student-এর একটা fact — "Rahim কোন department-এ" — তাই থাকে, শুধু FK হয়ে।</li>
+        <li><code>department</code>-এ একমাত্র determinant <code>dept</code> (key)। Head-এর নাম এখন একবারই লেখা।</li>
+        <li><b>Lossless join:</b> <code>student ∩ department = {dept}</code>, যেটা <code>department</code>-এর key।</li>
+        <li><b>Dependency preservation:</b> <code>student_id → dept</code> আছে <code>student</code>-এ, <code>dept → dept_head</code> আছে <code>department</code>-এ — কোনো FD হারায়নি।</li>
+        <li>বোনাস: এই চারটা table <b>BCNF-ও</b> — প্রতিটা table-এর প্রতিটা determinant একটা key। বাস্তবের বেশিরভাগ 3NF table-ই BCNF; পার্থক্য দেখতে আলাদা ধরনের উদাহরণ লাগে (পরের section)।</li>
+      </ul>
+    </div>
+
+    <h3><span class="st">PostgreSQL</span>Final schema + 4-table JOIN</h3>
+    <div class="grid2">
+      <div>
+        <div class="file" style="--dot:var(--pi)"><i></i>3NF schema (চূড়ান্ত)</div>
+<pre class="code" data-lang="sql">CREATE TABLE department (
+  dept      text PRIMARY KEY,
+  dept_head text NOT NULL
+);
+CREATE TABLE student (
+  student_id   int  PRIMARY KEY,
+  student_name text NOT NULL,
+  dept         text NOT NULL REFERENCES department
+);
+CREATE TABLE course (
+  course_code  text PRIMARY KEY,
+  course_title text NOT NULL,
+  credit       int  NOT NULL
+);
+CREATE TABLE enrollment (
+  student_id  int  REFERENCES student,
+  course_code text REFERENCES course,
+  grade       text NOT NULL,
+  PRIMARY KEY (student_id, course_code)
+);</pre>
+        <div class="file" style="--dot:var(--pi);margin-top:12px"><i></i>তিনটা anomaly-ই শেষ<span class="r" style="--tc:var(--ok)">psql</span></div>
+<pre class="code" data-lang="sql">INSERT INTO department VALUES ('BBA', 'Dr. Sabina Yasmin');
+<span class="o">INSERT 0 1</span>   <span class="c">-- student ছাড়াই department</span>
+
+UPDATE department SET dept_head = 'Dr. Shahidul Islam'
+WHERE dept = 'CSE';
+<span class="o">UPDATE 1</span>     <span class="c">-- এক row, সব CSE student-এর জন্য</span>
+
+INSERT INTO student VALUES (105, 'Arif Hossain', 'ME');
+<span class="e">ERROR:  insert or update on table "student" violates foreign key
+        constraint "student_dept_fkey"
+DETAIL:  Key (dept)=(ME) is not present in table "department".</span></pre>
+      </div>
+      <div>
+        <div class="file" style="--dot:var(--pi)"><i></i>JOIN — আসল sheet-এর ১NF রূপ<span class="r" style="--tc:var(--ok)">lossless</span></div>
+<pre class="code wide" data-lang="sql">SELECT e.student_id, s.student_name, s.dept, d.dept_head,
+       e.course_code, c.course_title, c.credit, e.grade
+FROM enrollment e
+JOIN student    s USING (student_id)
+JOIN department d USING (dept)
+JOIN course     c USING (course_code)
+ORDER BY e.student_id, e.course_code;
+<span class="o"> student_id | student_name | dept |     dept_head     | course_code |    course_title     | credit | grade
+------------+--------------+------+-------------------+-------------+---------------------+--------+-------
+        101 | Rahim Uddin  | CSE  | Dr. Nazmul Hasan  | CSE220      | Database Systems    |      3 | A
+        101 | Rahim Uddin  | CSE  | Dr. Nazmul Hasan  | CSE221      | Operating Systems   |      3 | B+
+        102 | Karima Begum | CSE  | Dr. Nazmul Hasan  | CSE220      | Database Systems    |      3 | A-
+        103 | Tanvir Ahmed | EEE  | Dr. Farhana Akter | CSE220      | Database Systems    |      3 | B
+        103 | Tanvir Ahmed | EEE  | Dr. Farhana Akter | EEE201      | Electrical Circuits |      4 | A
+        104 | Nusrat Jahan | EEE  | Dr. Farhana Akter | EEE201      | Electrical Circuits |      4 | A+
+(6 rows)</span></pre>
+        <p class="foot">JOIN-এ যে column গুলোতে filter বা join হয় (<code>enrollment.course_code</code>, <code>student.dept</code>), সেগুলোর index নিয়ে দেখো <a href="../indexing/index.html">Indexing গাইড</a> — PostgreSQL FK column-এ নিজে থেকে index বানায় না।</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- BCNF -->
+  <section id="bcnf" style="--c:var(--pd)">
+    <h2><span class="num w">BCNF</span>Boyce–Codd Normal Form (3.5NF)</h2>
+    <span class="motto">যে column কিছু determine করে, তাকে super key হতেই হবে</span>
+
+    <h3><span class="st">Definition</span></h3>
+    <figure class="def">
+      <figcaption>Official definition · BCNF</figcaption>
+      <blockquote>A relation schema R is in Boyce–Codd normal form (BCNF) if, for every nontrivial functional dependency X → A that holds in R, X is a superkey of R.</blockquote>
+      <small>3NF-এর definition থেকে শুধু "(b) A is a prime attribute" ছাড়টা বাদ — তাই 3NF-এর চেয়ে সামান্য কড়া, এজন্য ডাকনাম 3.5NF।</small>
+    </figure>
+    <p class="txt"><b>সহজ বাংলায়:</b> table-এ যে column (বা column set) অন্য কোনো column-এর মান ঠিক করে দেয়, সেটা অবশ্যই পুরো row চেনার মতো key হতে হবে — কোনো ব্যতিক্রম নেই। 3NF একটা ছাড় দিত: ডানপাশের column যদি নিজেই কোনো candidate key-র অংশ (prime) হয়, তাহলে চলবে। এই ছাড় কাজে লাগে শুধু তখন, যখন table-এ <b>একাধিক composite candidate key একে অপরের সাথে overlap করে</b>।</p>
+
+    <h3><span class="st">Problem</span>Section অনুযায়ী instructor — 3NF ✓ কিন্তু BCNF ✗</h3>
+    <p class="txt">একই university, নতুন নিয়ম: CSE220-এর দুইটা section, দুইজন instructor। Business rule: <b>(১)</b> প্রত্যেক instructor ঠিক একটা course পড়ান; <b>(২)</b> একজন student একটা course-এ একজন instructor-এর section-এই থাকে।</p>
+    <div class="grid2">
+      <div class="card tbox">
+        <div class="tcap">course_instructor<span class="tag warn">3NF ✓ · BCNF ✗</span></div>
+        <div class="tscroll"><table class="data sm">
+          <thead><tr><th class="pk">student_id<span class="kb">PK</span></th><th class="pk">course_code<span class="kb">PK</span></th><th>instructor</th></tr></thead>
+          <tbody>
+            <tr><td>101</td><td class="x">CSE220</td><td class="det">Dr. Mahbub Alam</td></tr>
+            <tr><td>102</td><td>CSE220</td><td>Dr. Sharmin Sultana</td></tr>
+            <tr><td>103</td><td class="x">CSE220</td><td class="det">Dr. Mahbub Alam</td></tr>
+            <tr><td>101</td><td>CSE221</td><td>Dr. Imran Hossain</td></tr>
+            <tr><td>103</td><td class="x x2">EEE201</td><td class="det">Dr. Rafiq Ahmed</td></tr>
+            <tr><td>104</td><td class="x x2">EEE201</td><td class="det">Dr. Rafiq Ahmed</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+      <div>
+        <div class="card"><ul class="fds">
+          <li><code>{student_id, course_code} → instructor</code><span class="tag ok">super key ✓</span></li>
+          <li><code>instructor → course_code</code><span>instructor super key না</span><span class="tag bad">BCNF ✗</span></li>
+        </ul></div>
+        <div class="how" style="margin-top:12px"><b>Candidate key দুইটা, overlap করে:</b>
+          <p><code>{student_id, course_code}</code> আর <code>{student_id, instructor}</code> (instructor জানলে course জানা যায়)। তাই তিনটা column-ই <b>prime</b>।</p>
+          <p><b>3NF কেন ঠিক:</b> <code>instructor → course_code</code>-এ ডানপাশ <code>course_code</code> prime → শর্ত (b) পূরণ।<br><b>BCNF কেন ভাঙে:</b> বামপাশ <code>instructor</code> super key না — একই instructor একাধিক row-তে।</p>
+        </div>
+      </div>
+    </div>
+    <div class="legend"><span><i></i>"Mahbub → CSE220" আর "Rafiq → EEE201" একাধিকবার লেখা</span><span><i class="o"></i>determinant যা super key না</span></div>
+    <div class="anoms" style="margin-top:14px">
+      <div class="card anom"><b>Insertion</b><p>নতুন instructor <strong>Dr. Tania Rahman</strong> CSE221 পড়াবেন — কোনো student তাঁর section-এ না আসা পর্যন্ত রাখা যায় না, কারণ দুইটা key-তেই <code>student_id</code> আছে।</p></div>
+      <div class="card anom"><b>Update</b><p>Mahbub CSE220 ছেড়ে CSE221 নিলেন; ভুলে শুধু 103-এর row বদলানো হলো → এখন data বলছে Mahbub <strong>দুইটা course</strong> পড়ান — rule (১) ভাঙা, কিন্তু database আপত্তি করেনি।</p></div>
+      <div class="card anom"><b>Deletion</b><p>Rahim (101) CSE221 drop করল → row delete → "Dr. Imran Hossain CSE221 পড়ান" — এই তথ্যটাই আর কোথাও নেই।</p></div>
+    </div>
+    <div class="file" style="--dot:var(--pd);margin-top:14px"><i></i>update anomaly, psql-এ<span class="r" style="--tc:var(--bad)">rule ভাঙল, error নেই</span></div>
+<pre class="code" data-lang="sql">UPDATE course_instructor SET course_code = 'CSE221'
+WHERE student_id = 103 AND instructor = 'Dr. Mahbub Alam';
+<span class="o">UPDATE 1</span>
+
+SELECT instructor, count(DISTINCT course_code)
+FROM course_instructor GROUP BY instructor
+HAVING count(DISTINCT course_code) > 1;
+<span class="o">   instructor    | count
+-----------------+-------
+ Dr. Mahbub Alam |     2</span></pre>
+
+    <h3><span class="st">Solution</span>Determinant-কে key বানাও — দুইটা table</h3>
+    <div class="tables">
+      <div class="card tbox">
+        <div class="tcap">teaches<span class="tag ok">BCNF ✓</span></div>
+        <div class="tscroll"><table class="data sm">
+          <thead><tr><th class="pk">instructor<span class="kb">PK</span></th><th>course_code<span class="kb fk">FK</span></th></tr></thead>
+          <tbody>
+            <tr><td>Dr. Mahbub Alam</td><td>CSE220</td></tr>
+            <tr><td>Dr. Sharmin Sultana</td><td>CSE220</td></tr>
+            <tr><td>Dr. Imran Hossain</td><td>CSE221</td></tr>
+            <tr><td>Dr. Rafiq Ahmed</td><td>EEE201</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+      <div class="card tbox">
+        <div class="tcap">student_instructor<span class="tag ok">BCNF ✓</span></div>
+        <div class="tscroll"><table class="data sm">
+          <thead><tr><th class="pk">student_id<span class="kb">PK</span><span class="kb fk">FK</span></th><th class="pk">instructor<span class="kb">PK</span><span class="kb fk">FK</span></th></tr></thead>
+          <tbody>
+            <tr><td>101</td><td>Dr. Mahbub Alam</td></tr>
+            <tr><td>102</td><td>Dr. Sharmin Sultana</td></tr>
+            <tr><td>103</td><td>Dr. Mahbub Alam</td></tr>
+            <tr><td>101</td><td>Dr. Imran Hossain</td></tr>
+            <tr><td>103</td><td>Dr. Rafiq Ahmed</td></tr>
+            <tr><td>104</td><td>Dr. Rafiq Ahmed</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+    </div>
+    <div class="how"><b>কেন এখন BCNF:</b>
+      <ul>
+        <li><code>teaches</code>: একমাত্র FD <code>instructor → course_code</code>, আর instructor-ই key। "Mahbub → CSE220" এখন একবারই লেখা; Tania-কে student ছাড়াই যোগ করা যায়।</li>
+        <li><code>student_instructor</code>: দুই column মিলেই key, কোনো nontrivial FD নেই (all-key table)।</li>
+        <li><b>Lossless join:</b> <code>teaches ∩ student_instructor = {instructor}</code>, যেটা <code>teaches</code>-এর key।</li>
+      </ul>
+    </div>
+
+    <h3>Trade-off — dependency preservation হারাল</h3>
+    <p class="txt"><code>{student_id, course_code} → instructor</code> — এই FD-র column গুলো এখন দুইটা table-এ ছড়ানো। কোনো একক table-এর PK/UNIQUE এটা আর enforce করতে পারে না। ফলে নিচের INSERT দুটো table-ই খুশি মনে নেয়, অথচ rule (২) ভাঙে:</p>
+    <div class="grid2">
+      <div>
+        <div class="file" style="--dot:var(--pd)"><i></i>BCNF schema + JOIN</div>
+<pre class="code" data-lang="sql">CREATE TABLE teaches (
+  instructor  text PRIMARY KEY,
+  course_code text NOT NULL REFERENCES course
+);
+CREATE TABLE student_instructor (
+  student_id int  REFERENCES student,
+  instructor text REFERENCES teaches,
+  PRIMARY KEY (student_id, instructor)
+);
+
+SELECT si.student_id, t.course_code, si.instructor
+FROM student_instructor si
+JOIN teaches t USING (instructor)
+ORDER BY si.student_id, t.course_code;
+<span class="o"> student_id | course_code |     instructor
+------------+-------------+---------------------
+        101 | CSE220      | Dr. Mahbub Alam
+        101 | CSE221      | Dr. Imran Hossain
+        102 | CSE220      | Dr. Sharmin Sultana
+        103 | CSE220      | Dr. Mahbub Alam
+        103 | EEE201      | Dr. Rafiq Ahmed
+        104 | EEE201      | Dr. Rafiq Ahmed
+(6 rows)</span></pre>
+      </div>
+      <div>
+        <div class="file" style="--dot:var(--pd)"><i></i>হারানো FD<span class="r" style="--tc:var(--bad)">rule (২) ভাঙল</span></div>
+<pre class="code" data-lang="sql"><span class="c">-- Rahim-কে CSE220-এর দ্বিতীয় section-এও দেওয়া হলো</span>
+INSERT INTO student_instructor VALUES (101, 'Dr. Sharmin Sultana');
+<span class="o">INSERT 0 1</span>   <span class="c">-- কোনো error নেই!</span>
+
+SELECT si.student_id, t.course_code, count(*) AS instructors
+FROM student_instructor si
+JOIN teaches t USING (instructor)
+GROUP BY si.student_id, t.course_code
+HAVING count(*) > 1;
+<span class="o"> student_id | course_code | instructors
+------------+-------------+-------------
+        101 | CSE220      |           2</span></pre>
+        <div class="file" style="--dot:var(--pd);margin-top:12px"><i></i>বিকল্প: 3NF-এ থাকো, redundancy-কে FK দিয়ে বাঁধো<span class="r" style="--tc:var(--ok)">দুটো rule-ই enforce</span></div>
+<pre class="code" data-lang="sql">CREATE TABLE teaches (
+  instructor  text PRIMARY KEY,
+  course_code text NOT NULL REFERENCES course,
+  UNIQUE (instructor, course_code)    <span class="c">-- composite FK-র target</span>
+);
+CREATE TABLE course_instructor (
+  student_id  int  REFERENCES student,
+  course_code text,
+  instructor  text NOT NULL,
+  PRIMARY KEY (student_id, course_code),            <span class="c">-- rule (২)</span>
+  FOREIGN KEY (instructor, course_code)
+    REFERENCES teaches (instructor, course_code)    <span class="c">-- rule (১)</span>
+    ON UPDATE CASCADE
+);
+INSERT INTO course_instructor VALUES (102, 'CSE220', 'Dr. Mahbub Alam');
+<span class="e">ERROR:  duplicate key value violates unique constraint "course_instructor_pkey"</span>
+INSERT INTO course_instructor VALUES (104, 'CSE221', 'Dr. Mahbub Alam');
+<span class="e">ERROR:  ... violates foreign key constraint "course_instructor_instructor_course_code_fkey"
+DETAIL:  Key (instructor, course_code)=(Dr. Mahbub Alam, CSE221) is not present in table "teaches".</span></pre>
+      </div>
+    </div>
+    <div class="how"><b>কোনটা বেছে নেবে:</b>
+      <ul>
+        <li><b>Theory:</b> যেকোনো relation-কে সবসময় <b>lossless + dependency-preserving</b> ভাবে 3NF-এ ভাঙা যায় (synthesis algorithm)। BCNF-এ lossless ভাঙা সবসময় যায়, কিন্তু dependency preservation-এর গ্যারান্টি নেই — এই উদাহরণটাই তার প্রমাণ।</li>
+        <li><b>BCNF-এ যাও</b> যদি হারানো rule-টা trigger বা application code দিয়ে check করতে রাজি থাকো (concurrency-তে সঠিক রাখতে <code>SERIALIZABLE</code> বা lock লাগবে)।</li>
+        <li><b>3NF-এ থাকো</b> (ডানের বিকল্প) যদি constraint দিয়েই সব rule চাও। "Mahbub → CSE220" কয়েকবার লেখা থাকে, কিন্তু composite FK থাকায় কখনো অমিল হতে পারে না — redundancy আছে, anomaly নেই।</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- step-through demo -->
+  <section id="demo" style="--c:var(--accent)">
+    <h2><span class="num">▶</span>Step-through — table কীভাবে ভাঙে</h2>
+    <p class="lead">একই data প্রতিটা ধাপে। Column-এর রং বলে সেটা কার তথ্য — <b style="color:var(--sa)">student</b>, <b style="color:var(--pc)">department</b>, <b style="color:var(--pi)">course</b>, <b style="color:var(--pd)">enrollment</b>। ডোরাকাটা cell = redundant (একই fact আগের কোনো row-তে already লেখা)।</p>
+    <div class="card demo" id="demoBox">
+      <div class="dctl">
+        <button class="btn" id="dBack" type="button">◀ Back</button>
+        <button class="btn pri" id="dStep" type="button">Step ▶</button>
+        <button class="btn" id="dPlay" type="button">Play</button>
+        <div class="dots" id="dDots"></div>
+      </div>
+      <div class="dcap" id="dCap"></div>
+      <div class="dstat" id="dStat"></div>
+      <div class="dtables" id="dTables"></div>
+    </div>
+  </section>
+
+  <!-- quiz -->
+  <section id="quiz" style="--c:var(--accent)">
+    <h2><span class="num">?</span>Quiz — table-টা কোন NF-এ?</h2>
+    <p class="lead">প্রতিটার জন্য <b>সর্বোচ্চ</b> যে normal form-এ table-টা আছে সেটা বেছে নাও। Underline করা column = primary key; FD গুলো business rule।</p>
+    <div class="quiz" id="quizBox"></div>
+    <p class="score" id="score" style="margin-top:12px"></p>
+  </section>
+
+  <!-- summary -->
+  <section id="summary">
+    <h2><span class="num" style="--c:var(--accent)">Σ</span>এক নজরে</h2>
+    <div class="card tscroll">
+      <table>
+        <thead><tr><th>NF</th><th>নিয়ম</th><th>যা সরায়</th><th>এই পেজের violation</th></tr></thead>
+        <tbody>
+          <tr><td class="p" style="--c:var(--pa)"><span>1</span>1NF</td><td>প্রতিটা cell atomic, single-valued; প্রতিটা row key দিয়ে চেনা যায়</td><td>Repeating group, multi-valued / composite cell</td><td><code>course_code = 'CSE220, CSE221'</code></td></tr>
+          <tr><td class="p" style="--c:var(--pc)"><span>2</span>2NF</td><td>1NF + প্রতিটা non-prime attribute প্রতিটা candidate key-র উপর <b>fully</b> dependent</td><td>Partial dependency</td><td><code>student_id → student_name</code>, key <code>(student_id, course_code)</code></td></tr>
+          <tr><td class="p" style="--c:var(--pi)"><span>3</span>3NF</td><td>প্রতিটা nontrivial <code>X → A</code>-তে X super key, <b>অথবা</b> A prime</td><td>Transitive dependency (non-key → non-key)</td><td><code>student_id → dept → dept_head</code></td></tr>
+          <tr><td class="p" style="--c:var(--pd)"><span>3.5</span>BCNF</td><td>প্রতিটা nontrivial <code>X → A</code>-তে X super key — কোনো ছাড় নেই</td><td>Non-superkey determinant (prime attribute-এর উপরেও)</td><td><code>instructor → course_code</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="foot">এর পরেও আছে 4NF (multi-valued dependency সরায়) আর 5NF (join dependency) — interview-এ সাধারণত definition পর্যন্তই আসে। বাস্তবে লক্ষ্য সাধারণত 3NF/BCNF।</p>
+  </section>
+
+  <!-- denormalization -->
+  <section id="denorm" style="--c:var(--warn)">
+    <h2><span class="num">⇄</span>কখন denormalize করবে</h2>
+    <p class="lead">Normalization write-কে নিরাপদ করে, কিন্তু read-এ JOIN বাড়ায়। <b>আগে normalize করো, measure করো, তারপর শুধু hot path-টা</b> ইচ্ছাকৃতভাবে denormalize করো — আর source of truth normalized-ই রাখো।</p>
+    <div class="grid2">
+      <div class="how" style="margin-top:0"><b>যেখানে মানায়:</b>
+        <ul>
+          <li><b>Read-heavy reporting / dashboard:</b> প্রতি request-এ ৫টা table JOIN না করে একটা pre-joined table বা materialized view।</li>
+          <li><b>Data warehouse:</b> star schema — dimension table ইচ্ছা করেই denormalized, কারণ data প্রায় শুধু পড়া হয়।</li>
+          <li><b>Cached aggregate:</b> <code>post.comment_count</code> রাখা, প্রতিবার <code>count(*)</code> না করে — trigger বা app দিয়ে update।</li>
+          <li><b>Cache layer:</b> Redis-এ পুরো profile JSON — DB normalized থাকে, cache-এ কপি।</li>
+        </ul>
+      </div>
+      <div>
+        <div class="file"><i></i>PostgreSQL — normalized থেকে derived কপি</div>
+<pre class="code" data-lang="sql">CREATE MATERIALIZED VIEW enrollment_report AS
+SELECT e.student_id, s.student_name, d.dept_head,
+       c.course_title, c.credit, e.grade
+FROM enrollment e
+JOIN student    s USING (student_id)
+JOIN department d USING (dept)
+JOIN course     c USING (course_code);
+
+<span class="c">-- data বদলালে (যেমন রাতে একবার)</span>
+REFRESH MATERIALIZED VIEW enrollment_report;</pre>
+        <p class="foot">সতর্কতা: order-এর সময়কার দাম বা ঠিকানা <code>order</code> table-এ রাখা denormalization না — সেটা আলাদা fact ("তখন কত ছিল"), product-এর বর্তমান দাম বদলালেও ওটা বদলানো উচিত না।</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- interview -->
+  <section id="qa">
+    <h2><span class="num" style="--c:var(--accent)">Q</span>Interview-এ যা আসে</h2>
+    <div class="card" style="padding:4px 18px">
+      <details><summary>3NF আর BCNF-এর পার্থক্য কী?</summary><p>দুটোতেই প্রতিটা nontrivial FD <code>X → A</code> দেখা হয়। BCNF বলে X অবশ্যই super key। 3NF একটা ছাড় দেয়: X super key না হলেও চলবে যদি A একটা prime attribute হয়। পার্থক্য দেখা যায় শুধু overlapping composite candidate key থাকলে — যেমন <code>(student_id, course_code, instructor)</code> যেখানে <code>instructor → course_code</code>।</p></details>
+      <details><summary>প্রতিটা BCNF table কি 3NF-ও? আর উল্টোটা?</summary><p>হ্যাঁ, BCNF মানলে 3NF-এর শর্ত (a) সবসময় পূরণ হয়, তাই BCNF ⊂ 3NF। উল্টোটা না — <code>course_instructor</code> 3NF কিন্তু BCNF না। তবে যে 3NF table-এ একাধিক overlapping candidate key নেই, সেটা নিশ্চিতভাবে BCNF।</p></details>
+      <details><summary>Transitive dependency কী? উদাহরণ দাও।</summary><p><code>A → B</code> আর <code>B → C</code>, যেখানে B কোনো candidate key না (বা তার অংশ না) এবং C non-prime — তখন <code>A → C</code> হলো transitive। যেমন <code>student_id → dept → dept_head</code>: head-এর নাম student-এর তথ্য না, department-এর। সমাধান: <code>department(dept, dept_head)</code> আলাদা table।</p></details>
+      <details><summary>Single-column primary key-ওয়ালা table কি 2NF ভাঙতে পারে?</summary><p>যদি সেটাই একমাত্র candidate key হয় — না, partial dependency-র জন্য key-র "অংশ" লাগে, তাই table নিজে থেকেই 2NF (তবে 3NF ভাঙতে পারে)। কিন্তু যদি আরেকটা composite candidate key থাকে — যেমন surrogate <code>id</code> PK আর <code>UNIQUE (student_id, course_code)</code>, সাথে <code>course_title</code> — তাহলে <code>course_code → course_title</code> ওই candidate key-র অংশের উপর নির্ভর করে, 2NF ভাঙে। Surrogate key সমস্যা লুকায়, সমাধান করে না।</p></details>
+      <details><summary>Lossless join decomposition কী, কীভাবে check করবে?</summary><p>ভাঙা table গুলো আবার natural JOIN করলে ঠিক আসল row গুলো ফেরে — কম না, বাড়তি (spurious) row-ও না। দুই ভাগের জন্য নিয়ম: <code>R1 ∩ R2 → R1</code> অথবা <code>R1 ∩ R2 → R2</code> — মানে common column গুলো অন্তত একপাশের key। যেমন <code>student ∩ department = {dept}</code>, যেটা department-এর key।</p></details>
+      <details><summary>Dependency preservation কেন গুরুত্বপূর্ণ? BCNF কি সবসময় সেটা দেয়?</summary><p>প্রতিটা FD যদি কোনো একটা table-এর ভেতরে থাকে, তাহলে PK/UNIQUE দিয়েই সস্তায় enforce করা যায়, JOIN করে check লাগে না। 3NF-এ সবসময় lossless + dependency-preserving decomposition পাওয়া যায়; BCNF-এ সবসময় না — <code>instructor</code> উদাহরণে <code>{student_id, course_code} → instructor</code> হারিয়ে যায়। তাই অনেক team 3NF-এই থামে।</p></details>
+      <details><summary>PostgreSQL-এর array বা JSONB column কি 1NF ভাঙে?</summary><p>Classic অর্থে, যদি তুমি ভেতরের element ধরে query, update বা join করো — হ্যাঁ, সেটা repeating group। "Atomic" নির্ভর করে ব্যবহারের উপর: tags পুরোটা একসাথে পড়া-লেখা হলে array ঠিক আছে। কিন্তু element-এ FK দরকার, বা "এই course কারা নিয়েছে" ধরনের প্রশ্ন বারবার হলে আলাদা table-ই ভালো (GIN index খোঁজা দ্রুত করে, কিন্তু FK দেয় না)।</p></details>
+      <details><summary>Normalization কি সবসময় ভালো? Performance-এর কী হবে?</summary><p>Write-heavy OLTP-তে normalization data-কে সঠিক রাখে আর write ছোট রাখে। Read-heavy reporting-এ বেশি JOIN ধীর হতে পারে — তখন materialized view, summary table বা cache দিয়ে বেছে বেছে denormalize। নিয়ম: আগে 3NF/BCNF, তারপর measure, তারপর denormalize — আর denormalized কপি কে update রাখবে সেটা পরিষ্কার রাখা।</p></details>
+    </div>
+  </section>
+
+  <footer><a href="../keys/index.html">← আগের গাইড: Keys</a><a href="../indexing/index.html">পরের গাইড: Indexing →</a></footer>
+</div>
+
+<script>
+const esc = s => String(s).replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+
+/* ---------- SQL highlighter (same tokenizer as the other guides) ---------- */
+const KW = {
+  sql: "BEGIN|COMMIT|ROLLBACK|SELECT|FROM|WHERE|UPDATE|SET|INSERT|INTO|VALUES|CREATE|TABLE|PRIMARY|FOREIGN|KEY|REFERENCES|UNIQUE|NOT|NULL|CHECK|ORDER|BY|GROUP|HAVING|JOIN|USING|ON|AS|AND|DISTINCT|CASCADE|MATERIALIZED|VIEW|REFRESH|count|string_agg|int|text",
+};
+function highlight(src, lang) {
+  const re = new RegExp(`(--[^\\n]*)|('(?:[^']|'')*')|\\b(\\d+)\\b|\\b(${KW[lang]})\\b`, "g");
+  return esc(src).replace(re, (m, c, s, d, k) =>
+    c ? `<span class="c">${c}</span>` : s ? `<span class="s">${s}</span>` : d ? `<span class="d">${d}</span>` : `<span class="k">${k}</span>`);
+}
+document.querySelectorAll("pre.code").forEach(pre => {
+  const lang = pre.dataset.lang;
+  if (!KW[lang]) return;
+  // Highlight only the plain-text parts; leave hand-marked output spans untouched.
+  [...pre.childNodes].forEach(node => {
+    if (node.nodeType !== 3) return;
+    const span = document.createElement("span");
+    span.innerHTML = highlight(node.textContent, lang);
+    node.replaceWith(...span.childNodes);
+  });
+});
+
+/* ---------- step-through demo ---------- */
+// One enrollment per row; every stage below is a projection of this.
+const ROWS = [
+  [101, "Rahim Uddin",  "CSE", "Dr. Nazmul Hasan",  "CSE220", "Database Systems",    3, "A"],
+  [101, "Rahim Uddin",  "CSE", "Dr. Nazmul Hasan",  "CSE221", "Operating Systems",   3, "B+"],
+  [102, "Karima Begum", "CSE", "Dr. Nazmul Hasan",  "CSE220", "Database Systems",    3, "A-"],
+  [103, "Tanvir Ahmed", "EEE", "Dr. Farhana Akter", "CSE220", "Database Systems",    3, "B"],
+  [103, "Tanvir Ahmed", "EEE", "Dr. Farhana Akter", "EEE201", "Electrical Circuits", 4, "A"],
+  [104, "Nusrat Jahan", "EEE", "Dr. Farhana Akter", "EEE201", "Electrical Circuits", 4, "A+"],
+];
+const COLS = ["student_id", "student_name", "dept", "dept_head", "course_code", "course_title", "credit", "grade"];
+const GROUP = { student_id: "s", student_name: "s", dept: "s", dept_head: "d", course_code: "c", course_title: "c", credit: "c", grade: "g" };
+// Each non-key column states a fact about this determinant (used to spot redundant cells).
+const DET = { student_name: "student_id", dept: "student_id", dept_head: "dept", course_title: "course_code", credit: "course_code" };
+const objs = ROWS.map(r => Object.fromEntries(COLS.map((c, i) => [c, r[i]])));
+
+function project(name, cols, pk, fk = []) {
+  const seen = new Set(), rows = [];
+  objs.forEach(o => {
+    const k = cols.map(c => o[c]).join("|");
+    if (!seen.has(k)) { seen.add(k); rows.push(cols.map(c => o[c])); }
+  });
+  return { name, cols, pk, fk, rows };
+}
+function unf() {
+  const by = new Map();
+  objs.forEach(o => { if (!by.has(o.student_id)) by.set(o.student_id, []); by.get(o.student_id).push(o); });
+  const rows = [...by.values()].map(list => COLS.map(c =>
+    ["course_code", "course_title", "credit", "grade"].includes(c) ? list.map(o => o[c]).join(", ") : list[0][c]));
+  return { name: "enrollment_sheet", cols: COLS, pk: [], fk: [], rows, multi: true };
+}
+const T_STUDENT2 = () => project("student", ["student_id", "student_name", "dept", "dept_head"], ["student_id"]);
+const T_STUDENT3 = () => project("student", ["student_id", "student_name", "dept"], ["student_id"], ["dept"]);
+const T_DEPT = () => project("department", ["dept", "dept_head"], ["dept"]);
+const T_COURSE = () => project("course", ["course_code", "course_title", "credit"], ["course_code"]);
+const T_ENROLL = () => project("enrollment", ["student_id", "course_code", "grade"], ["student_id", "course_code"], ["student_id", "course_code"]);
+
+const STAGES = [
+  { nf: "UNF", c: "var(--faint)", tables: () => [unf()],
+    cap: "<b>UNF:</b> এক row-তে এক student, কিন্তু course-এর চারটা cell-এ comma দিয়ে list। Grade কোন course-এর, বোঝা যায় শুধু position মিলিয়ে।" },
+  { nf: "1NF", c: "var(--pa)", tables: () => [project("enrollment", COLS, ["student_id", "course_code"])],
+    cap: "<b>1NF:</b> list ভেঙে প্রতিটা (student, course)-এর জন্য এক row। <b>সরলো:</b> repeating group। কিন্তু দেখো — redundancy বেড়ে গেছে: Rahim-এর নাম ২ বার, Database Systems ৩ বার।" },
+  { nf: "2NF", c: "var(--pc)", tables: () => [T_STUDENT2(), T_COURSE(), T_ENROLL()],
+    cap: "<b>2NF:</b> key-র অর্ধেকের উপর নির্ভরশীল column গুলো নিজের table-এ। <b>সরলো:</b> partial dependency (<code>student_id → …</code>, <code>course_code → …</code>)। বাকি: student-এ dept_head এখনো রিপিট।" },
+  { nf: "3NF", c: "var(--pi)", tables: () => [T_STUDENT3(), T_DEPT(), T_COURSE(), T_ENROLL()],
+    cap: "<b>3NF:</b> <code>dept → dept_head</code> গেল <code>department</code> table-এ। <b>সরলো:</b> transitive dependency। এখন প্রতিটা fact ঠিক একবার লেখা।" },
+  { nf: "BCNF", c: "var(--pd)", tables: () => [T_STUDENT3(), T_DEPT(), T_COURSE(), T_ENROLL()], bcnf: true,
+    cap: "<b>BCNF:</b> প্রতিটা table-এর প্রতিটা determinant এখন key — এই dataset-এ নতুন করে কিছু ভাঙতে হলো না। BCNF আলাদা হয় overlapping candidate key থাকলে — <a href=\"#bcnf\">instructor উদাহরণ</a> দেখো।" },
+];
+
+const dTables = document.getElementById("dTables"), dCap = document.getElementById("dCap"),
+      dStat = document.getElementById("dStat"), dDots = document.getElementById("dDots"),
+      dBack = document.getElementById("dBack"), dStep = document.getElementById("dStep"),
+      dPlay = document.getElementById("dPlay"), demoBox = document.getElementById("demoBox");
+let stage = 0, timer = null;
+
+function renderTable(t, i, badge) {
+  let dups = 0;
+  const seen = {};   // determinant column -> Set of values already seen in this table
+  const body = t.rows.map(r => {
+    const rowObj = Object.fromEntries(t.cols.map((c, j) => [c, r[j]]));
+    const cells = t.cols.map((c, j) => {
+      const v = r[j], det = DET[c];
+      let cls = "g-" + GROUP[c];
+      if (t.multi && String(v).includes(",")) cls += " mv";
+      else if (det && t.cols.includes(det) && !t.pk.includes(c) && !String(rowObj[det]).includes(",") &&
+               seen[det] && seen[det].has(rowObj[det])) { cls += " dup"; dups++; }
+      return `<td class="${cls}">${esc(v)}</td>`;
+    });
+    Object.keys(DET).forEach(c => { const d = DET[c]; if (t.cols.includes(d)) (seen[d] ||= new Set()).add(rowObj[d]); });
+    return `<tr>${cells.join("")}</tr>`;
+  }).join("");
+  const head = t.cols.map(c =>
+    `<th class="g-${GROUP[c]}${t.pk.includes(c) ? " pk" : ""}">${c}${t.pk.includes(c) ? '<span class="kb">PK</span>' : ""}${t.fk.includes(c) ? '<span class="kb fk">FK</span>' : ""}</th>`).join("");
+  const html = `<div class="dt" style="--i:${i}"><div class="tcap">${t.name}${badge}</div>
+    <div class="tscroll"><table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div></div>`;
+  return { html, dups, cells: t.rows.length * t.cols.length };
+}
+
+function render() {
+  const s = STAGES[stage];
+  demoBox.style.setProperty("--c", s.c);
+  const tables = s.tables();
+  let dups = 0, cells = 0;
+  const badge = s.nf === "UNF" ? '<span class="tag bad">1NF ✗</span>' : `<span class="tag ok">${s.nf} ✓</span>`;
+  const parts = tables.map((t, i) => { const r = renderTable(t, i, badge); dups += r.dups; cells += r.cells; return r.html; });
+  dTables.className = "dtables" + (tables.length === 1 ? " one" : "");
+  dTables.innerHTML = parts.join("");
+  dCap.innerHTML = s.cap;
+  dStat.innerHTML = `<span>ধাপ <i>${stage + 1}/${STAGES.length}</i></span><span>table <i>${tables.length}</i></span><span>মোট cell <i>${cells}</i></span><span>redundant cell <i>${dups}</i></span>`;
+  dDots.innerHTML = STAGES.map((x, i) => `<button type="button" class="dot${i === stage ? " on" : ""}" data-i="${i}">${x.nf}</button>`).join("");
+  dBack.disabled = stage === 0;
+  dStep.disabled = stage === STAGES.length - 1;
+}
+function go(i) { stage = Math.max(0, Math.min(STAGES.length - 1, i)); render(); }
+function stop() { clearInterval(timer); timer = null; dPlay.textContent = "Play"; }
+dBack.addEventListener("click", () => { stop(); go(stage - 1); });
+dStep.addEventListener("click", () => { stop(); go(stage + 1); });
+dDots.addEventListener("click", e => { const b = e.target.closest(".dot"); if (b) { stop(); go(+b.dataset.i); } });
+dPlay.addEventListener("click", () => {
+  if (timer) return stop();
+  if (stage === STAGES.length - 1) go(0);
+  dPlay.textContent = "Pause";
+  timer = setInterval(() => { if (stage >= STAGES.length - 1) stop(); else go(stage + 1); }, 2600);
+});
+render();
+
+/* ---------- quiz ---------- */
+const OPTS = ["1NF-ও না", "1NF", "2NF", "3NF", "BCNF"];
+const QUIZ = [
+  { sch: "student_phone(<u>student_id</u>, name, phones)", fds: ["<code>student_id → name, phones</code>", "উদাহরণ row: <code>101 | Rahim | '01711-000001, 01819-000002'</code>"], a: 0,
+    ex: "<b>1NF-ও না।</b> <code>phones</code> cell-এ একাধিক মান — multi-valued attribute। সমাধান: <code>student_phone(student_id, phone)</code> আলাদা table।" },
+  { sch: "order_item(<u>order_id</u>, <u>product_id</u>, product_name, qty)", fds: ["<code>{order_id, product_id} → qty</code>", "<code>product_id → product_name</code>"], a: 1,
+    ex: "<b>1NF।</b> <code>product_name</code> key-র অংশ <code>product_id</code>-এর উপর নির্ভর করে — partial dependency, তাই 2NF না।" },
+  { sch: "employee(<u>emp_id</u>, emp_name, branch_id, branch_city)", fds: ["<code>emp_id → emp_name, branch_id</code>", "<code>branch_id → branch_city</code>"], a: 2,
+    ex: "<b>2NF।</b> Key এক column-এর, তাই partial dependency অসম্ভব। কিন্তু <code>emp_id → branch_id → branch_city</code> transitive — 3NF না।" },
+  { sch: "coaching(<u>member_id</u>, <u>sport</u>, coach)", fds: ["<code>{member_id, sport} → coach</code>", "<code>coach → sport</code> (প্রত্যেক coach একটাই sport)"], a: 3,
+    ex: "<b>3NF।</b> Candidate key <code>{member_id, sport}</code> আর <code>{member_id, coach}</code> — সব column prime। <code>coach → sport</code>-এ sport prime, তাই 3NF ঠিক; কিন্তু coach super key না, তাই BCNF না।" },
+  { sch: "enrollment(<u>student_id</u>, <u>course_code</u>, grade)", fds: ["<code>{student_id, course_code} → grade</code>"], a: 4,
+    ex: "<b>BCNF।</b> একমাত্র nontrivial FD-র বামপাশ পুরো key।" },
+  { sch: "registration(<u>id</u>, student_id, course_code, course_title)", fds: ["<code>UNIQUE (student_id, course_code)</code>", "<code>course_code → course_title</code>"], a: 1,
+    ex: "<b>1NF।</b> Single-column PK দেখে ধোঁকা খেয়ো না — <code>{student_id, course_code}</code>-ও একটা candidate key, আর <code>course_title</code> তার অংশ <code>course_code</code>-এর উপর নির্ভর করে: partial dependency।" },
+  { sch: "product(<u>product_id</u>, sku, name, price)", fds: ["<code>product_id → sku, name, price</code>", "<code>sku → product_id, name, price</code> (sku unique)"], a: 4,
+    ex: "<b>BCNF।</b> দুইটা candidate key (<code>product_id</code>, <code>sku</code>) — দুটো determinant-ই key। একাধিক key থাকা মানেই সমস্যা না।" },
+];
+const quizBox = document.getElementById("quizBox"), scoreEl = document.getElementById("score");
+let answered = 0, correct = 0;
+quizBox.innerHTML = QUIZ.map((q, i) => `<div class="card qz" data-q="${i}">
+  <span class="qn">প্রশ্ন ${i + 1}</span>
+  <div class="sch">${q.sch}</div>
+  <ul>${q.fds.map(f => `<li>${f}</li>`).join("")}</ul>
+  <div class="opts">${OPTS.map((o, j) => `<button type="button" class="opt" data-j="${j}">${o}</button>`).join("")}</div>
+  <p class="ex">${q.ex}</p></div>`).join("");
+function updateScore() { scoreEl.innerHTML = answered ? `স্কোর: <b>${correct}/${answered}</b> (মোট ${QUIZ.length})` : ""; }
+quizBox.addEventListener("click", e => {
+  const b = e.target.closest(".opt"); if (!b) return;
+  const card = b.closest(".qz"); if (card.classList.contains("done")) return;
+  const q = QUIZ[+card.dataset.q], j = +b.dataset.j;
+  card.classList.add("done");
+  card.querySelectorAll(".opt").forEach(x => { x.disabled = true; if (+x.dataset.j === q.a) x.classList.add("right"); });
+  if (j !== q.a) b.classList.add("wrong"); else correct++;
+  answered++; updateScore();
+});
+
+/* ---------- theme ---------- */
+const root = document.documentElement;
+try { const t = localStorage.getItem("welldev-theme"); if (t) root.dataset.theme = t; } catch (e) {}
+document.getElementById("theme").addEventListener("click", () => {
+  const dark = root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  root.dataset.theme = dark ? "light" : "dark";
+  try { localStorage.setItem("welldev-theme", root.dataset.theme); } catch (e) {}
+});
+</script>
+</body>
+</html>
