@@ -1,0 +1,751 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DRY, KISS, YAGNI, SoC</title>
+<meta name="description" content="Design Principles — DRY, KISS, YAGNI, SoC — সহজ বাংলায়, C# Bad বনাম Good কোড সহ।">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,650;1,9..144,500&family=Hind+Siliguri:wght@400;500;600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f6f3ee; --surface:#fffdf9; --surface-2:#efeae2; --side:#efeae2;
+  --ink:#1f1c18; --ink-2:#5a534a; --ink-3:#8d857a; --line:#e2dbcf;
+  --accent:#b4532a; --bad:#c2410c; --good:#2f6f62;
+  --c1:#b4532a; --c2:#2f6f62; --c3:#5b4fa8; --c4:#a07a1d;
+  --code-bg:#1d1b19; --code-ink:#e8e2d8; --code-bar:#2a2724;
+  --t-kw:#e5946b; --t-str:#a9c97f; --t-com:#7d766c; --t-num:#d6b46a; --t-type:#87bfd9; --t-fn:#e9cf8a;
+  --shadow:0 1px 2px rgba(40,30,20,.04),0 8px 24px -12px rgba(40,30,20,.12);
+  --sans:"Inter","Hind Siliguri",system-ui,sans-serif;
+  --bn:"Hind Siliguri","Inter",system-ui,sans-serif;
+  --serif:"Fraunces",Georgia,serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#141311; --surface:#1b1a17; --surface-2:#24221e; --side:#181714;
+  --ink:#ece6dc; --ink-2:#b3aa9c; --ink-3:#7f776b; --line:#2e2b26;
+  --accent:#e58a5c; --bad:#f08a5d; --good:#5fb9a5;
+  --c1:#e58a5c; --c2:#5fb9a5; --c3:#a598f0; --c4:#d9b356;
+  --code-bg:#0f0e0d; --code-bar:#1a1917; --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px -14px rgba(0,0,0,.6);
+}}
+:root[data-theme="dark"]{
+  --bg:#141311; --surface:#1b1a17; --surface-2:#24221e; --side:#181714;
+  --ink:#ece6dc; --ink-2:#b3aa9c; --ink-3:#7f776b; --line:#2e2b26;
+  --accent:#e58a5c; --bad:#f08a5d; --good:#5fb9a5;
+  --c1:#e58a5c; --c2:#5fb9a5; --c3:#a598f0; --c4:#d9b356;
+  --code-bg:#0f0e0d; --code-bar:#1a1917; --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px -14px rgba(0,0,0,.6);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:24px}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased}
+a{color:var(--accent)}
+button{font:inherit;color:inherit}
+code{font-family:var(--mono)}
+:not(pre)>code{font-size:.84em;background:var(--surface-2);border:1px solid var(--line);padding:1px 6px;border-radius:6px}
+.app{display:grid;grid-template-columns:280px 1fr;min-height:100vh}
+
+/* sidebar */
+.sidebar{position:sticky;top:0;height:100vh;overflow-y:auto;background:var(--side);border-right:1px solid var(--line);padding:22px 14px 30px;display:flex;flex-direction:column}
+.brand{display:flex;align-items:center;gap:10px;padding:2px 8px 22px;text-decoration:none;color:var(--ink)}
+.brand-mark{width:34px;height:34px;border-radius:10px;background:var(--ink);color:var(--bg);display:grid;place-items:center;font-family:var(--serif);font-size:18px;font-weight:650}
+.brand b{font-family:var(--serif);font-weight:650;font-size:19px;display:block;line-height:1.1}
+.brand small{color:var(--ink-3);font-size:12px;font-family:var(--bn)}
+.side-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-3);padding:0 10px 6px}
+.nav a{display:grid;grid-template-columns:28px 1fr;column-gap:10px;align-items:center;padding:8px 10px;border-radius:10px;text-decoration:none;color:var(--ink);margin-bottom:2px}
+.nav a small{grid-column:2;color:var(--ink-3);font-size:12px;line-height:1.3}
+.nav a:hover{background:var(--surface)}
+.nav a.active{background:var(--surface);box-shadow:var(--shadow)}
+.nav-l{grid-row:span 2;width:28px;height:28px;border-radius:8px;display:grid;place-items:center;font-family:var(--serif);font-weight:650;color:var(--hue);background:color-mix(in srgb,var(--hue) 14%,transparent)}
+.nav .plain{grid-template-columns:28px 1fr}
+.nav .plain .nav-l{color:var(--ink-2);background:var(--surface-2);font-family:var(--sans);font-size:13px}
+.side-foot{margin-top:auto;padding-top:18px;display:flex;gap:8px;flex-wrap:wrap}
+.pill-btn{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 12px;font-size:12.5px;color:var(--ink-2);cursor:pointer;text-decoration:none}
+.pill-btn:hover{color:var(--ink);border-color:var(--ink-3)}
+
+/* main */
+.main{min-width:0}
+.wrap{max-width:860px;margin:0 auto;padding:44px 32px 90px}
+.hero{padding:10px 0 34px;border-bottom:1px solid var(--line);margin-bottom:10px}
+.eyebrow{font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--accent)}
+.hero h1{font-family:var(--serif);font-weight:650;font-size:clamp(36px,6vw,60px);line-height:1.04;letter-spacing:-.025em;margin:12px 0 16px}
+.hero h1 em{font-style:italic;color:var(--accent);font-weight:500}
+.hero p{font-family:var(--bn);font-size:17px;color:var(--ink-2);max-width:640px;margin:0 0 10px;line-height:1.75}
+.ov{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:30px 0 0}
+.ov-card{display:grid;grid-template-columns:52px 1fr;column-gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;text-decoration:none;color:var(--ink);transition:transform .15s,box-shadow .15s,border-color .15s}
+.ov-card:hover{transform:translateY(-2px);box-shadow:var(--shadow);border-color:color-mix(in srgb,var(--hue) 45%,var(--line))}
+.ov-letter{grid-row:span 3;width:52px;height:52px;border-radius:14px;display:grid;place-items:center;font-family:var(--serif);font-size:28px;font-weight:650;color:var(--hue);background:color-mix(in srgb,var(--hue) 13%,transparent)}
+.ov-name{font-weight:600;font-size:17px}
+.ov-full{font-size:12.5px;color:var(--ink-3)}
+.ov-core{font-family:var(--bn);font-size:14.5px;color:var(--ink-2);margin-top:6px}
+
+/* principle */
+.principle{padding-top:56px}
+.p-head{display:flex;gap:16px;align-items:center;margin-bottom:18px}
+.p-badge{flex:none;width:58px;height:58px;border-radius:16px;display:grid;place-items:center;font-family:var(--serif);font-size:32px;font-weight:650;color:#fff;background:var(--hue)}
+.p-num{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--hue)}
+.principle h2{font-family:var(--serif);font-size:clamp(28px,4vw,38px);font-weight:650;letter-spacing:-.02em;line-height:1.1;margin:2px 0 0}
+.principle h2 span{font-weight:500;font-style:italic;color:var(--ink-3);font-size:.6em;letter-spacing:0}
+.principle p,.principle li{font-family:var(--bn);font-size:16.5px;line-height:1.8}
+.principle p{margin:0 0 14px}
+.p-core{font-size:20px!important;font-weight:600;color:var(--ink);border-left:4px solid var(--hue);padding:2px 0 2px 14px}
+.principle h3{font-size:13px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin:30px 0 12px}
+.label{font-family:var(--sans);font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px}
+.analogy{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 18px;margin:18px 0}
+.analogy .label{color:var(--hue)}
+.analogy p{margin:0}
+
+.compare{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:10px;box-shadow:var(--shadow)}
+.seg{display:flex;gap:6px;padding:4px;background:var(--surface-2);border-radius:11px}
+.seg-btn{flex:1;border:0;background:none;padding:8px 10px;border-radius:8px;cursor:pointer;font-size:13.5px;font-weight:500;color:var(--ink-2)}
+.seg-btn.active{background:var(--surface);box-shadow:var(--shadow);color:var(--ink)}
+.seg-btn.bad.active{color:var(--bad)}
+.seg-btn.good.active{color:var(--good)}
+.pane{padding:14px 8px 4px}
+.pane-note{margin:0 4px 12px!important;font-size:15.5px!important}
+.code{border-radius:12px;overflow:hidden;background:var(--code-bg)}
+.code-bar{display:flex;align-items:center;justify-content:space-between;padding:7px 14px;background:var(--code-bar);font-family:var(--mono);font-size:12px;color:#9a9286}
+.copy{border:0;background:none;color:#9a9286;cursor:pointer;font-size:12px}
+.copy:hover{color:#fff}
+.code pre{margin:0;padding:14px 18px;overflow-x:auto;font-size:13px;line-height:1.65;color:var(--code-ink);tab-size:4}
+.t-kw{color:var(--t-kw)} .t-str{color:var(--t-str)} .t-com{color:var(--t-com);font-style:italic} .t-num{color:var(--t-num)} .t-type{color:var(--t-type)} .t-fn{color:var(--t-fn)}
+.full-file{margin:12px 0 0}
+.full-file summary{cursor:pointer;font-size:13px;color:var(--ink-3);padding:4px 2px}
+.full-file summary:hover{color:var(--ink)}
+.full-file .code{margin-top:8px}
+.notes{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:22px}
+.note{border-radius:14px;padding:14px 18px}
+.note p{margin:0;font-size:15.5px!important}
+.note.remember{background:color-mix(in srgb,var(--good) 11%,var(--surface));border:1px solid color-mix(in srgb,var(--good) 28%,transparent)}
+.note.remember .label{color:var(--good)}
+.note.caution{background:color-mix(in srgb,var(--c4) 12%,var(--surface));border:1px solid color-mix(in srgb,var(--c4) 30%,transparent)}
+.note.caution .label{color:var(--c4)}
+
+/* summary */
+.summary{padding-top:64px}
+.summary h2{font-family:var(--serif);font-size:clamp(28px,4vw,36px);font-weight:650;letter-spacing:-.02em;margin:0 0 6px}
+.summary > p{font-family:var(--bn);color:var(--ink-2);font-size:16px;margin:0 0 18px}
+.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-family:var(--bn);font-size:14.5px;line-height:1.6}
+th,td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--sans);font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);background:var(--surface-2)}
+tr:last-child td{border-bottom:0}
+td b{font-family:var(--serif);font-size:16px}
+.relations{display:grid;gap:12px;margin-top:22px}
+.rel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 18px;font-family:var(--bn);font-size:15.5px;line-height:1.75}
+.rel b{font-family:var(--sans)}
+.oneliners{margin-top:22px;background:var(--ink);color:var(--bg);border-radius:16px;padding:20px 22px}
+.oneliners .label{color:color-mix(in srgb,var(--bg) 60%,transparent)}
+.oneliners ul{margin:6px 0 0;padding-left:18px;font-family:var(--bn);font-size:15.5px;line-height:1.9}
+.oneliners b{font-family:var(--serif)}
+footer{margin-top:60px;padding-top:20px;border-top:1px solid var(--line);color:var(--ink-3);font-size:13px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+
+.topbar{display:none}
+@media (max-width:900px){
+  .app{grid-template-columns:1fr}
+  .sidebar{display:none}
+  .topbar{display:flex;position:sticky;top:0;z-index:5;gap:6px;overflow-x:auto;padding:10px 14px;background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);scrollbar-width:none}
+  .topbar a{white-space:nowrap;text-decoration:none;color:var(--ink-2);font-size:13.5px;padding:5px 12px;border-radius:999px;border:1px solid var(--line);background:var(--surface)}
+  .topbar a.active{color:var(--ink);border-color:var(--ink-3)}
+  html{scroll-padding-top:64px}
+}
+@media (max-width:640px){
+  .wrap{padding:28px 16px 70px}
+  .ov{grid-template-columns:1fr}
+  .notes{grid-template-columns:1fr}
+  .principle p,.principle li{font-size:16px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <a class="brand" href="#top"><div class="brand-mark">P</div><div><b>Design Principles</b><small>সহজ বাংলায় · C#</small></div></a>
+    <div class="side-label">Principles</div>
+    <nav class="nav">
+      <a class="plain" href="#top" data-sec="top"><span class="nav-l">≡</span>Overview<small>৪টি নীতি এক নজরে</small></a>
+      <a href="#dry" data-sec="dry" style="--hue:var(--c1)"><span class="nav-l">D</span>DRY<small>Don't Repeat Yourself</small></a><a href="#kiss" data-sec="kiss" style="--hue:var(--c2)"><span class="nav-l">K</span>KISS<small>Keep It Simple, Stupid</small></a><a href="#yagni" data-sec="yagni" style="--hue:var(--c3)"><span class="nav-l">Y</span>YAGNI<small>You Aren't Gonna Need It</small></a><a href="#soc" data-sec="soc" style="--hue:var(--c4)"><span class="nav-l">S</span>SoC<small>Separation of Concerns</small></a>
+      <a class="plain" href="#summary" data-sec="summary"><span class="nav-l">✓</span>তুলনা<small>কখন কোনটা</small></a>
+    </nav>
+    <div class="side-foot">
+      <a class="pill-btn" href="../solid/index.html">SOLID →</a>
+      <button class="pill-btn" id="theme" type="button">Theme</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <nav class="topbar" id="topbar"></nav>
+    <div class="wrap">
+      <section class="hero" id="top">
+        <div class="eyebrow">Design Principles · C# · বাংলা</div>
+        <h1>DRY, KISS, YAGNI<br><em>&amp; Separation of Concerns.</em></h1>
+        <p>সফটওয়্যার ইঞ্জিনিয়ারিংয়ে <strong>Design Principles</strong> হলো কিছু সাধারণ নিয়ম বা গাইডলাইন, যা মেনে কোড লিখলে কোড অনেক বেশি ক্লিন, মেইনটেইনেবল এবং বাগ-ফ্রি হয়। এগুলো কোনো নির্দিষ্ট ল্যাঙ্গুয়েজের জন্য নয়, বরং সব ল্যাঙ্গুয়েজেই ব্যবহার করা যায়।</p>
+        <p>SOLID-এর পাশাপাশি এই ৪টি হলো সবচেয়ে বেসিক নীতি। প্রতিটির জন্য সহজ ব্যাখ্যা, একটা বাস্তব উদাহরণ, আর একই C# কোডের <strong>Bad</strong> বনাম <strong>Good</strong> ভার্সন।</p>
+        <div class="ov">
+  <a class="ov-card" href="#dry" style="--hue:var(--c1)">
+    <span class="ov-letter">D</span>
+    <span class="ov-name">DRY</span>
+    <span class="ov-full">Don't Repeat Yourself</span>
+    <span class="ov-core">একই কোড বারবার লিখবেন না।</span>
+  </a>
+  <a class="ov-card" href="#kiss" style="--hue:var(--c2)">
+    <span class="ov-letter">K</span>
+    <span class="ov-name">KISS</span>
+    <span class="ov-full">Keep It Simple, Stupid</span>
+    <span class="ov-core">কোড যতটা সম্ভব সহজ রাখুন।</span>
+  </a>
+  <a class="ov-card" href="#yagni" style="--hue:var(--c3)">
+    <span class="ov-letter">Y</span>
+    <span class="ov-name">YAGNI</span>
+    <span class="ov-full">You Aren't Gonna Need It</span>
+    <span class="ov-core">ভবিষ্যতে লাগতে পারে ভেবে আজই কোনো কোড লিখবেন না।</span>
+  </a>
+  <a class="ov-card" href="#soc" style="--hue:var(--c4)">
+    <span class="ov-letter">S</span>
+    <span class="ov-name">SoC</span>
+    <span class="ov-full">Separation of Concerns</span>
+    <span class="ov-core">প্রতিটি অংশের কাজ আলাদা রাখুন।</span>
+  </a></div>
+      </section>
+
+      
+<section class="principle" id="dry" style="--hue:var(--c1)">
+  <header class="p-head">
+    <div class="p-badge">D</div>
+    <div>
+      <div class="p-num">Principle 01</div>
+      <h2>DRY <span>— Don't Repeat Yourself</span></h2>
+    </div>
+  </header>
+
+  <p class="p-core">একই কোড বারবার লিখবেন না।</p>
+  <p>DRY প্রিন্সিপালের মূল লক্ষ্য হলো কোডের ডুপ্লিকেশন কমানো। যদি আপনার প্রজেক্টের একাধিক জায়গায় একই লজিক বা কোড ব্লক ব্যবহার করা হয়, তবে কোনো পরিবর্তনের দরকার হলে আপনাকে সব জায়গায় পরিবর্তন করতে হবে, যা ভুল হওয়ার সম্ভাবনা বাড়িয়ে দেয়। তাই কমন কোডগুলোকে একটি আলাদা ফাংশন, মেথড বা ক্লাসে নিয়ে আসতে হয়। এতে কোড মেইনটেইন করা সহজ হয় এবং একবার পরিবর্তন করলেই সব জায়গায় আপডেট হয়ে যায়।</p>
+
+  <div class="analogy"><div class="label">বাস্তব উদাহরণ</div><p>অফিসের ঠিকানা যদি ১০টা কাগজে হাতে লেখা থাকে, অফিস বদলালে ১০টাই খুঁজে ঠিক করতে হয় — একটা মিস হলেই ভুল ঠিকানা থেকে যায়। একটা <strong>সিল (stamp)</strong> বানিয়ে রাখলে শুধু সিলটা বদলালেই সব কাগজ ঠিক।</p></div>
+
+  <h3>কোডে দেখি</h3>
+  <div class="compare" data-compare>
+    <div class="seg" role="tablist">
+      <button class="seg-btn bad active" type="button" data-show="bad">❌ Bad — নিয়ম ভাঙা</button>
+      <button class="seg-btn good" type="button" data-show="good">✅ Good — নিয়ম মানা</button>
+    </div>
+    <div class="pane" data-pane="bad">
+      <p class="pane-note"><code>ReportGeneratorBad</code>-এ PDF আর Excel — দুই মেথডেই কোম্পানির header হুবহু কপি করা। Header-এর লেখা বদলাতে হলে দুই জায়গায় বদলাতে হবে; একটা ভুলে গেলে দুই রিপোর্ট দুই রকম দেখাবে।</p>
+      <div class="code"><div class="code-bar"><span>DRY.cs · Bad</span><button class="copy" type="button">Copy</button></div><pre><code><span class="t-kw">public</span> <span class="t-kw">class</span> <span class="t-type">ReportGeneratorBad</span>
+{
+    <span class="t-kw">public</span> <span class="t-kw">void</span> <span class="t-fn">GeneratePDFReport</span>()
+    {
+        <span class="t-com">// Adding Header</span>
+        Console.<span class="t-fn">WriteLine</span>(<span class="t-str">"--- Company Header ---"</span>);
+        Console.<span class="t-fn">WriteLine</span>(<span class="t-str">"Date: "</span> + DateTime.Now);
+        
+        <span class="t-com">// Generate PDF logic...</span>
+        Console.<span class="t-fn">WriteLine</span>(<span class="t-str">"Generating PDF..."</span>);
+    }
+
+    <span class="t-kw">public</span> <span class="t-kw">void</span> <span class="t-fn">GenerateExcelReport</span>()
+    {
+        <span class="t-com">// Adding Header (Repeated Code)</span>
+        Console.<span class="t-fn">WriteLine</span>(<span class="t-str">"--- Company Header ---"</span>);
+        Console.<span class="t-fn">WriteLine</span>(<span class="t-str">"Date: "</span> + DateTime.Now);
+        
+        <span class="t-com">// Generate Excel logic...</span>
+        Console.<span class="t-fn">WriteLine</span>(<span class="t-str">"Generating Excel..."</span>);
+    }
+}</code></pre></div>
+    </div>
+    <div class="pane" data-pane="good" hidden>
+      <p class="pane-note">Header-এর লজিক এক জায়গায় — <code>PrintCompanyHeader()</code>। PDF আর Excel দুজনেই সেটা call করে। বদলাতে হলে একবার বদলালেই সব রিপোর্টে আপডেট।</p>
+      <div class="code"><div class="code-bar"><span>DRY.cs · Good</span><button class="copy" type="button">Copy</button></div><pre><code><span class="t-kw">public</span> <span class="t-kw">class</span> <span class="t-type">ReportGeneratorGood</span>
+{
+    <span class="t-com">// Extracted common logic to a single place</span>
+    <span class="t-kw">private</span> <span class="t-kw">void</span> <span class="t-fn">PrintCompanyHeader</span>()
+    {
+        Console.<span class="t-fn">WriteLine</span>(<span class="t-str">"--- Company Header ---"</span>);
+        Console.<span class="t-fn">WriteLine</span>(<span class="t-str">"Date: "</span> + DateTime.Now);
+    }
+
+    <span class="t-kw">public</span> <span class="t-kw">void</span> <span class="t-fn">GeneratePDFReport</span>()
+    {
+        <span class="t-fn">PrintCompanyHeader</span>(); <span class="t-com">// Reused</span>
+        Console.<span class="t-fn">WriteLine</span>(<span class="t-str">"Generating PDF..."</span>);
+    }
+
+    <span class="t-kw">public</span> <span class="t-kw">void</span> <span class="t-fn">GenerateExcelReport</span>()
+    {
+        <span class="t-fn">PrintCompanyHeader</span>(); <span class="t-com">// Reused</span>
+        Console.<span class="t-fn">WriteLine</span>(<span class="t-str">"Generating Excel..."</span>);</code></pre></div>
+    </div>
+  </div>
+  <details class="full-file"><summary>পুরো ফাইল দেখুন — DRY.cs</summary>
+    <div class="code"><div class="code-bar"><span>DRY.cs</span><button class="copy" type="button">Copy</button></div><pre><code><span class="t-kw">using</span> System;
+
+<span class="t-kw">namespace</span> <span class="t-type">DesignPrinciples</span>
+{
+    <span class="t-com">// ==========================================</span>
+    <span class="t-com">// ❌ BAD: Repeating the same logic (DRY Violation)</span>
+    <span class="t-com">// ==========================================</span>
+    <span class="t-kw">public</span> <span class="t-kw">class</span> <span class="t-type">ReportGeneratorBad</span>
+    {
+        <span class="t-kw">public</span> <span class="t-kw">void</span> <span class="t-fn">GeneratePDFReport</span>()
+        {
+            <span class="t-com">// Adding Header</span>
+            Console.<span class="t-fn">WriteLine</span>(<span class="t-str">"--- Company Header ---"</span>);
+            Console.<span class="t-fn">WriteLine</span>(<span class="t-str">"Date: "</span> + DateTime.Now);
+            
+            <span class="t-com">// Generate PDF logic...</span>
+            Console.<span class="t-fn">WriteLine</span>(<span class="t-str">"Generating PDF..."</span>);
+        }
+
+        <span class="t-kw">public</span> <span class="t-kw">void</span> <span class="t-fn">GenerateExcelReport</span>()
+        {
+            <span class="t-com">// Adding Header (Repeated Code)</span>
+            Console.<span class="t-fn">WriteLine</span>(<span class="t-str">"--- Company Header ---"</span>);
+            Console.<span class="t-fn">WriteLine</span>(<span class="t-str">"Date: "</span> + DateTime.Now);
+            
+            <span class="t-com">// Generate Excel logic...</span>
+            Console.<span class="t-fn">WriteLine</span>(<span class="t-str">"Generating Excel..."</span>);
+        }
+    }
+
+    <span class="t-com">// ==========================================</span>
+    <span class="t-com">// ✅ GOOD: Reusing logic (DRY Principle)</span>
+    <span class="t-com">// ==========================================</span>
+    <span class="t-kw">public</span> <span class="t-kw">class</span> <span class="t-type">ReportGeneratorGood</span>
+    {
+        <span class="t-com">// Extracted common logic to a single place</span>
+        <span class="t-kw">private</span> <span class="t-kw">void</span> <span class="t-fn">PrintCompanyHeader</span>()
+        {
+            Console.<span class="t-fn">WriteLine</span>(<span class="t-str">"--- Company Header ---"</span>);
+            Console.<span class="t-fn">WriteLine</span>(<span class="t-str">"Date: "</span> + DateTime.Now);
+        }
+
+        <span class="t-kw">public</span> <span class="t-kw">void</span> <span class="t-fn">GeneratePDFReport</span>()
+        {
+            <span class="t-fn">PrintCompanyHeader</span>(); <span class="t-com">// Reused</span>
+            Console.<span class="t-fn">WriteLine</span>(<span class="t-str">"Generating PDF..."</span>);
+        }
+
+        <span class="t-kw">public</span> <span class="t-kw">void</span> <span class="t-fn">GenerateExcelReport</span>()
+        {
+            <span class="t-fn">PrintCompanyHeader</span>(); <span class="t-com">// Reused</span>
+            Console.<span class="t-fn">WriteLine</span>(<span class="t-str">"Generating Excel..."</span>);
+        }
+    }
+}</code></pre></div>
+  </details>
+
+  <div class="notes">
+    <div class="note remember"><div class="label">মনে রাখো</div><p>একটা লজিক (বা জ্ঞান) পুরো সিস্টেমে <strong>একটাই জায়গায়</strong> থাকবে।</p></div>
+    <div class="note caution"><div class="label">সাবধান</div><p>দেখতে এক রকম হলেই এক করা ঠিক না। দুটো কোড যদি <strong>আলাদা কারণে বদলায়</strong>, জোর করে এক করলে ভুল abstraction তৈরি হয়। প্রচলিত নিয়ম: একই জিনিস <strong>তিনবার</strong> লিখতে হলে তখন আলাদা করো (Rule of Three)।</p></div>
+  </div>
+</section>
+<section class="principle" id="kiss" style="--hue:var(--c2)">
+  <header class="p-head">
+    <div class="p-badge">K</div>
+    <div>
+      <div class="p-num">Principle 02</div>
+      <h2>KISS <span>— Keep It Simple, Stupid</span></h2>
+    </div>
+  </header>
+
+  <p class="p-core">কোড যতটা সম্ভব সহজ রাখুন।</p>
+  <p>সফটওয়্যার ডেভেলপমেন্টে সব সময় চেষ্টা করা উচিত যেন সিস্টেম ডিজাইন এবং কোড যতটা সম্ভব সহজ থাকে। অযথাই জটিল লজিক বা ওভার-ইঞ্জিনিয়ারিং করার কোনো মানে নেই। কোড এমন হওয়া উচিত যেন অন্য কোনো ডেভেলপার বা ভবিষ্যতে আপনি নিজে দেখলে খুব সহজেই বুঝতে পারেন যে কোডটি কী কাজ করছে।</p>
+
+  <div class="analogy"><div class="label">বাস্তব উদাহরণ</div><p>ঘরের দরজা খুলতে একটা চাবিই যথেষ্ট। তার জায়গায় ফিঙ্গারপ্রিন্ট + পাসওয়ার্ড + ফেস স্ক্যান লাগালে দরজা খোলা কঠিন হয়, নষ্ট হওয়ার জায়গাও বাড়ে — অথচ কাজ একই।</p></div>
+
+  <h3>কোডে দেখি</h3>
+  <div class="compare" data-compare>
+    <div class="seg" role="tablist">
+      <button class="seg-btn bad active" type="button" data-show="bad">❌ Bad — নিয়ম ভাঙা</button>
+      <button class="seg-btn good" type="button" data-show="good">✅ Good — নিয়ম মানা</button>
+    </div>
+    <div class="pane" data-pane="bad">
+      <p class="pane-note"><code>GetMonthNameBad()</code> নিজেই ১২ মাসের array বানায়, তারপর invalid হলে <code>try</code>-এর ভেতরে exception থ্রো করে সাথে সাথে <code>catch</code> করে message রিটার্ন করে। Exception দিয়ে সাধারণ if/else-এর কাজ করানো — পড়তে কঠিন, আর অকারণে ধীর।</p>
+      <div class="code"><div class="code-bar"><span>KISS.cs · Bad</span><button class="copy" type="button">Copy</button></div><pre><code><span class="t-kw">public</span> <span class="t-kw">string</span> <span class="t-fn">GetMonthNameBad</span>(<span class="t-kw">int</span> monthNumber)
+{
+    <span class="t-com">// Unnecessarily complex way to return a month name</span>
+    <span class="t-kw">string</span>[] months = { <span class="t-str">"January"</span>, <span class="t-str">"February"</span>, <span class="t-str">"March"</span>, <span class="t-str">"April"</span>, <span class="t-str">"May"</span>, <span class="t-str">"June"</span>, <span class="t-str">"July"</span>, <span class="t-str">"August"</span>, <span class="t-str">"September"</span>, <span class="t-str">"October"</span>, <span class="t-str">"November"</span>, <span class="t-str">"December"</span> };
+    
+    <span class="t-kw">try</span>
+    {
+        <span class="t-kw">if</span> (monthNumber &gt;= <span class="t-num">1</span> &amp;&amp; monthNumber &lt;= <span class="t-num">12</span>)
+        {
+            <span class="t-kw">return</span> months[monthNumber - <span class="t-num">1</span>];
+        }
+        <span class="t-kw">else</span>
+        {
+            <span class="t-kw">throw</span> <span class="t-kw">new</span> <span class="t-fn">Exception</span>(<span class="t-str">"Invalid month"</span>);
+        }
+    }
+    <span class="t-kw">catch</span> (Exception ex)
+    {
+        <span class="t-kw">return</span> ex.Message;
+    }
+}</code></pre></div>
+    </div>
+    <div class="pane" data-pane="good" hidden>
+      <p class="pane-note"><code>GetMonthNameGood()</code> শুরুতেই invalid ইনপুট আটকে দেয় (guard clause), তারপর built-in <code>DateTime</code>-কে দিয়ে মাসের নাম নেয়। ৩ লাইন, এক নজরে বোঝা যায়।</p>
+      <div class="code"><div class="code-bar"><span>KISS.cs · Good</span><button class="copy" type="button">Copy</button></div><pre><code><span class="t-kw">public</span> <span class="t-kw">string</span> <span class="t-fn">GetMonthNameGood</span>(<span class="t-kw">int</span> monthNumber)
+{
+    <span class="t-com">// Simple, built-in, easy to read</span>
+    <span class="t-kw">if</span> (monthNumber &lt; <span class="t-num">1</span> || monthNumber &gt; <span class="t-num">12</span>)
+        <span class="t-kw">return</span> <span class="t-str">"Invalid month"</span>;
+
+    <span class="t-kw">return</span> <span class="t-kw">new</span> <span class="t-fn">DateTime</span>(<span class="t-num">2000</span>, monthNumber, <span class="t-num">1</span>).<span class="t-fn">ToString</span>(<span class="t-str">"MMMM"</span>);</code></pre></div>
+    </div>
+  </div>
+  <details class="full-file"><summary>পুরো ফাইল দেখুন — KISS.cs</summary>
+    <div class="code"><div class="code-bar"><span>KISS.cs</span><button class="copy" type="button">Copy</button></div><pre><code><span class="t-kw">using</span> System;
+
+<span class="t-kw">namespace</span> <span class="t-type">DesignPrinciples</span>
+{
+    <span class="t-kw">public</span> <span class="t-kw">class</span> <span class="t-type">DateHelper</span>
+    {
+        <span class="t-com">// ==========================================</span>
+        <span class="t-com">// ❌ BAD: Overcomplicating simple logic (KISS Violation)</span>
+        <span class="t-com">// ==========================================</span>
+        <span class="t-kw">public</span> <span class="t-kw">string</span> <span class="t-fn">GetMonthNameBad</span>(<span class="t-kw">int</span> monthNumber)
+        {
+            <span class="t-com">// Unnecessarily complex way to return a month name</span>
+            <span class="t-kw">string</span>[] months = { <span class="t-str">"January"</span>, <span class="t-str">"February"</span>, <span class="t-str">"March"</span>, <span class="t-str">"April"</span>, <span class="t-str">"May"</span>, <span class="t-str">"June"</span>, <span class="t-str">"July"</span>, <span class="t-str">"August"</span>, <span class="t-str">"September"</span>, <span class="t-str">"October"</span>, <span class="t-str">"November"</span>, <span class="t-str">"December"</span> };
+            
+            <span class="t-kw">try</span>
+            {
+                <span class="t-kw">if</span> (monthNumber &gt;= <span class="t-num">1</span> &amp;&amp; monthNumber &lt;= <span class="t-num">12</span>)
+                {
+                    <span class="t-kw">return</span> months[monthNumber - <span class="t-num">1</span>];
+                }
+                <span class="t-kw">else</span>
+                {
+                    <span class="t-kw">throw</span> <span class="t-kw">new</span> <span class="t-fn">Exception</span>(<span class="t-str">"Invalid month"</span>);
+                }
+            }
+            <span class="t-kw">catch</span> (Exception ex)
+            {
+                <span class="t-kw">return</span> ex.Message;
+            }
+        }
+
+        <span class="t-com">// ==========================================</span>
+        <span class="t-com">// ✅ GOOD: Simple and readable (KISS Principle)</span>
+        <span class="t-com">// ==========================================</span>
+        <span class="t-kw">public</span> <span class="t-kw">string</span> <span class="t-fn">GetMonthNameGood</span>(<span class="t-kw">int</span> monthNumber)
+        {
+            <span class="t-com">// Simple, built-in, easy to read</span>
+            <span class="t-kw">if</span> (monthNumber &lt; <span class="t-num">1</span> || monthNumber &gt; <span class="t-num">12</span>)
+                <span class="t-kw">return</span> <span class="t-str">"Invalid month"</span>;
+
+            <span class="t-kw">return</span> <span class="t-kw">new</span> <span class="t-fn">DateTime</span>(<span class="t-num">2000</span>, monthNumber, <span class="t-num">1</span>).<span class="t-fn">ToString</span>(<span class="t-str">"MMMM"</span>);
+        }
+    }
+}</code></pre></div>
+  </details>
+
+  <div class="notes">
+    <div class="note remember"><div class="label">মনে রাখো</div><p>কোড একবার লেখা হয়, কিন্তু <strong>পড়া হয় বহুবার</strong> — পড়তে সহজ কোডই ভালো কোড।</p></div>
+    <div class="note caution"><div class="label">সাবধান</div><p>সহজ মানে অসম্পূর্ণ না — দরকারি validation বা error handling বাদ দেওয়া KISS না। আর <code>ToString("MMMM")</code> চলতি culture অনুযায়ী মাসের নাম দেয়; সবসময় ইংরেজি নাম চাইলে <code>CultureInfo.InvariantCulture</code> দিতে হয়।</p></div>
+  </div>
+</section>
+<section class="principle" id="yagni" style="--hue:var(--c3)">
+  <header class="p-head">
+    <div class="p-badge">Y</div>
+    <div>
+      <div class="p-num">Principle 03</div>
+      <h2>YAGNI <span>— You Aren't Gonna Need It</span></h2>
+    </div>
+  </header>
+
+  <p class="p-core">ভবিষ্যতে লাগতে পারে ভেবে আজই কোনো কোড লিখবেন না।</p>
+  <p>আমরা অনেক সময় ভাবি, "ভবিষ্যতে হয়তো এই ফিচারটি লাগতে পারে, তাই আজকেই এর জন্য কিছু এক্সট্রা ক্লাস বা মেথড লিখে রাখি।" কিন্তু বেশির ভাগ সময়ই সেই ফিচারগুলোর আর দরকার হয় না, ফলে কোডবেস অযথাই বড় এবং জটিল হয়ে যায়। YAGNI প্রিন্সিপাল বলে, বর্তমানে আপনার যে রিকোয়ারমেন্ট আছে, ঠিক ততটুকুই কোড লিখুন।</p>
+
+  <div class="analogy"><div class="label">বাস্তব উদাহরণ</div><p>এখনো গাড়ি কেনেননি, কিন্তু বাড়িতে আগেই গ্যারেজ বানিয়ে রাখলেন। জায়গা আর টাকা আটকে থাকল — আর পরে যে গাড়ি কিনবেন, সেটা হয়তো ওই গ্যারেজে ঢুকবেই না।</p></div>
+
+  <h3>কোডে দেখি</h3>
+  <div class="compare" data-compare>
+    <div class="seg" role="tablist">
+      <button class="seg-btn bad active" type="button" data-show="bad">❌ Bad — নিয়ম ভাঙা</button>
+      <button class="seg-btn good" type="button" data-show="good">✅ Good — নিয়ম মানা</button>
+    </div>
+    <div class="pane" data-pane="bad">
+      <p class="pane-note">এখনো কোনো mobile app নেই, তবু <code>RegisterUserFromMobileApp(deviceId)</code> লিখে রাখা হয়েছে। এই কোড এখন কেউ ব্যবহার করে না, কিন্তু maintain আর test করতে হয় — আর আসল requirement এলে সেটা হয়তো সম্পূর্ণ আলাদা হবে।</p>
+      <div class="code"><div class="code-bar"><span>YAGNI.cs · Bad</span><button class="copy" type="button">Copy</button></div><pre><code><span class="t-kw">public</span> <span class="t-kw">class</span> <span class="t-type">UserRegistrationBad</span>
+{
+    <span class="t-kw">public</span> <span class="t-kw">void</span> <span class="t-fn">RegisterUser</span>(<span class="t-kw">string</span> username, <span class="t-kw">string</span> password)
+    {
+        Console.<span class="t-fn">WriteLine</span>(<span class="t-str">$"User {username} registered."</span>);
+    }
+
+    <span class="t-com">// We don't have a mobile app yet, but we wrote this just in case.</span>
+    <span class="t-com">// This is a waste of time and adds unnecessary code to maintain.</span>
+    <span class="t-kw">public</span> <span class="t-kw">void</span> <span class="t-fn">RegisterUserFromMobileApp</span>(<span class="t-kw">string</span> username, <span class="t-kw">string</span> password, <span class="t-kw">string</span> deviceId)
+    {
+        Console.<span class="t-fn">WriteLine</span>(<span class="t-str">$"User {username} registered from device {deviceId}."</span>);
+    }
+}</code></pre></div>
+    </div>
+    <div class="pane" data-pane="good" hidden>
+      <p class="pane-note">আজকের requirement শুধু সাধারণ registration — তাই শুধু <code>RegisterUser()</code>। Mobile registration তখনই লেখা হবে, যখন সত্যিই দরকার আসবে।</p>
+      <div class="code"><div class="code-bar"><span>YAGNI.cs · Good</span><button class="copy" type="button">Copy</button></div><pre><code><span class="t-kw">public</span> <span class="t-kw">class</span> <span class="t-type">UserRegistrationGood</span>
+{
+    <span class="t-com">// The current requirement is only simple registration.</span>
+    <span class="t-kw">public</span> <span class="t-kw">void</span> <span class="t-fn">RegisterUser</span>(<span class="t-kw">string</span> username, <span class="t-kw">string</span> password)
+    {
+        Console.<span class="t-fn">WriteLine</span>(<span class="t-str">$"User {username} registered."</span>);
+    }
+
+    <span class="t-com">// We will add mobile registration later ONLY IF the requirement actually comes.</span></code></pre></div>
+    </div>
+  </div>
+  <details class="full-file"><summary>পুরো ফাইল দেখুন — YAGNI.cs</summary>
+    <div class="code"><div class="code-bar"><span>YAGNI.cs</span><button class="copy" type="button">Copy</button></div><pre><code><span class="t-kw">using</span> System;
+
+<span class="t-kw">namespace</span> <span class="t-type">DesignPrinciples</span>
+{
+    <span class="t-com">// ==========================================</span>
+    <span class="t-com">// ❌ BAD: Adding features we don't need right now (YAGNI Violation)</span>
+    <span class="t-com">// ==========================================</span>
+    <span class="t-kw">public</span> <span class="t-kw">class</span> <span class="t-type">UserRegistrationBad</span>
+    {
+        <span class="t-kw">public</span> <span class="t-kw">void</span> <span class="t-fn">RegisterUser</span>(<span class="t-kw">string</span> username, <span class="t-kw">string</span> password)
+        {
+            Console.<span class="t-fn">WriteLine</span>(<span class="t-str">$"User {username} registered."</span>);
+        }
+
+        <span class="t-com">// We don't have a mobile app yet, but we wrote this just in case.</span>
+        <span class="t-com">// This is a waste of time and adds unnecessary code to maintain.</span>
+        <span class="t-kw">public</span> <span class="t-kw">void</span> <span class="t-fn">RegisterUserFromMobileApp</span>(<span class="t-kw">string</span> username, <span class="t-kw">string</span> password, <span class="t-kw">string</span> deviceId)
+        {
+            Console.<span class="t-fn">WriteLine</span>(<span class="t-str">$"User {username} registered from device {deviceId}."</span>);
+        }
+    }
+
+    <span class="t-com">// ==========================================</span>
+    <span class="t-com">// ✅ GOOD: Only building what is required today (YAGNI Principle)</span>
+    <span class="t-com">// ==========================================</span>
+    <span class="t-kw">public</span> <span class="t-kw">class</span> <span class="t-type">UserRegistrationGood</span>
+    {
+        <span class="t-com">// The current requirement is only simple registration.</span>
+        <span class="t-kw">public</span> <span class="t-kw">void</span> <span class="t-fn">RegisterUser</span>(<span class="t-kw">string</span> username, <span class="t-kw">string</span> password)
+        {
+            Console.<span class="t-fn">WriteLine</span>(<span class="t-str">$"User {username} registered."</span>);
+        }
+
+        <span class="t-com">// We will add mobile registration later ONLY IF the requirement actually comes.</span>
+    }
+}</code></pre></div>
+  </details>
+
+  <div class="notes">
+    <div class="note remember"><div class="label">মনে রাখো</div><p>আজকের requirement-এর জন্য কোড লেখো, <strong>কালকের অনুমানের</strong> জন্য না।</p></div>
+    <div class="note caution"><div class="label">সাবধান</div><p>YAGNI মানে design খারাপ রাখা না। কোড এমনভাবে লেখো যেন পরে নতুন ফিচার যোগ করা সহজ হয় (clean, OCP মেনে) — শুধু ফিচারটা আগেভাগে বানিয়ো না।</p></div>
+  </div>
+</section>
+<section class="principle" id="soc" style="--hue:var(--c4)">
+  <header class="p-head">
+    <div class="p-badge">S</div>
+    <div>
+      <div class="p-num">Principle 04</div>
+      <h2>SoC <span>— Separation of Concerns</span></h2>
+    </div>
+  </header>
+
+  <p class="p-core">প্রতিটি অংশের কাজ আলাদা রাখুন।</p>
+  <p>একটি প্রোগ্রামের বিভিন্ন কাজ বা দায়িত্বকে আলাদা আলাদা অংশে ভাগ করাকে Separation of Concerns বলে। যেমন: ডাটাবেস থেকে ডেটা আনার কাজ, ইউজার ইন্টারফেসে ডেটা দেখানোর কাজ এবং বিজনেস লজিক—এগুলো সব আলাদা আলাদা ক্লাস বা মডিউলে থাকা উচিত। এতে একটি অংশে পরিবর্তন আনলে অন্য অংশগুলোর ওপর কোনো প্রভাব পড়ে না।</p>
+
+  <div class="analogy"><div class="label">বাস্তব উদাহরণ</div><p>হাসপাতালে রিসেপশন, ডাক্তার আর ফার্মেসি আলাদা। ফার্মেসি নতুন সিস্টেমে গেলে ডাক্তারকে নতুন কিছু শিখতে হয় না — কারণ প্রত্যেকের কাজ নিজের জায়গায়।</p></div>
+
+  <h3>কোডে দেখি</h3>
+  <div class="compare" data-compare>
+    <div class="seg" role="tablist">
+      <button class="seg-btn bad active" type="button" data-show="bad">❌ Bad — নিয়ম ভাঙা</button>
+      <button class="seg-btn good" type="button" data-show="good">✅ Good — নিয়ম মানা</button>
+    </div>
+    <div class="pane" data-pane="bad">
+      <p class="pane-note"><code>OrderProcessorBad.ProcessOrder()</code> একাই validation, database-এ save আর email পাঠানো — তিনটা আলাদা কাজ একসাথে করে। Database বদলালে বা email-এর নিয়ম বদলালে এই একটা মেথডই বারবার এডিট করতে হয়।</p>
+      <div class="code"><div class="code-bar"><span>SoC.cs · Bad</span><button class="copy" type="button">Copy</button></div><pre><code><span class="t-kw">public</span> <span class="t-kw">class</span> <span class="t-type">OrderProcessorBad</span>
+{
+    <span class="t-kw">public</span> <span class="t-kw">void</span> <span class="t-fn">ProcessOrder</span>()
+    {
+        <span class="t-com">// 1. Validation Logic</span>
+        Console.<span class="t-fn">WriteLine</span>(<span class="t-str">"Validating order..."</span>);
+        
+        <span class="t-com">// 2. Database Logic</span>
+        Console.<span class="t-fn">WriteLine</span>(<span class="t-str">"Saving order to database..."</span>);
+
+        <span class="t-com">// 3. Email Notification Logic</span>
+        Console.<span class="t-fn">WriteLine</span>(<span class="t-str">"Sending confirmation email..."</span>);
+    }
+}</code></pre></div>
+    </div>
+    <div class="pane" data-pane="good" hidden>
+      <p class="pane-note"><code>OrderValidator</code>, <code>OrderRepository</code>, <code>EmailService</code> — প্রত্যেকে একটা কাজ করে। <code>OrderProcessorGood</code> শুধু তাদের সমন্বয় (coordinate) করে।</p>
+      <div class="code"><div class="code-bar"><span>SoC.cs · Good</span><button class="copy" type="button">Copy</button></div><pre><code><span class="t-kw">public</span> <span class="t-kw">class</span> <span class="t-type">OrderValidator</span>
+{
+    <span class="t-kw">public</span> <span class="t-kw">void</span> <span class="t-fn">Validate</span>() =&gt; Console.<span class="t-fn">WriteLine</span>(<span class="t-str">"Validating order..."</span>);
+}
+
+<span class="t-kw">public</span> <span class="t-kw">class</span> <span class="t-type">OrderRepository</span>
+{
+    <span class="t-kw">public</span> <span class="t-kw">void</span> <span class="t-fn">Save</span>() =&gt; Console.<span class="t-fn">WriteLine</span>(<span class="t-str">"Saving order to database..."</span>);
+}
+
+<span class="t-kw">public</span> <span class="t-kw">class</span> <span class="t-type">EmailService</span>
+{
+    <span class="t-kw">public</span> <span class="t-kw">void</span> <span class="t-fn">SendEmail</span>() =&gt; Console.<span class="t-fn">WriteLine</span>(<span class="t-str">"Sending confirmation email..."</span>);
+}
+
+<span class="t-kw">public</span> <span class="t-kw">class</span> <span class="t-type">OrderProcessorGood</span>
+{
+    <span class="t-kw">private</span> OrderValidator _validator = <span class="t-kw">new</span> <span class="t-fn">OrderValidator</span>();
+    <span class="t-kw">private</span> OrderRepository _repository = <span class="t-kw">new</span> <span class="t-fn">OrderRepository</span>();
+    <span class="t-kw">private</span> EmailService _emailService = <span class="t-kw">new</span> <span class="t-fn">EmailService</span>();
+
+    <span class="t-kw">public</span> <span class="t-kw">void</span> <span class="t-fn">ProcessOrder</span>()
+    {
+        <span class="t-com">// The processor now only coordinates, each class does its own specific job.</span>
+        _validator.<span class="t-fn">Validate</span>();
+        _repository.<span class="t-fn">Save</span>();
+        _emailService.<span class="t-fn">SendEmail</span>();</code></pre></div>
+    </div>
+  </div>
+  <details class="full-file"><summary>পুরো ফাইল দেখুন — SoC.cs</summary>
+    <div class="code"><div class="code-bar"><span>SoC.cs</span><button class="copy" type="button">Copy</button></div><pre><code><span class="t-kw">using</span> System;
+
+<span class="t-kw">namespace</span> <span class="t-type">DesignPrinciples</span>
+{
+    <span class="t-com">// ==========================================</span>
+    <span class="t-com">// ❌ BAD: Mixing everything together (SoC Violation)</span>
+    <span class="t-com">// ==========================================</span>
+    <span class="t-kw">public</span> <span class="t-kw">class</span> <span class="t-type">OrderProcessorBad</span>
+    {
+        <span class="t-kw">public</span> <span class="t-kw">void</span> <span class="t-fn">ProcessOrder</span>()
+        {
+            <span class="t-com">// 1. Validation Logic</span>
+            Console.<span class="t-fn">WriteLine</span>(<span class="t-str">"Validating order..."</span>);
+            
+            <span class="t-com">// 2. Database Logic</span>
+            Console.<span class="t-fn">WriteLine</span>(<span class="t-str">"Saving order to database..."</span>);
+
+            <span class="t-com">// 3. Email Notification Logic</span>
+            Console.<span class="t-fn">WriteLine</span>(<span class="t-str">"Sending confirmation email..."</span>);
+        }
+    }
+
+    <span class="t-com">// ==========================================</span>
+    <span class="t-com">// ✅ GOOD: Separating the concerns (SoC Principle)</span>
+    <span class="t-com">// ==========================================</span>
+    
+    <span class="t-kw">public</span> <span class="t-kw">class</span> <span class="t-type">OrderValidator</span>
+    {
+        <span class="t-kw">public</span> <span class="t-kw">void</span> <span class="t-fn">Validate</span>() =&gt; Console.<span class="t-fn">WriteLine</span>(<span class="t-str">"Validating order..."</span>);
+    }
+
+    <span class="t-kw">public</span> <span class="t-kw">class</span> <span class="t-type">OrderRepository</span>
+    {
+        <span class="t-kw">public</span> <span class="t-kw">void</span> <span class="t-fn">Save</span>() =&gt; Console.<span class="t-fn">WriteLine</span>(<span class="t-str">"Saving order to database..."</span>);
+    }
+
+    <span class="t-kw">public</span> <span class="t-kw">class</span> <span class="t-type">EmailService</span>
+    {
+        <span class="t-kw">public</span> <span class="t-kw">void</span> <span class="t-fn">SendEmail</span>() =&gt; Console.<span class="t-fn">WriteLine</span>(<span class="t-str">"Sending confirmation email..."</span>);
+    }
+
+    <span class="t-kw">public</span> <span class="t-kw">class</span> <span class="t-type">OrderProcessorGood</span>
+    {
+        <span class="t-kw">private</span> OrderValidator _validator = <span class="t-kw">new</span> <span class="t-fn">OrderValidator</span>();
+        <span class="t-kw">private</span> OrderRepository _repository = <span class="t-kw">new</span> <span class="t-fn">OrderRepository</span>();
+        <span class="t-kw">private</span> EmailService _emailService = <span class="t-kw">new</span> <span class="t-fn">EmailService</span>();
+
+        <span class="t-kw">public</span> <span class="t-kw">void</span> <span class="t-fn">ProcessOrder</span>()
+        {
+            <span class="t-com">// The processor now only coordinates, each class does its own specific job.</span>
+            _validator.<span class="t-fn">Validate</span>();
+            _repository.<span class="t-fn">Save</span>();
+            _emailService.<span class="t-fn">SendEmail</span>();
+        }
+    }
+}</code></pre></div>
+  </details>
+
+  <div class="notes">
+    <div class="note remember"><div class="label">মনে রাখো</div><p>প্রতিটা অংশ <strong>একটা concern</strong> দেখবে — UI, business logic, data আলাদা।</p></div>
+    <div class="note caution"><div class="label">সাবধান</div><p>Good ভার্সনেও ক্লাসগুলো ভেতরে <code>new</code> দিয়ে তৈরি হচ্ছে। আরও ভালো হলো constructor দিয়ে inject করা — সেটা SOLID-এর <strong>Dependency Inversion</strong>। বাস্তব উদাহরণ: MVC, layered architecture (UI → Business → Data), HTML / CSS / JS আলাদা রাখা।</p></div>
+  </div>
+</section>
+
+      <section class="summary" id="summary">
+        <h2>তুলনা — কখন কোনটা</h2>
+        <p>কোড লেখার সময় নিজেকে এই প্রশ্নগুলো করুন।</p>
+        <div class="table-wrap"><table>
+          <thead><tr><th>নীতি</th><th>নিজেকে প্রশ্ন করো</th><th>ভাঙার লক্ষণ</th><th>সমাধান</th></tr></thead>
+          <tbody>
+            <tr><td><b>DRY</b></td><td>এই লজিক কি আর কোথাও আছে?</td><td>একই কোড কপি-পেস্ট; এক জায়গা বদলালে আরেক জায়গাও বদলাতে হয়</td><td>কমন অংশ একটা মেথড / ক্লাসে নিয়ে যাও</td></tr>
+            <tr><td><b>KISS</b></td><td>এর চেয়ে সহজভাবে কি লেখা যায়?</td><td>অকারণ nested logic, exception দিয়ে flow control, built-in থাকতে নিজে বানানো</td><td>Guard clause, built-in ফাংশন, ছোট মেথড</td></tr>
+            <tr><td><b>YAGNI</b></td><td>এটা কি আজই লাগবে?</td><td>"পরে লাগতে পারে" ভেবে লেখা কোড, যা কেউ call করে না</td><td>মুছে দাও; দরকার হলে তখন লেখো</td></tr>
+            <tr><td><b>SoC</b></td><td>এই ক্লাস কি একাধিক ধরনের কাজ করছে?</td><td>এক মেথডে validation + database + email</td><td>প্রতিটা concern আলাদা ক্লাস / layer-এ</td></tr>
+          </tbody>
+        </table></div>
+
+        <div class="relations">
+          <div class="rel"><b>DRY ↔ KISS:</b> অতিরিক্ত DRY করতে গিয়ে সবকিছু এক জেনেরিক abstraction-এ ঢোকালে কোড জটিল হয়ে KISS ভাঙে। একটু repetition অনেক সময় ভুল abstraction-এর চেয়ে ভালো।</div>
+          <div class="rel"><b>KISS ↔ YAGNI:</b> দুটো একই পরিবারের — দুটোই over-engineering থামায়। KISS বলে <em>যা লিখছ</em> সহজ রাখো, YAGNI বলে <em>যা দরকার নেই</em> লিখো না।</div>
+          <div class="rel"><b>SoC ↔ SRP:</b> একই ধারণা, ভিন্ন স্কেলে। SoC বড় স্কেলে (layer, module — UI / business / data), SOLID-এর SRP ক্লাস লেভেলে (একটা ক্লাস, বদলানোর একটা কারণ)।</div>
+        </div>
+
+        <div class="oneliners">
+          <div class="label">ইন্টারভিউর জন্য এক লাইনে</div>
+          <ul>
+            <li><b>DRY</b> — Every piece of knowledge should have a single source of truth.</li>
+            <li><b>KISS</b> — Prefer the simplest solution that works; code is read more than written.</li>
+            <li><b>YAGNI</b> — Build for today's requirement, not for guesses about tomorrow.</li>
+            <li><b>SoC</b> — Each part of the system handles one concern, so changes stay local.</li>
+          </ul>
+        </div>
+
+        <footer><span>WellDev · 02-oop-java / design-principle</span><a href="../solid/index.html">পরের বিষয়: SOLID Principles →</a></footer>
+      </section>
+    </div>
+  </main>
+</div>
+
+<script>
+// Bad / Good toggle
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-show]");
+  if (b) {
+    const box = b.closest("[data-compare]");
+    box.querySelectorAll("[data-show]").forEach(x => x.classList.toggle("active", x === b));
+    box.querySelectorAll("[data-pane]").forEach(p => { p.hidden = p.dataset.pane !== b.dataset.show; });
+    return;
+  }
+  const c = e.target.closest(".copy");
+  if (c && navigator.clipboard) {
+    navigator.clipboard.writeText(c.closest(".code").querySelector("code").innerText)
+      .then(() => { c.textContent = "Copied"; setTimeout(() => (c.textContent = "Copy"), 1300); }, () => {});
+  }
+});
+
+// mobile top nav mirrors the sidebar
+const topNav = document.getElementById("topbar");
+topNav.innerHTML = [...document.querySelectorAll(".nav a")].map(a =>
+  `<a href="${a.getAttribute("href")}" data-sec="${a.dataset.sec}">${a.dataset.sec === "top" ? "Overview" : a.dataset.sec === "summary" ? "তুলনা" : a.querySelector(".nav-l").nextSibling.textContent}</a>`).join("");
+
+// highlight the section in view
+const links = [...document.querySelectorAll("[data-sec]")];
+const spy = new IntersectionObserver(es => es.forEach(en => {
+  if (en.isIntersecting) links.forEach(l => l.classList.toggle("active", l.dataset.sec === en.target.id));
+}), { rootMargin: "-30% 0px -65% 0px" });
+document.querySelectorAll(".hero, .principle, .summary").forEach(s => spy.observe(s));
+
+// theme
+const root = document.documentElement;
+try { const t = localStorage.getItem("dp-theme"); if (t) root.dataset.theme = t; } catch (e) {}
+document.getElementById("theme").addEventListener("click", () => {
+  const dark = root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  root.dataset.theme = dark ? "light" : "dark";
+  try { localStorage.setItem("dp-theme", root.dataset.theme); } catch (e) {}
+});
+</script>
+</body>
+</html>
