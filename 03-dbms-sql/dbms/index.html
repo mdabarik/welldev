@@ -168,7 +168,7 @@ details pre.code{margin:8px 0 0 24px}
 .seg button.on[data-m="off"]{background:var(--bad);color:#fff}
 .seg button:disabled{cursor:not-allowed}
 .sim-stage{border-radius:14px;background:var(--surface-2);overflow-x:auto;-webkit-overflow-scrolling:touch}
-.sim-stage svg{display:block;width:100%;height:auto;min-width:500px}
+.sim-stage svg{display:block;width:100%;max-width:780px;margin:0 auto;height:auto;min-width:500px}
 .sim-stage text{font-family:var(--sans)}
 .nbox{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
 .nbox.hot{stroke:var(--accent);stroke-width:2.2}
@@ -800,7 +800,8 @@ Idempotency-Key: 7f3a9c1e-4b2d-4e8a-9c1f-2d3e4f5a6b7c
                                       ("amt", req.Amount), ("acc", req.AccountId)).ExecuteScalarAsync())!;
         var paymentId = (long)(await Cmd("INSERT INTO payments (account_id, order_id, amount) " +
                                          "VALUES (@acc, @ord, @amt) RETURNING id",
-                                         ("acc", req.AccountId), ("ord", req.OrderId), ("amt", req.Amount)).ExecuteScalarAsync())!;
+                                         ("acc", req.AccountId), ("ord", req.OrderId), ("amt", req.Amount))
+                                   .ExecuteScalarAsync())!;
         string body = JsonSerializer.Serialize(new { payment_id = paymentId, status = "paid", balance });
 
         await Cmd("UPDATE idempotency_keys SET status = 'completed', response = @r::jsonb WHERE key = @k",
