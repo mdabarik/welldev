@@ -1,0 +1,1103 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DBMS Keys</title>
+<meta name="description" content="Super, Candidate, Primary, Alternate, Composite, Unique, Foreign, Natural vs Surrogate, Partial key আর Prime attribute — একটা university database দিয়ে, PostgreSQL DDL, আসল error message আর interactive key checker সহ।">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Layout: one running university schema; every key type is shown on the same tables,
+   with PostgreSQL 18 DDL and real psql output. Code is highlighted by the tokenizer at the bottom. */
+:root{
+  --bg:#f5f7fc; --surface:#ffffff; --surface-2:#f1f4fa; --fg:#0f172a; --muted:#5b6478; --faint:#94a0b8; --line:#e4e8f1;
+  --accent:#6366f1; --sa:#4f46e5; --sb:#db2777;
+  --pa:#e11d48; --pc:#d97706; --pi:#0284c7; --pd:#059669;
+  --ok:#059669; --bad:#e11d48; --warn:#d97706;
+  --kv:#7c3aed; --kt:#0d9488;
+  --hero:linear-gradient(135deg,#4f46e5 0%,#7c3aed 45%,#db2777 100%);
+  --shadow:0 1px 2px rgba(15,23,42,.04),0 10px 30px -12px rgba(15,23,42,.14);
+  --code-bg:#ffffff; --code-line:#e6e9f1;
+  --t-kw:#0000ff; --t-str:#a31515; --t-num:#098658; --t-com:#008000; --t-type:#267f99;
+  --sans:"Inter","Hind Siliguri",system-ui,sans-serif; --bn:"Hind Siliguri","Inter",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0b0f1a; --surface:#121827; --surface-2:#182033; --fg:#e7ecf6; --muted:#9aa6bf; --faint:#66728c; --line:#232c42;
+  --accent:#818cf8; --sa:#818cf8; --sb:#f472b6; --pa:#fb7185; --pc:#fbbf24; --pi:#38bdf8; --pd:#34d399;
+  --ok:#34d399; --bad:#fb7185; --warn:#fbbf24; --kv:#a78bfa; --kt:#2dd4bf;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6);
+  --code-bg:#1e1e1e; --code-line:#2d2d30; --t-kw:#569cd6; --t-str:#ce9178; --t-num:#b5cea8; --t-com:#6a9955; --t-type:#4ec9b0;
+}}
+:root[data-theme="dark"]{
+  --bg:#0b0f1a; --surface:#121827; --surface-2:#182033; --fg:#e7ecf6; --muted:#9aa6bf; --faint:#66728c; --line:#232c42;
+  --accent:#818cf8; --sa:#818cf8; --sb:#f472b6; --pa:#fb7185; --pc:#fbbf24; --pi:#38bdf8; --pd:#34d399;
+  --ok:#34d399; --bad:#fb7185; --warn:#fbbf24; --kv:#a78bfa; --kt:#2dd4bf;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6);
+  --code-bg:#1e1e1e; --code-line:#2d2d30; --t-kw:#569cd6; --t-str:#ce9178; --t-num:#b5cea8; --t-com:#6a9955; --t-type:#4ec9b0;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 var(--bn);-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto 0;height:420px;z-index:-1;pointer-events:none;
+  background:radial-gradient(620px 260px at 20% -40px,color-mix(in srgb,#6366f1 14%,transparent),transparent 70%),
+             radial-gradient(540px 240px at 90% -60px,color-mix(in srgb,#ec4899 11%,transparent),transparent 70%)}
+a{color:var(--accent)}
+button{font:inherit;color:inherit}
+code{font-family:var(--mono);font-size:.86em;font-weight:500;background:color-mix(in srgb,var(--accent) 10%,var(--surface));color:color-mix(in srgb,var(--accent) 72%,var(--fg));padding:.1em .4em;border-radius:6px}
+.wrap{max-width:1040px;margin:0 auto;padding:20px 18px 70px}
+section{margin-top:56px;scroll-margin-top:16px}
+
+.topnav{display:flex;align-items:center;gap:10px}
+.brand{display:flex;align-items:center;gap:10px;color:var(--fg);text-decoration:none;font:800 16px var(--sans);letter-spacing:-.02em}
+.logo{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:#fff;font:800 13px var(--mono);background:var(--hero)}
+.topnav .sp{flex:1}
+.pill{border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:6px 14px;font:600 13px var(--sans);cursor:pointer;text-decoration:none}
+.pill:hover{color:var(--fg)}
+
+.hero{margin-top:22px;border-radius:22px;padding:30px 32px;color:#fff;background:var(--hero);position:relative;overflow:hidden}
+.hero::after{content:"";position:absolute;right:-70px;top:-90px;width:320px;height:320px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.2),transparent 65%);pointer-events:none}
+.eyebrow{font:600 12px var(--sans);letter-spacing:.1em;text-transform:uppercase;opacity:.85}
+.hero h1{margin:8px 0 10px;font:800 clamp(28px,4.4vw,42px)/1.12 var(--sans);letter-spacing:-.03em}
+.hero p{margin:0;max-width:720px;font-size:16.5px;opacity:.94}
+
+/* key cards (same look as the ACID letters, ten of them) */
+.letters{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-top:22px}
+@media (max-width:900px){.letters{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:620px){.letters{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.letter{display:block;text-decoration:none;color:inherit;padding:14px 16px;border-top:3px solid var(--c)}
+.letter .big{font:800 26px/1 var(--sans);color:var(--c)}
+.letter b{display:block;margin-top:8px;font:700 14.5px var(--sans)}
+.letter p{margin:4px 0 0;font-size:13.5px;color:var(--muted);line-height:1.5}
+.letter:hover{border-color:var(--c)}
+
+h2{display:flex;align-items:center;gap:12px;margin:0 0 6px;font:800 clamp(21px,2.8vw,26px)/1.25 var(--sans);letter-spacing:-.025em}
+.num{flex:none;width:38px;height:38px;border-radius:11px;display:grid;place-items:center;color:#fff;font:800 17px var(--sans);background:var(--c,var(--accent))}
+.motto{display:inline-block;margin:2px 0 14px;font:600 13.5px var(--sans);color:var(--c);background:color-mix(in srgb,var(--c) 10%,transparent);padding:4px 12px;border-radius:999px}
+.lead{margin:0 0 18px;color:var(--muted);max-width:820px}
+.lead b{color:var(--fg)}
+h3{margin:26px 0 10px;font:700 17px var(--sans);letter-spacing:-.015em}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow)}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:start}
+@media (max-width:760px){.grid2{grid-template-columns:minmax(0,1fr)}}
+
+.story{padding:14px 16px;font-size:15px;border-left:4px solid var(--c)}
+.story b{color:var(--fg)}
+.story p{margin:0;color:var(--muted)}
+
+pre.code{margin:0;padding:12px 14px;border-radius:12px;background:var(--code-bg);border:1px solid var(--code-line);font:13px/1.65 var(--mono);white-space:pre-wrap;word-break:break-word;font-variant-ligatures:none;overflow-x:auto}
+.k{color:var(--t-kw);font-weight:600}.s{color:var(--t-str)}.d{color:var(--t-num)}.c{color:var(--t-com);font-style:italic}.t{color:var(--t-type)}
+pre.code .o{color:var(--muted);font-style:normal}
+pre.code .e{color:var(--bad);font-style:normal}
+pre.code .g{color:var(--ok);font-style:normal;font-weight:600}
+.file{display:flex;align-items:center;gap:8px;margin:0 0 6px;font:600 12px var(--mono);color:var(--muted)}
+.file i{width:8px;height:8px;border-radius:50%;background:var(--dot,var(--accent))}
+.file .r{margin-left:auto;font:600 11px var(--sans);padding:1px 8px;border-radius:6px;color:var(--tc);background:color-mix(in srgb,var(--tc) 12%,transparent)}
+
+.how{margin-top:14px;padding:14px 16px;border-radius:12px;background:color-mix(in srgb,var(--c) 7%,var(--surface));border:1px solid color-mix(in srgb,var(--c) 22%,var(--line));font-size:15px}
+.how b{color:var(--fg)}
+.how ul{margin:6px 0 0;padding-left:20px;color:var(--muted)}
+.how li{margin:3px 0}
+
+.tscroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:640px;font-size:14.5px}
+th,td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font:600 12px var(--sans);text-transform:uppercase;letter-spacing:.05em;color:var(--muted);background:var(--surface-2)}
+tr:last-child td{border-bottom:0}
+td.p{font:700 14px var(--sans);white-space:nowrap}
+td.p span{display:inline-grid;place-items:center;min-width:24px;height:24px;padding:0 5px;margin-right:8px;border-radius:7px;color:#fff;font-size:11px;background:var(--c)}
+.foot{margin:10px 2px 0;font-size:13.5px;color:var(--muted)}
+
+/* ---- page-specific: key colours, data tables, sets, ER, checker ---- */
+.c-sk{--c:var(--sa)} .c-ck{--c:var(--pi)} .c-pk{--c:var(--pa)} .c-ak{--c:var(--pc)} .c-cp{--c:var(--kv)}
+.c-uq{--c:var(--pd)} .c-fk{--c:var(--kt)} .c-sg{--c:var(--sb)} .c-pt{--c:var(--muted)} .c-pr{--c:var(--accent)}
+.chip{display:inline-block;vertical-align:1px;font:700 10.5px/1.5 var(--sans);letter-spacing:.04em;padding:0 6px;border-radius:5px;color:var(--c);background:color-mix(in srgb,var(--c) 15%,transparent);white-space:nowrap}
+.legend{display:flex;flex-wrap:wrap;gap:8px 16px;margin:0 0 14px;font-size:13.5px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+
+.tcap{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 10px;padding:10px 14px;border-bottom:1px solid var(--line);font:700 13.5px var(--mono)}
+.tcap small{font:500 12.5px var(--bn);color:var(--muted)}
+table.data{min-width:520px;font:13px/1.5 var(--mono)}
+table.data.sm{min-width:300px}
+table.data th{text-transform:none;letter-spacing:0;font:600 12.5px var(--mono);color:var(--fg);white-space:nowrap}
+table.data th .chip{margin-left:5px}
+table.data td,table.data th{padding:7px 12px;white-space:nowrap}
+table.data th.hl{box-shadow:inset 0 -2px var(--c)}
+table.data td.hl{background:color-mix(in srgb,var(--c) 8%,transparent)}
+td.nul{color:var(--faint);font-style:italic}
+.stack{display:grid;grid-template-columns:minmax(0,1fr);gap:14px}
+
+/* nested key family */
+.sets{padding:16px}
+.set{border:2px solid color-mix(in srgb,var(--c) 55%,transparent);border-radius:18px;padding:12px 14px 14px;background:color-mix(in srgb,var(--c) 5%,transparent)}
+.set.dash{border-style:dashed}
+.set>.lbl{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:2px 10px;font:700 13.5px var(--sans);color:var(--c)}
+.set>.lbl small{font:500 12.5px var(--bn);color:var(--muted)}
+.mem{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 12px}
+.mem:last-child{margin-bottom:0}
+.m{font:500 12px/1.4 var(--mono);padding:3px 8px;border-radius:8px;background:var(--surface);border:1px solid var(--line);color:var(--fg)}
+.m s{color:var(--faint);text-decoration-color:var(--faint)}
+.m.more{color:var(--muted);border-style:dashed}
+.pair{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);gap:10px;margin-top:8px}
+@media (max-width:480px){.pair{grid-template-columns:minmax(0,1fr)}}
+.formula{margin-top:12px;padding:10px 14px;border-radius:12px;background:var(--surface-2);font:600 13.5px var(--mono);text-align:center}
+
+/* ER diagram */
+.er-box{padding:10px}
+.er{display:block;width:100%;min-width:640px;height:auto}
+.er text{font-family:var(--mono);font-size:12px;fill:var(--fg)}
+.er .ent{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+.er .weak{fill:none;stroke:var(--faint);stroke-width:1}
+.er .hd{fill:var(--surface-2)}
+.er .hdt{font:700 13px var(--mono);fill:var(--fg)}
+.er .rel{fill:none;stroke:var(--muted);stroke-width:1.4}
+.er marker path{fill:none;stroke:var(--muted);stroke-width:1.4}
+.er .tg{font:700 10px var(--sans)}
+.er .lab{font:600 10.5px var(--sans);fill:var(--muted)}
+.er .pk{fill:var(--pa)} .er .ak{fill:var(--pc)} .er .uq{fill:var(--pd)} .er .fk{fill:var(--kt)} .er .pt{fill:var(--muted)}
+.er .u{text-decoration:underline}
+
+/* interactive checker */
+.ck{padding:16px}
+.ck-q{margin:0 0 10px;font:600 15px var(--bn)}
+.atts{display:flex;flex-wrap:wrap;gap:8px}
+.att{position:relative;display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface-2);font:600 13px var(--mono);cursor:pointer;user-select:none}
+.att input{position:absolute;opacity:0;pointer-events:none}
+.att .box{width:14px;height:14px;border-radius:4px;border:1.5px solid var(--faint);display:grid;place-items:center;font-size:10px;color:#fff}
+.att:has(input:checked){border-color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,var(--surface))}
+.att:has(input:checked) .box{background:var(--accent);border-color:var(--accent)}
+.att:has(input:checked) .box::after{content:"✓"}
+.att:has(input:focus-visible){outline:2px solid var(--accent);outline-offset:2px}
+.presets{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:12px;font-size:13px;color:var(--muted)}
+.presets button{border:1px dashed var(--line);background:none;border-radius:8px;padding:2px 9px;font:500 12px var(--mono);color:var(--muted);cursor:pointer}
+.presets button:hover{color:var(--fg);border-color:var(--faint)}
+.verdict{margin-top:14px;padding:12px 14px;border-radius:12px;border:1px solid color-mix(in srgb,var(--vc) 35%,var(--line));background:color-mix(in srgb,var(--vc) 8%,var(--surface))}
+.verdict .vt{font:700 15.5px var(--sans);color:var(--vc)}
+.verdict .checks{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:4px;font:600 12.5px var(--sans);color:var(--muted)}
+.verdict ul{margin:8px 0 0;padding-left:20px;font-size:14.5px;color:var(--muted)}
+.verdict li{margin:3px 0}
+.verdict b{color:var(--fg)}
+#ck-table{margin-top:12px;border:1px solid var(--line);border-radius:12px}
+#ck-table td.off,#ck-table th.off{opacity:.38}
+#ck-table tr.dup td{background:color-mix(in srgb,var(--bad) 10%,transparent)}
+#ck-table tr.dup td.on{color:var(--bad);font-weight:700}
+#ck-table th.on{color:var(--accent);box-shadow:inset 0 -2px var(--accent)}
+@media (max-width:620px){#ck-table .off{display:none}}
+
+details{border-bottom:1px solid var(--line);padding:12px 2px}
+details:last-child{border-bottom:0}
+summary{cursor:pointer;font:600 15.5px var(--bn);list-style:none;display:flex;gap:10px}
+summary::before{content:"+";font:700 15px var(--mono);color:var(--accent);width:14px;flex:none}
+details[open] summary::before{content:"−"}
+details p{margin:8px 0 0 24px;color:var(--muted);font-size:15px}
+
+footer{margin-top:56px;padding-top:16px;border-top:1px solid var(--line);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;font-size:13px;color:var(--faint)}
+@media (max-width:640px){.hero{padding:24px 20px;border-radius:18px}}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="topnav">
+    <a class="brand" href="../../../index.html"><span class="logo">W</span>WellDev</a>
+    <span class="sp"></span>
+    <a class="pill" href="../indexing/index.html">Indexing →</a>
+    <button class="pill" id="theme" type="button">Theme</button>
+  </nav>
+
+  <header class="hero">
+    <div class="eyebrow">DBMS · PostgreSQL</div>
+    <h1>Keys — কোন row কে, কীভাবে চিনবে</h1>
+    <p>একটা table-এ হাজার হাজার row। তার মধ্যে <i>ঠিক একটা</i> row-কে আলাদা করে চেনার উপায়ই key — আর এক table থেকে আরেক table-কে জোড়ার সুতাও key। এখানে একটা university database দিয়ে সব রকম key একই data-র ওপর দেখানো হয়েছে। প্রতিটা DDL আর error PostgreSQL 18-এ চালিয়ে আসল output দেওয়া।</p>
+  </header>
+
+  <div class="letters">
+    <a class="card letter c-sk" href="#super"><span class="big">SK</span><b>Super Key</b><p>যে কোনো set যা row চেনায়</p></a>
+    <a class="card letter c-ck" href="#candidate"><span class="big">CK</span><b>Candidate Key</b><p>বাড়তি কিছু নেই এমন super key</p></a>
+    <a class="card letter c-pk" href="#primary"><span class="big">PK</span><b>Primary Key</b><p>বাছাই করা একটা candidate</p></a>
+    <a class="card letter c-ak" href="#alternate"><span class="big">AK</span><b>Alternate Key</b><p>বাকি candidate গুলো</p></a>
+    <a class="card letter c-cp" href="#composite"><span class="big">(a,b)</span><b>Composite Key</b><p>একাধিক column মিলে key</p></a>
+    <a class="card letter c-uq" href="#unique"><span class="big">UQ</span><b>Unique Key</b><p>unique, কিন্তু NULL চলে</p></a>
+    <a class="card letter c-fk" href="#foreign"><span class="big">FK</span><b>Foreign Key</b><p>অন্য table-এর key-র দিকে ইশারা</p></a>
+    <a class="card letter c-sg" href="#surrogate"><span class="big">ID</span><b>Natural vs Surrogate</b><p>বাস্তব মান, নাকি বানানো id</p></a>
+    <a class="card letter c-pt" href="#partial"><span class="big">½</span><b>Partial Key</b><p>weak entity-র discriminator</p></a>
+    <a class="card letter c-pr" href="#prime"><span class="big">P</span><b>Prime Attribute</b><p>normalization-এর সেতু</p></a>
+  </div>
+
+  <!-- 0. running example -->
+  <section id="setup">
+    <h2><span class="num">0</span>আমাদের university</h2>
+    <p class="lead">পুরো page জুড়ে এই চারটা table। প্রতিটা key type এই একই row গুলোর ওপর দেখানো হবে — কোন column-এ কোন key, রঙ দেখেই বোঝা যাবে।</p>
+    <div class="legend">
+      <span><span class="chip c-pk">PK</span>Primary key</span>
+      <span><span class="chip c-ak">AK</span>Alternate key (UNIQUE + NOT NULL)</span>
+      <span><span class="chip c-uq">UQ</span>Unique, NULL চলে</span>
+      <span><span class="chip c-fk">FK</span>Foreign key</span>
+    </div>
+
+    <div class="stack">
+      <div class="card">
+        <div class="tcap">students <small>— প্রতিটা ছাত্র একবার</small></div>
+        <div class="tscroll">
+          <table class="data">
+            <thead><tr>
+              <th class="hl c-pk">student_id<span class="chip c-pk">PK</span></th>
+              <th class="hl c-ak">nid<span class="chip c-ak">AK</span></th>
+              <th class="hl c-ak">email<span class="chip c-ak">AK</span></th>
+              <th class="hl c-uq">phone<span class="chip c-uq">UQ</span></th>
+              <th>name</th>
+              <th class="hl c-fk">dept_id<span class="chip c-fk">FK</span></th>
+            </tr></thead>
+            <tbody>
+              <tr><td class="hl c-pk">1</td><td class="hl c-ak">1998123456701</td><td class="hl c-ak">rahim@uni.edu</td><td class="hl c-uq">01711000001</td><td>Rahim</td><td class="hl c-fk">10</td></tr>
+              <tr><td class="hl c-pk">2</td><td class="hl c-ak">1999234567802</td><td class="hl c-ak">karim@uni.edu</td><td class="hl c-uq">01811000002</td><td>Karim</td><td class="hl c-fk">10</td></tr>
+              <tr><td class="hl c-pk">3</td><td class="hl c-ak">2000345678903</td><td class="hl c-ak">nusrat@uni.edu</td><td class="hl c-uq nul">NULL</td><td>Nusrat</td><td class="hl c-fk">20</td></tr>
+              <tr><td class="hl c-pk">4</td><td class="hl c-ak">1999456789004</td><td class="hl c-ak">rahim.u@uni.edu</td><td class="hl c-uq">01911000004</td><td>Rahim</td><td class="hl c-fk">20</td></tr>
+              <tr><td class="hl c-pk">5</td><td class="hl c-ak">2001567890105</td><td class="hl c-ak">tania@uni.edu</td><td class="hl c-uq">01611000005</td><td>Tania</td><td class="hl c-fk">10</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="grid2">
+        <div class="card">
+          <div class="tcap">departments</div>
+          <div class="tscroll">
+            <table class="data sm">
+              <thead><tr><th class="hl c-pk">dept_id<span class="chip c-pk">PK</span></th><th class="hl c-ak">code<span class="chip c-ak">AK</span></th><th>name</th></tr></thead>
+              <tbody>
+                <tr><td class="hl c-pk">10</td><td class="hl c-ak">CSE</td><td>Computer Science &amp; Engineering</td></tr>
+                <tr><td class="hl c-pk">20</td><td class="hl c-ak">EEE</td><td>Electrical &amp; Electronic Engineering</td></tr>
+                <tr><td class="hl c-pk">30</td><td class="hl c-ak">BBA</td><td>Business Administration</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card">
+          <div class="tcap">courses <small>— prereq_id নিজের table-কেই দেখায়</small></div>
+          <div class="tscroll">
+            <table class="data sm">
+              <thead><tr><th class="hl c-pk">course_id<span class="chip c-pk">PK</span></th><th>title</th><th class="hl c-fk">dept_id<span class="chip c-fk">FK</span></th><th class="hl c-fk">prereq_id<span class="chip c-fk">FK</span></th></tr></thead>
+              <tbody>
+                <tr><td class="hl c-pk">CSE101</td><td>Structured Programming</td><td class="hl c-fk">10</td><td class="hl c-fk nul">NULL</td></tr>
+                <tr><td class="hl c-pk">CSE201</td><td>Data Structures</td><td class="hl c-fk">10</td><td class="hl c-fk">CSE101</td></tr>
+                <tr><td class="hl c-pk">CSE301</td><td>Database Systems</td><td class="hl c-fk">10</td><td class="hl c-fk">CSE201</td></tr>
+                <tr><td class="hl c-pk">EEE101</td><td>Circuits I</td><td class="hl c-fk">20</td><td class="hl c-fk nul">NULL</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="tcap">enrollments <small>— কে, কোন course, কোন semester-এ; তিনটা মিলে PK</small></div>
+        <div class="tscroll">
+          <table class="data">
+            <thead><tr>
+              <th class="hl c-cp">student_id<span class="chip c-pk">PK</span><span class="chip c-fk">FK</span></th>
+              <th class="hl c-cp">course_id<span class="chip c-pk">PK</span><span class="chip c-fk">FK</span></th>
+              <th class="hl c-cp">semester<span class="chip c-pk">PK</span></th>
+              <th>grade</th>
+            </tr></thead>
+            <tbody>
+              <tr><td class="hl c-cp">1</td><td class="hl c-cp">CSE101</td><td class="hl c-cp">Spring-2025</td><td>A</td></tr>
+              <tr><td class="hl c-cp">1</td><td class="hl c-cp">CSE201</td><td class="hl c-cp">Fall-2025</td><td>A-</td></tr>
+              <tr><td class="hl c-cp">2</td><td class="hl c-cp">CSE101</td><td class="hl c-cp">Spring-2025</td><td>B+</td></tr>
+              <tr><td class="hl c-cp">2</td><td class="hl c-cp">CSE101</td><td class="hl c-cp">Fall-2025</td><td>A</td></tr>
+              <tr><td class="hl c-cp">3</td><td class="hl c-cp">EEE101</td><td class="hl c-cp">Spring-2025</td><td>A</td></tr>
+              <tr><td class="hl c-cp">5</td><td class="hl c-cp">CSE301</td><td class="hl c-cp">Fall-2025</td><td class="nul">NULL</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <h3>পুরো DDL — এক জায়গায়</h3>
+<pre class="code" data-lang="sql">CREATE TABLE departments (
+  dept_id  int  PRIMARY KEY,
+  code     text NOT NULL UNIQUE,                 -- alternate key
+  name     text NOT NULL
+);
+
+CREATE TABLE students (
+  student_id int  GENERATED ALWAYS AS IDENTITY PRIMARY KEY,   -- surrogate PK
+  nid        text NOT NULL UNIQUE,               -- alternate key (natural)
+  email      text NOT NULL UNIQUE,               -- alternate key (natural)
+  phone      text UNIQUE,                        -- unique key, NULL চলে
+  name       text NOT NULL,
+  dept_id    int  REFERENCES departments(dept_id) ON DELETE SET NULL
+);
+
+CREATE TABLE courses (
+  course_id  text PRIMARY KEY,                   -- natural PK
+  title      text NOT NULL,
+  dept_id    int  NOT NULL REFERENCES departments(dept_id),   -- NO ACTION (default)
+  prereq_id  text REFERENCES courses(course_id)                -- self-referencing FK
+);
+
+CREATE TABLE enrollments (
+  student_id int  REFERENCES students(student_id) ON DELETE CASCADE,
+  course_id  text REFERENCES courses(course_id)  ON DELETE RESTRICT,
+  semester   text,
+  grade      text,
+  PRIMARY KEY (student_id, course_id, semester)  -- composite PK
+);</pre>
+  </section>
+
+  <!-- 1. family -->
+  <section id="family" style="--c:var(--accent)">
+    <h2><span class="num">1</span>Key-এর পরিবার</h2>
+    <span class="motto">Super ⊇ Candidate ⊇ Primary</span>
+    <p class="lead"><b>Key</b> মানে এক বা একাধিক attribute-এর এমন একটা set, যার মান দেখে table-এর <b>ঠিক একটা</b> row চেনা যায়। সব key একই পরিবারের — বড় বৃত্তের ভেতরে ছোট বৃত্ত। নিচে <code>students</code>-এর 6টা column দিয়ে বানানো সম্ভাব্য 63টা column-set কোথায় পড়ে:</p>
+
+    <div class="card sets">
+      <div class="set dash" style="--c:var(--faint)">
+        <div class="lbl"><span>সব column-set</span><small>2⁶ − 1 = 63টা</small></div>
+        <div class="mem">
+          <span class="m">{name}</span><span class="m">{dept_id}</span><span class="m">{phone}</span><span class="m">{name, dept_id}</span><span class="m more">… মোট 7টা key না</span>
+        </div>
+        <div class="set c-sk">
+          <div class="lbl"><span>Super keys</span><small>student_id / nid / email — এর অন্তত একটা আছে · 56টা</small></div>
+          <div class="mem">
+            <span class="m">{email, <s>name</s>}</span><span class="m">{student_id, <s>phone</s>}</span><span class="m">{nid, <s>email</s>}</span><span class="m">{nid, <s>name, dept_id</s>}</span><span class="m">{<s>all 6</s>}</span><span class="m more">… আরো 48টা</span>
+          </div>
+          <div class="set c-ck">
+            <div class="lbl"><span>Candidate keys</span><small>minimal — একটা column-ও বাদ দেওয়া যায় না · 3টা</small></div>
+            <div class="pair">
+              <div class="set c-pk"><div class="lbl"><span>Primary key</span><small>বাছাই করা</small></div><div class="mem"><span class="m">{student_id}</span></div></div>
+              <div class="set c-ak"><div class="lbl"><span>Alternate keys</span><small>বাকি candidate</small></div><div class="mem"><span class="m">{nid}</span><span class="m">{email}</span></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="formula">Alternate keys = Candidate keys − Primary key</div>
+    </div>
+    <p class="foot">কাটা দাগ দেওয়া column গুলো <b>বাড়তি</b> — ওগুলো ছাড়াও set-টা row চিনতে পারে। বাড়তি থাকলে super key, একদম না থাকলে candidate key।</p>
+  </section>
+
+  <!-- 2. super -->
+  <section id="super" class="c-sk">
+    <h2><span class="num">2</span>Super Key</h2>
+    <span class="motto">Row চেনাতে পারলেই হলো — বাড়তি থাকুক না থাকুক</span>
+    <p class="lead">যে কোনো attribute-set যার মান দুইটা row-তে কখনো এক হবে না, সেটাই super key। <code>{email}</code> একটা super key, তাই <code>{email, name}</code>, <code>{email, name, phone}</code> — email থাকা প্রতিটা set-ই super key। পুরো row (সব column একসাথে) সবসময় একটা super key, কারণ relation-এ duplicate row থাকে না।</p>
+    <div class="card story"><p><b>বাস্তবে:</b> "সাদা শার্ট পরা, চশমা আছে, roll 17" — roll 17 বললেই চলত, বাকিগুলো বাড়তি তথ্য। তবু পুরো বর্ণনাটা দিয়েও মানুষটাকে চেনা যায় — এটাই super key।</p></div>
+
+    <h3>নিজে চেষ্টা করো — কোনটা key?</h3>
+    <div class="card ck" id="checker">
+      <p class="ck-q"><code>students</code>-এর কোন column গুলো নিলে প্রতিটা row আলাদা করে চেনা যায়? Tick দাও:</p>
+      <div class="atts" id="atts"></div>
+      <div class="presets">চেষ্টা করো:
+        <button type="button" data-p="student_id">{student_id}</button>
+        <button type="button" data-p="email,name">{email, name}</button>
+        <button type="button" data-p="name">{name}</button>
+        <button type="button" data-p="name,dept_id">{name, dept_id}</button>
+        <button type="button" data-p="phone">{phone}</button>
+        <button type="button" data-p="nid">{nid}</button>
+      </div>
+      <div class="verdict" id="verdict" aria-live="polite"></div>
+      <div class="tscroll" id="ck-table"></div>
+      <p class="foot">Declared rule: <code>student_id</code> PK, <code>nid</code> ও <code>email</code> UNIQUE NOT NULL, <code>phone</code> UNIQUE (NULL চলে)। লাল row = নির্বাচিত column-এ একই মান।</p>
+    </div>
+
+    <h3>Data দেখে key খোঁজার ফাঁদ</h3>
+    <div class="grid2">
+<pre class="code" data-lang="sql">SELECT name, count(*) FROM students
+GROUP BY name HAVING count(*) &gt; 1;
+<span class="o"> name  | count
+-------+-------
+ Rahim |     2       ← name key না, প্রমাণ</span>
+
+SELECT name, dept_id, count(*) FROM students
+GROUP BY name, dept_id HAVING count(*) &gt; 1;
+<span class="o">(0 rows)             ← তাহলে {name, dept_id} key?</span></pre>
+      <div class="how"><b>না!</b> আজকের 5টা row-এ "Rahim, CSE" একজনই, কিন্তু কাল আরেক Rahim CSE-তে ভর্তি হতে পারে। Key হলো <b>business rule</b> — "এটা কখনো duplicate হবে না" — যেটা database-এ <code>PRIMARY KEY</code>/<code>UNIQUE</code> দিয়ে declare করা থাকে। Data দেখে শুধু বলা যায় কোনটা key <b>না</b> (একটা duplicate পেলেই), কোনটা key তা প্রমাণ করা যায় না।</div>
+    </div>
+  </section>
+
+  <!-- 3. candidate -->
+  <section id="candidate" class="c-ck">
+    <h2><span class="num">3</span>Candidate Key</h2>
+    <span class="motto">Minimal super key — একটা column-ও বাড়তি নেই</span>
+    <p class="lead">যে super key থেকে কোনো একটা attribute সরালেই সেটা আর row চেনাতে পারে না, সেটাই candidate key। Primary key হওয়ার "প্রার্থী" — তাই নাম candidate। একটা table-এ একাধিক candidate key থাকতেই পারে।</p>
+    <div class="grid2">
+      <div class="card tscroll">
+        <table class="data sm">
+          <thead><tr><th>Column-set</th><th>Super?</th><th>Candidate?</th></tr></thead>
+          <tbody>
+            <tr><td>{student_id}</td><td style="color:var(--ok)">✓</td><td style="color:var(--ok)">✓</td></tr>
+            <tr><td>{nid}</td><td style="color:var(--ok)">✓</td><td style="color:var(--ok)">✓</td></tr>
+            <tr><td>{email}</td><td style="color:var(--ok)">✓</td><td style="color:var(--ok)">✓</td></tr>
+            <tr><td>{email, name}</td><td style="color:var(--ok)">✓</td><td style="color:var(--bad)">✗ name বাড়তি</td></tr>
+            <tr><td>{phone}</td><td style="color:var(--bad)">✗ NULL</td><td style="color:var(--bad)">✗</td></tr>
+            <tr><td>{name, dept_id}</td><td style="color:var(--bad)">✗ rule নেই</td><td style="color:var(--bad)">✗</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="how" style="margin-top:0"><b>Candidate key-এর দুই শর্ত:</b>
+        <ul>
+          <li><b>Uniqueness</b> — দুইটা row-এ মান কখনো এক হবে না।</li>
+          <li><b>Minimality (irreducibility)</b> — কোনো proper subset নিজে unique না।</li>
+          <li>Practically আরেকটা: <b>NULL হবে না</b> — যে মান নেই, তা দিয়ে কাউকে চেনা যায় না। তাই nullable <code>phone</code> candidate key না।</li>
+          <li>Composite candidate key-ও হয়: <code>enrollments</code>-এ <code>{student_id, course_id, semester}</code> — তিনটার কোনোটা বাদ দিলে duplicate সম্ভব।</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. primary -->
+  <section id="primary" class="c-pk">
+    <h2><span class="num">4</span>Primary Key</h2>
+    <span class="motto">সব candidate-এর মধ্যে একজন — table-এর অফিসিয়াল পরিচয়</span>
+    <p class="lead">Candidate key গুলোর মধ্যে যেটাকে আমরা row-এর মূল পরিচয় হিসেবে <b>বেছে নিই</b>। PostgreSQL-এ <code>PRIMARY KEY</code> = <code>UNIQUE</code> + <code>NOT NULL</code>, আর প্রতি table-এ <b>সর্বোচ্চ একটা</b>। অন্য table-এর FK সাধারণত এটাকেই দেখায়।</p>
+    <div class="card story"><p><b>কোনটা বাছবে:</b> যেটা কখনো বদলায় না, ছোট, আর সবসময় থাকে। <code>email</code> বদলাতে পারে, <code>nid</code> ব্যক্তিগত তথ্য — তাই students-এ বানানো <code>student_id</code> PK, আর nid/email থাকল alternate key হয়ে।</p></div>
+
+    <h3>PK ভাঙার চেষ্টা</h3>
+    <div class="grid2">
+<pre class="code" data-lang="sql">INSERT INTO departments VALUES (10, 'MAT', 'Math');
+<span class="e">ERROR:  duplicate key value violates unique constraint "departments_pkey"
+DETAIL:  Key (dept_id)=(10) already exists.</span>
+
+INSERT INTO departments VALUES (NULL, 'MAT', 'Math');
+<span class="e">ERROR:  null value in column "dept_id" of relation "departments" violates not-null constraint
+DETAIL:  Failing row contains (null, MAT, Math).</span></pre>
+<pre class="code" data-lang="sql">-- দ্বিতীয় PK? না।
+ALTER TABLE students ADD PRIMARY KEY (nid);
+<span class="e">ERROR:  multiple primary keys for table "students" are not allowed</span>
+
+-- IDENTITY ALWAYS: হাতে id দেওয়া যায় না
+INSERT INTO students (student_id, nid, email, name)
+VALUES (1, '111', 'x@uni.edu', 'X');
+<span class="e">ERROR:  cannot insert a non-DEFAULT value into column "student_id"
+DETAIL:  Column "student_id" is an identity column defined as GENERATED ALWAYS.
+HINT:  Use OVERRIDING SYSTEM VALUE to override.</span></pre>
+    </div>
+    <div class="how"><b>PostgreSQL কীভাবে করে:</b>
+      <ul>
+        <li><code>PRIMARY KEY</code> দিলেই PostgreSQL নিজে থেকে <code>students_pkey</code> নামে একটা <b>unique B-tree index</b> বানায়। Insert/update-এ duplicate খোঁজা হয় এই index-এ — পুরো table scan করতে হয় না।</li>
+        <li>PK column গুলো automatically <code>NOT NULL</code> হয়ে যায় (PostgreSQL 18-এ <code>pg_constraint</code>-এ এগুলো আলাদা NOT NULL constraint হিসেবেও দেখা যায়)।</li>
+        <li>PK ছাড়াও table বানানো যায়, কিন্তু তখন duplicate row ঠেকানোর কিছু থাকে না, আর logical replication-এ UPDATE/DELETE-এর জন্য replica identity লাগে — practically প্রতিটা table-এ PK রাখো।</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 5. alternate -->
+  <section id="alternate" class="c-ak">
+    <h2><span class="num">5</span>Alternate (Secondary) Key</h2>
+    <span class="motto">PK হয়নি এমন candidate key</span>
+    <p class="lead"><code>students</code>-এর candidate key তিনটা — <code>student_id</code>, <code>nid</code>, <code>email</code>। একটা PK হলো, বাকি দুইটা <b>alternate key</b>। এগুলোকে ভুলে গেলে চলবে না: <code>UNIQUE NOT NULL</code> দিয়ে declare না করলে একই NID দিয়ে দুইজন ছাত্র ঢুকে যাবে — surrogate PK তো প্রতিবার নতুন নম্বর দেবে।</p>
+<pre class="code" data-lang="sql">INSERT INTO students (nid, email, name) VALUES ('1998123456701', 'new@uni.edu', 'New');
+<span class="e">ERROR:  duplicate key value violates unique constraint "students_nid_key"
+DETAIL:  Key (nid)=(1998123456701) already exists.</span>
+
+INSERT INTO students (nid, email, name) VALUES ('2002000000006', 'rahim@uni.edu', 'New');
+<span class="e">ERROR:  duplicate key value violates unique constraint "students_email_key"
+DETAIL:  Key (email)=(rahim@uni.edu) already exists.</span>
+
+INSERT INTO students (nid, email, name) VALUES ('2002000000007', NULL, 'New');
+<span class="e">ERROR:  null value in column "email" of relation "students" violates not-null constraint
+DETAIL:  Failing row contains (8, 2002000000007, null, null, New, null).</span>
+<span class="c">-- student_id 8?  আগের দুইটা fail হওয়া INSERT 6 আর 7 খরচ করে ফেলেছে — নিচে "gap" দেখো</span></pre>
+    <p class="foot">"Secondary key" নামটা কেউ কেউ non-unique search column (যেটায় শুধু index আছে) বোঝাতেও ব্যবহার করে। Interview-এ বললে স্পষ্ট করো: alternate key = unique candidate key যেটা PK না।</p>
+  </section>
+
+  <!-- 6. composite -->
+  <section id="composite" class="c-cp">
+    <h2><span class="num">6</span>Composite / Compound Key</h2>
+    <span class="motto">একা কেউ পারে না, মিলে পারে</span>
+    <p class="lead">যখন কোনো একটা column একা row চেনাতে পারে না, একাধিক column মিলে key হয়। <code>enrollments</code>-এ Karim (2) CSE101 দুবার নিয়েছে — Spring আর Fall-এ। তাই <code>(student_id, course_id)</code> যথেষ্ট না, <code>semester</code>-ও লাগবে।</p>
+    <div class="grid2">
+<pre class="code" data-lang="sql">PRIMARY KEY (student_id, course_id, semester)
+
+INSERT INTO enrollments VALUES (2, 'CSE101', 'Fall-2025', 'B');
+<span class="e">ERROR:  duplicate key value violates unique constraint "enrollments_pkey"
+DETAIL:  Key (student_id, course_id, semester)=(2, CSE101, Fall-2025) already exists.</span>
+
+INSERT INTO enrollments VALUES (2, 'CSE101', NULL, 'B');
+<span class="e">ERROR:  null value in column "semester" of relation "enrollments" violates not-null constraint
+DETAIL:  Failing row contains (2, CSE101, null, B).</span>
+
+INSERT INTO enrollments VALUES (2, 'CSE201', 'Spring-2026', NULL);
+<span class="g">INSERT 0 1</span>   <span class="c">-- একটা অংশ আলাদা হলেই নতুন key</span></pre>
+      <div class="how" style="margin-top:0"><b>মনে রাখো:</b>
+        <ul>
+          <li>Composite PK-ও <b>একটাই</b> PK — শুধু তার column একাধিক। প্রতিটা অংশ NOT NULL।</li>
+          <li><b>Column order গুরুত্বপূর্ণ।</b> Index হয় <code>(student_id, course_id, semester)</code> ক্রমে — <code>WHERE student_id = …</code> এই index ব্যবহার করতে পারে, কিন্তু শুধু <code>WHERE course_id = …</code> পারে না (leftmost prefix rule)। বিস্তারিত: <a href="../indexing/index.html">Indexing গাইড</a>।</li>
+          <li><b>Compound key</b> — অনেক বইয়ে composite-এরই আরেক নাম; কিছু বইয়ে সেই composite key যার প্রতিটা অংশ নিজেই একটা FK (যেমন junction table-এ <code>student_id</code> + <code>course_id</code>)।</li>
+          <li>FK যদি composite PK-কে দেখায়, FK-ও composite হবে — সব column নিয়ে।</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7. unique -->
+  <section id="unique" class="c-uq">
+    <h2><span class="num">7</span>Unique Key</h2>
+    <span class="motto">Duplicate না — কিন্তু "নেই" (NULL) হতে পারে</span>
+    <p class="lead"><code>UNIQUE</code> constraint থাকা column। PK-র সাথে পার্থক্য: <b>NULL চলে</b>, আর একটা table-এ <b>যত খুশি</b> থাকতে পারে। SQL-এ <code>NULL = NULL</code> সত্য না (unknown), তাই default-এ অনেকগুলো NULL একসাথে থাকতে পারে। <code>phone</code> ঠিক এরকম — সবার phone নাও থাকতে পারে, কিন্তু যার আছে, তা অন্য কারো সাথে মিলবে না।</p>
+    <div class="grid2">
+<pre class="code" data-lang="sql">INSERT INTO students (nid, email, phone, name)
+VALUES ('2002000000008', 'sakib@uni.edu', NULL, 'Sakib');
+<span class="g">INSERT 0 1</span>   <span class="c">-- Nusrat-এরও NULL, তবু চলল</span>
+
+INSERT INTO students (nid, email, phone, name)
+VALUES ('2002000000009', 'mitu@uni.edu', '01711000001', 'Mitu');
+<span class="e">ERROR:  duplicate key value violates unique constraint "students_phone_key"
+DETAIL:  Key (phone)=(01711000001) already exists.</span>
+
+SELECT student_id, name, phone FROM students WHERE phone IS NULL;
+<span class="o"> student_id |  name  | phone
+------------+--------+-------
+          3 | Nusrat |
+          9 | Sakib  |</span></pre>
+<pre class="code" data-lang="sql">-- PostgreSQL 15+: NULL-ও একটার বেশি না
+CREATE TABLE t_phone (phone text UNIQUE NULLS NOT DISTINCT);
+INSERT INTO t_phone VALUES (NULL);
+<span class="g">INSERT 0 1</span>
+INSERT INTO t_phone VALUES (NULL);
+<span class="e">ERROR:  duplicate key value violates unique constraint "t_phone_phone_key"
+DETAIL:  Key (phone)=(null) already exists.</span>
+
+-- একাধিক column মিলে unique-ও হয়
+-- UNIQUE (dept_id, roll_no)</pre>
+    </div>
+    <div class="how"><b>Unique key vs candidate key:</b> <code>UNIQUE NOT NULL</code> হলে সেটা candidate key (আমাদের <code>nid</code>, <code>email</code> — alternate key)। শুধু <code>UNIQUE</code> (nullable) হলে row চেনার নিশ্চয়তা নেই — Nusrat-কে phone দিয়ে খুঁজে পাবে না। PostgreSQL দুই ক্ষেত্রেই <code>students_phone_key</code>-এর মতো একটা unique B-tree index বানায়।</div>
+  </section>
+
+  <!-- 8. foreign -->
+  <section id="foreign" class="c-fk">
+    <h2><span class="num">8</span>Foreign Key</h2>
+    <span class="motto">"এই মান ওই table-এ থাকতেই হবে"</span>
+    <p class="lead">এক table-এর column যেটা অন্য (বা একই) table-এর <b>PK বা UNIQUE</b> column-কে দেখায়। এটাই <b>referential integrity</b>: enrollment-এ এমন student থাকতে পারবে না যে students table-এ নেই। যে table দেখায় সেটা <b>child / referencing</b>, যাকে দেখায় সেটা <b>parent / referenced</b>।</p>
+
+    <div class="card er-box tscroll">
+      <svg class="er" viewBox="0 0 820 432" role="img" aria-label="ER diagram: departments, students, courses, enrollments, sections আর তাদের foreign key সম্পর্ক">
+        <defs>
+          <marker id="one" viewBox="0 0 12 12" refX="2" refY="6" markerWidth="12" markerHeight="12" markerUnits="userSpaceOnUse" orient="auto"><path d="M7 1V11"/></marker>
+          <marker id="many" viewBox="0 0 12 12" refX="12" refY="6" markerWidth="12" markerHeight="12" markerUnits="userSpaceOnUse" orient="auto"><path d="M0 6L12 1M0 6L12 6M0 6L12 11"/></marker>
+        </defs>
+        <!-- relationships (drawn first, under the boxes) -->
+        <path class="rel" d="M210 191 C255 191 255 167 300 167" marker-start="url(#one)" marker-end="url(#many)"/>
+        <path class="rel" d="M210 191 C255 191 255 321 300 321" marker-start="url(#one)" marker-end="url(#many)"/>
+        <path class="rel" d="M520 57 C560 57 560 91 600 91" marker-start="url(#one)" marker-end="url(#many)"/>
+        <path class="rel" d="M520 277 C565 277 555 113 600 113" marker-start="url(#one)" marker-end="url(#many)"/>
+        <path class="rel" d="M520 277 C560 277 560 297 600 297" marker-start="url(#one)" marker-end="url(#many)"/>
+        <path class="rel" d="M360 362 C360 414 470 414 470 362" marker-start="url(#one)" marker-end="url(#many)"/>
+        <text class="lab" x="255" y="152" text-anchor="middle">SET NULL</text>
+        <text class="lab" x="250" y="276" text-anchor="end">NO ACTION</text>
+        <text class="lab" x="560" y="46" text-anchor="middle">CASCADE</text>
+        <text class="lab" x="566" y="214">RESTRICT</text>
+        <text class="lab" x="560" y="318" text-anchor="middle">CASCADE</text>
+        <text class="lab" x="415" y="424" text-anchor="middle">prereq_id → course_id (self FK)</text>
+
+        <!-- departments -->
+        <rect class="ent" x="20" y="150" width="190" height="104" rx="10"/>
+        <path class="hd" d="M30 151 h170 a9 9 0 0 1 9 9 v20 h-188 v-20 a9 9 0 0 1 9 -9z"/>
+        <text class="hdt" x="34" y="170">departments</text>
+        <text x="34" y="199" class="u">dept_id</text><text class="tg pk" x="198" y="199" text-anchor="end">PK</text>
+        <text x="34" y="221">code</text><text class="tg ak" x="198" y="221" text-anchor="end">AK</text>
+        <text x="34" y="243">name</text>
+
+        <!-- students -->
+        <rect class="ent" x="300" y="16" width="220" height="170" rx="10"/>
+        <path class="hd" d="M310 17 h200 a9 9 0 0 1 9 9 v20 h-218 v-20 a9 9 0 0 1 9 -9z"/>
+        <text class="hdt" x="314" y="36">students</text>
+        <text x="314" y="61" class="u">student_id</text><text class="tg pk" x="508" y="61" text-anchor="end">PK</text>
+        <text x="314" y="83">nid</text><text class="tg ak" x="508" y="83" text-anchor="end">AK</text>
+        <text x="314" y="105">email</text><text class="tg ak" x="508" y="105" text-anchor="end">AK</text>
+        <text x="314" y="127">phone</text><text class="tg uq" x="508" y="127" text-anchor="end">UQ</text>
+        <text x="314" y="149">name</text>
+        <text x="314" y="171">dept_id</text><text class="tg fk" x="508" y="171" text-anchor="end">FK</text>
+
+        <!-- courses -->
+        <rect class="ent" x="300" y="236" width="220" height="126" rx="10"/>
+        <path class="hd" d="M310 237 h200 a9 9 0 0 1 9 9 v20 h-218 v-20 a9 9 0 0 1 9 -9z"/>
+        <text class="hdt" x="314" y="256">courses</text>
+        <text x="314" y="281" class="u">course_id</text><text class="tg pk" x="508" y="281" text-anchor="end">PK</text>
+        <text x="314" y="303">title</text>
+        <text x="314" y="325">dept_id</text><text class="tg fk" x="508" y="325" text-anchor="end">FK</text>
+        <text x="314" y="347">prereq_id</text><text class="tg fk" x="508" y="347" text-anchor="end">FK</text>
+
+        <!-- enrollments -->
+        <rect class="ent" x="600" y="50" width="200" height="126" rx="10"/>
+        <path class="hd" d="M610 51 h180 a9 9 0 0 1 9 9 v20 h-198 v-20 a9 9 0 0 1 9 -9z"/>
+        <text class="hdt" x="614" y="70">enrollments</text>
+        <text x="614" y="95" class="u">student_id</text><text class="tg pk" x="788" y="95" text-anchor="end">PK·<tspan class="fk">FK</tspan></text>
+        <text x="614" y="117" class="u">course_id</text><text class="tg pk" x="788" y="117" text-anchor="end">PK·<tspan class="fk">FK</tspan></text>
+        <text x="614" y="139" class="u">semester</text><text class="tg pk" x="788" y="139" text-anchor="end">PK</text>
+        <text x="614" y="161">grade</text>
+
+        <!-- sections (weak entity: double border) -->
+        <rect class="ent" x="600" y="256" width="200" height="104" rx="10"/>
+        <rect class="weak" x="604" y="260" width="192" height="96" rx="7"/>
+        <path class="hd" d="M613 261 h174 a7 7 0 0 1 7 7 v18 h-188 v-18 a7 7 0 0 1 7 -7z"/>
+        <text class="hdt" x="614" y="279">sections <tspan class="lab">weak</tspan></text>
+        <text x="614" y="304" class="u">course_id</text><text class="tg pk" x="788" y="304" text-anchor="end">PK·<tspan class="fk">FK</tspan></text>
+        <text x="614" y="326" style="text-decoration:underline dashed">section_no</text><text class="tg pt" x="788" y="326" text-anchor="end">partial</text>
+        <text x="614" y="348">room</text>
+      </svg>
+    </div>
+    <p class="foot">দাগের এক মাথায় খাড়া দাগ = "1" (parent), অন্য মাথায় কাকের পা = "N" (child)। দাগের পাশের লেখা = সেই FK-এর <code>ON DELETE</code> নিয়ম।</p>
+
+    <h3>FK violation — insert-এ আর delete-এ</h3>
+    <div class="grid2">
+      <div>
+        <div class="file" style="--dot:var(--kt)"><i></i>child-এ এমন মান যা parent-এ নেই<span class="r" style="--tc:var(--bad)">insert block</span></div>
+<pre class="code" data-lang="sql">INSERT INTO enrollments VALUES (99, 'CSE101', 'Spring-2026', NULL);
+<span class="e">ERROR:  insert or update on table "enrollments" violates foreign key constraint "enrollments_student_id_fkey"
+DETAIL:  Key (student_id)=(99) is not present in table "students".</span>
+
+INSERT INTO enrollments VALUES (1, 'MAT999', 'Spring-2026', NULL);
+<span class="e">ERROR:  insert or update on table "enrollments" violates foreign key constraint "enrollments_course_id_fkey"
+DETAIL:  Key (course_id)=(MAT999) is not present in table "courses".</span></pre>
+      </div>
+      <div>
+        <div class="file" style="--dot:var(--kt)"><i></i>parent মুছলে child অনাথ হবে<span class="r" style="--tc:var(--bad)">delete block</span></div>
+<pre class="code" data-lang="sql">-- ON DELETE RESTRICT
+DELETE FROM courses WHERE course_id = 'CSE301';
+<span class="e">ERROR:  update or delete on table "courses" violates RESTRICT setting of foreign key constraint "enrollments_course_id_fkey" on table "enrollments"
+DETAIL:  Key (course_id)=(CSE301) is referenced from table "enrollments".</span>
+
+-- কিছু না লিখলে = NO ACTION
+DELETE FROM departments WHERE dept_id = 20;
+<span class="e">ERROR:  update or delete on table "departments" violates foreign key constraint "courses_dept_id_fkey" on table "courses"
+DETAIL:  Key (dept_id)=(20) is still referenced from table "courses".</span></pre>
+      </div>
+    </div>
+
+    <h3>ON DELETE — parent মুছলে child-এর কী হবে</h3>
+    <div class="grid2">
+      <div>
+        <div class="file" style="--dot:var(--kt)"><i></i>CASCADE — student গেলে তার enrollment-ও যাবে</div>
+<pre class="code" data-lang="sql">SELECT count(*) FROM enrollments WHERE student_id = 1;
+<span class="o"> count
+-------
+     2</span>
+DELETE FROM students WHERE student_id = 1;
+<span class="o">DELETE 1</span>
+SELECT count(*) FROM enrollments WHERE student_id = 1;
+<span class="o"> count
+-------
+     0</span>          <span class="c">-- child row নিজে থেকেই মুছে গেছে</span></pre>
+      </div>
+      <div>
+        <div class="file" style="--dot:var(--kt)"><i></i>SET NULL — department বন্ধ হলে student থাকবে, dept ফাঁকা</div>
+<pre class="code" data-lang="sql">UPDATE students SET dept_id = 30 WHERE student_id = 5;
+DELETE FROM departments WHERE dept_id = 30;   <span class="o">-- BBA</span>
+<span class="o">DELETE 1</span>
+SELECT student_id, name, dept_id FROM students WHERE student_id = 5;
+<span class="o"> student_id | name  | dept_id
+------------+-------+---------
+          5 | Tania |</span>          <span class="c">-- NULL</span></pre>
+      </div>
+    </div>
+    <div class="card tscroll" style="margin-top:14px">
+      <table>
+        <thead><tr><th>Option</th><th>Parent row মুছলে</th><th>কখন ব্যবহার</th></tr></thead>
+        <tbody>
+          <tr><td><code>NO ACTION</code> <small style="color:var(--muted)">default</small></td><td>Child থাকলে error — check হয় statement-এর শেষে (DEFERRABLE হলে commit-এ)</td><td>বেশিরভাগ ক্ষেত্রে নিরাপদ default</td></tr>
+          <tr><td><code>RESTRICT</code></td><td>Child থাকলে error — সাথে সাথে, defer করা যায় না</td><td>যে parent মুছতেই দেওয়া যাবে না (course যার result আছে)</td></tr>
+          <tr><td><code>CASCADE</code></td><td>Child row-ও মুছে যায় (chain হলে আরো নিচে)</td><td>Child-এর আলাদা অস্তিত্ব নেই — order → order_items, course → sections</td></tr>
+          <tr><td><code>SET NULL</code></td><td>Child-এর FK column NULL হয় (column nullable হতে হবে)</td><td>সম্পর্ক ঐচ্ছিক — student থাকুক, department ফাঁকা</td></tr>
+          <tr><td><code>SET DEFAULT</code></td><td>FK column-এ DEFAULT মান বসে (সেটা parent-এ থাকতে হবে)</td><td>"Unassigned" নামে একটা placeholder parent থাকলে</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="foot"><code>ON UPDATE</code>-এও একই option গুলো আছে — parent-এর key বদলালে child কী করবে। Surrogate PK কখনো বদলায় না বলে সাধারণত দরকার পড়ে না।</p>
+
+    <h3>Self-referencing FK — table নিজেকেই দেখায়</h3>
+    <div class="grid2">
+<pre class="code" data-lang="sql">prereq_id text REFERENCES courses(course_id)
+<span class="c">-- CSE301 → CSE201 → CSE101 → NULL (শিকল এখানে শেষ)</span>
+
+INSERT INTO courses VALUES ('CSE401', 'Compilers', 10, 'CSE999');
+<span class="e">ERROR:  insert or update on table "courses" violates foreign key constraint "courses_prereq_id_fkey"
+DETAIL:  Key (prereq_id)=(CSE999) is not present in table "courses".</span>
+
+DELETE FROM courses WHERE course_id = 'CSE101';
+<span class="e">ERROR:  update or delete on table "courses" violates foreign key constraint "courses_prereq_id_fkey" on table "courses"
+DETAIL:  Key (course_id)=(CSE101) is still referenced from table "courses".</span></pre>
+      <div class="how" style="margin-top:0"><b>কোথায় দেখা যায়:</b>
+        <ul>
+          <li><code>employees.manager_id → employees.id</code> — org chart</li>
+          <li><code>categories.parent_id → categories.id</code> — nested menu</li>
+          <li><code>comments.reply_to → comments.id</code> — thread</li>
+          <li>Root row-এর (CEO, top category) FK <code>NULL</code> — তাই self FK সাধারণত nullable। পুরো গাছ পড়তে <code>WITH RECURSIVE</code>।</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>FK-এর আরো তিনটা নিয়ম</h3>
+    <div class="grid2">
+<pre class="code" data-lang="sql">-- ১. FK NULL হতে পারে (NOT NULL না দিলে) — "এখনো কোনো dept নেই"
+INSERT INTO students (nid, email, name, dept_id)
+VALUES ('2002000000010', 'guest@uni.edu', 'Guest', NULL);
+<span class="g">INSERT 0 1</span>
+
+-- ২. শুধু PK/UNIQUE column-কেই দেখানো যায়
+CREATE TABLE t_bad (student_name text REFERENCES students(name));
+<span class="e">ERROR:  there is no unique constraint matching given keys for referenced table "students"</span></pre>
+<pre class="code" data-lang="sql">-- ৩. Alternate key-কেও দেখানো যায়
+CREATE TABLE library_cards (
+  card_no       int  PRIMARY KEY,
+  student_email text NOT NULL REFERENCES students(email)
+);
+<span class="g">CREATE TABLE</span>
+<span class="c">-- চলে, কিন্তু email বদলালে card-ও বদলাতে হবে —
+-- তাই সাধারণত stable PK (student_id)-কেই দেখানো ভালো</span></pre>
+    </div>
+  </section>
+
+  <!-- 9. natural vs surrogate -->
+  <section id="surrogate" class="c-sg">
+    <h2><span class="num">9</span>Natural Key vs Surrogate Key</h2>
+    <span class="motto">বাস্তব দুনিয়ার মান, নাকি database-এর বানানো নম্বর?</span>
+    <p class="lead"><b>Natural key</b> — data-র নিজের মধ্যেই থাকা অর্থবহ unique মান: NID, email, ISBN, <code>course_id = 'CSE101'</code>। <b>Surrogate key</b> — কোনো business অর্থ নেই, শুধু row চেনার জন্য database যে মান বানায়: <code>student_id = 1, 2, 3…</code> বা UUID। আমাদের schema দুটোই দেখায়: <code>students</code>-এ surrogate, <code>courses</code>-এ natural।</p>
+    <div class="grid2">
+      <div class="card story" style="--c:var(--sb)"><p><b>Natural key-এর ঝামেলা:</b> email বদলায়, NID-তে ভুল থাকে, নিয়ম বদলায় (ধরো NID 10 থেকে 17 digit)। PK বদলালে প্রতিটা FK table-এ বদলাতে হয়। আর NID-কে PK বানালে ব্যক্তিগত তথ্য প্রতিটা child table, log, URL-এ ছড়িয়ে পড়ে।</p></div>
+      <div class="card story" style="--c:var(--sb)"><p><b>Surrogate key-এর ঝামেলা:</b> নিজে কোনো duplicate ঠেকায় না — একই Rahim দুবার insert হবে id 1 আর id 6 নিয়ে। তাই surrogate PK-র পাশাপাশি natural key-তে <code>UNIQUE</code> রাখতেই হবে। আর join ছাড়া id দেখে কিছু বোঝা যায় না।</p></div>
+    </div>
+
+    <h3>PostgreSQL-এ surrogate বানানোর তিন উপায়</h3>
+    <div class="grid2">
+<pre class="code" data-lang="sql">-- পুরনো: serial (PostgreSQL-এর নিজস্ব shorthand)
+CREATE TABLE old_style (id serial PRIMARY KEY, x text);
+\d old_style
+<span class="o"> Column |  Type   | Nullable |                Default
+--------+---------+----------+---------------------------------------
+ id     | integer | not null | nextval('old_style_id_seq'::regclass)</span>
+
+-- আধুনিক: SQL standard IDENTITY (PostgreSQL 10+)
+student_id int GENERATED ALWAYS AS IDENTITY PRIMARY KEY
+<span class="c">-- ALWAYS: হাতে মান দিলে error (উপরে দেখেছ)
+-- BY DEFAULT: হাতে দেওয়া মান মেনে নেয়</span></pre>
+<pre class="code" data-lang="sql">-- UUID: gen_random_uuid() (v4, 13+), uuidv7() (18+)
+SELECT gen_random_uuid() AS v4, uuidv7() AS v7;
+<span class="o">                  v4                  |                  v7
+--------------------------------------+--------------------------------------
+ fb887564-b89d-4bb8-9466-3f646730c9ee | 01a1131e-e0f6-74d3-a2f8-b743ef6ca688</span>
+
+CREATE TABLE payments (
+  payment_id uuid PRIMARY KEY DEFAULT uuidv7(),
+  amount     numeric(10,2) NOT NULL
+);
+INSERT INTO payments (amount) VALUES (1500), (2500) RETURNING payment_id;
+<span class="o"> 01a1131e-e0f8-7987-8911-0469aa9cbb32
+ 01a1131e-e0f8-7c0a-83f5-586f18b3c94b</span>   <span class="c">-- সময় অনুযায়ী বাড়ছে</span></pre>
+    </div>
+    <div class="grid2" style="margin-top:14px">
+      <div>
+        <div class="file" style="--dot:var(--sb)"><i></i>Identity/sequence-এ "gap" হয় — এটা bug না</div>
+<pre class="code" data-lang="sql">INSERT INTO students (nid, email, name) VALUES ('2002000000006', 'x@uni.edu', 'X') RETURNING student_id;
+<span class="o">          6</span>
+INSERT INTO students (nid, email, name) VALUES ('1998123456701', 'y@uni.edu', 'Y');
+<span class="e">ERROR:  duplicate key value violates unique constraint "students_nid_key"</span>
+INSERT INTO students (nid, email, name) VALUES ('2002000000007', 'z@uni.edu', 'Z') RETURNING student_id;
+<span class="o">          8</span>       <span class="c">-- 7 কোথায়? fail হওয়া insert খেয়ে ফেলেছে</span></pre>
+      </div>
+      <div class="how" style="margin-top:0"><b>কেন gap:</b> sequence-এর <code>nextval()</code> transaction rollback হলেও ফেরত যায় না — তাহলে প্রতিটা insert-কে আগেরটার commit-এর জন্য অপেক্ষা করতে হতো। তাই surrogate id কখনো "invoice number"-এর মতো ফাঁকহীন ক্রমিক নম্বর হিসেবে ব্যবহার কোরো না।</div>
+    </div>
+
+    <h3>কোনটা কখন</h3>
+    <div class="card tscroll">
+      <table>
+        <thead><tr><th></th><th><code>serial</code></th><th><code>IDENTITY</code></th><th>UUID v4</th><th>UUID v7</th><th>Natural (NID/email)</th></tr></thead>
+        <tbody>
+          <tr><td><b>Size</b></td><td>4 B (<code>bigserial</code> 8 B)</td><td>4 / 8 B</td><td>16 B</td><td>16 B</td><td>অনেক বড় হতে পারে, সব FK-তে কপি</td></tr>
+          <tr><td><b>Insert locality</b></td><td>ক্রমিক — index-এর শেষে যোগ</td><td>ক্রমিক</td><td>Random — B-tree-র সব জায়গায়, page split বেশি</td><td>সময়-ক্রমিক — প্রায় serial-এর মতো</td><td>Random</td></tr>
+          <tr><td><b>কে বানায়</b></td><td>DB sequence</td><td>DB sequence</td><td>যে কেউ — app, offline client</td><td>যে কেউ</td><td>বাস্তব দুনিয়া</td></tr>
+          <tr><td><b>Guess করা যায়?</b></td><td>হ্যাঁ — <code>/students/7</code> দেখে 8 চেষ্টা</td><td>হ্যাঁ</td><td>না</td><td>না, তবে তৈরির সময় বোঝা যায়</td><td>অর্থবহ — PII ফাঁস</td></tr>
+          <tr><td><b>Merge / distributed</b></td><td>দুই DB merge করলে collision</td><td>Collision</td><td>Collision প্রায় অসম্ভব</td><td>Collision প্রায় অসম্ভব</td><td>—</td></tr>
+          <tr><td><b>রায়</b></td><td>নতুন code-এ না</td><td><b>Default পছন্দ</b></td><td>Public id / distributed</td><td><b>UUID লাগলে এটা</b></td><td>শুধু সত্যি স্থির হলে (ISO code, course code)</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="foot">Interview-এ ভালো উত্তর: "Surrogate PK (identity বা UUIDv7) + natural key-তে UNIQUE NOT NULL" — FK গুলো ছোট ও স্থির থাকে, আর business duplicate-ও ঠেকানো যায়।</p>
+  </section>
+
+  <!-- 10. partial -->
+  <section id="partial" class="c-pt">
+    <h2><span class="num">10</span>Partial Key — weak entity-র discriminator</h2>
+    <span class="motto">নিজে একা অর্থহীন, মালিকের সাথে মিলে key</span>
+    <p class="lead"><b>Weak entity</b> হলো যার নিজের কোনো পূর্ণ key নেই — অন্য একটা <b>owner entity</b>-র ওপর নির্ভর করে বাঁচে। Course-এর section: "Section 1" বললে বোঝা যায় না কোন course-এর। <code>section_no</code> হলো <b>partial key (discriminator)</b> — owner-এর PK-র সাথে মিলে পুরো key হয়। ER diagram-এ weak entity দুই-দাগের বাক্স, partial key-র নিচে dashed দাগ।</p>
+    <div class="grid2">
+<pre class="code" data-lang="sql">CREATE TABLE sections (
+  course_id  text REFERENCES courses(course_id) ON DELETE CASCADE,
+  section_no int,                       -- partial key
+  room       text,
+  PRIMARY KEY (course_id, section_no)   -- owner PK + discriminator
+);
+INSERT INTO sections VALUES ('CSE201', 1, 'Room 401'),
+  ('CSE201', 2, 'Room 402'), ('EEE101', 1, 'Lab 2');
+<span class="g">INSERT 0 3</span>    <span class="c">-- section 1 দুইবার, ভিন্ন course-এ — ঠিক আছে</span>
+
+INSERT INTO sections VALUES ('CSE201', 1, 'Room 999');
+<span class="e">ERROR:  duplicate key value violates unique constraint "sections_pkey"
+DETAIL:  Key (course_id, section_no)=(CSE201, 1) already exists.</span></pre>
+      <div class="how" style="margin-top:0"><b>চেনার উপায়:</b>
+        <ul>
+          <li>Owner ছাড়া অস্তিত্ব নেই → FK সাধারণত <code>ON DELETE CASCADE</code>।</li>
+          <li>PK = owner-এর PK + partial key (composite)।</li>
+          <li>আরো উদাহরণ: <code>order_items(order_id, line_no)</code>, <code>dependents(employee_id, name)</code>, <code>rooms(building_id, room_no)</code>।</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 11. prime -->
+  <section id="prime" class="c-pr">
+    <h2><span class="num">11</span>Prime vs Non-prime Attribute</h2>
+    <span class="motto">Normalization-এ ঢোকার দরজা</span>
+    <p class="lead">যে attribute <b>অন্তত একটা candidate key-র অংশ</b>, সেটা <b>prime</b>। বাকিগুলো <b>non-prime</b>। শুধু PK না — <i>যে কোনো</i> candidate key ধরে হিসাব হয়।</p>
+    <div class="grid2">
+      <div class="card tscroll">
+        <table class="data sm">
+          <thead><tr><th>Table</th><th>Prime</th><th>Non-prime</th></tr></thead>
+          <tbody>
+            <tr><td>students</td><td style="color:var(--accent)">student_id, nid, email</td><td>phone, name, dept_id</td></tr>
+            <tr><td>enrollments</td><td style="color:var(--accent)">student_id, course_id, semester</td><td>grade</td></tr>
+            <tr><td>departments</td><td style="color:var(--accent)">dept_id, code</td><td>name</td></tr>
+            <tr><td>sections</td><td style="color:var(--accent)">course_id, section_no</td><td>room</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="how" style="margin-top:0"><b>কেন জানা দরকার — normal form গুলো এই ভাগ দিয়েই লেখা:</b>
+        <ul>
+          <li><b>2NF:</b> কোনো non-prime attribute candidate key-র <i>অংশের</i> ওপর নির্ভর করবে না। <code>enrollments</code>-এ <code>course_title</code> রাখলে সেটা শুধু <code>course_id</code>-এর ওপর নির্ভর করে → partial dependency → 2NF ভাঙে।</li>
+          <li><b>3NF:</b> non-prime আরেক non-prime-এর ওপর নির্ভর করবে না। <code>students</code>-এ <code>dept_name</code> রাখলে <code>student_id → dept_id → dept_name</code> → transitive।</li>
+          <li><b>BCNF:</b> প্রতিটা determinant-কে super key হতে হবে — prime attribute-এর জন্যও কোনো ছাড় নেই।</li>
+        </ul>
+      </div>
+    </div>
+    <p class="foot">পরের ধাপ: <a href="../normalization/index.html">Normalization গাইড →</a></p>
+  </section>
+
+  <!-- 12. under the hood -->
+  <section id="internals" style="--c:var(--pi)">
+    <h2><span class="num">12</span>PostgreSQL-এর ভেতরে — key মানেই index?</h2>
+    <span class="motto">PK/UNIQUE → automatic index · FK → নিজে বানাতে হবে</span>
+    <p class="lead">Uniqueness check করতে PostgreSQL প্রতিটা <code>PRIMARY KEY</code> আর <code>UNIQUE</code>-এর জন্য নিজে একটা <b>unique B-tree index</b> বানায়। কিন্তু <code>FOREIGN KEY</code>-এর <b>referencing (child) column-এ কোনো index বানায় না</b> — parent-এর দিকে তো PK index আছেই, child-এর দিকটা তোমার দায়িত্ব।</p>
+    <div class="grid2">
+<pre class="code" data-lang="sql">SELECT tablename, indexdef FROM pg_indexes
+WHERE schemaname = 'public' ORDER BY 1, 2;
+<span class="o">courses     | CREATE UNIQUE INDEX courses_pkey ... btree (course_id)
+departments | CREATE UNIQUE INDEX departments_code_key ... btree (code)
+departments | CREATE UNIQUE INDEX departments_pkey ... btree (dept_id)
+enrollments | CREATE UNIQUE INDEX enrollments_pkey ... btree (student_id, course_id, semester)
+students    | CREATE UNIQUE INDEX students_email_key ... btree (email)
+students    | CREATE UNIQUE INDEX students_nid_key ... btree (nid)
+students    | CREATE UNIQUE INDEX students_phone_key ... btree (phone)
+students    | CREATE UNIQUE INDEX students_pkey ... btree (student_id)
+(8 rows)</span>
+<span class="c">-- 5টা FK, কিন্তু FK-র জন্য আলাদা কোনো index নেই</span></pre>
+<pre class="code" data-lang="sql">-- কোন FK-এর child column-এ index নেই?
+SELECT c.conrelid::regclass AS table_name, c.conname AS fk_name
+FROM   pg_constraint c
+WHERE  c.contype = 'f'
+AND    NOT EXISTS (
+         SELECT 1 FROM pg_index i
+         WHERE  i.indrelid = c.conrelid
+         AND    (i.indkey::int2[])[0:cardinality(c.conkey) - 1] @&gt; c.conkey)
+ORDER  BY 1, 2;
+<span class="o"> table_name  |          fk_name
+-------------+----------------------------
+ students    | students_dept_id_fkey
+ courses     | courses_dept_id_fkey
+ courses     | courses_prereq_id_fkey
+ enrollments | enrollments_course_id_fkey</span>
+<span class="c">-- enrollments.student_id নেই, কারণ composite PK index-এর প্রথম column ওটাই</span></pre>
+    </div>
+
+    <h3>Index না থাকলে কী হয় — 10 লাখ row-এ মাপা</h3>
+    <p class="lead">Parent row মুছলে (বা তার key বদলালে) PostgreSQL-কে child table-এ খুঁজতে হয় "কেউ কি এখনো একে দেখাচ্ছে?"। FK আসলে internal system trigger দিয়ে চলে — প্রতিটা মুছে ফেলা parent row-এর জন্য child-এ একটা query। Index না থাকলে প্রতিবার পুরো child table scan।</p>
+    <div class="grid2">
+<pre class="code" data-lang="sql">-- p_courses: 2000 row · p_enroll: 1,000,000 row
+-- course 1001–2000 কেউ ব্যবহার করে না
+<span class="c">-- index ছাড়া</span>
+DELETE FROM p_courses WHERE course_id &gt; 1000;
+<span class="o">DELETE 1000
+Time: 52598.046 ms (00:52.598)</span>
+
+CREATE INDEX ON p_enroll (course_id);
+<span class="o">Time: 390.262 ms</span>
+
+<span class="c">-- index সহ</span>
+DELETE FROM p_courses WHERE course_id &gt; 1000;
+<span class="o">DELETE 1000
+Time: 18.424 ms</span>          <span class="g">≈ 2800× দ্রুত</span></pre>
+<pre class="code" data-lang="sql">EXPLAIN (ANALYZE, COSTS OFF)
+DELETE FROM p_courses WHERE course_id BETWEEN 1001 AND 1050;
+
+<span class="c">-- index ছাড়া</span>
+<span class="o"> Trigger for constraint p_enroll_course_id_fkey: time=2452.537 calls=50
+ Execution Time: 2452.940 ms</span>
+
+<span class="c">-- index সহ</span>
+<span class="o"> Trigger for constraint p_enroll_course_id_fkey: time=1.236 calls=50
+ Execution Time: 1.318 ms</span>
+<span class="c">-- delete নিজে 0.1 ms; সব সময় গেছে FK trigger-এ</span></pre>
+    </div>
+    <div class="how"><b>নিয়ম:</b>
+      <ul>
+        <li>প্রায় প্রতিটা FK column-এ index দাও: <code>CREATE INDEX ON enrollments (course_id);</code> — parent delete/update দ্রুত হয়, আর <code>JOIN … ON e.course_id = c.course_id</code>-ও।</li>
+        <li>Composite PK-র প্রথম column FK হলে (যেমন <code>enrollments.student_id</code>) আলাদা index লাগে না — leftmost prefix কাজ করে।</li>
+        <li>ব্যতিক্রম: ছোট lookup table, যার parent প্রায় কখনো মোছা হয় না — সেখানে index শুধু write খরচ বাড়ায়।</li>
+        <li>MySQL InnoDB FK-তে নিজে থেকে index বানায়; PostgreSQL বানায় না — interview-এ এই পার্থক্যটা প্রায়ই আসে।</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- summary -->
+  <section id="summary">
+    <h2><span class="num" style="--c:var(--accent)">Σ</span>এক নজরে</h2>
+    <div class="card tscroll">
+      <table>
+        <thead><tr><th>Key</th><th>কী</th><th>NULL?</th><th>প্রতি table-এ</th><th>PostgreSQL-এ</th><th>আমাদের উদাহরণ</th></tr></thead>
+        <tbody>
+          <tr><td class="p c-sk"><span>SK</span>Super</td><td>যে কোনো set যা row চেনায়, বাড়তি থাকতে পারে</td><td>—</td><td>অনেক (56টা)</td><td>ধারণা মাত্র, কোনো keyword নেই</td><td><code>{email, name}</code></td></tr>
+          <tr><td class="p c-ck"><span>CK</span>Candidate</td><td>Minimal super key</td><td>না</td><td>এক বা একাধিক</td><td>PK অথবা <code>UNIQUE NOT NULL</code></td><td><code>student_id</code>, <code>nid</code>, <code>email</code></td></tr>
+          <tr><td class="p c-pk"><span>PK</span>Primary</td><td>বাছাই করা candidate</td><td>কখনো না</td><td>সর্বোচ্চ ১টা</td><td><code>PRIMARY KEY</code> → unique B-tree index</td><td><code>student_id</code></td></tr>
+          <tr><td class="p c-ak"><span>AK</span>Alternate</td><td>Candidate − Primary</td><td>না</td><td>০ বা বেশি</td><td><code>UNIQUE NOT NULL</code> → unique index</td><td><code>nid</code>, <code>email</code></td></tr>
+          <tr><td class="p c-uq"><span>UQ</span>Unique</td><td>Duplicate না, কিন্তু মান না-ও থাকতে পারে</td><td>হ্যাঁ, অনেকগুলো (<code>NULLS NOT DISTINCT</code> হলে ১টা)</td><td>যত খুশি</td><td><code>UNIQUE</code> → unique index</td><td><code>phone</code></td></tr>
+          <tr><td class="p c-fk"><span>FK</span>Foreign</td><td>অন্য/একই table-এর PK বা UNIQUE-কে দেখায়</td><td>হ্যাঁ (NOT NULL না দিলে)</td><td>যত খুশি</td><td><code>REFERENCES</code> → system trigger; <b>index নিজে বানাও</b></td><td><code>enrollments.course_id</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="foot">Duplicate মান? — Super/Candidate/Primary/Alternate/Unique: না। Foreign: হ্যাঁ, অনেক child একই parent-কে দেখাতে পারে (CSE101 দুইবার)।</p>
+  </section>
+
+  <!-- interview -->
+  <section id="qa">
+    <h2><span class="num" style="--c:var(--accent)">Q</span>Interview-এ যা আসে</h2>
+    <div class="card" style="padding:4px 18px">
+      <details><summary>Primary key আর Unique key-এর পার্থক্য কী?</summary><p>PK = UNIQUE + NOT NULL, প্রতি table-এ একটাই, আর row-এর অফিসিয়াল পরিচয় (FK সাধারণত এটাকেই দেখায়)। UNIQUE key-তে NULL চলে (PostgreSQL-এ default-এ একাধিক NULL), আর যত খুশি থাকতে পারে। দুটোই PostgreSQL-এ unique B-tree index বানায়। (কিছু DB-তে — যেমন SQL Server, MySQL InnoDB — PK clustered index হয়; PostgreSQL-এ table সবসময় heap, PK আর দশটা unique index-এর মতোই।)</p></details>
+      <details><summary>একটা table-এ কি একাধিক primary key থাকতে পারে?</summary><p>না — <code>multiple primary keys for table "students" are not allowed</code>। তবে একটা PK-তে একাধিক column থাকতে পারে (composite), আর candidate key / UNIQUE constraint যত খুশি রাখা যায়।</p></details>
+      <details><summary>Foreign key কি NULL হতে পারে? Duplicate?</summary><p>দুটোই পারে। NULL মানে "এখনো কোনো parent নেই" — FK check হয় না। NOT NULL দিলে বাধ্যতামূলক সম্পর্ক। Duplicate তো স্বাভাবিক — অনেক enrollment একই course-কে দেখায় (one-to-many)। FK-তে UNIQUE দিলে সম্পর্কটা one-to-one হয়ে যায়।</p></details>
+      <details><summary>Primary key কি composite হতে পারে? কখন ব্যবহার করবে?</summary><p>হ্যাঁ — <code>PRIMARY KEY (student_id, course_id, semester)</code>। Junction table (many-to-many) আর weak entity-তে স্বাভাবিক। খারাপ দিক: যে table এটাকে FK দিয়ে দেখাবে তাকেও সব column রাখতে হয়। তখন অনেকে surrogate <code>id</code> PK নিয়ে composite-টাকে <code>UNIQUE</code> রাখে।</p></details>
+      <details><summary>Super key আর candidate key-এর পার্থক্য কী?</summary><p>প্রতিটা candidate key একটা super key, কিন্তু উল্টোটা না। Super key-তে বাড়তি attribute থাকতে পারে (<code>{email, name}</code>); candidate key minimal — কোনো attribute সরালেই uniqueness চলে যায় (<code>{email}</code>)। n attribute-এর table-এ super key অনেক, candidate key হাতে গোনা।</p></details>
+      <details><summary>Surrogate key না natural key — কোনটা ভালো?</summary><p>সাধারণত surrogate PK (<code>GENERATED ALWAYS AS IDENTITY</code>, distributed হলে UUIDv7) — ছোট, কখনো বদলায় না, PII ছড়ায় না। কিন্তু natural key-কে <code>UNIQUE NOT NULL</code> হিসেবে রাখতেই হবে, নইলে একই মানুষ দুবার ঢুকবে। সত্যি স্থির ও ছোট natural key (country code, currency code) হলে সেটাই PK হতে পারে।</p></details>
+      <details><summary>PostgreSQL কি foreign key-তে automatically index বানায়?</summary><p>না। PK আর UNIQUE-এ বানায় (uniqueness check-এর জন্য লাগে), কিন্তু FK-র child column-এ না। Index না থাকলে parent delete/update-এ প্রতিটা row-এর জন্য child table-এ seq scan হয় — উপরের মাপে 52.6 s বনাম 18 ms। MySQL InnoDB নিজেই বানায়।</p></details>
+      <details><summary>FK কি primary key ছাড়া অন্য column-কে দেখাতে পারে?</summary><p>পারে, যদি সেই column-এ PK বা UNIQUE constraint থাকে (যেমন <code>REFERENCES students(email)</code>)। না থাকলে: <code>there is no unique constraint matching given keys for referenced table</code> — কারণ parent-এ একাধিক match থাকলে "কোনটাকে দেখাচ্ছি" অর্থহীন।</p></details>
+    </div>
+  </section>
+
+  <footer><span>WellDev · DBMS &amp; SQL</span><span><a href="../../acid/index.html">ACID</a> · <a href="../indexing/index.html">Indexing</a> · <a href="../normalization/index.html">পরের গাইড: Normalization →</a></span></footer>
+</div>
+
+<script>
+// ---------- key checker: students sample rows + declared constraints ----------
+const ATTR = ["student_id", "nid", "email", "phone", "name", "dept_id"];
+const KEYS = ["student_id", "nid", "email"];          // declared UNIQUE + NOT NULL
+const ROWS = [
+  [1, "1998123456701", "rahim@uni.edu", "01711000001", "Rahim", 10],
+  [2, "1999234567802", "karim@uni.edu", "01811000002", "Karim", 10],
+  [3, "2000345678903", "nusrat@uni.edu", null, "Nusrat", 20],
+  [4, "1999456789004", "rahim.u@uni.edu", "01911000004", "Rahim", 20],
+  [5, "2001567890105", "tania@uni.edu", "01611000005", "Tania", 10],
+];
+const attsBox = document.getElementById("atts");
+attsBox.innerHTML = ATTR.map(a => `<label class="att"><input type="checkbox" value="${a}"><span class="box"></span>${a}</label>`).join("");
+const boxes = [...attsBox.querySelectorAll("input")];
+const verdict = document.getElementById("verdict");
+const tableBox = document.getElementById("ck-table");
+const set = arr => `<code>{${arr.join(", ")}}</code>`;
+
+function evaluate(sel) {
+  const idx = sel.map(a => ATTR.indexOf(a));
+  const groups = new Map();
+  ROWS.forEach((r, i) => {
+    const k = JSON.stringify(idx.map(j => r[j]));
+    groups.set(k, [...(groups.get(k) || []), i]);
+  });
+  const dups = [...groups.values()].filter(g => g.length > 1);
+  const keyIn = sel.filter(a => KEYS.includes(a));
+  const nullRows = ROWS.filter(r => idx.some(j => r[j] === null));
+  if (!sel.length) return { vc: "var(--muted)", title: "কোনো column বাছাই হয়নি", checks: [], why: ["উপরের যে কোনো column-এ tick দাও।"], dups };
+
+  if (keyIn.length) {
+    const minimal = sel.length === 1;
+    const checks = ["Super key ✓", minimal ? "Minimal ✓" : "Minimal ✗"];
+    if (minimal) {
+      const pk = sel[0] === "student_id";
+      return { vc: pk ? "var(--pa)" : "var(--pc)", dups, checks,
+        title: pk ? "Candidate key ✓ — এবং এটাই Primary key" : "Candidate key ✓ — Alternate key",
+        why: [`<b>${sel[0]}</b> declare করা ${pk ? "<code>PRIMARY KEY</code>" : "<code>UNIQUE NOT NULL</code>"} — দুইটা row-এ কখনো এক হবে না, কখনো NULL হবে না।`,
+              "একটাই column, বাদ দেওয়ার মতো কিছু নেই → minimal।",
+              pk ? "তিনটা candidate-এর মধ্যে এটাকেই PK হিসেবে বাছা হয়েছে।" : "Candidate, কিন্তু PK হিসেবে বাছা হয়নি → alternate key।"] };
+    }
+    const extra = sel.filter(a => a !== keyIn[0]);
+    return { vc: "var(--sa)", dups, checks, title: "Super key ✓ — কিন্তু candidate key না",
+      why: [`<b>${keyIn[0]}</b> একাই row চেনাতে পারে (declared unique, NOT NULL)।`,
+            `তাই ${set(extra)} বাড়তি — সরালেও set-টা key থাকে → minimal না।`,
+            keyIn.length > 1 ? `এখানে ${keyIn.length}টা আলাদা candidate key একসাথে আছে — যে কোনো একটা রাখলেই যথেষ্ট।` : `শুধু ${set([keyIn[0]])} রাখলে candidate key হবে।`] };
+  }
+
+  const why = [];
+  dups.forEach(g => why.push(`Row ${g.map(i => ROWS[i][0] + " (" + ROWS[i][4] + ")").join(" আর ")} — ${set(sel)}-এ একই মান → আলাদা করা যায় না।`));
+  if (sel.includes("phone") && nullRows.length) why.push("<b>phone</b>-এ <code>UNIQUE</code> আছে, কিন্তু NULL চলে — Nusrat-এর phone নেই, তাকে phone দিয়ে চেনা যায় না; আর একাধিক NULL থাকতে পারে।");
+  if (!dups.length) {
+    const ruleless = sel.filter(a => a !== "phone");
+    if (ruleless.length) why.push(`এই 5টা row-এ duplicate নেই — কিন্তু ${set(ruleless)}-এ কোনো UNIQUE rule নেই। কাল একই মানের আরেকজন ভর্তি হলেই ভাঙবে। Key আসে rule থেকে, data-র কাকতালীয় মিল থেকে না।`);
+  }
+  if (sel.length === 1 && sel[0] === "phone") why.push("তাই phone একটা <b>Unique key</b>, candidate key না।");
+  return { vc: "var(--bad)", dups, checks: ["Super key ✗"], title: "Key না ✗", why };
+}
+
+function render() {
+  const sel = boxes.filter(b => b.checked).map(b => b.value);
+  const r = evaluate(sel);
+  verdict.style.setProperty("--vc", r.vc);
+  verdict.innerHTML = `<div class="vt">${r.title}</div>` +
+    (r.checks.length ? `<div class="checks">${r.checks.map(c => `<span>${c}</span>`).join("")}</div>` : "") +
+    `<ul>${r.why.map(w => `<li>${w}</li>`).join("")}</ul>`;
+  const dupRows = new Set(r.dups.flat());
+  const on = a => (sel.length && !sel.includes(a) ? "off" : sel.includes(a) ? "on" : "");
+  tableBox.innerHTML = `<table class="data"><thead><tr>${ATTR.map(a => `<th class="${on(a)}">${a}</th>`).join("")}</tr></thead><tbody>` +
+    ROWS.map((row, i) => `<tr class="${dupRows.has(i) ? "dup" : ""}">${row.map((v, j) =>
+      `<td class="${on(ATTR[j])}${v === null ? " nul" : ""}">${v === null ? "NULL" : v}</td>`).join("")}</tr>`).join("") + `</tbody></table>`;
+}
+boxes.forEach(b => b.addEventListener("change", render));
+document.querySelectorAll(".presets button").forEach(btn => btn.addEventListener("click", () => {
+  const want = btn.dataset.p.split(",");
+  boxes.forEach(b => (b.checked = want.includes(b.value)));
+  render();
+}));
+boxes[2].checked = true; boxes[4].checked = true;   // start with {email, name}
+render();
+
+// ---------- SQL highlighter (same tokenizer as the other guides) ----------
+const esc = s => s.replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+const KW = {
+  sql: "BEGIN|COMMIT|ROLLBACK|SELECT|FROM|WHERE|UPDATE|SET|INSERT|INTO|VALUES|CREATE|TABLE|PRIMARY|KEY|NOT|NULL|NULLS|DISTINCT|UNIQUE|CHECK|REFERENCES|ON|DELETE|CASCADE|RESTRICT|DEFAULT|GENERATED|ALWAYS|AS|IDENTITY|ALTER|ADD|INDEX|EXPLAIN|ANALYZE|COSTS|OFF|RETURNING|GROUP|ORDER|BY|HAVING|AND|BETWEEN|IS|EXISTS|count|int|int2|text|uuid|serial|numeric|bigint",
+};
+function highlight(src, lang) {
+  const com = "--[^\\n]*";
+  const str = "'(?:[^']|'')*'";
+  const re = new RegExp(`(${com})|(${str})|\\b(\\d+)\\b|\\b(${KW[lang]})\\b`, "g");
+  return esc(src).replace(re, (m, c, s, d, k) =>
+    c ? `<span class="c">${c}</span>` : s ? `<span class="s">${s}</span>` : d ? `<span class="d">${d}</span>` : `<span class="k">${k}</span>`);
+}
+document.querySelectorAll("pre.code").forEach(pre => {
+  const lang = pre.dataset.lang;
+  if (!KW[lang]) return;
+  // Highlight only the plain-text parts; leave hand-marked output spans untouched.
+  [...pre.childNodes].forEach(node => {
+    if (node.nodeType !== 3) return;
+    const span = document.createElement("span");
+    span.innerHTML = highlight(node.textContent, lang);
+    node.replaceWith(...span.childNodes);
+  });
+});
+
+const root = document.documentElement;
+try { const t = localStorage.getItem("welldev-theme"); if (t) root.dataset.theme = t; } catch (e) {}
+document.getElementById("theme").addEventListener("click", () => {
+  const dark = root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  root.dataset.theme = dark ? "light" : "dark";
+  try { localStorage.setItem("welldev-theme", root.dataset.theme); } catch (e) {}
+});
+</script>
+</body>
+</html>
