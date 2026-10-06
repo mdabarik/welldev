@@ -1,0 +1,827 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Web Server কীভাবে কাজ করে</title>
+<meta name="description" content="একটা HTTP request browser থেকে Nginx, app server, Redis আর database হয়ে কীভাবে ফেরে — GSAP অ্যানিমেশনে ধাপে ধাপে।">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.15.0/gsap.min.js"></script>
+<style>
+/* Layout: animated server scene (SVG + GSAP) with the step explanation on the right and
+   the real request/response text + a timing waterfall under it. A second scene compares
+   Nginx's event loop with Apache's process-per-connection model. */
+:root{
+  --bg:#f5f7fc; --surface:#ffffff; --surface-2:#f1f4fa; --fg:#0f172a; --muted:#5b6478; --faint:#94a0b8; --line:#e4e8f1;
+  --accent:#6366f1; --stage:#eef2fb;
+  --c-browser:#0ea5e9; --c-dns:#8b5cf6; --c-net:#64748b; --c-kernel:#475569; --c-nginx:#16a34a; --c-static:#f59e0b;
+  --c-app:#6366f1; --c-redis:#e11d48; --c-db:#2563eb; --c-apache:#dc2626;
+  --ok:#059669; --bad:#e11d48; --warn:#d97706;
+  --hero:linear-gradient(135deg,#4f46e5 0%,#7c3aed 45%,#db2777 100%);
+  --shadow:0 1px 2px rgba(15,23,42,.04),0 10px 30px -12px rgba(15,23,42,.14);
+  --shadow-lg:0 2px 4px rgba(15,23,42,.05),0 24px 48px -20px rgba(30,41,99,.3);
+  --code-bg:#ffffff; --code-line:#e6e9f1;
+  --t-kw:#0000ff; --t-str:#a31515; --t-num:#098658; --t-key:#001080; --t-com:#008000;
+  --sans:"Inter","Hind Siliguri",system-ui,sans-serif; --bn:"Hind Siliguri","Inter",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0b0f1a; --surface:#121827; --surface-2:#182033; --fg:#e7ecf6; --muted:#9aa6bf; --faint:#66728c; --line:#232c42; --accent:#818cf8; --stage:#0f1524;
+  --c-browser:#38bdf8; --c-dns:#a78bfa; --c-net:#94a3b8; --c-kernel:#94a3b8; --c-nginx:#4ade80; --c-static:#fbbf24; --c-app:#818cf8; --c-redis:#fb7185; --c-db:#60a5fa; --c-apache:#f87171;
+  --ok:#34d399; --bad:#fb7185; --warn:#fbbf24;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6); --shadow-lg:0 24px 48px -20px rgba(0,0,0,.75);
+  --code-bg:#1e1e1e; --code-line:#2d2d30; --t-kw:#569cd6; --t-str:#ce9178; --t-num:#b5cea8; --t-key:#9cdcfe; --t-com:#6a9955;
+}}
+:root[data-theme="dark"]{
+  --bg:#0b0f1a; --surface:#121827; --surface-2:#182033; --fg:#e7ecf6; --muted:#9aa6bf; --faint:#66728c; --line:#232c42; --accent:#818cf8; --stage:#0f1524;
+  --c-browser:#38bdf8; --c-dns:#a78bfa; --c-net:#94a3b8; --c-kernel:#94a3b8; --c-nginx:#4ade80; --c-static:#fbbf24; --c-app:#818cf8; --c-redis:#fb7185; --c-db:#60a5fa; --c-apache:#f87171;
+  --ok:#34d399; --bad:#fb7185; --warn:#fbbf24;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6); --shadow-lg:0 24px 48px -20px rgba(0,0,0,.75);
+  --code-bg:#1e1e1e; --code-line:#2d2d30; --t-kw:#569cd6; --t-str:#ce9178; --t-num:#b5cea8; --t-key:#9cdcfe; --t-com:#6a9955;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.65 var(--bn);-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto 0;height:460px;z-index:-1;pointer-events:none;
+  background:radial-gradient(620px 260px at 25% -40px,color-mix(in srgb,#6366f1 15%,transparent),transparent 70%),
+             radial-gradient(540px 240px at 90% -60px,color-mix(in srgb,#ec4899 12%,transparent),transparent 70%)}
+a{color:var(--accent)}
+button,select,input{font:inherit;color:inherit}
+code{font-family:var(--mono);font-size:.86em;font-weight:500;background:color-mix(in srgb,var(--accent) 10%,var(--surface));color:color-mix(in srgb,var(--accent) 72%,var(--fg));padding:.1em .4em;border-radius:6px}
+.wrap{max-width:1300px;margin:0 auto;padding:20px 18px 70px;display:grid;gap:22px}
+
+/* top */
+.topnav{display:flex;align-items:center;gap:10px}
+.topnav .brand{display:flex;align-items:center;gap:10px;color:var(--fg);text-decoration:none;font:800 16px var(--sans);letter-spacing:-.02em}
+.topnav .logo{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:#fff;font:800 13px var(--mono);background:var(--hero);box-shadow:0 6px 16px -6px #8b5cf6}
+.topnav .sp{flex:1}
+.pill{border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:6px 14px;font:600 13px var(--sans);cursor:pointer;text-decoration:none;box-shadow:var(--shadow)}
+.pill:hover{color:var(--fg)}
+.hero{border-radius:24px;padding:32px 36px;color:#fff;background:var(--hero);box-shadow:var(--shadow-lg);position:relative;overflow:hidden}
+.hero::after{content:"";position:absolute;right:-70px;top:-90px;width:340px;height:340px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.22),transparent 65%);pointer-events:none}
+.eyebrow{display:inline-block;font:600 12px var(--sans);letter-spacing:.08em;text-transform:uppercase;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.26);padding:3px 11px;border-radius:999px}
+.hero h1{margin:12px 0 10px;font:800 clamp(28px,4.4vw,46px)/1.12 var(--sans);letter-spacing:-.03em;max-width:860px}
+.hero p{margin:0;max-width:860px;font-size:17px;opacity:.94}
+.hero b{color:#fde68a}
+
+/* bench */
+.bench{display:grid;grid-template-columns:minmax(0,1.75fr) minmax(0,1fr);grid-template-areas:"stage info" "insp insp";gap:20px;align-items:start}
+.stage{grid-area:stage}.info{grid-area:info}.insp{grid-area:insp}
+@media (max-width:1050px){.bench{grid-template-columns:minmax(0,1fr);grid-template-areas:"stage" "info" "insp"}}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);min-width:0}
+.stage{padding:12px;display:grid;gap:12px}
+.scene{border-radius:14px;background:var(--stage);overflow:hidden}
+.scene svg{display:block;width:100%;height:auto;font-family:var(--sans)}
+
+/* scene nodes */
+.node{transition:opacity .35s}
+.node .box{fill:var(--surface);stroke:color-mix(in srgb,var(--c) 45%,var(--line));stroke-width:1.5;transition:fill .35s,stroke .35s,stroke-width .35s}
+.node .title{fill:var(--fg);font:700 14px var(--sans);text-anchor:middle}
+.node .sub{fill:var(--muted);font:500 11px var(--mono);text-anchor:middle}
+.node .chip{fill:color-mix(in srgb,var(--c) 14%,var(--surface));stroke:color-mix(in srgb,var(--c) 40%,transparent);stroke-width:1;transition:fill .3s}
+.node .chip-t{fill:color-mix(in srgb,var(--c) 75%,var(--fg));font:600 11px var(--mono);text-anchor:middle}
+.node.on .box{fill:color-mix(in srgb,var(--c) 12%,var(--surface));stroke:var(--c);stroke-width:2.5}
+.scene.focus .node:not(.on){opacity:.42}
+.node .chip.hot{fill:var(--c)} .node .chip.hot + .chip-t,.node .chip-t.hot{fill:#fff}
+.node.down .box{fill:color-mix(in srgb,var(--bad) 10%,var(--surface));stroke:var(--bad);stroke-dasharray:6 4}
+.node.down .title{fill:var(--bad)}
+.frame{fill:none;stroke:var(--line);stroke-width:2;stroke-dasharray:8 6}
+.frame-t{fill:var(--muted);font:600 12px var(--mono)}
+.link{fill:none;stroke:color-mix(in srgb,var(--fg) 14%,transparent);stroke-width:2;stroke-dasharray:3 5}
+.cloud{fill:var(--surface);stroke:color-mix(in srgb,var(--c-net) 40%,var(--line));stroke-width:1.5}
+.pkt rect{stroke-width:0;filter:drop-shadow(0 4px 6px rgba(15,23,42,.18))}
+.pkt text{fill:#fff;font:700 11.5px var(--mono);text-anchor:middle;dominant-baseline:central}
+.pkt.req rect{fill:#4f46e5} .pkt.res rect{fill:#059669} .pkt.err rect{fill:#e11d48} .pkt.hs rect{fill:#475569} .pkt.dns rect{fill:#7c3aed} .pkt.q rect{fill:#0891b2} .pkt.miss rect{fill:#d97706}
+.boom{fill:none;stroke:var(--bad);stroke-width:3}
+
+/* controls */
+.scrub{display:flex;align-items:center;gap:10px}
+.scrub input{flex:1;min-width:0;accent-color:#8b5cf6}
+.scrub span{font:500 13px var(--mono);color:var(--muted);white-space:nowrap}
+.controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.controls button,.controls select{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:9px 14px;font:600 14px var(--sans);cursor:pointer;box-shadow:0 1px 2px rgba(15,23,42,.05)}
+.controls button:hover,.controls select:hover{border-color:var(--accent)}
+.controls button.primary{border:0;color:#fff;background:linear-gradient(135deg,#6366f1,#8b5cf6 55%,#ec4899);min-width:100px;box-shadow:0 8px 18px -10px #8b5cf6}
+.controls .sp{flex:1}
+.controls label{font-size:14px;color:var(--muted)}
+.controls select{font-weight:500}
+
+/* info */
+.info{padding:20px;display:grid;gap:12px;position:sticky;top:14px;border-top:4px solid var(--accent)}
+@media (max-width:1050px){.info{position:static}}
+.badge-row{display:flex;align-items:center;gap:12px}
+.lbadge{flex:none;width:46px;height:46px;border-radius:13px;display:grid;place-items:center;color:#fff;font:800 15px var(--mono);background:var(--accent);box-shadow:0 8px 18px -10px rgba(15,23,42,.5)}
+.info h2{margin:0;font:800 21px/1.25 var(--sans);letter-spacing:-.02em}
+.info .dir{margin:2px 0 0;font-size:13.5px;color:var(--muted)}
+.info p.text{margin:0;font-size:16px}
+.info p.text b{color:var(--fg)}
+pre.code{margin:0;padding:12px 14px;border-radius:12px;background:var(--code-bg);border:1px solid var(--code-line);font:12.5px/1.65 var(--mono);white-space:pre-wrap;word-break:break-word;color:var(--fg);font-variant-ligatures:none}
+
+/* inspector */
+.insp{padding:18px 20px;display:grid;gap:18px}
+.insp-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+@media (max-width:800px){.insp-grid{grid-template-columns:minmax(0,1fr)}}
+.insp h3{margin:0 0 8px;font:800 17px var(--sans);letter-spacing:-.015em;display:flex;align-items:center;gap:8px}
+.insp h3 .tag{font:600 11px var(--mono);padding:2px 8px;border-radius:999px;color:#fff}
+.http{margin:0;min-height:150px;padding:12px 14px;border-radius:12px;background:var(--code-bg);border:1px solid var(--code-line);font:12.5px/1.7 var(--mono);white-space:pre-wrap;word-break:break-all;font-variant-ligatures:none}
+.http .m{color:var(--t-kw);font-weight:700} .http .k{color:var(--t-key)} .http .n{color:var(--t-num);font-weight:700} .http .s{color:var(--t-str)} .http .e{color:var(--bad);font-weight:700} .http .c{color:var(--t-com);font-style:italic}
+.empty{color:var(--faint);font-family:var(--bn);font-size:14px}
+.wf{display:grid;gap:7px}
+.wf-row{display:grid;grid-template-columns:170px minmax(0,1fr) 62px;gap:10px;align-items:center;font-size:13.5px}
+.wf-row .lbl{font-family:var(--sans);font-weight:600}
+.wf-row .track{height:12px;border-radius:99px;background:var(--surface-2);position:relative}
+.wf-row .bar{position:absolute;top:0;bottom:0;border-radius:99px}
+.wf-row .ms{font:600 12px var(--mono);color:var(--muted);text-align:right}
+.wf-total{display:flex;justify-content:space-between;font-size:13px;color:var(--muted);border-top:1px dashed var(--line);padding-top:8px}
+.wf-total b{font-family:var(--mono);color:var(--fg)}
+
+/* concurrency demo */
+.sect-h{display:flex;align-items:center;gap:10px;margin:0;font:800 clamp(22px,3vw,28px)/1.2 var(--sans);letter-spacing:-.025em}
+.sect-h::before{content:"";width:12px;height:28px;border-radius:4px;background:linear-gradient(180deg,#6366f1,#ec4899)}
+.sect-p{margin:6px 0 0;color:var(--muted);max-width:900px}
+.conc{padding:14px;display:grid;gap:12px}
+.conc .scene text{font-family:var(--sans)}
+.conc .lane-t{fill:var(--fg);font:800 15px var(--sans)}
+.conc .lane-s{fill:var(--muted);font:500 11.5px var(--mono)}
+.conc .proc{fill:var(--surface);stroke:color-mix(in srgb,var(--c-apache) 45%,var(--line));stroke-width:1.5}
+.conc .proc.busy{fill:color-mix(in srgb,var(--c-apache) 14%,var(--surface))}
+.conc .proc-t{fill:var(--muted);font:600 11px var(--mono)}
+.conc .worker{fill:color-mix(in srgb,var(--c-nginx) 12%,var(--surface));stroke:var(--c-nginx);stroke-width:2}
+.conc .ring{fill:none;stroke:var(--c-nginx);stroke-width:3;stroke-dasharray:22 12}
+.conc .zone{fill:none;stroke:var(--line);stroke-width:1.5;stroke-dasharray:6 5}
+.conc .zone-t{fill:var(--muted);font:600 11px var(--mono);text-anchor:middle}
+.conc .dot{stroke:var(--surface);stroke-width:1.5}
+.conc .dot.a{fill:var(--c-apache)} .conc .dot.n{fill:var(--c-nginx)}
+.conc .clock{fill:var(--fg);font:700 13px var(--mono)}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.stat{border-radius:14px;padding:12px 16px;border:1px solid var(--line);background:var(--surface-2)}
+.stat b{display:block;font:800 22px var(--mono)}
+.stat span{font-size:14px;color:var(--muted)}
+.stat.ap b{color:var(--c-apache)} .stat.ng b{color:var(--c-nginx)}
+
+/* reference */
+.ref{display:grid;gap:16px}
+.tscroll{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow)}
+table{border-collapse:collapse;width:100%;min-width:640px;font-size:15px}
+th,td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font:600 12px var(--sans);text-transform:uppercase;letter-spacing:.05em;background:color-mix(in srgb,var(--accent) 8%,var(--surface));color:color-mix(in srgb,var(--accent) 72%,var(--fg));white-space:nowrap}
+tbody tr:nth-child(even) td{background:color-mix(in srgb,var(--accent) 3%,transparent)}
+tr:last-child td{border-bottom:0}
+.notes{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+.note{background:var(--surface);border:1px solid var(--line);border-top:4px solid var(--c);border-radius:16px;padding:16px 18px;box-shadow:var(--shadow)}
+.note h3{margin:0 0 6px;font:800 17px var(--sans);letter-spacing:-.015em}
+.note p{margin:0;font-size:15px}
+footer{color:var(--faint);font-size:13px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;border-top:1px solid var(--line);padding-top:16px}
+@media (max-width:640px){.hero{padding:24px 20px;border-radius:20px}.wf-row{grid-template-columns:110px minmax(0,1fr) 52px}.stats{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="topnav">
+    <a class="brand" href="../../index.html"><span class="logo">W</span>WellDev</a>
+    <span class="sp"></span>
+    <a class="pill" href="../OSI/index.html">OSI ডেমো</a>
+    <a class="pill" href="../../index.html">⌂ সব গাইড</a>
+    <button class="pill" id="themeToggle" type="button">Theme</button>
+  </nav>
+
+  <header class="hero">
+    <span class="eyebrow">Computer Networks · Web Server · GSAP demo</span>
+    <h1>একটা Request-এর যাত্রা: Browser থেকে Server হয়ে ফেরা</h1>
+    <p>আপনি <b>https://example.com/api/users/42</b> খুললেন। DNS, TCP, TLS পেরিয়ে request পৌঁছায় server-এ — সেখানে <b>Nginx</b> দেখে কোথায় পাঠাবে, <b>app server</b> চেক করে, <b>Redis</b> আর <b>database</b> থেকে ডেটা আনে, তারপর response ফেরে। প্রতিটা ধাপে আসল HTTP লেখা দেখুন, আর ঘটনা বদলে দেখুন static file, cache hit, 404 আর 502 হলে কী হয়।</p>
+  </header>
+
+  <div class="bench">
+    <section class="card stage" aria-label="Server animation">
+      <div class="scene" id="scene">
+        <svg viewBox="0 0 1000 560" role="img" aria-label="Browser থেকে server-এর ভেতর পর্যন্ত request-এর পথ">
+          <!-- server machine frame -->
+          <rect class="frame" x="455" y="18" width="530" height="527" rx="20"/>
+          <text class="frame-t" x="475" y="44">Server · 203.0.113.10</text>
+          <!-- connection hints -->
+          <path class="link" d="M190 268 C 250 268, 270 285, 300 285"/>
+          <path class="link" d="M410 285 L 475 285"/>
+          <path class="link" d="M110 210 C 110 140, 250 72, 280 72"/>
+          <path class="link" d="M567 285 C 585 285, 590 246, 610 246"/>
+          <path class="link" d="M780 230 L 810 230"/>
+          <path class="link" d="M687 390 L 687 415"/>
+          <path class="link" d="M847 335 L 847 370"/>
+          <path class="link" d="M932 335 L 932 370"/>
+
+          <g class="node" id="n-browser" style="--c:var(--c-browser)">
+            <rect class="box" x="30" y="210" width="160" height="115" rx="14"/>
+            <rect class="chip" x="44" y="232" width="132" height="22" rx="6"/>
+            <text class="chip-t" x="110" y="247">example.com/api</text>
+            <text class="title" x="110" y="282">Browser</text>
+            <text class="sub" x="110" y="302">Chrome · 198.51.100.7</text>
+            <rect x="70" y="325" width="80" height="8" rx="3" fill="color-mix(in srgb,var(--c-browser) 35%,var(--line))"/>
+          </g>
+
+          <g class="node" id="n-dns" style="--c:var(--c-dns)">
+            <rect class="box" x="280" y="40" width="150" height="62" rx="12"/>
+            <text class="title" x="355" y="66">DNS Resolver</text>
+            <text class="sub" x="355" y="86">example.com → ?</text>
+          </g>
+
+          <g class="node" id="n-net" style="--c:var(--c-net)">
+            <path class="cloud" d="M302 300 C 280 300, 278 268, 302 264 C 300 240, 336 232, 350 250 C 362 230, 404 236, 400 262 C 424 262, 428 300, 404 302 Z"/>
+            <text class="title" x="354" y="285">Internet</text>
+          </g>
+
+          <g class="node" id="n-kernel" style="--c:var(--c-kernel)">
+            <rect class="box" x="475" y="215" width="92" height="140" rx="12"/>
+            <text class="title" x="521" y="240">Kernel</text>
+            <rect class="chip" x="485" y="252" width="72" height="22" rx="6"/><text class="chip-t" x="521" y="267">NIC</text>
+            <rect class="chip" x="485" y="280" width="72" height="22" rx="6"/><text class="chip-t" x="521" y="295">TCP/IP</text>
+            <rect class="chip" x="485" y="308" width="72" height="22" rx="6" id="k-port"/><text class="chip-t" x="521" y="323">:443</text>
+            <text class="sub" x="521" y="346">socket</text>
+          </g>
+
+          <g class="node" id="n-nginx" style="--c:var(--c-nginx)">
+            <rect class="box" x="595" y="130" width="185" height="260" rx="14"/>
+            <text class="title" x="687" y="156">Nginx</text>
+            <text class="sub" x="687" y="173">reverse proxy · :443</text>
+            <rect class="chip" x="610" y="184" width="155" height="26" rx="7"/><text class="chip-t" x="687" y="201">master process</text>
+            <rect class="chip" id="w0" x="610" y="220" width="74" height="44" rx="8"/><text class="chip-t" x="647" y="246">worker 1</text>
+            <rect class="chip" id="w1" x="691" y="220" width="74" height="44" rx="8"/><text class="chip-t" x="728" y="246">worker 2</text>
+            <rect class="chip" id="w2" x="610" y="272" width="74" height="44" rx="8"/><text class="chip-t" x="647" y="298">worker 3</text>
+            <rect class="chip" id="w3" x="691" y="272" width="74" height="44" rx="8"/><text class="chip-t" x="728" y="298">worker 4</text>
+            <rect class="chip" id="n-loc" x="610" y="326" width="155" height="48" rx="8"/>
+            <text class="chip-t" id="n-loc-1" x="687" y="345">location /images/</text>
+            <text class="chip-t" id="n-loc-2" x="687" y="362">location /api/</text>
+          </g>
+
+          <g class="node" id="n-static" style="--c:var(--c-static)">
+            <rect class="box" x="595" y="415" width="185" height="70" rx="12"/>
+            <text class="title" x="687" y="443">Static files</text>
+            <text class="sub" x="687" y="463">/var/www/html</text>
+          </g>
+
+          <g class="node" id="n-app" style="--c:var(--c-app)">
+            <rect class="box" x="810" y="110" width="160" height="225" rx="14"/>
+            <text class="title" x="890" y="136">App server</text>
+            <text class="sub" x="890" y="153">Node.js · :3000</text>
+            <rect class="chip" id="a-router" x="822" y="168" width="136" height="32" rx="8"/><text class="chip-t" x="890" y="188">Router</text>
+            <rect class="chip" id="a-auth" x="822" y="208" width="136" height="32" rx="8"/><text class="chip-t" x="890" y="228">Auth (JWT)</text>
+            <rect class="chip" id="a-ctrl" x="822" y="248" width="136" height="32" rx="8"/><text class="chip-t" x="890" y="268">Controller</text>
+            <text class="sub" x="890" y="306">DB pool: 10 conn</text>
+          </g>
+
+          <g class="node" id="n-redis" style="--c:var(--c-redis)">
+            <rect class="box" x="810" y="370" width="75" height="80" rx="12"/>
+            <text class="title" x="847" y="402">Redis</text>
+            <text class="sub" x="847" y="422">cache</text>
+          </g>
+          <g class="node" id="n-db" style="--c:var(--c-db)">
+            <rect class="box" x="895" y="370" width="75" height="80" rx="12"/>
+            <text class="title" x="932" y="402">Postgres</text>
+            <text class="sub" x="932" y="422">database</text>
+          </g>
+
+          <g id="fx"></g>
+          <g id="pk"></g>
+        </svg>
+      </div>
+      <div class="scrub">
+        <input type="range" id="stepRange" min="0" max="15" value="0" aria-label="ধাপ">
+        <span id="stepNo">ধাপ 0 / 15</span>
+      </div>
+      <div class="controls">
+        <button type="button" id="prevBtn">◀ আগে</button>
+        <button type="button" id="playBtn" class="primary">▶ Play</button>
+        <button type="button" id="nextBtn">পরে ▶</button>
+        <button type="button" id="replayBtn">↻ এই ধাপ আবার</button>
+        <button type="button" id="resetBtn">↺ শুরু</button>
+        <span class="sp"></span>
+        <label for="scenario">ঘটনা</label>
+        <select id="scenario">
+          <option value="api">API request (cache miss → database)</option>
+          <option value="cache">API request (Redis cache hit)</option>
+          <option value="static">Static file (ছবি)</option>
+          <option value="notfound">404 Not Found</option>
+          <option value="badgw">502 Bad Gateway (app বন্ধ)</option>
+        </select>
+      </div>
+    </section>
+
+    <section class="card info" aria-live="polite">
+      <div class="badge-row">
+        <div class="lbadge" id="lbadge">0</div>
+        <div><h2 id="infoTitle"></h2><p class="dir" id="infoDir"></p></div>
+      </div>
+      <p class="text" id="infoText"></p>
+      <pre class="code" id="infoCode"></pre>
+    </section>
+
+    <section class="card insp" aria-label="Request, response and timing">
+      <div class="insp-grid">
+        <div><h3>Request <span class="tag" style="background:#4f46e5">browser → server</span></h3><pre class="http" id="reqBox"></pre></div>
+        <div><h3>Response <span class="tag" style="background:#059669">server → browser</span></h3><pre class="http" id="resBox"></pre></div>
+      </div>
+      <div>
+        <h3>সময় কোথায় যায় <span class="tag" style="background:#64748b">আনুমানিক উদাহরণ</span></h3>
+        <div class="wf" id="wf"></div>
+      </div>
+    </section>
+  </div>
+
+  <section>
+    <h2 class="sect-h">Nginx বনাম Apache: একসাথে ১২টা request</h2>
+    <p class="sect-p">প্রতিটা request-এ কাজ তিন ভাগে: একটু CPU কাজ (0.1s), তারপর app/database-এর জন্য <b>অপেক্ষা</b> (1s), তারপর আবার একটু CPU কাজ (0.1s)। <b>Apache (prefork)</b>-এ প্রতিটা request পুরো সময় একটা process আটকে রাখে — অপেক্ষার সময়ও। <b>Nginx</b>-এর worker অপেক্ষা করে বসে থাকে না; request-টা epoll-এ রেখে পরেরটা ধরে।</p>
+  </section>
+  <section class="card conc">
+    <div class="scene">
+      <svg viewBox="0 0 1000 330" id="concSvg" role="img" aria-label="Apache ৪টা process আর Nginx ১টা worker দিয়ে ১২টা request সামলানোর তুলনা">
+        <text class="lane-t" x="24" y="30">Apache · prefork MPM</text>
+        <text class="lane-s" x="24" y="48">প্রতি connection = ১টা process (এখানে ৪টা)</text>
+        <rect class="zone" x="20" y="62" width="90" height="250" rx="10"/><text class="zone-t" x="65" y="324">অপেক্ষার লাইন</text>
+        <g id="procs"></g>
+        <rect class="zone" x="370" y="62" width="110" height="250" rx="10"/><text class="zone-t" x="425" y="324">শেষ ✓</text>
+        <text class="clock" x="300" y="30" id="clockA">0.0 s</text>
+
+        <text class="lane-t" x="520" y="30">Nginx · event loop</text>
+        <text class="lane-s" x="520" y="48">১টা worker, অপেক্ষার সময় অন্যটা ধরে</text>
+        <rect class="zone" x="516" y="62" width="90" height="250" rx="10"/><text class="zone-t" x="561" y="324">অপেক্ষার লাইন</text>
+        <circle class="worker" cx="670" cy="187" r="44"/><circle class="ring" id="ring" cx="670" cy="187" r="52"/>
+        <text class="lane-s" x="670" y="191" text-anchor="middle" style="font-weight:700;fill:var(--fg)">worker</text>
+        <rect class="zone" x="735" y="62" width="120" height="250" rx="10"/><text class="zone-t" x="795" y="324">epoll: I/O অপেক্ষা</text>
+        <rect class="zone" x="870" y="62" width="110" height="250" rx="10"/><text class="zone-t" x="925" y="324">শেষ ✓</text>
+        <text class="clock" x="905" y="30" id="clockN">0.0 s</text>
+        <g id="dots"></g>
+      </svg>
+    </div>
+    <div class="controls">
+      <button type="button" class="primary" id="concPlay">▶ চালান</button>
+      <button type="button" id="concReset">↺ আবার</button>
+      <span class="sp"></span>
+      <span class="note-s" style="font-size:14px;color:var(--muted)">সময় ধীর করে দেখানো · সংখ্যাগুলো উদাহরণ</span>
+    </div>
+    <div class="stats">
+      <div class="stat ap"><b id="statA">—</b><span>Apache: ৪টা process দিয়ে সব শেষ হতে সময়</span></div>
+      <div class="stat ng"><b id="statN">—</b><span>Nginx: ১টা worker দিয়ে সব শেষ হতে সময়</span></div>
+    </div>
+  </section>
+
+  <section class="ref">
+    <h2 class="sect-h">মনে রাখার জন্য</h2>
+    <div class="tscroll"><table>
+      <thead><tr><th>Header</th><th>কে পাঠায়</th><th>কী বোঝায়</th></tr></thead>
+      <tbody>
+        <tr><td><code>Host</code></td><td>Browser</td><td>কোন ডোমেইন চাই। একই IP-তে অনেক সাইট থাকলে Nginx এটা দেখে <code>server_name</code> মেলায়।</td></tr>
+        <tr><td><code>Accept</code> / <code>Accept-Encoding</code></td><td>Browser</td><td>কোন ধরনের ডেটা (JSON, ছবি) আর কোন compression (gzip, br) বুঝি।</td></tr>
+        <tr><td><code>Cookie</code> / <code>Authorization</code></td><td>Browser</td><td>আমি কে — session বা JWT token। App-এর auth middleware এটা যাচাই করে।</td></tr>
+        <tr><td><code>X-Forwarded-For</code> / <code>X-Real-IP</code></td><td>Nginx</td><td>App শুধু Nginx-কে দেখে; আসল client IP জানাতে Nginx এগুলো যোগ করে।</td></tr>
+        <tr><td><code>Content-Type</code> / <code>Content-Length</code></td><td>Server</td><td>Body কী ধরনের আর কত বাইট।</td></tr>
+        <tr><td><code>Cache-Control</code> / <code>ETag</code></td><td>Server</td><td>Browser কতক্ষণ জমিয়ে রাখবে; পরে ETag দিয়ে জিজ্ঞেস করলে না বদলালে শুধু <code>304</code> আসে।</td></tr>
+        <tr><td><code>Set-Cookie</code></td><td>Server</td><td>Browser-এ নতুন cookie রাখতে বলে (যেমন login-এর পর session)।</td></tr>
+      </tbody>
+    </table></div>
+    <div class="tscroll"><table>
+      <thead><tr><th>Status</th><th>মানে</th><th>সাধারণত কে দেয়</th></tr></thead>
+      <tbody>
+        <tr><td><code>200 OK</code></td><td>সফল</td><td>App বা Nginx (static)</td></tr>
+        <tr><td><code>301</code> / <code>302</code></td><td>অন্য URL-এ যাও (redirect), যেমন http → https</td><td>Nginx বা app</td></tr>
+        <tr><td><code>304 Not Modified</code></td><td>আপনার কাছে থাকা কপিটাই ঠিক আছে, body পাঠানো হলো না</td><td>Nginx (ETag মিলে গেলে)</td></tr>
+        <tr><td><code>401</code> / <code>403</code></td><td>কে আপনি জানি না / জানি, কিন্তু অনুমতি নেই</td><td>App-এর auth middleware</td></tr>
+        <tr><td><code>404 Not Found</code></td><td>এমন কিছু নেই</td><td>Nginx (ফাইল নেই) বা app (ডেটা নেই)</td></tr>
+        <tr><td><code>500</code></td><td>App-এর ভেতরে bug / exception</td><td>App</td></tr>
+        <tr><td><code>502</code> / <code>504</code></td><td>Nginx পেছনের app-এর কাছে পৌঁছাতে পারেনি / সময়মতো উত্তর পায়নি</td><td>Nginx</td></tr>
+      </tbody>
+    </table></div>
+    <div class="notes">
+      <div class="note" style="--c:var(--c-nginx)"><h3>Nginx কী করে?</h3><p>সামনে দাঁড়িয়ে থাকা দারোয়ান: TLS খোলে, static file নিজেই দেয়, বাকিটা <code>proxy_pass</code> দিয়ে app-এ পাঠায়, একাধিক app থাকলে load balance করে, gzip আর access log লেখে।</p></div>
+      <div class="note" style="--c:var(--c-apache)"><h3>Apache কোথায় আলাদা?</h3><p>পুরোনো, module-ভিত্তিক (<code>.htaccess</code>, <code>mod_php</code>)। prefork / worker MPM-এ প্রতি connection-এ process বা thread লাগে, তাই অনেক ধীর connection একসাথে এলে memory বেশি লাগে। নতুন event MPM অনেকটা Nginx-এর মতো।</p></div>
+      <div class="note" style="--c:var(--c-app)"><h3>App server কেন আলাদা?</h3><p>Node, Spring, Django-তে আপনার business logic চলে। Nginx এটা সামনে থেকে আড়াল করে — app crash করলে Nginx অন্তত <code>502</code> দেখাতে পারে, আর একাধিক app instance-এ ভাগ করে দিতে পারে।</p></div>
+      <div class="note" style="--c:var(--c-redis)"><h3>Keep-alive আর cache</h3><p>প্রথম request-এ DNS, TCP, TLS-এ সময় যায়। একই connection খোলা থাকে (keep-alive), তাই পরের request এগুলো ছাড়াই যায়। Redis cache থাকলে database পর্যন্তই যেতে হয় না।</p></div>
+    </div>
+  </section>
+
+  <footer><span>WellDev · 06-networking / web-server · GSAP দিয়ে অ্যানিমেশন</span><a href="../../index.html">← সব গাইড</a></footer>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const md = s => esc(s).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/`([^`]+)`/g, "<code>$1</code>");
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // ---------------- scenario data (every number shown is computed or stated here) ----------------
+  const CLIENT_IP = "198.51.100.7", SERVER_IP = "203.0.113.10";
+  const USER = { id: 42, name: "Karim", email: "karim@example.com" };
+  const SC = {
+    api:      { path: "/api/users/42",   kind: "api",    cache: "miss", found: true },
+    cache:    { path: "/api/users/42",   kind: "api",    cache: "hit",  found: true },
+    static:   { path: "/images/logo.png", kind: "static" },
+    notfound: { path: "/api/users/9999", kind: "api",    cache: "miss", found: false },
+    badgw:    { path: "/api/users/42",   kind: "api",    down: true },
+  };
+  const LOGO_BYTES = 18342;
+  const S = { sc: "api", step: 0, playing: false };
+  const cur = () => SC[S.sc];
+
+  function requestText() {
+    const c = cur();
+    const accept = c.kind === "static" ? "image/avif,image/webp,image/png,*/*" : "application/json";
+    return [`GET ${c.path} HTTP/1.1`, "Host: example.com", "User-Agent: Mozilla/5.0 (Macintosh) Chrome/129", `Accept: ${accept}`,
+      "Accept-Encoding: gzip, br", ...(c.kind === "api" ? ["Authorization: Bearer eyJhbGciOiJIUzI1NiJ9…"] : []),
+      "Cookie: session=7f2c9a", "Connection: keep-alive"].join("\n");
+  }
+  function responseBody() {
+    const c = cur();
+    if (c.down) return '<html><head><title>502 Bad Gateway</title></head>\n<body><center><h1>502 Bad Gateway</h1></center>\n<hr><center>nginx</center></body></html>';
+    if (c.kind === "static") return null;
+    return c.found ? JSON.stringify(USER) : JSON.stringify({ error: "User not found" });
+  }
+  function status() { const c = cur(); return c.down ? 502 : c.kind === "static" ? 200 : c.found ? 200 : 404; }
+  const REASON = { 200: "OK", 404: "Not Found", 502: "Bad Gateway" };
+  function responseText() {
+    const c = cur(), st = status(), body = responseBody();
+    const lines = [`HTTP/1.1 ${st} ${REASON[st]}`, "Server: nginx", "Date: Wed, 07 Oct 2026 04:15:32 GMT"];
+    if (c.kind === "static") lines.push("Content-Type: image/png", `Content-Length: ${LOGO_BYTES}`, "Last-Modified: Mon, 05 Oct 2026 09:12:00 GMT",
+      `ETag: "6703a1c0-${LOGO_BYTES.toString(16)}"`, "Cache-Control: public, max-age=86400", "Accept-Ranges: bytes", "", `(ছবির ${LOGO_BYTES.toLocaleString("en-US")} বাইট binary ডেটা)`);
+    else if (c.down) lines.push("Content-Type: text/html", `Content-Length: ${new TextEncoder().encode(body).length}`, "Connection: keep-alive", "", body);
+    else lines.push("Content-Type: application/json; charset=utf-8", "Content-Encoding: gzip", "Transfer-Encoding: chunked", "Vary: Accept-Encoding",
+      st === 200 ? "Cache-Control: private, max-age=60" : "Cache-Control: no-store", ...(st === 200 ? [`X-Cache: ${c.cache === "hit" ? "HIT" : "MISS"}`] : []),
+      "Connection: keep-alive", "", body);
+    return lines.join("\n");
+  }
+  function bodyBytes() { const b = responseBody(); return b === null ? LOGO_BYTES : new TextEncoder().encode(b).length; }
+
+  function httpHL(text) {
+    return text.split("\n").map((l, i) => {
+      if (i === 0) return l.replace(/^(GET|POST|PUT|DELETE) (\S+) (HTTP\/1\.1)$/, '<span class="m">$1</span> <span class="s">$2</span> $3')
+        .replace(/^(HTTP\/1\.1) (\d{3}) (.*)$/, (m, v, c, r) => `${v} <span class="${+c >= 400 ? "e" : "n"}">${c} ${esc(r)}</span>`);
+      const h = l.match(/^([A-Za-z-]+): (.*)$/);
+      if (h) return `<span class="k">${h[1]}</span>: ${esc(h[2])}`;
+      if (l.startsWith("(")) return `<span class="c">${esc(l)}</span>`;
+      return esc(l);
+    }).join("\n");
+  }
+
+  // ---------------- scene geometry ----------------
+  const P = {
+    B: { x: 190, y: 268 }, BT: { x: 110, y: 205 }, DNS: { x: 355, y: 106 }, DNSL: { x: 280, y: 72 }, NET: { x: 355, y: 285 },
+    K: { x: 521, y: 285 }, KP: { x: 521, y: 319 }, W: { x: 728, y: 246 }, NG: { x: 780, y: 230 },
+    APP: { x: 818, y: 230 }, RT: { x: 890, y: 184 }, AU: { x: 890, y: 224 }, CT: { x: 890, y: 264 },
+    RD: { x: 847, y: 410 }, DB: { x: 932, y: 410 }, ST: { x: 687, y: 450 }, LOC: { x: 687, y: 350 },
+  };
+  const NS = "http://www.w3.org/2000/svg";
+  const scene = $("scene"), pk = $("pk"), fx = $("fx");
+  function mkPkt() {
+    const g = document.createElementNS(NS, "g"); g.setAttribute("class", "pkt");
+    const r = document.createElementNS(NS, "rect"); r.setAttribute("rx", 8); r.setAttribute("height", 26); r.setAttribute("y", -13);
+    const t = document.createElementNS(NS, "text");
+    g.append(r, t); pk.append(g); gsap.set(g, { autoAlpha: 0 }); return g;
+  }
+  const PK = [mkPkt(), mkPkt(), mkPkt()];
+  function label(g, text, kind) {
+    g.setAttribute("class", "pkt " + kind);
+    const t = g.querySelector("text"), r = g.querySelector("rect");
+    t.textContent = text;
+    const w = Math.max(44, text.length * 7.2 + 20);
+    r.setAttribute("width", w); r.setAttribute("x", -w / 2);
+  }
+  const dist = (a, b) => Math.hypot(b.x - a.x, b.y - a.y);
+  // move a packet through waypoints at a steady speed (GSAP keyframes)
+  function fly(tl, g, pts, at, speed = 380) {
+    const kf = [];
+    for (let i = 1; i < pts.length; i++) kf.push({ x: pts[i].x, y: pts[i].y, duration: Math.max(0.18, dist(pts[i - 1], pts[i]) / speed), ease: "none" });
+    tl.set(g, { x: pts[0].x, y: pts[0].y, autoAlpha: 1 }, at);
+    tl.to(g, { keyframes: kf }, ">");
+    return tl;
+  }
+  const hide = (tl, g, at = ">") => tl.to(g, { autoAlpha: 0, duration: 0.25 }, at);
+  const pulse = (tl, sel, at = ">") => tl.fromTo(sel, { scale: 1 }, { scale: 1.08, duration: 0.22, yoyo: true, repeat: 1, transformOrigin: "50% 50%", ease: "power2.out" }, at);
+  const hot = (tl, id, on = true, at = ">") => tl.call(() => $(id).classList.toggle("hot", on), null, at);
+  function boom(tl, p, at = ">") {
+    tl.call(() => {
+      if (reduce) return;
+      const c = document.createElementNS(NS, "circle");
+      c.setAttribute("class", "boom"); c.setAttribute("cx", p.x); c.setAttribute("cy", p.y); c.setAttribute("r", 6); fx.append(c);
+      gsap.to(c, { attr: { r: 34 }, opacity: 0, duration: 0.7, ease: "power2.out", onComplete: () => c.remove() });
+    }, null, at);
+  }
+
+  // ---------------- steps ----------------
+  const SEND = "Browser → Server", RECV = "Server → Browser", IN = "Server-এর ভেতরে";
+  const STEP = {
+    intro: () => ({ badge: "0", color: "var(--accent)", title: "শুরু: একটা URL খোলা", dir: "বাম: আপনার browser · ডান: server machine", hl: [],
+      text: {
+        api: "Browser একটা API থেকে user 42-এর তথ্য চাইবে। Redis-এ নেই (cache miss), তাই request database পর্যন্ত যাবে।",
+        cache: "একই request, কিন্তু কিছুক্ষণ আগে কেউ এটা চেয়েছিল, তাই উত্তর Redis-এ জমা আছে (cache hit)। Database পর্যন্ত যেতেই হবে না।",
+        static: "এবার একটা ছবি চাওয়া হচ্ছে। এটা app লাগে না — Nginx নিজেই disk থেকে ফাইলটা দিয়ে দেবে।",
+        notfound: "user 9999 চাওয়া হচ্ছে, যেটা database-এ নেই। দেখবেন 404 কে বানায়।",
+        badgw: "App server বন্ধ (crash করেছে)। দেখবেন Nginx কীভাবে বোঝে আর 502 দেয়।",
+      }[S.sc] + " যেকোনো ধাপে slider টেনে বা আগে/পরে চাপুন।",
+      code: `URL     https://example.com${cur().path}\nঘটনা    ${$("scenario").selectedOptions[0].textContent}`,
+      anim: tl => pulse(tl, "#n-browser .box") }),
+    url: () => ({ badge: "URL", color: "var(--c-browser)", title: "Browser URL ভাঙে", dir: "Browser", hl: ["n-browser"],
+      text: "Browser URL-টাকে টুকরো করে: **https** মানে port 443 আর encrypted (TLS), **example.com** হলো কোন server, আর **path** হলো server-এর কাছে কী চাই। আগে নিজের cache দেখে — ছবি বা পুরোনো উত্তর থাকলে network-এই যায় না।",
+      code: `scheme  https       → port 443, TLS\nhost    example.com → DNS লাগবে\npath    ${cur().path}`,
+      anim: tl => pulse(tl, "#n-browser .chip") }),
+    dns: () => ({ badge: "DNS", color: "var(--c-dns)", title: "DNS: নাম থেকে IP", dir: "Browser ⇄ DNS resolver", hl: ["n-browser", "n-dns"],
+      text: `Computer শুধু IP চেনে। Browser আর OS-এর DNS cache-এ না পেলে resolver-কে জিজ্ঞেস করে: example.com-এর IP কত? উত্তর আসে **${SERVER_IP}** (A record), সাথে TTL — কতক্ষণ মনে রাখা যাবে।`,
+      code: `প্রশ্ন   example.com  A ?\nউত্তর   example.com.  300  IN  A  ${SERVER_IP}\n        (TTL 300 সেকেন্ড পর্যন্ত cache)`,
+      anim: tl => { label(PK[0], "example.com ?", "dns"); fly(tl, PK[0], [P.BT, { x: 110, y: 72 }, P.DNSL]); hide(tl, PK[0]); pulse(tl, "#n-dns .box");
+        tl.call(() => { $("n-dns").querySelector(".sub").textContent = "example.com → " + SERVER_IP; });
+        label(PK[1], SERVER_IP, "dns"); fly(tl, PK[1], [P.DNSL, { x: 110, y: 72 }, P.BT]); hide(tl, PK[1]); } }),
+    tcp: () => ({ badge: "TCP", color: "var(--c-kernel)", title: "TCP handshake: SYN, SYN-ACK, ACK", dir: SEND + " ⇄", hl: ["n-browser", "n-net", "n-kernel"],
+      text: `Browser ${SERVER_IP}:443-এ connection খোলে। তিনটা ছোট packet: **SYN** ("কথা বলতে চাই"), **SYN-ACK** ("ঠিক আছে"), **ACK** ("শুরু করি")। Server-এর kernel নিজেই এটা করে, Nginx তখনো কিছু জানে না।`,
+      code: `${CLIENT_IP}:52100 → ${SERVER_IP}:443  SYN      seq=1000\n${SERVER_IP}:443 → ${CLIENT_IP}:52100  SYN-ACK  seq=5000 ack=1001\n${CLIENT_IP}:52100 → ${SERVER_IP}:443  ACK      ack=5001`,
+      anim: tl => { label(PK[0], "SYN", "hs"); fly(tl, PK[0], [P.B, P.NET, P.K], undefined, 520); hide(tl, PK[0]);
+        label(PK[1], "SYN-ACK", "hs"); fly(tl, PK[1], [P.K, P.NET, P.B], undefined, 520); hide(tl, PK[1]);
+        label(PK[2], "ACK", "hs"); fly(tl, PK[2], [P.B, P.NET, P.K], undefined, 520); hide(tl, PK[2]); pulse(tl, "#k-port"); } }),
+    tls: () => ({ badge: "TLS", color: "#0d9488", title: "TLS handshake: encryption চালু", dir: "Browser ⇄ Nginx", hl: ["n-browser", "n-net", "n-kernel", "n-nginx"],
+      text: "Browser জানায় কোন encryption পারে (ClientHello)। **Nginx** তার certificate পাঠায় — browser যাচাই করে এটা সত্যিই example.com। দুজনে মিলে একটা গোপন key বানায়। এখন থেকে সব কিছু encrypted। TLS খোলার কাজটা Nginx করে, তাই একে বলে **TLS termination**।",
+      code: "ClientHello   TLS 1.3, cipher suites, key share\nServerHello   TLS_AES_128_GCM_SHA256\nCertificate   CN=example.com (Let's Encrypt)\nFinished      ✓ এখন থেকে encrypted\n\nnginx: ssl_certificate /etc/ssl/example.com.pem;",
+      anim: tl => { label(PK[0], "ClientHello", "hs"); fly(tl, PK[0], [P.B, P.NET, P.K, P.W], undefined, 520); hide(tl, PK[0]);
+        label(PK[1], "Cert + ServerHello", "hs"); fly(tl, PK[1], [P.W, P.K, P.NET, P.B], undefined, 520); hide(tl, PK[1]);
+        label(PK[2], "Finished 🔒", "hs"); fly(tl, PK[2], [P.B, P.NET, P.K, P.W], undefined, 520); hide(tl, PK[2]); } }),
+    request: () => ({ badge: "REQ", color: "#4f46e5", title: "HTTP request রওনা দিল", dir: SEND, hl: ["n-browser", "n-net", "n-kernel"],
+      text: "এবার আসল request। প্রথম লাইনে **method + path**, তারপর headers: কোন domain (`Host`), কী ধরনের উত্তর বুঝি (`Accept`), compression, আর আমি কে (`Cookie` / `Authorization`)। পুরোটা TLS-এ মোড়া, পথের কেউ পড়তে পারে না। নিচের Request বক্সে পুরো লেখাটা দেখুন।",
+      code: requestText().split("\n").slice(0, 2).join("\n") + "\n…", showReq: true,
+      anim: tl => { label(PK[0], "GET " + cur().path, "req"); fly(tl, PK[0], [P.B, P.NET, P.K]); } }),
+    kernel: () => ({ badge: "OS", color: "var(--c-kernel)", title: "Kernel থেকে Nginx worker", dir: IN, hl: ["n-kernel", "n-nginx"],
+      text: "Network card bit গুলো নেয়, kernel TCP segment জোড়া লাগায় আর port 443-এর socket-এ রাখে। Nginx-এর একটা worker **epoll**-এ ঘুমিয়ে ছিল — kernel জানায় \"ডেটা এসেছে\", worker জেগে ওঠে। কোন worker নেবে সেটা kernel ঠিক করে; এখানে worker 2।",
+      code: `$ ss -ltnp | grep 443\nLISTEN 0 511 0.0.0.0:443  users:(("nginx",pid=812,fd=6))`, showReq: true,
+      anim: tl => { label(PK[0], "GET " + cur().path, "req"); pulse(tl, "#k-port"); fly(tl, PK[0], [P.K, { x: 590, y: 246 }, P.W]); hot(tl, "w1"); pulse(tl, "#w1"); } }),
+    nginx: () => {
+      const st = cur().kind === "static";
+      return { badge: "NGX", color: "var(--c-nginx)", title: "Nginx: কোথায় পাঠাব?", dir: IN, hl: ["n-nginx"],
+        text: `Worker request decrypt করে লাইনগুলো পড়ে। \`Host: example.com\` দেখে কোন **server** block, তারপর path দেখে কোন **location**। \`${cur().path}\` মিলল ${st ? "`location /images/`-এর সাথে — static file, app লাগবে না।" : "`location /api/`-এর সাথে — এটা app server-এর কাজ, তাই `proxy_pass`।"}`,
+        code: `server {\n    listen 443 ssl;\n    server_name example.com;\n\n    location /images/ { root /var/www/html; }${st ? "   ← মিলল" : ""}\n    location /api/    { proxy_pass http://127.0.0.1:3000; }${st ? "" : "   ← মিলল"}\n}`,
+        showReq: true,
+        anim: tl => { label(PK[0], "GET " + cur().path, "req"); tl.set(PK[0], { x: P.W.x, y: P.W.y, autoAlpha: 1 }); tl.call(() => $("w1").classList.add("hot"));
+          fly(tl, PK[0], [P.W, P.LOC], undefined, 260); hot(tl, "n-loc"); pulse(tl, st ? "#n-loc-1" : "#n-loc-2"); } };
+    },
+    static: () => ({ badge: "DISK", color: "var(--c-static)", title: "Disk থেকে ফাইল", dir: IN, hl: ["n-nginx", "n-static"],
+      text: `Nginx \`root\` আর path জুড়ে ফাইলের ঠিকানা বানায়, disk থেকে পড়ে। \`sendfile\` থাকলে ফাইল kernel থেকে সরাসরি network-এ যায় — বাড়তি copy ছাড়াই। সাথে **ETag** আর **Last-Modified** বানায়, যাতে পরের বার browser জিজ্ঞেস করতে পারে "বদলেছে?"।`,
+      code: `root + uri = /var/www/html/images/logo.png\nsize ${LOGO_BYTES} bytes · type image/png\nsendfile on;  →  disk → socket, zero-copy`, showReq: true,
+      anim: tl => { label(PK[0], "open logo.png", "q"); fly(tl, PK[0], [P.LOC, P.ST]); pulse(tl, "#n-static .box");
+        label(PK[1], `${LOGO_BYTES} B`, "res"); fly(tl, PK[1], [P.ST, P.LOC, P.W]); tl.to(PK[0], { autoAlpha: 0, duration: .2 }, "<"); } }),
+    proxy: () => {
+      const down = cur().down;
+      return { badge: "→APP", color: down ? "var(--bad)" : "var(--c-app)", title: down ? "proxy_pass: app সাড়া দেয় না" : "Reverse proxy: app server-এ পাঠানো", dir: IN, hl: ["n-nginx", "n-app"],
+        text: down
+          ? "Nginx 127.0.0.1:3000-এ connection খুলতে চায়, কিন্তু সেখানে কেউ শুনছে না — app crash করেছে। Kernel সাথে সাথে বলে **Connection refused**। Nginx error log-এ লেখে আর নিজেই একটা উত্তর বানাবে।"
+          : "Nginx নতুন একটা HTTP request বানিয়ে app-কে পাঠায় (সাধারণত encryption ছাড়া, কারণ একই machine)। App শুধু Nginx-কে দেখে, তাই আসল client-এর IP জানাতে header যোগ হয়। একাধিক app instance থাকলে এখানেই **load balancing** (round-robin ইত্যাদি)।",
+        code: down
+          ? `connect() failed (111: Connection refused)\nwhile connecting to upstream,\nupstream: "http://127.0.0.1:3000${cur().path}"`
+          : `GET ${cur().path} HTTP/1.1\nHost: example.com\nX-Real-IP: ${CLIENT_IP}\nX-Forwarded-For: ${CLIENT_IP}\nX-Forwarded-Proto: https\nAuthorization: Bearer eyJ…`,
+        showReq: true,
+        anim: tl => {
+          label(PK[0], "GET " + cur().path, "req"); tl.call(() => $("w1").classList.add("hot"));
+          if (down) { fly(tl, PK[0], [P.W, P.NG, P.APP]); boom(tl, P.APP); tl.call(() => label(PK[0], "connection refused", "err"));
+            fly(tl, PK[0], [P.APP, P.NG, P.W]); }
+          else { fly(tl, PK[0], [P.W, P.NG, P.APP, P.RT]); hot(tl, "a-router"); }
+        } };
+    },
+    app: () => ({ badge: "APP", color: "var(--c-app)", title: "App: route → auth → controller", dir: IN, hl: ["n-app"],
+      text: "App-এর **router** path মেলায় (`/api/users/:id`, id = " + cur().path.split("/").pop() + ")। তারপর **middleware**: `Authorization`-এর JWT-এর signature আর মেয়াদ যাচাই ✓ (ভুল হলে এখানেই 401)। তারপর **controller** আসল কাজ শুরু করে।",
+      code: "app.get('/api/users/:id', auth, async (req, res) => {\n  const user = await getUser(req.params.id);\n  if (!user) return res.status(404).json({ error: 'User not found' });\n  res.json(user);\n});",
+      showReq: true,
+      anim: tl => { label(PK[0], "GET " + cur().path, "req"); tl.set(PK[0], { x: P.RT.x, y: P.RT.y, autoAlpha: 1 }); hot(tl, "a-router", true, 0);
+        fly(tl, PK[0], [P.RT, P.AU], undefined, 160); hot(tl, "a-auth"); pulse(tl, "#a-auth");
+        fly(tl, PK[0], [P.AU, P.CT], undefined, 160); hot(tl, "a-ctrl"); pulse(tl, "#a-ctrl"); } }),
+    cache: () => {
+      const hit = cur().cache === "hit", key = "user:" + cur().path.split("/").pop();
+      return { badge: "RDS", color: "var(--c-redis)", title: hit ? "Redis: cache hit ✓" : "Redis: cache miss", dir: IN, hl: ["n-app", "n-redis"],
+        text: hit
+          ? "Controller আগে Redis-এ খোঁজে। পাওয়া গেছে! কয়েক সেকেন্ড আগে কেউ এটা চেয়েছিল, উত্তর memory-তে জমা। Database পর্যন্ত যেতেই হলো না — ১ মিলিসেকেন্ডের মধ্যে উত্তর।"
+          : "Controller আগে Redis (memory-তে রাখা key-value store) দেখে। এই key নেই — **cache miss**। তাই database-এ যেতে হবে।",
+        code: `> GET ${key}\n${hit ? JSON.stringify(JSON.stringify(USER)) + "\n  (TTL বাকি 41 সেকেন্ড)" : "(nil)"}`,
+        showReq: true,
+        anim: tl => { tl.set(PK[0], { x: P.CT.x, y: P.CT.y, autoAlpha: 1 }); label(PK[0], "GET " + cur().path, "req");
+          label(PK[1], "GET " + key, "q"); fly(tl, PK[1], [P.CT, { x: 847, y: 300 }, P.RD]); pulse(tl, "#n-redis .box");
+          tl.call(() => label(PK[1], hit ? "HIT ✓" : "(nil) miss", hit ? "res" : "miss")); fly(tl, PK[1], [P.RD, { x: 847, y: 300 }, P.CT]); hide(tl, PK[1]); } };
+    },
+    db: () => {
+      const f = cur().found, id = cur().path.split("/").pop();
+      return { badge: "SQL", color: "var(--c-db)", title: f ? "Database query" : "Database: কিছু পাওয়া গেল না", dir: IN, hl: ["n-app", "n-db"],
+        text: f
+          ? "Pool-এ আগে থেকে খোলা ১০টা database connection-এর একটা নিয়ে query চালায় — প্রতিবার নতুন connection খুললে অনেক সময় যেত। Primary key-তে index আছে, তাই সরাসরি row পায়। উত্তরটা Redis-এ ৬০ সেকেন্ডের জন্য রেখে দেয়, যাতে পরের জনকে আর database-এ যেতে না হয়।"
+          : `Query চলল, কিন্তু id ${id}-এর কোনো row নেই — ফল 0 rows। Controller তাই 404 বানাবে।`,
+        code: `SELECT id, name, email FROM users WHERE id = $1;   -- $1 = ${id}\n` + (f ? `→ 1 row  (${USER.id}, '${USER.name}', '${USER.email}')\n\n> SETEX user:${id} 60 '${JSON.stringify(USER)}'` : "→ 0 rows"),
+        showReq: true,
+        anim: tl => { tl.set(PK[0], { x: P.CT.x, y: P.CT.y, autoAlpha: 1 }); label(PK[0], "GET " + cur().path, "req");
+          label(PK[1], "SELECT … id=" + id, "q"); fly(tl, PK[1], [P.CT, { x: 932, y: 300 }, P.DB]); pulse(tl, "#n-db .box");
+          tl.call(() => label(PK[1], f ? "1 row" : "0 rows", f ? "res" : "miss")); fly(tl, PK[1], [P.DB, { x: 932, y: 300 }, P.CT]); hide(tl, PK[1]);
+          if (f) { label(PK[2], "SETEX user:" + id, "q"); fly(tl, PK[2], [P.CT, { x: 847, y: 300 }, P.RD]); hide(tl, PK[2]); } } };
+    },
+    build: () => {
+      const st = status();
+      return { badge: String(st), color: st === 200 ? "var(--ok)" : "var(--bad)", title: `App উত্তর বানায়: ${st} ${REASON[st]}`, dir: "App → Nginx", hl: ["n-app", "n-nginx"],
+        text: st === 200 ? "Controller ডেটাকে JSON বানায়, status 200 দেয়, আর Nginx-এর কাছে ফেরত পাঠায়। App-এর কাজ শেষ।"
+          : "Database কিছু দেয়নি, তাই controller status 404 আর একটা ছোট error JSON পাঠায়। খেয়াল করুন: 404 এখানে app বানাল, Nginx না।",
+        code: st === 200 ? `res.json(user)\n→ ${st} ${responseBody()}` : `res.status(404).json({ error: 'User not found' })\n→ 404 ${responseBody()}`,
+        showReq: true,
+        anim: tl => { label(PK[0], `${st} ${REASON[st]}`, st === 200 ? "res" : "err"); fly(tl, PK[0], [P.CT, P.APP, P.NG, P.W]); pulse(tl, "#w1"); } };
+    },
+    nginxresp: () => {
+      const st = status(), c = cur();
+      return { badge: "NGX", color: st === 200 ? "var(--c-nginx)" : "var(--bad)", title: c.down ? "Nginx নিজেই 502 বানায়" : "Nginx response সাজায়", dir: IN, hl: ["n-nginx"],
+        text: c.down ? "App নেই, তাই Nginx নিজের ছোট HTML error page দিয়ে **502 Bad Gateway** পাঠায়। ব্যবহারকারী অন্তত একটা পরিষ্কার error দেখে, আর error log-এ কারণ লেখা থাকে।"
+          : (c.kind === "static" ? "Nginx header বসায়: Content-Type, Content-Length, ETag, Cache-Control। ছবি আগে থেকেই compressed, তাই gzip লাগে না।"
+            : "Nginx app-এর উত্তরে `Server` header বসায়, JSON-কে **gzip** করে ছোট বানায় (browser `Accept-Encoding`-এ বলেছিল), তারপর TLS দিয়ে encrypt করে।") +
+          " প্রতিটা request-এর একটা লাইন **access log**-এ লেখা হয়। নিচের Response বক্সে পুরো উত্তরটা দেখুন।",
+        code: `# /var/log/nginx/access.log\n${CLIENT_IP} - - [07/Oct/2026:10:15:32 +0600] "GET ${c.path} HTTP/1.1" ${st} ${bodyBytes()} "-" "Chrome/129"`,
+        showReq: true, showRes: true,
+        anim: tl => { label(PK[0], `${st} ${REASON[st]}`, st === 200 ? "res" : "err"); tl.set(PK[0], { x: P.W.x, y: P.W.y, autoAlpha: 1 });
+          tl.call(() => $("w1").classList.add("hot")); pulse(tl, "#w1"); pulse(tl, PK[0]); } };
+    },
+    back: () => ({ badge: "RES", color: status() === 200 ? "var(--ok)" : "var(--bad)", title: "Response ফিরে যায়", dir: RECV, hl: ["n-kernel", "n-net", "n-browser"],
+      text: "Worker উত্তরটা socket-এ লেখে, kernel TCP segment বানিয়ে পাঠায়, browser প্রতিটার ACK দেয়। Worker এর মধ্যেই অন্য request ধরতে চলে যায়। Connection বন্ধ হয় না (**keep-alive**) — পরের request-এ DNS, TCP, TLS আর লাগবে না।",
+      code: `${SERVER_IP}:443 → ${CLIENT_IP}:52100\n${status()} ${REASON[status()]}  ·  ${bodyBytes()} বাইট body (encrypted)`, showReq: true, showRes: true,
+      anim: tl => { const st = status(); label(PK[0], `${st} ${REASON[st]}`, st === 200 ? "res" : "err"); fly(tl, PK[0], [P.W, { x: 590, y: 246 }, P.K, P.NET, P.B]); } }),
+    render: () => {
+      const st = status(), c = cur();
+      return { badge: "✓", color: st === 200 ? "var(--ok)" : "var(--bad)", title: st === 200 ? "Browser দেখায়" : `Browser পেল ${st}`, dir: "Browser", hl: ["n-browser"],
+        text: c.kind === "static" ? "Browser ছবিটা decode করে দেখায় আর ১ দিনের জন্য cache-এ রাখে (max-age=86400)। কাল আবার চাইলে network-এ যাবেই না।"
+          : st === 200 ? `JavaScript JSON পড়ে পেজে "${USER.name}" দেখায়। DevTools-এর Network tab খুললে ঠিক এই request, headers আর সময়ের ভাগ দেখা যায়।`
+          : st === 404 ? "App-এর JavaScript 404 দেখে \"user পাওয়া যায়নি\" লেখা দেখায়। Request পুরোপুরি ঠিকঠাক গেছে-এসেছে — 404 মানে network-এর সমস্যা না, ডেটা নেই।"
+          : "ব্যবহারকারী 502 পেজ দেখে। সমাধান: app আবার চালু করা (systemd / Docker restart policy), আর একাধিক app instance রাখা যাতে একটা পড়ে গেলেও Nginx অন্যটায় পাঠাতে পারে।",
+        code: `Status  ${st} ${REASON[st]}\nTotal   ≈ ${WF_TOTAL()} ms (নিচের হিসাব)`, showReq: true, showRes: true,
+        anim: tl => pulse(tl, "#n-browser .box") };
+    },
+  };
+
+  const FLOW = {
+    api:      ["intro", "url", "dns", "tcp", "tls", "request", "kernel", "nginx", "proxy", "app", "cache", "db", "build", "nginxresp", "back", "render"],
+    cache:    ["intro", "url", "dns", "tcp", "tls", "request", "kernel", "nginx", "proxy", "app", "cache", "build", "nginxresp", "back", "render"],
+    static:   ["intro", "url", "dns", "tcp", "tls", "request", "kernel", "nginx", "static", "nginxresp", "back", "render"],
+    notfound: ["intro", "url", "dns", "tcp", "tls", "request", "kernel", "nginx", "proxy", "app", "cache", "db", "build", "nginxresp", "back", "render"],
+    badgw:    ["intro", "url", "dns", "tcp", "tls", "request", "kernel", "nginx", "proxy", "nginxresp", "back", "render"],
+  };
+  const steps = () => FLOW[S.sc];
+
+  // typical timings (illustrative) — each row appears once its step is reached
+  function WF() {
+    const c = cur(), rows = [["DNS lookup", 18, "dns", "#8b5cf6"], ["TCP handshake", 24, "tcp", "#64748b"], ["TLS handshake", 32, "tls", "#0d9488"],
+      ["Request পাঠানো", 4, "request", "#4f46e5"], ["Nginx", 1, "nginx", "#16a34a"]];
+    if (c.kind === "static") rows.push(["Disk থেকে পড়া", 2, "static", "#f59e0b"]);
+    else if (c.down) rows.push(["App-এ connect চেষ্টা", 1, "proxy", "#e11d48"]);
+    else { rows.push(["App (route + auth)", 2, "app", "#6366f1"], ["Redis", 1, "cache", "#e11d48"]); if (c.cache !== "hit") rows.push(["Database query", 9, "db", "#2563eb"]); }
+    rows.push(["Response ফেরা", c.kind === "static" ? 38 : 12, "back", "#059669"]);
+    return rows;
+  }
+  const WF_TOTAL = () => WF().reduce((a, r) => a + r[1], 0);
+  function renderWF() {
+    const rows = WF(), total = WF_TOTAL(), idx = steps().indexOf(steps()[S.step]);
+    let start = 0, html = "";
+    rows.forEach(([lbl, ms, sid, col]) => {
+      const shown = steps().indexOf(sid) <= idx;
+      html += `<div class="wf-row" style="opacity:${shown ? 1 : .3}"><span class="lbl">${lbl}</span><span class="track"><span class="bar" style="left:${start / total * 100}%;width:${Math.max(.8, ms / total * 100)}%;background:${shown ? col : "var(--line)"}"></span></span><span class="ms">${ms} ms</span></div>`;
+      start += ms;
+    });
+    html += `<div class="wf-total"><span>মোট (প্রথম request, নতুন connection)</span><b>${total} ms</b></div>`;
+    $("wf").innerHTML = html;
+  }
+
+  // ---------------- render + play ----------------
+  const NODES = ["n-browser", "n-dns", "n-net", "n-kernel", "n-nginx", "n-static", "n-app", "n-redis", "n-db"];
+  let tl = null, playTimer = null;
+  function resetScene() {
+    gsap.killTweensOf(PK); PK.forEach(g => gsap.set(g, { autoAlpha: 0, scale: 1 }));
+    document.querySelectorAll("#scene .hot").forEach(e => e.classList.remove("hot"));
+    gsap.set("#scene .box, #scene .chip, #scene .chip-t", { clearProps: "transform" });
+    $("n-dns").querySelector(".sub").textContent = steps().indexOf("dns") < S.step ? "example.com → " + SERVER_IP : "example.com → ?";
+    $("n-app").classList.toggle("down", !!cur().down);
+    fx.replaceChildren();
+  }
+  function render(animate) {
+    const ids = steps(), id = ids[S.step], st = STEP[id]();
+    $("stepRange").max = ids.length - 1; $("stepRange").value = S.step;
+    $("stepNo").textContent = `ধাপ ${S.step} / ${ids.length - 1}`;
+    $("infoTitle").textContent = st.title; $("infoDir").textContent = st.dir;
+    $("infoText").innerHTML = md(st.text); $("infoCode").textContent = st.code;
+    const b = $("lbadge"); b.textContent = st.badge; b.style.background = st.color;
+    $("reqBox").innerHTML = st.showReq ? httpHL(requestText()) : '<span class="empty">Request এখনো পাঠানো হয়নি — ধাপ "HTTP request রওনা দিল"-এ দেখা যাবে।</span>';
+    $("resBox").innerHTML = st.showRes ? httpHL(responseText()) : '<span class="empty">Response এখনো তৈরি হয়নি।</span>';
+    renderWF();
+    scene.classList.toggle("focus", st.hl.length > 0);
+    NODES.forEach(n => $(n).classList.toggle("on", st.hl.includes(n)));
+    if (tl) tl.kill();
+    resetScene();
+    tl = gsap.timeline({ onComplete: schedule });
+    st.anim(tl);
+    if (!animate || reduce) tl.progress(1);
+  }
+  function setStep(i, fromPlay) {
+    i = Math.max(0, Math.min(steps().length - 1, i));
+    if (!fromPlay) setPlaying(false);
+    const forward = i === S.step + 1;
+    S.step = i; render(forward || fromPlay);
+  }
+  function schedule() {
+    clearTimeout(playTimer);
+    if (!S.playing) return;
+    playTimer = setTimeout(() => { if (S.step >= steps().length - 1) return setPlaying(false); setStep(S.step + 1, true); }, 1700);
+  }
+  function setPlaying(on) {
+    S.playing = on; $("playBtn").textContent = on ? "❚❚ Pause" : "▶ Play";
+    clearTimeout(playTimer);
+    if (on) { if (S.step >= steps().length - 1) setStep(0, true); else if (!tl || !tl.isActive()) schedule(); }
+  }
+  $("prevBtn").onclick = () => setStep(S.step - 1);
+  $("nextBtn").onclick = () => setStep(S.step + 1);
+  $("resetBtn").onclick = () => setStep(0);
+  $("replayBtn").onclick = () => { setPlaying(false); render(true); };
+  $("playBtn").onclick = () => setPlaying(!S.playing);
+  $("stepRange").oninput = e => setStep(+e.target.value);
+  $("scenario").onchange = e => {
+    const id = steps()[S.step];
+    S.sc = e.target.value; setPlaying(false);
+    const j = steps().indexOf(id); S.step = j >= 0 ? j : Math.min(S.step, steps().length - 1);
+    render(false);
+  };
+  document.addEventListener("keydown", e => {
+    if (e.target.closest("select,input")) return;
+    if (e.key === "ArrowRight") setStep(S.step + 1);
+    if (e.key === "ArrowLeft") setStep(S.step - 1);
+  });
+
+  // ---------------- Nginx vs Apache ----------------
+  const N = 12, CPU = 0.1, WAIT = 1.0, PROCS = 4, K = 1.5; // K = real seconds shown per simulated second
+  const svgC = $("concSvg"), dotsG = $("dots"), procsG = $("procs");
+  for (let j = 0; j < PROCS; j++) {
+    const y = 70 + j * 61;
+    procsG.insertAdjacentHTML("beforeend", `<rect class="proc" id="proc${j}" x="135" y="${y}" width="210" height="50" rx="10"/><text class="proc-t" x="148" y="${y + 18}">process ${j + 1}</text>`);
+  }
+  const qPos = (i, x0) => ({ x: x0 + 22 + (i % 3) * 23, y: 80 + Math.floor(i / 3) * 56 + (i % 3) * 8 });
+  const donePos = (i, x0) => ({ x: x0 + 22 + (i % 4) * 22, y: 82 + Math.floor(i / 4) * 34 });
+  const mkDot = cls => { const c = document.createElementNS(NS, "circle"); c.setAttribute("class", "dot " + cls); c.setAttribute("r", 7); dotsG.append(c); return c; };
+  const A = Array.from({ length: N }, () => mkDot("a")), NG = Array.from({ length: N }, () => mkDot("n"));
+
+  function simulateNginx() {   // one worker; CPU parts run one at a time, waits overlap
+    const tasks = Array.from({ length: N }, (_, i) => ({ i, ready: 0, phase: 1 }));
+    let free = 0; const log = Array.from({ length: N }, () => ({}));
+    while (tasks.length) {
+      tasks.sort((a, b) => a.ready - b.ready || a.phase - b.phase || a.i - b.i);
+      const t = tasks.shift(), start = Math.max(free, t.ready); free = start + CPU;
+      if (t.phase === 1) { log[t.i].s1 = start; log[t.i].park = free; tasks.push({ i: t.i, ready: free + WAIT, phase: 2 }); }
+      else { log[t.i].s2 = start; log[t.i].done = free; }
+    }
+    return log;
+  }
+  const nLog = simulateNginx();
+  const aEnd = Math.ceil(N / PROCS) * (CPU + WAIT + CPU), nEnd = Math.max(...nLog.map(l => l.done));
+  let concTl = null;
+  function buildConc() {
+    if (concTl) concTl.kill();
+    const t = gsap.timeline({ paused: true });
+    A.forEach((d, i) => gsap.set(d, { x: qPos(i, 20).x, y: qPos(i, 20).y, autoAlpha: 1 }));
+    NG.forEach((d, i) => gsap.set(d, { x: qPos(i, 516).x, y: qPos(i, 516).y, autoAlpha: 1 }));
+    for (let j = 0; j < PROCS; j++) $("proc" + j).classList.remove("busy");
+    // Apache: request i runs on process i % 4, one after another
+    A.forEach((d, i) => {
+      const j = i % PROCS, round = Math.floor(i / PROCS), s = round * (CPU + WAIT + CPU), y = 70 + j * 61 + 25;
+      t.to(d, { x: 300, y, duration: 0.35 * K, ease: "power2.inOut" }, s * K)
+        .call(() => $("proc" + j).classList.add("busy"), null, s * K)
+        .to(d, { x: 330, duration: (CPU + WAIT + CPU) * K - 0.35 * K, ease: "none" }, ">")
+        .to(d, { x: donePos(i, 370).x, y: donePos(i, 370).y, duration: 0.3 * K }, (s + CPU + WAIT + CPU) * K)
+        .call(() => { if (round === Math.ceil(N / PROCS) - 1) $("proc" + j).classList.remove("busy"); }, null, (s + CPU + WAIT + CPU) * K);
+    });
+    // Nginx: into the worker for CPU, out to epoll while waiting, back in, then done
+    NG.forEach((d, i) => {
+      const l = nLog[i], park = { x: 755 + (i % 4) * 26, y: 90 + Math.floor(i / 4) * 70 };
+      t.to(d, { x: 670, y: 187, duration: CPU * K, ease: "power2.in" }, l.s1 * K)
+        .to(d, { x: park.x, y: park.y, duration: 0.25 * K, ease: "power2.out" }, l.park * K)
+        .to(d, { x: 670, y: 187, duration: CPU * K, ease: "power2.in" }, l.s2 * K)
+        .to(d, { x: donePos(i, 870).x, y: donePos(i, 870).y, duration: 0.25 * K }, l.done * K);
+    });
+    t.to("#ring", { rotation: 360 * 6, transformOrigin: "50% 50%", duration: Math.max(aEnd, nEnd) * K + 0.6, ease: "none" }, 0);
+    const clock = { a: 0, n: 0 };
+    t.to(clock, { a: aEnd, duration: aEnd * K, ease: "none", onUpdate: () => { $("clockA").textContent = clock.a.toFixed(1) + " s"; } }, 0);
+    t.to(clock, { n: nEnd, duration: nEnd * K, ease: "none", onUpdate: () => { $("clockN").textContent = clock.n.toFixed(1) + " s"; } }, 0);
+    t.call(() => { $("statN").textContent = nEnd.toFixed(1) + " s"; }, null, nEnd * K);
+    t.call(() => { $("statA").textContent = aEnd.toFixed(1) + " s"; $("concPlay").textContent = "▶ চালান"; }, null, aEnd * K + 0.4);
+    concTl = t;
+    $("clockA").textContent = "0.0 s"; $("clockN").textContent = "0.0 s"; $("statA").textContent = "—"; $("statN").textContent = "—";
+  }
+  buildConc();
+  $("concPlay").onclick = () => {
+    if (concTl.progress() >= 1) buildConc();
+    if (concTl.isActive()) { concTl.pause(); $("concPlay").textContent = "▶ চালান"; }
+    else { concTl.play(); $("concPlay").textContent = "❚❚ থামান"; }
+  };
+  $("concReset").onclick = () => { buildConc(); $("concPlay").textContent = "▶ চালান"; };
+
+  // ---------------- theme ----------------
+  const root = document.documentElement;
+  try { const t = localStorage.getItem("welldev-theme"); if (t) root.dataset.theme = t; } catch (e) {}
+  $("themeToggle").onclick = () => {
+    const dark = root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+    root.dataset.theme = dark ? "light" : "dark";
+    try { localStorage.setItem("welldev-theme", root.dataset.theme); } catch (e) {}
+  };
+
+  render(false);
+})();
+</script>
+</body>
+</html>
