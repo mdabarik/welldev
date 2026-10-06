@@ -367,7 +367,8 @@ Execution Time: <b>0.040 ms</b></span></pre>
         <div class="file" style="--dot:var(--warn)"><i></i>একই 100,000 row insert — 0 বনাম 5টা index</div>
 <pre class="code" data-lang="sql">CREATE TABLE t_noidx (id bigint, customer_id int, email text,
                       amount numeric, created_at timestamptz);
-CREATE TABLE t_5idx  (LIKE t_noidx);   -- একই column
+CREATE TABLE t_5idx  (id bigint, customer_id int, email text,
+                      amount numeric, created_at timestamptz);
 CREATE INDEX ON t_5idx (id);     CREATE INDEX ON t_5idx (customer_id);
 CREATE INDEX ON t_5idx (email);  CREATE INDEX ON t_5idx (amount);
 CREATE INDEX ON t_5idx (created_at);
@@ -628,6 +629,7 @@ WHERE customer_id = 4242 AND created_at >= '2025-06-01';
         Index Cond: ((customer_id = 4242) AND (created_at >= '2025-06-01 …'))</span>
 
 -- শুধু প্রথম column (leftmost prefix) → index
+DROP INDEX orders_customer_id_idx;   -- আলাদা (customer_id) index সরিয়ে দেখি
 EXPLAIN SELECT * FROM orders WHERE customer_id = 4242;
 <span class="o">Bitmap Heap Scan on orders  (rows=10)
   ->  Bitmap Index Scan on <b>orders_cust_created_idx</b>
@@ -944,7 +946,7 @@ FROM bt_page_stats('orders_pkey', 3);   -- root page
           <li><b>বেশি fan-out, কম তলা:</b> internal page-এ ctid/row রাখতে হয় না, শুধু key + child pointer — একই 8 KB-তে বেশি key, tree আরো চ্যাপ্টা, কম disk read।</li>
           <li><b>Range আর ORDER BY:</b> leaf chain ধরে sequential হাঁটা — <code>BETWEEN</code>, <code>&gt;</code>, <code>ORDER BY … LIMIT</code> সব সস্তা। Classic B-tree-তে range-এর জন্য tree-তে উপরে-নিচে in-order traversal লাগত।</li>
           <li><b>অনুমানযোগ্য খরচ:</b> সব lookup একই সংখ্যক page — query planner-এর হিসাব সহজ।</li>
-          <li><b>PostgreSQL-এর nbtree</b> হলো <b>Lehman &amp; Yao</b>-র B-link tree: প্রতিটা page-এ (শুধু leaf না, প্রতিটা level-এ) ডান-sibling link আর একটা "high key"। Split চলাকালীন কোনো reader ভুল page-এ নামলে high key দেখে বোঝে আর ডানে সরে যায় — তাই পুরো tree lock না করেই অনেক session একসাথে পড়া-লেখা করতে পারে। Leaf-এ বাম link-ও আছে (<code>Index Scan Backward</code>)। এছাড়া PG 13+-এ duplicate key-র <b>deduplication</b> আর internal key-র suffix truncation।</li>
+          <li><b>PostgreSQL-এর nbtree</b> হলো <b>Lehman &amp; Yao</b>-র B-link tree: প্রতিটা page-এ (শুধু leaf না, প্রতিটা level-এ) ডান-sibling link আর একটা "high key"। Split চলাকালীন কোনো reader ভুল page-এ নামলে high key দেখে বোঝে আর ডানে সরে যায় — তাই পুরো tree lock না করেই অনেক session একসাথে পড়া-লেখা করতে পারে। Leaf-এ বাম link-ও আছে (<code>Index Scan Backward</code>)। এছাড়া PG 12+-এ internal key-র suffix truncation আর PG 13+-এ duplicate key-র <b>deduplication</b>।</li>
         </ul>
       </div>
     </div>
@@ -1428,6 +1430,14 @@ FROM gin_metapage_info(get_raw_page('products_tags_gin', 0));
         <b>12</b> |               0 |                0</span>
 <span class="c">-- 12 = 5 category + 7 tag — 1 লাখ row, কিন্তু entry মাত্র 12টা</span>
 
+SELECT indexrelname, pg_size_pretty(pg_relation_size(indexrelid))
+FROM pg_stat_user_indexes WHERE relname = 'products';
+<span class="o">    indexrelname    | size        <span class="c">-- heap: 22 MB</span>
+ products_attrs_gin | 1200 kB
+ products_fts_gin   | <b>6416 kB</b>
+ products_pkey      | 2208 kB
+ products_tags_gin  |  400 kB</span>
+
 SHOW gin_pending_list_limit;   <span class="o">-- 4MB</span>
 
 INSERT INTO products (name, tags, attrs, description)
@@ -1441,15 +1451,7 @@ FROM gin_metapage_info(get_raw_page('products_tags_gin', 0));
 
 VACUUM products;
 <span class="o"> n_pending_pages | n_pending_tuples
-               0 |                0    ← pending list মূল tree-তে merge</span>
-
-SELECT indexrelname, pg_size_pretty(pg_relation_size(indexrelid))
-FROM pg_stat_user_indexes WHERE relname = 'products';
-<span class="o">    indexrelname    | size        <span class="c">-- heap: 22 MB</span>
- products_attrs_gin | 1200 kB
- products_fts_gin   | <b>6416 kB</b>
- products_pkey      | 2208 kB
- products_tags_gin  |  400 kB</span></pre>
+               0 |                0    ← pending list মূল tree-তে merge</span></pre>
       </div>
       <div class="how" style="margin-top:0"><b>GIN-এর ভেতর:</b>
         <ul>
@@ -1808,7 +1810,7 @@ function TreeWidget(box) {
   box.addEventListener("click", e => {
     const act = e.target.closest("[data-act]")?.dataset.act; if (!act) return;
     if (act === "play") play();
-    else if (act === "step") { stop(); if (idx >= script.length - 1 && script !== build) { script = build; idx = build.length - 2; sqlLine = ""; } step(); }
+    else if (act === "step") { stop(); step(); }
     else if (act === "reset") { stop(); script = build; idx = -1; sqlLine = ""; render(); }
     else if (act === "search") { const k = num("key"); if (k == null) return; runScript(sim.search(k), `SELECT * FROM users WHERE id = ${k};`); }
     else if (act === "range") { let lo = num("lo"), hi = num("hi"); if (lo == null || hi == null) return; if (lo > hi) [lo, hi] = [hi, lo];
