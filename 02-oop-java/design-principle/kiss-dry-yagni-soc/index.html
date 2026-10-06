@@ -7,35 +7,93 @@
 <meta name="description" content="Design Principles — DRY, KISS, YAGNI, SoC — সহজ বাংলায়, C# Bad বনাম Good কোড সহ।">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,650;1,9..144,500&family=Hind+Siliguri:wght@400;500;600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
+/* ===== WellDev theme — shared tokens (same look as the SQL 50 guide and the hub page) ===== */
 :root{
-  --bg:#f6f3ee; --surface:#fffdf9; --surface-2:#efeae2; --side:#efeae2;
-  --ink:#1f1c18; --ink-2:#5a534a; --ink-3:#8d857a; --line:#e2dbcf;
-  --accent:#b4532a; --bad:#c2410c; --good:#2f6f62;
-  --c1:#b4532a; --c2:#2f6f62; --c3:#5b4fa8; --c4:#a07a1d;
-  --code-bg:#1d1b19; --code-ink:#e8e2d8; --code-bar:#2a2724;
-  --t-kw:#e5946b; --t-str:#a9c97f; --t-com:#7d766c; --t-num:#d6b46a; --t-type:#87bfd9; --t-fn:#e9cf8a;
-  --shadow:0 1px 2px rgba(40,30,20,.04),0 8px 24px -12px rgba(40,30,20,.12);
-  --sans:"Inter","Hind Siliguri",system-ui,sans-serif;
-  --bn:"Hind Siliguri","Inter",system-ui,sans-serif;
-  --serif:"Fraunces",Georgia,serif;
-  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  --bg:#f5f7fc; --surface:#ffffff; --surface-2:#f1f4fa; --side:rgba(255,255,255,.86);
+  --ink:#0f172a; --ink-2:#4b5565; --ink-3:#8a95ab; --line:#e4e8f1;
+  --text:var(--ink); --muted:var(--ink-2); --faint:var(--ink-3); --soft:var(--surface-2);
+  --accent:#6366f1; --accent-soft:color-mix(in srgb,#6366f1 12%,transparent);
+  --c1:#6366f1; --c2:#10b981; --c3:#ec4899; --c4:#f59e0b; --c5:#0ea5e9; --c6:#8b5cf6;
+  --good:#059669; --bad:#e11d48;
+  --hero:linear-gradient(135deg,#4f46e5 0%,#7c3aed 45%,#db2777 100%);
+  --shadow:0 1px 2px rgba(15,23,42,.04),0 10px 30px -12px rgba(15,23,42,.14);
+  --shadow-lg:0 2px 4px rgba(15,23,42,.05),0 24px 48px -20px rgba(30,41,99,.3);
+  /* VS Code Light+ */
+  --code-bg:#ffffff; --code-bar:#f3f4f8; --code-line:#e6e9f1; --code-gutter:#237893; --code-ink:#1f1f1f;
+  --t-kw:#0000ff; --t-str:#a31515; --t-com:#008000; --t-num:#098658; --t-type:#267f99; --t-fn:#795e26; --t-attr:#001080;
+  --sans:"Inter","Hind Siliguri",ui-sans-serif,-apple-system,"Segoe UI",sans-serif;
+  --bn:"Hind Siliguri","Inter",ui-sans-serif,sans-serif;
+  --serif:"Inter","Hind Siliguri",sans-serif;
+  --mono:"JetBrains Mono","SF Mono",Menlo,Consolas,monospace;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --bg:#141311; --surface:#1b1a17; --surface-2:#24221e; --side:#181714;
-  --ink:#ece6dc; --ink-2:#b3aa9c; --ink-3:#7f776b; --line:#2e2b26;
-  --accent:#e58a5c; --bad:#f08a5d; --good:#5fb9a5;
-  --c1:#e58a5c; --c2:#5fb9a5; --c3:#a598f0; --c4:#d9b356;
-  --code-bg:#0f0e0d; --code-bar:#1a1917; --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px -14px rgba(0,0,0,.6);
+  --bg:#0b0f1a; --surface:#121827; --surface-2:#182033; --side:rgba(18,24,39,.88);
+  --ink:#e7ecf6; --ink-2:#a3aec6; --ink-3:#6b7791; --line:#232c42;
+  --accent:#818cf8; --c1:#818cf8; --c2:#34d399; --c3:#f472b6; --c4:#fbbf24; --c5:#38bdf8; --c6:#a78bfa;
+  --good:#34d399; --bad:#fb7185;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6); --shadow-lg:0 24px 48px -20px rgba(0,0,0,.75);
+  --code-bg:#1e1e1e; --code-bar:#252526; --code-line:#2d2d30; --code-gutter:#858585; --code-ink:#d4d4d4;
+  --t-kw:#569cd6; --t-str:#ce9178; --t-com:#6a9955; --t-num:#b5cea8; --t-type:#4ec9b0; --t-fn:#dcdcaa; --t-attr:#9cdcfe;
 }}
 :root[data-theme="dark"]{
-  --bg:#141311; --surface:#1b1a17; --surface-2:#24221e; --side:#181714;
-  --ink:#ece6dc; --ink-2:#b3aa9c; --ink-3:#7f776b; --line:#2e2b26;
-  --accent:#e58a5c; --bad:#f08a5d; --good:#5fb9a5;
-  --c1:#e58a5c; --c2:#5fb9a5; --c3:#a598f0; --c4:#d9b356;
-  --code-bg:#0f0e0d; --code-bar:#1a1917; --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px -14px rgba(0,0,0,.6);
+  --bg:#0b0f1a; --surface:#121827; --surface-2:#182033; --side:rgba(18,24,39,.88);
+  --ink:#e7ecf6; --ink-2:#a3aec6; --ink-3:#6b7791; --line:#232c42;
+  --accent:#818cf8; --c1:#818cf8; --c2:#34d399; --c3:#f472b6; --c4:#fbbf24; --c5:#38bdf8; --c6:#a78bfa;
+  --good:#34d399; --bad:#fb7185;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6); --shadow-lg:0 24px 48px -20px rgba(0,0,0,.75);
+  --code-bg:#1e1e1e; --code-bar:#252526; --code-line:#2d2d30; --code-gutter:#858585; --code-ink:#d4d4d4;
+  --t-kw:#569cd6; --t-str:#ce9178; --t-com:#6a9955; --t-num:#b5cea8; --t-type:#4ec9b0; --t-fn:#dcdcaa; --t-attr:#9cdcfe;
 }
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15.5px;line-height:1.65;-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto 0;height:460px;z-index:-1;pointer-events:none;
+  background:radial-gradient(620px 260px at 25% -40px,color-mix(in srgb,#6366f1 15%,transparent),transparent 70%),
+             radial-gradient(540px 240px at 90% -60px,color-mix(in srgb,#ec4899 12%,transparent),transparent 70%)}
+a{color:var(--accent)}
+button{font:inherit;color:inherit}
+
+/* ----- code: VS Code look ----- */
+.code{margin:16px 0 22px;border-radius:12px;overflow:hidden;background:var(--code-bg);border:1px solid var(--code-line);box-shadow:var(--shadow)}
+.code-bar{display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--code-bar);border-bottom:1px solid var(--code-line);font:500 12px var(--mono);color:var(--ink-2)}
+.code-bar::before{content:"";flex:none;width:11px;height:11px;border-radius:50%;background:#ff5f57;box-shadow:17px 0 0 #febc2e,34px 0 0 #28c840;margin-right:36px}
+.code-bar > span:first-of-type{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.copy{margin-left:auto;border:1px solid var(--code-line);background:var(--code-bg);color:var(--ink-2);border-radius:7px;padding:2px 10px;font:500 11.5px var(--sans);cursor:pointer}
+.copy:hover{color:var(--ink);border-color:var(--ink-3)}
+.code pre{margin:0;padding:12px 0;overflow-x:auto;font-family:var(--mono);font-size:13.5px;line-height:1.7;color:var(--code-ink);tab-size:4;counter-reset:ln;scrollbar-width:thin}
+.code pre:not(.numbered){padding:12px 18px}
+.code .ln-row{display:block;padding-right:18px;min-height:1.7em}
+.code .ln-row::before{counter-increment:ln;content:counter(ln);display:inline-block;width:46px;padding-right:16px;text-align:right;color:var(--code-gutter);opacity:.85;user-select:none;-webkit-user-select:none}
+.code .ln-row:hover{background:color-mix(in srgb,var(--accent) 6%,transparent)}
+.hljs-keyword,.hljs-meta .hljs-keyword,.t-kw{color:var(--t-kw)}
+.hljs-built_in{color:var(--t-type)}
+.hljs-string,.hljs-regexp,.t-str{color:var(--t-str)}
+.hljs-comment,.hljs-quote,.t-com{color:var(--t-com);font-style:italic}
+.hljs-number,.hljs-literal,.t-num{color:var(--t-num)}
+.hljs-title,.hljs-title.class_,.hljs-type,.t-type{color:var(--t-type)}
+.hljs-title.function_,.hljs-function .hljs-title,.t-fn{color:var(--t-fn)}
+.hljs-attr,.hljs-variable,.hljs-property,.hljs-meta{color:var(--t-attr)}
+.hljs-params{color:var(--code-ink)}
+
+/* ----- tables ----- */
+.table-wrap{overflow-x:auto;margin:18px 0 22px;border:1px solid var(--line);border-radius:14px;background:var(--surface);box-shadow:var(--shadow)}
+table{border-collapse:collapse;width:100%;font-size:14.5px;line-height:1.6}
+th,td{padding:10px 14px;text-align:left;vertical-align:top;border-bottom:1px solid var(--line)}
+th{background:color-mix(in srgb,var(--accent) 8%,var(--surface));color:color-mix(in srgb,var(--accent) 70%,var(--ink));font:600 12px var(--sans);letter-spacing:.04em;text-transform:uppercase;white-space:nowrap;border-bottom-color:color-mix(in srgb,var(--accent) 22%,var(--line))}
+tbody tr:nth-child(even) td{background:color-mix(in srgb,var(--surface-2) 55%,transparent)}
+tbody tr:hover td{background:color-mix(in srgb,var(--accent) 6%,var(--surface))}
+tr:last-child td{border-bottom:0}
+
+:not(pre)>code{font-family:var(--mono);font-size:.84em;font-weight:500;background:color-mix(in srgb,var(--accent) 9%,var(--surface));color:color-mix(in srgb,var(--accent) 72%,var(--ink));border:0;padding:.12em .45em;border-radius:6px}
+::selection{background:color-mix(in srgb,#8b5cf6 25%,transparent)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+code,pre,kbd{font-variant-ligatures:none;font-feature-settings:"liga" 0,"calt" 0}
+
+
+
+
+
 *{box-sizing:border-box}
 html{scroll-behavior:smooth;scroll-padding-top:24px}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased}
@@ -155,6 +213,56 @@ footer{margin-top:60px;padding-top:20px;border-top:1px solid var(--line);color:v
   .notes{grid-template-columns:1fr}
   .principle p,.principle li{font-size:16px}
 }
+
+/* ===== WellDev theme overrides — single-page guides (DRY/KISS/YAGNI/SoC, UML) ===== */
+:root{--uml:#334155}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--uml:#cbd5e1}}
+:root[data-theme="dark"]{--uml:#cbd5e1}
+.sidebar{backdrop-filter:blur(14px)}
+.brand-mark{background:var(--hero)!important;color:#fff!important;font-family:var(--sans)!important;font-weight:800!important;box-shadow:0 6px 16px -6px #8b5cf6}
+.brand b{font-weight:800;letter-spacing:-.02em}
+.nav a.active{background:color-mix(in srgb,var(--accent) 12%,transparent)!important;box-shadow:none!important;color:var(--accent)}
+.pill-btn{box-shadow:var(--shadow)}
+
+/* hero → gradient card */
+.hero{border:0!important;border-radius:24px;padding:36px 38px!important;margin-bottom:8px;color:#fff;background:var(--hero);box-shadow:var(--shadow-lg);position:relative;overflow:hidden}
+.hero::after{content:"";position:absolute;right:-70px;top:-90px;width:340px;height:340px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.22),transparent 65%);pointer-events:none}
+.hero .eyebrow{color:#fff!important;opacity:.85}
+.hero h1{font-weight:800!important;letter-spacing:-.035em!important}
+.hero h1 em{font-style:normal!important;color:#fde68a!important;font-weight:800!important}
+.hero p{color:#fff!important;opacity:.92}
+.hero strong,.hero b{color:#fff}
+.hero .ov,.hero .roadmap{position:relative;z-index:1}
+.ov-card{box-shadow:var(--shadow)}
+.roadmap a{border-color:rgba(255,255,255,.3)!important;background:rgba(255,255,255,.16)!important;color:#fff!important;backdrop-filter:blur(6px)}
+.roadmap a span{background:#fff!important;color:#6d28d9!important}
+
+/* headings */
+.principle h2,.part-head h2,.summary h2,.rel h3{font-weight:800!important;letter-spacing:-.025em!important}
+.principle h2 span,.rel h3 span{font-style:normal!important;font-weight:500!important}
+.p-badge{background:linear-gradient(135deg,var(--hue),color-mix(in srgb,var(--hue) 55%,#ec4899))!important;box-shadow:0 10px 20px -10px var(--hue);font-family:var(--sans)!important;font-weight:800!important}
+.p-num,.part-head .k{letter-spacing:.1em}
+.rel-n{background:var(--hero)!important;color:#fff!important}
+.rel{border-top:4px solid var(--accent)!important}
+
+/* cards and panels */
+.analogy,.card,.mcard,.mod,.rchip,.rule,.rel-svg,.facts div,.scale,.compare,.rel,.note,.ov-card{border-radius:16px}
+.analogy{border-left:4px solid var(--hue,var(--accent))!important;background:color-mix(in srgb,var(--hue,var(--accent)) 6%,var(--surface))!important}
+.card,.mcard,.mod,.rchip,.rule,.scale,.rel{box-shadow:var(--shadow)}
+.mod .sym{color:var(--accent)!important}
+.rule .q{background:var(--hero)!important}
+.seg-btn.bad.active{background:color-mix(in srgb,#f43f5e 12%,var(--surface))!important;color:#e11d48!important}
+.seg-btn.good.active{background:color-mix(in srgb,#10b981 13%,var(--surface))!important;color:#059669!important}
+.oneliners,.trick{background:var(--hero)!important;color:#fff!important;box-shadow:var(--shadow-lg)}
+.oneliners .label,.trick .lbl{color:rgba(255,255,255,.8)!important}
+.oneliners b,.trick b{color:#fde68a}
+.scale .bar{background:linear-gradient(90deg,#c7d2fe,#8b5cf6,#ec4899)!important}
+.msym{color:#fff!important;background:linear-gradient(135deg,#6366f1,#8b5cf6)!important}
+.tag{background:color-mix(in srgb,var(--accent) 10%,var(--surface))!important;color:var(--accent)!important;border:0!important}
+.badge{color:#db2777!important;background:color-mix(in srgb,#ec4899 12%,transparent)!important}
+.types li.hot::before{background:var(--hero)!important}
+.code pre{font-size:13.5px}
+.full-file summary,.codebox summary{color:var(--accent)!important;font-weight:600}
 </style>
 </head>
 <body>
@@ -168,6 +276,7 @@ footer{margin-top:60px;padding-top:20px;border-top:1px solid var(--line);color:v
       <a class="plain" href="#summary" data-sec="summary"><span class="nav-l">✓</span>তুলনা<small>কখন কোনটা</small></a>
     </nav>
     <div class="side-foot">
+      <a class="pill-btn" href="../../../index.html">⌂ WellDev</a>
       <a class="pill-btn" href="../solid/index.html">SOLID →</a>
       <button class="pill-btn" id="theme" type="button">Theme</button>
     </div>
@@ -746,6 +855,31 @@ document.getElementById("theme").addEventListener("click", () => {
   root.dataset.theme = dark ? "light" : "dark";
   try { localStorage.setItem("dp-theme", root.dataset.theme); } catch (e) {}
 });
+</script>
+<script>
+/* WellDev theme: VS Code style line numbers for every .code block, including ones rendered later. */
+(function () {
+  function number(pre) {
+    if (pre.classList.contains("numbered")) return;
+    const code = pre.querySelector("code") || pre;
+    const stack = [], out = [];
+    code.innerHTML.replace(/\n$/, "").split("\n").forEach(line => {
+      const reopen = stack.join("");
+      const re = /<(\/?)span([^>]*)>/g; let m;
+      while ((m = re.exec(line))) { if (m[1]) stack.pop(); else stack.push("<span" + m[2] + ">"); }
+      out.push('<span class="ln-row">' + reopen + (line || " ") + "</span>".repeat(stack.length) + "</span>");
+    });
+    pre.classList.add("numbered");
+    code.innerHTML = out.join("");
+  }
+  function scan(node) {
+    if (node.nodeType !== 1) return;
+    if (node.matches(".code pre")) number(node);
+    node.querySelectorAll(".code pre").forEach(number);
+  }
+  scan(document.body);
+  new MutationObserver(ms => ms.forEach(m => m.addedNodes.forEach(scan))).observe(document.body, { childList: true, subtree: true });
+})();
 </script>
 </body>
 </html>
