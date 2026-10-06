@@ -1,0 +1,1300 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Idempotency</title>
+<meta name="description" content="Idempotency — database/SQL দৃষ্টিকোণ থেকে: কোন SQL statement idempotent, retry-তে double charge কেন হয়, idempotency key, UNIQUE constraint, conditional update, concurrency আর C# উদাহরণ — PostgreSQL 18-এর আসল output সহ।">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Layout: idea → SQL statement table → the double-charge problem → three database-level fixes →
+   concurrency timelines → HTTP → C# → D3 simulation → Q&A. Code is highlighted by the small
+   tokenizer at the bottom; every psql output on the page is from a real PostgreSQL 18 run. */
+:root{
+  --bg:#f5f7fc; --surface:#ffffff; --surface-2:#f1f4fa; --fg:#0f172a; --muted:#5b6478; --faint:#94a0b8; --line:#e4e8f1;
+  --accent:#6366f1; --sa:#4f46e5; --sb:#db2777;
+  --pa:#e11d48; --pc:#d97706; --pi:#0284c7; --pd:#059669;
+  --ok:#059669; --bad:#e11d48; --warn:#d97706;
+  --hero:linear-gradient(135deg,#4f46e5 0%,#7c3aed 45%,#db2777 100%);
+  --shadow:0 1px 2px rgba(15,23,42,.04),0 10px 30px -12px rgba(15,23,42,.14);
+  --code-bg:#ffffff; --code-line:#e6e9f1;
+  --t-kw:#0000ff; --t-str:#a31515; --t-num:#098658; --t-com:#008000; --t-type:#267f99;
+  --sans:"Inter","Hind Siliguri",system-ui,sans-serif; --bn:"Hind Siliguri","Inter",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0b0f1a; --surface:#121827; --surface-2:#182033; --fg:#e7ecf6; --muted:#9aa6bf; --faint:#66728c; --line:#232c42;
+  --accent:#818cf8; --sa:#818cf8; --sb:#f472b6; --pa:#fb7185; --pc:#fbbf24; --pi:#38bdf8; --pd:#34d399;
+  --ok:#34d399; --bad:#fb7185; --warn:#fbbf24;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6);
+  --code-bg:#1e1e1e; --code-line:#2d2d30; --t-kw:#569cd6; --t-str:#ce9178; --t-num:#b5cea8; --t-com:#6a9955; --t-type:#4ec9b0;
+}}
+:root[data-theme="dark"]{
+  --bg:#0b0f1a; --surface:#121827; --surface-2:#182033; --fg:#e7ecf6; --muted:#9aa6bf; --faint:#66728c; --line:#232c42;
+  --accent:#818cf8; --sa:#818cf8; --sb:#f472b6; --pa:#fb7185; --pc:#fbbf24; --pi:#38bdf8; --pd:#34d399;
+  --ok:#34d399; --bad:#fb7185; --warn:#fbbf24;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6);
+  --code-bg:#1e1e1e; --code-line:#2d2d30; --t-kw:#569cd6; --t-str:#ce9178; --t-num:#b5cea8; --t-com:#6a9955; --t-type:#4ec9b0;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 var(--bn);-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto 0;height:420px;z-index:-1;pointer-events:none;
+  background:radial-gradient(620px 260px at 20% -40px,color-mix(in srgb,#6366f1 14%,transparent),transparent 70%),
+             radial-gradient(540px 240px at 90% -60px,color-mix(in srgb,#ec4899 11%,transparent),transparent 70%)}
+a{color:var(--accent)}
+button{font:inherit;color:inherit}
+code{font-family:var(--mono);font-size:.86em;font-weight:500;background:color-mix(in srgb,var(--accent) 10%,var(--surface));color:color-mix(in srgb,var(--accent) 72%,var(--fg));padding:.1em .4em;border-radius:6px;overflow-wrap:anywhere}
+.wrap{max-width:1040px;margin:0 auto;padding:20px 18px 70px}
+section{margin-top:56px;scroll-margin-top:16px}
+
+.topnav{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;color:var(--fg);text-decoration:none;font:800 16px var(--sans);letter-spacing:-.02em}
+.logo{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:#fff;font:800 13px var(--mono);background:var(--hero)}
+.topnav .sp{flex:1}
+.pill{border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:6px 14px;font:600 13px var(--sans);cursor:pointer;text-decoration:none}
+.pill:hover{color:var(--fg)}
+@media (max-width:420px){.pill{padding:5px 10px;font-size:12px}}
+
+.hero{margin-top:22px;border-radius:22px;padding:30px 32px;color:#fff;background:var(--hero);position:relative;overflow:hidden}
+.hero::after{content:"";position:absolute;right:-70px;top:-90px;width:320px;height:320px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.2),transparent 65%);pointer-events:none}
+.eyebrow{font:600 12px var(--sans);letter-spacing:.1em;text-transform:uppercase;opacity:.85}
+.hero h1{margin:8px 0 10px;font:800 clamp(28px,4.4vw,42px)/1.12 var(--sans);letter-spacing:-.03em}
+.hero p{margin:0;max-width:720px;font-size:16.5px;opacity:.94}
+.jump{display:flex;flex-wrap:wrap;gap:8px;margin-top:20px;position:relative;z-index:1}
+.jump a{color:#fff;text-decoration:none;font:600 13px var(--sans);padding:5px 12px;border-radius:999px;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.28)}
+.jump a:hover{background:rgba(255,255,255,.26)}
+
+h2{display:flex;align-items:center;gap:12px;margin:0 0 6px;font:800 clamp(21px,2.8vw,26px)/1.25 var(--sans);letter-spacing:-.025em}
+.num{flex:none;width:38px;height:38px;border-radius:11px;display:grid;place-items:center;color:#fff;font:800 17px var(--sans);background:var(--c,var(--accent))}
+.motto{display:inline-block;margin:2px 0 14px;font:600 13.5px var(--sans);color:var(--c);background:color-mix(in srgb,var(--c) 10%,transparent);padding:4px 12px;border-radius:999px}
+.lead{margin:0 0 18px;color:var(--muted);max-width:820px}
+.lead b{color:var(--fg)}
+h3{margin:26px 0 10px;font:700 17px var(--sans);letter-spacing:-.015em}
+.math{font:600 15px var(--mono);color:var(--fg)}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow)}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:start}
+@media (max-width:760px){.grid2{grid-template-columns:minmax(0,1fr)}}
+
+.story{padding:14px 16px;font-size:15px;border-left:4px solid var(--c)}
+.story b{color:var(--fg)}
+.story p{margin:0;color:var(--muted)}
+
+pre.code{margin:0;padding:12px 14px;border-radius:12px;background:var(--code-bg);border:1px solid var(--code-line);font:13px/1.65 var(--mono);white-space:pre-wrap;word-break:break-word;font-variant-ligatures:none;overflow-x:auto}
+.k{color:var(--t-kw);font-weight:600}.s{color:var(--t-str)}.d{color:var(--t-num)}.c{color:var(--t-com);font-style:italic}.t{color:var(--t-type)}
+pre.code .o{color:var(--muted);font-style:normal}
+pre.code .e{color:var(--bad);font-style:normal}
+pre.code .g{color:var(--ok);font-style:normal;font-weight:600}
+.file{display:flex;align-items:center;gap:8px;margin:0 0 6px;font:600 12px var(--mono);color:var(--muted)}
+.file i{width:8px;height:8px;border-radius:50%;background:var(--dot,var(--accent));flex:none}
+.file .r{margin-left:auto;font:600 11px var(--sans);padding:1px 8px;border-radius:6px;color:var(--tc);background:color-mix(in srgb,var(--tc) 12%,transparent);white-space:nowrap}
+
+.how{margin-top:14px;padding:14px 16px;border-radius:12px;background:color-mix(in srgb,var(--c) 7%,var(--surface));border:1px solid color-mix(in srgb,var(--c) 22%,var(--line));font-size:15px}
+.how b{color:var(--fg)}
+.how ul,.how ol{margin:6px 0 0;padding-left:20px;color:var(--muted)}
+.how li{margin:3px 0}
+.how p{margin:6px 0 0;color:var(--muted)}
+
+/* flow steps */
+.flow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+@media (max-width:860px){.flow{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.flow.two{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media (max-width:480px){.flow,.flow.two{grid-template-columns:minmax(0,1fr)}}
+.flow .card{padding:14px 16px;border-top:3px solid var(--c)}
+.flow b{display:block;font:700 14.5px var(--sans)}
+.flow small{display:block;font:600 11.5px var(--mono);color:var(--c);margin-bottom:4px}
+.flow p{margin:4px 0 0;font-size:14px;color:var(--muted);line-height:1.55}
+
+/* timeline */
+.tl{overflow:hidden}
+.tl-head,.row{display:grid;grid-template-columns:40px minmax(0,1fr) minmax(0,1fr)}
+.tl-head{background:var(--surface-2);border-bottom:1px solid var(--line);font:700 12.5px var(--sans)}
+.tl-head span{padding:10px 14px}
+.tl-head .a{color:var(--sa)} .tl-head .b{color:var(--sb);border-left:1px solid var(--line)}
+.row{border-bottom:1px solid var(--line)}
+.row:last-child{border-bottom:0}
+.row .n{display:grid;place-items:start center;padding-top:13px;font:600 11.5px var(--mono);color:var(--faint)}
+.cell{padding:10px 14px;min-width:0}
+.cell + .cell{border-left:1px solid var(--line)}
+.cell.on{background:color-mix(in srgb,var(--who) 4%,transparent)}
+.cell.a{--who:var(--sa)} .cell.b{--who:var(--sb)}
+.cell pre{margin:0;font:12.8px/1.6 var(--mono);white-space:pre-wrap;word-break:break-word;font-variant-ligatures:none}
+.out{margin-top:6px;font:12.5px/1.55 var(--mono);color:var(--muted);word-break:break-word}
+.out b{color:var(--fg)}
+.out .err{color:var(--bad)}
+.tag{display:inline-block;margin-top:6px;font:600 12px var(--sans);padding:2px 9px;border-radius:7px;background:color-mix(in srgb,var(--tc) 12%,transparent);color:var(--tc)}
+.tag.ok{--tc:var(--ok)} .tag.bad{--tc:var(--bad)} .tag.wait{--tc:var(--warn)} .tag.info{--tc:var(--muted)}
+@media (max-width:700px){
+  .tl-head{display:none}
+  .row{grid-template-columns:30px minmax(0,1fr)}
+  .cell:not(.on){display:none}
+  .cell + .cell{border-left:0}
+  .cell.on::before{content:attr(data-who);display:inline-block;margin-bottom:4px;font:700 11px var(--sans);color:#fff;background:var(--who);padding:1px 8px;border-radius:6px}
+}
+
+.tscroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:640px;font-size:14.5px}
+th,td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font:600 12px var(--sans);text-transform:uppercase;letter-spacing:.05em;color:var(--muted);background:var(--surface-2)}
+tr:last-child td{border-bottom:0}
+td.y,td.n2,td.m{font:700 13px var(--sans);white-space:nowrap}
+td.y{color:var(--ok)} td.n2{color:var(--bad)} td.m{color:var(--warn)}
+.foot{margin:10px 2px 0;font-size:13.5px;color:var(--muted)}
+
+details{border-bottom:1px solid var(--line);padding:12px 2px}
+details:last-child{border-bottom:0}
+summary{cursor:pointer;font:600 15.5px var(--bn);list-style:none;display:flex;gap:10px}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"+";font:700 15px var(--mono);color:var(--accent);width:14px;flex:none}
+details[open] summary::before{content:"−"}
+details p{margin:8px 0 0 24px;color:var(--muted);font-size:15px}
+details pre.code{margin:8px 0 0 24px}
+
+/* simulation */
+.sim{padding:14px;display:grid;gap:12px}
+.sim-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.sim-bar .sp{flex:1}
+.btn{border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:10px;padding:7px 12px;font:600 13px var(--sans);cursor:pointer}
+.btn:hover:not(:disabled){border-color:var(--accent)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.primary{border-color:transparent;color:#fff;background:linear-gradient(135deg,#6366f1,#8b5cf6 55%,#ec4899)}
+.seg{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface)}
+.seg span{padding:0 10px;font:600 12px var(--sans);color:var(--muted)}
+.seg button{border:0;border-left:1px solid var(--line);background:none;padding:7px 12px;font:700 12px var(--mono);color:var(--muted);cursor:pointer}
+.seg button.on[data-m="on"]{background:var(--ok);color:#fff}
+.seg button.on[data-m="off"]{background:var(--bad);color:#fff}
+.seg button:disabled{cursor:not-allowed}
+.sim-stage{border-radius:14px;background:var(--surface-2);overflow-x:auto;-webkit-overflow-scrolling:touch}
+.sim-stage svg{display:block;width:100%;height:auto;min-width:500px}
+.sim-stage text{font-family:var(--sans)}
+.nbox{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+.nbox.hot{stroke:var(--accent);stroke-width:2.2}
+.n-title{font:800 15px var(--sans);fill:var(--fg)}
+.n-sub{font:500 10.5px var(--mono);fill:var(--muted)}
+.n-big{font:800 26px var(--mono);fill:var(--fg)}
+.n-lbl{font:600 10.5px var(--sans);fill:var(--faint)}
+.n-st{font:600 11px var(--mono);fill:var(--muted)}
+.n-st.ok{fill:var(--ok)} .n-st.bad{fill:var(--bad)} .n-st.wait{fill:var(--warn)} .n-st.a{fill:var(--sa)} .n-st.b{fill:var(--sb)}
+.wire{stroke:var(--line);stroke-width:1.5;stroke-dasharray:4 5}
+.pkt rect{fill:var(--accent)}
+.pkt.a rect{fill:var(--sa)} .pkt.b rect{fill:var(--sb)}
+.pkt.ok rect{fill:var(--ok)} .pkt.bad rect{fill:var(--bad)} .pkt.wait rect{fill:var(--warn)} .pkt.db rect{fill:#64748b}
+.pkt.wait{animation:pulse 1s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.55}}
+.pkt text{fill:#fff;font:700 10.5px var(--mono);text-anchor:middle;dominant-baseline:central}
+.sim-explain{padding:12px 14px;border-radius:12px;background:var(--surface-2);font-size:15px;min-height:50px;color:var(--muted)}
+.sim-explain b{color:var(--fg)}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.stat{border:1px solid var(--line);border-radius:12px;padding:8px 12px}
+.stat small{display:block;font:600 11.5px var(--sans);color:var(--faint)}
+.stat b{font:800 20px var(--mono)}
+.stat.bad{border-color:var(--bad)} .stat.bad b{color:var(--bad)}
+.stat.ok b{color:var(--ok)}
+@media (max-width:480px){.stats{grid-template-columns:minmax(0,1fr)}.stat{display:flex;justify-content:space-between;align-items:baseline}}
+.tbox{border:1px solid var(--line);border-radius:12px;padding:10px 12px;min-width:0;position:relative}
+.tbox.dim table{opacity:.45}
+.tbox .offnote{display:none;font:600 12px var(--sans);color:var(--bad);margin:0 0 4px}
+.tbox.dim .offnote{display:block}
+table.mini{min-width:0;font:12.5px/1.45 var(--mono)}
+table.mini th{font:600 10.5px var(--sans);padding:6px 8px}
+table.mini td{padding:6px 8px;word-break:break-word}
+table.mini td.empty{color:var(--faint);font-family:var(--sans)}
+table.mini tr.fresh td{animation:fresh 1.6s ease-out}
+@keyframes fresh{from{background:color-mix(in srgb,var(--accent) 22%,transparent)}to{background:transparent}}
+table.mini tr.dup td{color:var(--bad);font-weight:700}
+table.mini tr.unc td{font-style:italic;color:var(--warn)}
+.sim-log{max-height:260px;overflow-y:auto;border:1px solid var(--line);border-radius:12px;font:12px/1.5 var(--mono)}
+.sim-log .empty{margin:0;padding:12px;color:var(--faint);font-family:var(--sans);font-size:14px}
+.lg{display:grid;grid-template-columns:26px minmax(0,1fr) minmax(0,.8fr);gap:10px;padding:6px 10px;border-bottom:1px solid var(--line)}
+.lg:last-child{border-bottom:0}
+.lg .w{font:700 11px var(--sans);color:#fff;background:var(--who,var(--accent));border-radius:6px;text-align:center;height:18px;line-height:18px}
+.lg .w.a{--who:var(--sa)} .lg .w.b{--who:var(--sb)}
+.lg .q{white-space:pre-wrap;word-break:break-word}
+.lg .r{color:var(--muted);word-break:break-word}
+.lg .r.ok{color:var(--ok)} .lg .r.bad{color:var(--bad)} .lg .r.wait{color:var(--warn)}
+@media (max-width:560px){.lg{grid-template-columns:26px minmax(0,1fr)}.lg .r{grid-column:2}}
+
+footer{margin-top:56px;padding-top:16px;border-top:1px solid var(--line);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;font-size:13px;color:var(--faint)}
+@media (max-width:640px){.hero{padding:24px 20px;border-radius:18px}}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}.pkt.wait{animation:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="topnav">
+    <a class="brand" href="../../index.html"><span class="logo">W</span>WellDev</a>
+    <span class="sp"></span>
+    <a class="pill" href="../acid/index.html">ACID →</a>
+    <a class="pill" href="../transactions/index.html">Isolation →</a>
+    <button class="pill" id="theme" type="button">Theme</button>
+  </nav>
+
+  <header class="hero">
+    <div class="eyebrow">DBMS · PostgreSQL</div>
+    <h1>Idempotency — একবার বা দশবার, ফল একই</h1>
+    <p>bKash-এ "Pay" দুবার চাপা পড়ল, কিংবা network timeout হয়ে app নিজেই আবার request পাঠাল — টাকা কিন্তু কাটতে হবে একবারই। কোন SQL নিজে থেকেই idempotent, কোনটা না, আর PostgreSQL দিয়ে কীভাবে retry-কে নিরাপদ করা যায় — idempotency key, UNIQUE constraint, conditional update। প্রতিটা উদাহরণ PostgreSQL 18-এ চালিয়ে আসল output দেওয়া।</p>
+    <div class="jump">
+      <a href="#what">কী</a><a href="#sql">SQL statement</a><a href="#problem">সমস্যা</a><a href="#key">Idempotency key</a><a href="#unique">UNIQUE</a><a href="#cas">Conditional update</a><a href="#race">Concurrency</a><a href="#http">HTTP</a><a href="#code">C#</a><a href="#sim">▶ Simulation</a><a href="#qa">Interview</a>
+    </div>
+  </header>
+
+  <!-- 1 what -->
+  <section id="what" style="--c:var(--accent)">
+    <h2><span class="num">1</span>Idempotency কী</h2>
+    <span class="motto">একই কাজ একবার করো বা N বার — system-এর অবস্থা একই</span>
+    <p class="lead">কোনো operation <b>idempotent</b> হলে সেটা একবার চালানো আর পরপর অনেকবার চালানোর ফল (system-এর <b>state</b>) হুবহু এক। গণিতের ভাষায় <span class="math">f(f(x)) = f(x)</span> — যেমন <code>abs(abs(-5)) = abs(-5) = 5</code>। লিফটের "5" button দশবার চাপলেও লিফট 5 তলাতেই যায়; কিন্তু "এক তলা উপরে" button দশবার চাপলে দশ তলা উঠে যাবে।</p>
+    <div class="grid2">
+      <div class="card story" style="--c:var(--pa)"><p><b>Double tap:</b> bKash-এ ৳500 পাঠাতে "Pay" চাপলে, app এক সেকেন্ড ঝুলে থাকল — তুমি আবার চাপলে। Server-এ দুইটা request গেল। তোমার ইচ্ছা একটাই payment, তাই টাকা কাটতে হবে একবার।</p></div>
+      <div class="card story" style="--c:var(--pc)"><p><b>Timeout → retry:</b> Request server-এ পৌঁছেছে, টাকা কেটে <code>COMMIT</code>-ও হয়ে গেছে — কিন্তু response ফেরার পথে mobile network চলে গেল। App জানে না কাজ হয়েছে কি না, তাই আবার পাঠায়। Server-কে চিনতে হবে "এটা আগের সেই request"।</p></div>
+    </div>
+    <div class="how"><b>কেন retry এড়ানো যায় না:</b>
+      <ul>
+        <li>Client কখনো আলাদা করতে পারে না — <b>request</b> হারিয়েছে, নাকি <b>response</b> হারিয়েছে। দুই ক্ষেত্রেই সে শুধু দেখে "timeout"।</li>
+        <li>তাই সব জায়গায় retry আছে: mobile app, HTTP client library (যেমন .NET-এ Polly), API gateway / load balancer, আর message queue (Kafka, RabbitMQ) — এরা <b>at-least-once</b> delivery দেয়, মানে একই message দুবারও আসতে পারে।</li>
+        <li>Retry থাকবেই — তাই server-কে এমনভাবে বানাতে হয় যে duplicate request এলে <b>effect একবারই</b> হয়। এটাই idempotency।</li>
+      </ul>
+    </div>
+
+    <h3>Same state বনাম same response</h3>
+    <div class="grid2">
+      <div>
+        <div class="file"><i></i>psql — একই DELETE দুবার<span class="r" style="--tc:var(--ok)">state একই</span></div>
+<pre class="code" data-lang="sql">DELETE FROM orders WHERE id = 44;
+<span class="o">DELETE 1</span>
+DELETE FROM orders WHERE id = 44;
+<span class="o">DELETE 0</span>          <span class="c">-- response আলাদা, কিন্তু row তো নেই-ই</span></pre>
+      </div>
+      <div>
+        <div class="file"><i></i>HTTP — একই কথা<span class="r" style="--tc:var(--warn)">response আলাদা</span></div>
+<pre class="code" data-lang="http">DELETE /orders/44   →  204 No Content
+DELETE /orders/44   →  404 Not Found</pre>
+      </div>
+    </div>
+    <p class="foot">Idempotency-র সংজ্ঞা <b>state</b> (side effect) নিয়ে, response নিয়ে না — দ্বিতীয় DELETE-এর উত্তর ভিন্ন হলেও সেটা idempotent। কিন্তু payment-এর মতো জায়গায় client-এর <b>একই response</b>-ও দরকার (payment id, নতুন balance) — তাই পরে আমরা response-টাও database-এ রেখে দেব (idempotency key pattern)।</p>
+  </section>
+
+  <!-- 0 setup -->
+  <section id="setup">
+    <h2><span class="num" style="font-size:13px">DB</span>Setup</h2>
+    <p class="lead">এই guide-এর সব উদাহরণ এই তিনটা table-এ। Rahim-এর account-এ <b>৳2000</b>, আর order <b>#42</b> (৳500) এখনো <code>pending</code>।</p>
+<pre class="code" data-lang="sql">CREATE TABLE accounts (
+  id      int  PRIMARY KEY,
+  name    text NOT NULL,
+  balance int  NOT NULL CHECK (balance &gt;= 0)
+);
+CREATE TABLE orders (
+  id         int  PRIMARY KEY,
+  account_id int  NOT NULL REFERENCES accounts,
+  amount     int  NOT NULL,
+  status     text NOT NULL DEFAULT 'pending'
+);
+CREATE TABLE payments (
+  id         bigserial   PRIMARY KEY,           -- sequence থেকে নতুন id
+  account_id int         NOT NULL REFERENCES accounts,
+  order_id   int         NOT NULL,
+  amount     int         NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+INSERT INTO accounts VALUES (1, 'Rahim', 2000);
+INSERT INTO orders (id, account_id, amount) VALUES (42, 1, 500);</pre>
+  </section>
+
+  <!-- 2 sql -->
+  <section id="sql" style="--c:var(--pi)">
+    <h2><span class="num">2</span>SQL statement — idempotent নাকি না</h2>
+    <p class="lead">মূল প্রশ্ন একটাই: <b>statement-টা কি আগের মানের উপর নির্ভর করে, নাকি নতুন কিছু তৈরি করে?</b> Absolute মান বসালে idempotent; "আগের চেয়ে এত কম/বেশি" বা "নতুন row" হলে না।</p>
+    <div class="card tscroll">
+      <table>
+        <thead><tr><th>Statement</th><th>Idempotent?</th><th>কেন</th></tr></thead>
+        <tbody>
+          <tr><td><code>UPDATE accounts SET balance = 1500 WHERE id = 1</code></td><td class="y">✓ হ্যাঁ</td><td>Absolute মান — যতবারই চালাও, balance 1500।</td></tr>
+          <tr><td><code>UPDATE accounts SET balance = balance - 500 WHERE id = 1</code></td><td class="n2">✗ না</td><td>Relative — আগের মান থেকে প্রতিবার আরো 500 কমে।</td></tr>
+          <tr><td><code>INSERT INTO payments (…) VALUES (…)</code> <small>(bigserial id)</small></td><td class="n2">✗ না</td><td>প্রতিবার sequence থেকে নতুন id → duplicate row।</td></tr>
+          <tr><td><code>INSERT INTO orders VALUES (43, …)</code> <small>(id নিজে দেওয়া, PK)</small></td><td class="m">state ✓ · error</td><td>দ্বিতীয়বার <code>duplicate key</code> ERROR — row বাড়ে না, কিন্তু transaction-এর ভেতরে হলে পুরো transaction abort হয়।</td></tr>
+          <tr><td><code>INSERT … ON CONFLICT (id) DO NOTHING</code></td><td class="y">✓ হ্যাঁ</td><td>দ্বিতীয়বার চুপচাপ <code>INSERT 0 0</code>, কোনো error নেই।</td></tr>
+          <tr><td><code>INSERT … ON CONFLICT (id) DO UPDATE SET status = EXCLUDED.status</code></td><td class="y">✓ হ্যাঁ*</td><td>Upsert — থাকলে update, না থাকলে insert। *যদি SET-এ absolute মান থাকে; <code>SET hits = orders.hits + 1</code> হলে না।</td></tr>
+          <tr><td><code>DELETE FROM orders WHERE id = 44</code></td><td class="y">✓ state</td><td><code>DELETE 1</code> → <code>DELETE 0</code>; শেষ অবস্থা একই। কিন্তু <code>DELETE … WHERE id IN (SELECT … LIMIT 10)</code> প্রতিবার <b>পরের</b> 10টা মুছে — না।</td></tr>
+          <tr><td><code>CREATE TABLE / INDEX IF NOT EXISTS</code>, <code>ADD COLUMN IF NOT EXISTS</code>, <code>DROP TABLE IF EXISTS</code></td><td class="y">✓ হ্যাঁ</td><td>Migration script বারবার চালানো যায় — শুধু <code>NOTICE … skipping</code>।</td></tr>
+          <tr><td><code>CREATE TABLE audit_log (…)</code> <small>(IF NOT EXISTS ছাড়া)</small></td><td class="n2">✗ না</td><td>দ্বিতীয়বার <code>ERROR: relation already exists</code> — deploy script মাঝপথে ভেঙে যায়।</td></tr>
+          <tr><td><code>now()</code>, <code>gen_random_uuid()</code>, <code>nextval()</code> / serial, <code>random()</code></td><td class="n2">✗ না</td><td>Volatile function — প্রতিবার নতুন মান। <code>SET updated_at = now()</code> থাকা UPDATE-ও প্রতিবার state বদলায়।</td></tr>
+          <tr><td><code>SELECT …</code></td><td class="y">✓ (safe)</td><td>কিছুই বদলায় না — idempotent তো বটেই, "safe"-ও।</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>প্রমাণ — psql-এ দুবার করে চালানো</h3>
+    <div class="grid2">
+      <div>
+        <div class="file" style="--dot:var(--pi)"><i></i>UPDATE — absolute বনাম relative</div>
+<pre class="code" data-lang="sql">UPDATE accounts SET balance = 1500 WHERE id = 1;
+<span class="o">UPDATE 1</span>
+UPDATE accounts SET balance = 1500 WHERE id = 1;
+<span class="o">UPDATE 1</span>
+SELECT balance FROM accounts WHERE id = 1;
+<span class="o"> balance
+---------
+    1500</span>                 <span class="g">✓ দুবারেও 1500</span>
+
+UPDATE accounts SET balance = balance - 500 WHERE id = 1;
+<span class="o">UPDATE 1                 -- balance → 1000</span>
+UPDATE accounts SET balance = balance - 500 WHERE id = 1;
+<span class="o">UPDATE 1                 -- balance → 500</span>
+<span class="e">-- একই statement, দুবারে মোট 1000 কমল</span></pre>
+      </div>
+      <div>
+        <div class="file" style="--dot:var(--pi)"><i></i>INSERT — PK error বনাম duplicate row</div>
+<pre class="code" data-lang="sql">INSERT INTO orders (id, account_id, amount) VALUES (43, 1, 300);
+<span class="o">INSERT 0 1</span>
+INSERT INTO orders (id, account_id, amount) VALUES (43, 1, 300);
+<span class="e">ERROR:  duplicate key value violates unique constraint "orders_pkey"
+DETAIL:  Key (id)=(43) already exists.</span>
+
+INSERT INTO payments (account_id, order_id, amount) VALUES (1, 43, 300);
+<span class="o">INSERT 0 1</span>
+INSERT INTO payments (account_id, order_id, amount) VALUES (1, 43, 300);
+<span class="o">INSERT 0 1</span>
+SELECT id, order_id, amount FROM payments;
+<span class="o"> id | order_id | amount
+----+----------+--------
+  1 |       43 |    300
+  2 |       43 |    300</span>     <span class="e">← একই payment দুবার</span></pre>
+      </div>
+      <div>
+        <div class="file" style="--dot:var(--ok)"><i></i>Upsert — ON CONFLICT<span class="r" style="--tc:var(--ok)">idempotent</span></div>
+<pre class="code" data-lang="sql">INSERT INTO orders (id, account_id, amount) VALUES (44, 1, 250)
+ON CONFLICT (id) DO NOTHING;
+<span class="o">INSERT 0 1</span>
+INSERT INTO orders (id, account_id, amount) VALUES (44, 1, 250)
+ON CONFLICT (id) DO NOTHING;
+<span class="o">INSERT 0 0</span>               <span class="g">← কিছুই হয়নি, error-ও না</span>
+
+INSERT INTO orders (id, account_id, amount, status) VALUES (44, 1, 250, 'paid')
+ON CONFLICT (id) DO UPDATE SET status = EXCLUDED.status;
+<span class="o">INSERT 0 1</span>
+INSERT INTO orders (id, account_id, amount, status) VALUES (44, 1, 250, 'paid')
+ON CONFLICT (id) DO UPDATE SET status = EXCLUDED.status;
+<span class="o">INSERT 0 1</span>               <span class="c">-- DO UPDATE হলেও tag "INSERT 0 1"</span>
+SELECT * FROM orders WHERE id = 44;
+<span class="o"> id | account_id | amount | status
+----+------------+--------+--------
+ 44 |          1 |    250 | paid</span></pre>
+      </div>
+      <div>
+        <div class="file" style="--dot:var(--ok)"><i></i>DDL / migration — IF NOT EXISTS</div>
+<pre class="code" data-lang="sql">CREATE TABLE IF NOT EXISTS audit_log (id bigserial PRIMARY KEY, msg text);
+<span class="o">CREATE TABLE</span>
+CREATE TABLE IF NOT EXISTS audit_log (id bigserial PRIMARY KEY, msg text);
+<span class="o">NOTICE:  relation "audit_log" already exists, skipping
+CREATE TABLE</span>
+CREATE TABLE audit_log (id bigserial PRIMARY KEY, msg text);
+<span class="e">ERROR:  relation "audit_log" already exists</span>
+
+CREATE INDEX IF NOT EXISTS payments_account_idx ON payments (account_id);
+<span class="o">NOTICE:  relation "payments_account_idx" already exists, skipping</span>
+ALTER TABLE payments ADD COLUMN IF NOT EXISTS note text;
+<span class="o">NOTICE:  column "note" of relation "payments" already exists, skipping</span>
+DROP TABLE IF EXISTS audit_log;
+<span class="o">DROP TABLE</span>
+DROP TABLE IF EXISTS audit_log;
+<span class="o">NOTICE:  table "audit_log" does not exist, skipping</span></pre>
+      </div>
+    </div>
+    <div class="grid2" style="margin-top:14px">
+      <div>
+        <div class="file" style="--dot:var(--bad)"><i></i>Volatile function — প্রতিবার নতুন মান</div>
+<pre class="code" data-lang="sql">SELECT gen_random_uuid();
+<span class="o"> 8c2fade8-4077-4fa6-b130-eba8a4376907</span>
+SELECT gen_random_uuid();
+<span class="o"> 5c3bb19c-2ecf-4358-8e65-33f74da1d026</span>
+
+UPDATE orders SET status = 'paid' WHERE id = 43 RETURNING now();
+<span class="o">              now
+-------------------------------
+ 2026-10-07 03:21:16.092881+06</span>   <span class="c">-- পরের বার অন্য সময়</span></pre>
+      </div>
+      <div class="how" style="margin-top:0"><b>মনে রাখার নিয়ম:</b>
+        <ul>
+          <li><code>x = মান</code> → idempotent; <code>x = x + মান</code> → না।</li>
+          <li>নতুন row বানালে (serial id, uuid default) → না, যদি না একটা <b>UNIQUE</b> key duplicate আটকায়।</li>
+          <li>Migration সবসময় <code>IF NOT EXISTS</code> / <code>IF EXISTS</code> দিয়ে লিখো — CI/CD retry হলেও ভাঙবে না।</li>
+          <li>Upsert-এর জন্য PostgreSQL-এ <code>INSERT … ON CONFLICT</code>-ই ঠিক রাস্তা — এটা concurrent অবস্থাতেও atomic।</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3 problem -->
+  <section id="problem" style="--c:var(--pa)">
+    <h2><span class="num">3</span>সমস্যা: timeout-এর পর retry = double charge</h2>
+    <p class="lead">সাধারণ payment API — এক transaction-এ টাকা কাটো আর payment row লেখো। <a href="../acid/index.html#atomicity">Atomicity</a> ঠিক আছে, কিন্তু <b>idempotency নেই</b>। প্রথম request <code>COMMIT</code> হলো, response পথে হারাল, app একই request আবার পাঠাল:</p>
+    <div class="grid2">
+      <div>
+        <div class="file" style="--dot:var(--pa)"><i></i>POST /payments — প্রথমবার + retry<span class="r" style="--tc:var(--bad)">দুবার কাটা</span></div>
+<pre class="code" data-lang="sql">-- request #1
+BEGIN;
+UPDATE accounts SET balance = balance - 500 WHERE id = 1;
+<span class="o">UPDATE 1</span>
+INSERT INTO payments (account_id, order_id, amount)
+VALUES (1, 42, 500) RETURNING id;
+<span class="o"> id
+----
+  1</span>
+COMMIT;
+<span class="o">COMMIT</span>       <span class="c">-- ✓ হয়ে গেছে… কিন্তু response হারাল</span>
+
+-- retry (হুবহু একই request)
+BEGIN;
+UPDATE accounts SET balance = balance - 500 WHERE id = 1;
+<span class="o">UPDATE 1</span>
+INSERT INTO payments (account_id, order_id, amount)
+VALUES (1, 42, 500) RETURNING id;
+<span class="o"> id
+----
+  2</span>
+COMMIT;</pre>
+      </div>
+      <div>
+        <div class="file" style="--dot:var(--pa)"><i></i>ফলাফল</div>
+<pre class="code" data-lang="sql">SELECT id, order_id, amount FROM payments ORDER BY id;
+<span class="o"> id | order_id | amount
+----+----------+--------
+  1 |       42 |    500
+  2 |       42 |    500</span>
+
+SELECT balance FROM accounts WHERE id = 1;
+<span class="o"> balance
+---------
+    1000</span>   <span class="e">← 1500 হওয়ার কথা ছিল</span></pre>
+        <div class="how"><b>কী ঘটল:</b>
+          <ol>
+            <li>App → <code>POST /payments</code> (order 42, ৳500)</li>
+            <li>Server টাকা কেটে <code>COMMIT</code> করল</li>
+            <li>Response ফেরার পথে network drop → app দেখল timeout</li>
+            <li>App একই request আবার পাঠাল</li>
+            <li>Server জানে না এটা পুরনো request → আবার কাটল</li>
+          </ol>
+          <p>Database-এর দোষ নেই — দুটোই বৈধ transaction। Server-কে <b>"এই request আগে দেখেছি"</b> চেনার উপায় দিতে হবে।</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4 idempotency key -->
+  <section id="key" style="--c:var(--pd)">
+    <h2><span class="num">4</span>সমাধান ১: Idempotency key</h2>
+    <span class="motto">প্রতিটা user-intent-এর জন্য একটা unique key — server সেটা মনে রাখে</span>
+    <p class="lead">Client প্রতিটা payment-এর জন্য একটা random key (UUID) বানায় আর <b>সব retry-তে একই key</b> পাঠায় (<code>Idempotency-Key</code> header)। Server key-টা একটা table-এ লিখে রাখে, সাথে response। একই key আবার এলে কাজ না করে পুরনো response ফেরত দেয়।</p>
+    <div class="grid2">
+      <div>
+        <div class="file" style="--dot:var(--pd)"><i></i>schema</div>
+<pre class="code" data-lang="sql">CREATE TABLE idempotency_keys (
+  key          text        PRIMARY KEY,     -- client-এর পাঠানো UUID
+  request_hash text        NOT NULL,        -- body-র sha256
+  status       text        NOT NULL DEFAULT 'processing',
+  response     jsonb,                       -- যা client-কে ফেরত দিয়েছিলাম
+  created_at   timestamptz NOT NULL DEFAULT now()
+);</pre>
+        <p class="foot">Production-এ key সাধারণত user/merchant অনুযায়ী আলাদা: <code>PRIMARY KEY (user_id, key)</code> — এক user-এর key দিয়ে আরেকজনের response পাওয়া যাবে না।</p>
+      </div>
+      <div class="flow two">
+        <div class="card" style="--c:var(--pd)"><small>step 1</small><b>Key দাবি করো</b><p><code>INSERT … ON CONFLICT (key) DO NOTHING RETURNING key</code></p></div>
+        <div class="card" style="--c:var(--pd)"><small>1 row ফিরল</small><b>নতুন request</b><p>টাকা কাটো, payment লেখো, response key-তে save করো।</p></div>
+        <div class="card" style="--c:var(--pi)"><small>0 row ফিরল</small><b>আগে দেখা request</b><p>Stored response ফেরত দাও — কিছু কাটবে না।</p></div>
+        <div class="card" style="--c:var(--pa)"><small>hash মেলে না</small><b>একই key, ভিন্ন body</b><p>Reject — <code>422</code> (client bug)।</p></div>
+      </div>
+    </div>
+
+    <h3>প্রথম request — key নতুন, তাই কাজ হয়</h3>
+<pre class="code" data-lang="sql">BEGIN;
+INSERT INTO idempotency_keys (key, request_hash)
+VALUES ('7f3a9c1e-pay-42', 'sha256:9b1d…e4')
+ON CONFLICT (key) DO NOTHING
+RETURNING key;
+<span class="o">       key
+-----------------
+ 7f3a9c1e-pay-42
+(1 row)                        </span><span class="g">← 1 row: আমরাই প্রথম</span>
+
+UPDATE accounts SET balance = balance - 500 WHERE id = 1 RETURNING balance;
+<span class="o"> balance
+---------
+    1500</span>
+INSERT INTO payments (account_id, order_id, amount) VALUES (1, 42, 500) RETURNING id;
+<span class="o"> id
+----
+  1</span>
+UPDATE idempotency_keys
+SET status = 'completed',
+    response = '{"payment_id": 1, "status": "paid", "balance": 1500}'
+WHERE key = '7f3a9c1e-pay-42';
+<span class="o">UPDATE 1</span>
+COMMIT;                        <span class="c">-- key + টাকা কাটা + response — একসাথে</span></pre>
+
+    <h3>Retry — একই key আবার এল</h3>
+    <div class="grid2">
+      <div>
+        <div class="file" style="--dot:var(--pi)"><i></i>retry<span class="r" style="--tc:var(--ok)">কিছু কাটা হয়নি</span></div>
+<pre class="code" data-lang="sql">BEGIN;
+INSERT INTO idempotency_keys (key, request_hash)
+VALUES ('7f3a9c1e-pay-42', 'sha256:9b1d…e4')
+ON CONFLICT (key) DO NOTHING
+RETURNING key;
+<span class="o"> key
+-----
+(0 rows)
+INSERT 0 0</span>                 <span class="g">← 0 row: আগে দেখা request</span>
+
+SELECT request_hash, status, response
+FROM idempotency_keys WHERE key = '7f3a9c1e-pay-42';
+<span class="o">  request_hash  |  status   |                       response
+----------------+-----------+------------------------------------------------------
+ sha256:9b1d…e4 | completed | {"status": "paid", "balance": 1500, "payment_id": 1}</span>
+COMMIT;
+<span class="c">-- app এই response-টাই হুবহু ফেরত দেয়</span></pre>
+        <p class="foot">লক্ষ করো, <code>jsonb</code> key-গুলোর ক্রম নিজের মতো সাজিয়ে রাখে — হুবহু byte ফেরত দিতে চাইলে <code>text</code> বা <code>json</code> column নাও।</p>
+      </div>
+      <div>
+        <div class="file" style="--dot:var(--pi)"><i></i>পরে<span class="r" style="--tc:var(--ok)">একবারই কাটা</span></div>
+<pre class="code" data-lang="sql">SELECT id, order_id, amount FROM payments;
+<span class="o"> id | order_id | amount
+----+----------+--------
+  1 |       42 |    500
+(1 row)</span>
+
+SELECT balance FROM accounts WHERE id = 1;
+<span class="o"> balance
+---------
+    1500</span>                <span class="g">✓</span></pre>
+        <div class="file" style="--dot:var(--pa);margin-top:14px"><i></i>একই key, ভিন্ন body (৳500 এর বদলে ৳5000)</div>
+<pre class="code" data-lang="sql">SELECT request_hash = 'sha256:51ac…07' AS same_body, status
+FROM idempotency_keys WHERE key = '7f3a9c1e-pay-42';
+<span class="o"> same_body |  status
+-----------+-----------
+ f         | completed</span>
+<span class="c">-- app → 422 Unprocessable Content
+-- "এই key অন্য request-এ ব্যবহার হয়েছে"</span></pre>
+      </div>
+    </div>
+
+    <h3>কেন key আর টাকা কাটা <u>একই</u> transaction-এ</h3>
+    <div class="grid2">
+      <div>
+        <div class="file" style="--dot:var(--pd)"><i></i>charge fail → key-ও মুছে যায়<span class="r" style="--tc:var(--ok)">retry করা যাবে</span></div>
+<pre class="code" data-lang="sql">BEGIN;
+INSERT INTO idempotency_keys (key, request_hash)
+VALUES ('c0ffee-pay-77', 'sha256:aa…01')
+ON CONFLICT (key) DO NOTHING
+RETURNING key;
+<span class="o"> c0ffee-pay-77
+(1 row)</span>
+UPDATE accounts SET balance = balance - 5000 WHERE id = 1;
+<span class="e">ERROR:  new row for relation "accounts" violates check constraint "accounts_balance_check"
+DETAIL:  Failing row contains (1, Rahim, -3500).</span>
+COMMIT;
+<span class="o">ROLLBACK</span>
+
+SELECT count(*) FROM idempotency_keys WHERE key = 'c0ffee-pay-77';
+<span class="o"> count
+-------
+     0</span>       <span class="g">← key-ও rollback হয়েছে</span></pre>
+      </div>
+      <div class="how" style="margin-top:0"><b><a href="../acid/index.html#atomicity">Atomicity</a> না থাকলে দুই রকম বিপদ:</b>
+        <ul>
+          <li><b>Key আগে আলাদা commit, তারপর charge-এর আগে crash</b> → key বলছে "দেখেছি", কিন্তু টাকা কাটা হয়নি। Retry এলে server ভুল করে "already done" বলবে — payment চিরতরে আটকে।</li>
+          <li><b>Charge commit, তারপর key লেখার আগে crash</b> → key নেই, retry এলে আবার কাটবে — double charge ফিরে এল।</li>
+          <li>এক transaction-এ রাখলে দুটো হয় একসাথে টিকে, নয়তো একসাথে মুছে যায়। আর <b>Durability</b>-র কারণে <code>COMMIT</code>-এর পর crash হলেও key + payment দুটোই থাকে।</li>
+        </ul>
+      </div>
+    </div>
+    <div class="how"><b>কিন্তু আসল charge যদি বাইরের API হয়?</b> (যেমন bKash/SSLCommerz gateway call) — সেটা database transaction-এর ভেতরে rollback করা যায় না। তখন ধাপ ভাগ করো:
+      <ol>
+        <li>Transaction ১: key insert, <code>status = 'processing'</code> → <code>COMMIT</code>।</li>
+        <li>Gateway call — <b>একই idempotency key</b> gateway-কেও পাঠাও (ভালো gateway গুলো এটা support করে)।</li>
+        <li>Transaction ২: payment row লেখো, key-কে <code>completed</code> + response করো।</li>
+      </ol>
+      <p>এর মধ্যে একই key এলে <code>status = 'processing'</code> দেখে <code>409 Conflict</code> দাও ("এখনো চলছে, পরে চেষ্টা করো")। Crash-এ আটকে থাকা <code>processing</code> row গুলো একটা background job gateway-র কাছে status জিজ্ঞেস করে ঠিক করে।</p>
+    </div>
+  </section>
+
+  <!-- 5 unique -->
+  <section id="unique" style="--c:var(--pc)">
+    <h2><span class="num">5</span>সমাধান ২: Business key-তে UNIQUE constraint</h2>
+    <span class="motto">Database-এর শেষ প্রতিরক্ষা — app-এ bug থাকলেও</span>
+    <p class="lead">একটা order-এর payment একবারই হয় — এই নিয়মটা সরাসরি database-কে বলে দাও। Client যদি ভুল করে প্রতিটা retry-তে <b>নতুন</b> idempotency key বানায়, কিংবা কোনো code path key check-ই না করে — তবুও দ্বিতীয় payment ঢুকতে পারবে না।</p>
+    <div class="grid2">
+      <div>
+        <div class="file" style="--dot:var(--pc)"><i></i>প্রথম payment-এর পর (balance 1500)<span class="r" style="--tc:var(--ok)">retry আটকাল</span></div>
+<pre class="code" data-lang="sql">ALTER TABLE payments
+  ADD CONSTRAINT payments_order_id_key UNIQUE (order_id);
+<span class="o">ALTER TABLE</span>
+
+-- একই order-এর জন্য আবার charge
+BEGIN;
+UPDATE accounts SET balance = balance - 500 WHERE id = 1;
+<span class="o">UPDATE 1</span>
+INSERT INTO payments (account_id, order_id, amount) VALUES (1, 42, 500);
+<span class="e">ERROR:  duplicate key value violates unique constraint "payments_order_id_key"
+DETAIL:  Key (order_id)=(42) already exists.</span>
+COMMIT;
+<span class="o">ROLLBACK</span>
+
+SELECT balance FROM accounts WHERE id = 1;
+<span class="o"> balance
+---------
+    1500</span>      <span class="g">← UPDATE-টাও rollback হয়েছে</span></pre>
+      </div>
+      <div class="how" style="margin-top:0"><b>ব্যবহারের নিয়ম:</b>
+        <ul>
+          <li>Constraint ভাঙলে PostgreSQL SQLSTATE <code>23505</code> (unique_violation) দেয়। App সেটা ধরে "আগেই paid" ধরে নিয়ে বিদ্যমান payment খুঁজে ফেরত দেয় — 500 error না।</li>
+          <li>Business key না থাকলে (যেমন একই order-এ কিস্তিতে একাধিক payment বৈধ) তখন <code>UNIQUE (order_id, installment_no)</code> বা idempotency key লাগবে।</li>
+          <li>Idempotency key = <b>app-level</b> সুরক্ষা ও response replay; UNIQUE = <b>data-level</b> গ্যারান্টি। Production-এ দুটোই রাখো।</li>
+          <li>UNIQUE constraint concurrent insert-এও কাজ করে — পরের অংশে দেখো।</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6 conditional update -->
+  <section id="cas" style="--c:var(--pi)">
+    <h2><span class="num">6</span>সমাধান ৩: Conditional update / state machine</h2>
+    <span class="motto">"শুধু যদি এখনো pending থাকে, তবেই paid করো"</span>
+    <p class="lead">Order-এর একটা <b>state machine</b> আছে: <code>pending → paid → shipped</code>। Transition-টা <code>WHERE</code>-এ আগের state সহ লিখলে statement নিজেই idempotent হয় — দ্বিতীয়বার কোনো row মেলে না (compare-and-set)।</p>
+    <div class="grid2">
+      <div>
+        <div class="file" style="--dot:var(--pi)"><i></i>শুধু transition</div>
+<pre class="code" data-lang="sql">UPDATE orders SET status = 'paid'
+WHERE id = 42 AND status = 'pending';
+<span class="o">UPDATE 1</span>          <span class="g">← transition হলো</span>
+
+UPDATE orders SET status = 'paid'
+WHERE id = 42 AND status = 'pending';
+<span class="o">UPDATE 0</span>          <span class="g">← আগেই paid, কিছু হলো না</span></pre>
+        <p class="foot">App row count দেখে: <code>1</code> হলে এখন charge করো, <code>0</code> হলে আগেই হয়ে গেছে। Optimistic locking-ও একই ধারণা: <code>… SET version = version + 1 WHERE id = 42 AND version = 7</code>।</p>
+      </div>
+      <div>
+        <div class="file" style="--dot:var(--pi)"><i></i>transition + charge — এক statement-এ (CTE)</div>
+<pre class="code" data-lang="sql">WITH paid AS (
+  UPDATE orders SET status = 'paid'
+  WHERE id = 42 AND status = 'pending'
+  RETURNING account_id, amount
+)
+UPDATE accounts a SET balance = a.balance - p.amount
+FROM paid p WHERE a.id = p.account_id
+RETURNING a.balance;
+<span class="o"> balance
+---------
+    1500
+UPDATE 1</span>
+
+-- একই statement আবার
+<span class="o"> balance
+---------
+(0 rows)
+UPDATE 0</span>          <span class="g">← order আর pending না → কিছুই কাটা হয়নি</span></pre>
+      </div>
+    </div>
+    <div class="how"><b>Concurrent হলেও নিরাপদ কেন:</b> দুটো request একসাথে এই UPDATE চালালে দ্বিতীয়টা প্রথমটার row lock-এ অপেক্ষা করে। প্রথমটা commit করলে <code>READ COMMITTED</code>-এ PostgreSQL দ্বিতীয়টার <code>WHERE</code> শর্ত <b>row-এর নতুন version-এর উপর আবার যাচাই করে</b> — <code>status</code> এখন <code>'paid'</code>, তাই <code>UPDATE 0</code> (দুই session চালিয়ে যাচাই করা)। সীমাবদ্ধতা: client-কে আগের response দেয় না, আর এমন কিছু লাগে যার state আছে (order)।</div>
+  </section>
+
+  <!-- 7 concurrency -->
+  <section id="race" style="--c:var(--pa)">
+    <h2><span class="num">7</span>Concurrency — দুইটা request একই মুহূর্তে</h2>
+    <p class="lead">Double click-এ দুটো request প্রায় একসাথে আসে — দুইটা আলাদা connection, দুইটা transaction। এখানে সবচেয়ে প্রচলিত ভুল: <b>"আগে SELECT করে দেখি আছে কি না, না থাকলে INSERT"</b> (check-then-act)।</p>
+
+    <h3>ভুল: SELECT করে দেখো, তারপর charge</h3>
+    <div class="card tl" data-tl="racy"></div>
+    <div class="how"><b>কেন ভাঙল:</b> দুজনেই <code>t3–t4</code>-এ check করেছে যখন কোনো payment ছিল না। <code>accounts</code>-এর row lock B-কে শুধু <b>দেরি</b> করিয়েছে, থামায়নি — কারণ "আছে কি না" সিদ্ধান্ত তো আগেই নেওয়া। Check আর insert-এর মাঝের ফাঁকটাই race condition।
+      <ul>
+        <li><code>idempotency_keys</code>-এ PK থাকলে এই একই pattern-এ B পায় <code>ERROR: duplicate key value violates unique constraint "idempotency_keys_pkey"</code> — double charge হয় না, কিন্তু user দেখে 500 error (এটাও যাচাই করা)।</li>
+      </ul>
+    </div>
+
+    <h3>সঠিক: INSERT … ON CONFLICT দিয়ে key দাবি</h3>
+    <div class="card tl" data-tl="onconflict"></div>
+    <div class="how"><b>কী ঘটল:</b>
+      <ul>
+        <li>A-র insert করা key এখনো <b>uncommitted</b>। B একই key insert করতে গিয়ে unique index-এ সেটা দেখে — কিন্তু A commit করবে না rollback, জানে না। তাই B <b>অপেক্ষা করে</b> (<code>t2</code>)।</li>
+        <li>A <code>COMMIT</code> করতেই B জেগে উঠে conflict দেখে → <code>INSERT 0 0</code>, 0 row ফেরত → charge না করে stored response পড়ে।</li>
+        <li>যদি A <code>ROLLBACK</code> করত (ধরো balance কম ছিল), তাহলে B-এর insert সফল হতো (<code>INSERT 0 1</code>) আর B নিজেই কাজটা করত — ঠিক যেমন হওয়া উচিত (দুই session দিয়ে যাচাই করা)।</li>
+        <li>এই pattern <code>READ COMMITTED</code>-এর (default) জন্য। <code>REPEATABLE READ</code>-এ B-এর snapshot A-র row দেখতে পায় না, তাই PostgreSQL দেয় <code>ERROR: could not serialize access due to concurrent update</code> — তখন পুরো transaction retry করতে হবে (<a href="../transactions/index.html#rr">Isolation গাইড</a>)।</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 8 http -->
+  <section id="http" style="--c:var(--pc)">
+    <h2><span class="num">8</span>HTTP method আর idempotency</h2>
+    <p class="lead"><b>Safe</b> = server-এর state বদলায় না (শুধু পড়ে)। <b>Idempotent</b> = বদলাতে পারে, কিন্তু N বার করলেও একবারের সমান। সব safe method idempotent, কিন্তু উল্টোটা না।</p>
+    <div class="card tscroll">
+      <table>
+        <thead><tr><th>Method</th><th>Safe</th><th>Idempotent</th><th>উদাহরণ / কারণ</th></tr></thead>
+        <tbody>
+          <tr><td><code>GET</code>, <code>HEAD</code>, <code>OPTIONS</code></td><td class="y">✓</td><td class="y">✓</td><td>শুধু পড়া — <code>SELECT</code>-এর মতো।</td></tr>
+          <tr><td><code>PUT</code></td><td class="n2">✗</td><td class="y">✓</td><td>পুরো resource replace — <code>PUT /orders/42 {"status":"paid"}</code> ≈ <code>UPDATE … SET status = 'paid'</code>।</td></tr>
+          <tr><td><code>DELETE</code></td><td class="n2">✗</td><td class="y">✓</td><td>দ্বিতীয়বার 404 আসতে পারে, কিন্তু state একই — resource নেই।</td></tr>
+          <tr><td><code>POST</code></td><td class="n2">✗</td><td class="n2">✗</td><td>নতুন কিছু তৈরি করে (নতুন payment, নতুন id) ≈ serial id দিয়ে <code>INSERT</code>। <code>Idempotency-Key</code> দিয়ে idempotent বানাতে হয়।</td></tr>
+          <tr><td><code>PATCH</code></td><td class="n2">✗</td><td class="m">নির্ভর করে</td><td><code>{"balance": 500}</code> হলে idempotent; <code>{"op":"increment","by":500}</code> হলে না।</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="grid2" style="margin-top:14px">
+      <div>
+        <div class="file"><i></i>Idempotency-Key header convention</div>
+<pre class="code" data-lang="http">POST /v1/payments HTTP/1.1
+Content-Type: application/json
+Idempotency-Key: 7f3a9c1e-4b2d-4e8a-9c1f-2d3e4f5a6b7c
+
+{"order_id": 42, "amount": 500}</pre>
+      </div>
+      <div class="how" style="margin-top:0;--c:var(--pc)"><b>যা প্রচলিত:</b>
+        <ul>
+          <li><b>Stripe</b> সহ অনেক payment API এই header নেয়; replay হলে আগের status code + body ফেরত দেয় (Stripe সাথে <code>Idempotent-Replayed: true</code> header দেয়), আর key অন্তত 24 ঘণ্টা রাখে।</li>
+          <li>IETF draft (<i>The Idempotency-Key HTTP Header Field</i>) অনুযায়ী: key না থাকলে <code>400</code>, একই key-তে ভিন্ন body হলে <code>422</code>, আগেরটা এখনো চললে <code>409</code>।</li>
+          <li>HTTP-র idempotency শুধু একটা <b>চুক্তি</b> — <code>PUT</code> handler-এর ভেতরে <code>balance = balance - 500</code> লিখলে সেটা আর idempotent থাকে না। আসল গ্যারান্টি আসে database-এর query থেকে।</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 9 code -->
+  <section id="code" style="--c:var(--accent)">
+    <h2><span class="num">9</span>Application code — C# (Npgsql)</h2>
+    <p class="lead">Server: key দাবি, charge, response save — সব এক transaction-এ। Client: একবার key বানাও, timeout হলে <b>একই key</b> দিয়ে exponential backoff-এ retry।</p>
+    <div class="file" style="--dot:var(--ok)"><i></i>PaymentsEndpoint.cs — server<span class="r" style="--tc:var(--ok)">এক transaction</span></div>
+<pre class="code" data-lang="cs">app.MapPost("/payments", async (HttpRequest http, PayRequest req, NpgsqlDataSource db) =&gt;
+{
+    string? key = http.Headers["Idempotency-Key"];
+    if (string.IsNullOrEmpty(key)) return Results.BadRequest("Idempotency-Key header লাগবে");
+    string hash = Sha256(JsonSerializer.Serialize(req));
+
+    await using var conn = await db.OpenConnectionAsync();
+    await using var tx = await conn.BeginTransactionAsync();       // READ COMMITTED (default)
+
+    NpgsqlCommand Cmd(string sql, params (string, object)[] ps)
+    {
+        var c = new NpgsqlCommand(sql, conn, tx);
+        foreach (var (n, v) in ps) c.Parameters.AddWithValue(n, v);
+        return c;
+    }
+
+    // ১) key দাবি — একই key-এর আরেকটা request চললে এখানে অপেক্ষা করবে
+    var claimed = await Cmd("INSERT INTO idempotency_keys (key, request_hash) VALUES (@k, @h) " +
+                            "ON CONFLICT (key) DO NOTHING RETURNING key",
+                            ("k", key), ("h", hash)).ExecuteScalarAsync();
+
+    if (claimed is null)                                             // ২) আগে দেখা request
+    {
+        await using var rd = await Cmd("SELECT request_hash, response::text FROM idempotency_keys WHERE key = @k",
+                                       ("k", key)).ExecuteReaderAsync();
+        await rd.ReadAsync();
+        if (rd.GetString(0) != hash) return Results.UnprocessableEntity("একই key, ভিন্ন body");
+        return Results.Content(rd.GetString(1), "application/json");  // replay — কিছু কাটা হয়নি
+    }
+
+    try                                                              // ৩) আসল কাজ
+    {
+        var balance = (int)(await Cmd("UPDATE accounts SET balance = balance - @amt WHERE id = @acc RETURNING balance",
+                                      ("amt", req.Amount), ("acc", req.AccountId)).ExecuteScalarAsync())!;
+        var paymentId = (long)(await Cmd("INSERT INTO payments (account_id, order_id, amount) " +
+                                         "VALUES (@acc, @ord, @amt) RETURNING id",
+                                         ("acc", req.AccountId), ("ord", req.OrderId), ("amt", req.Amount)).ExecuteScalarAsync())!;
+        string body = JsonSerializer.Serialize(new { payment_id = paymentId, status = "paid", balance });
+
+        await Cmd("UPDATE idempotency_keys SET status = 'completed', response = @r::jsonb WHERE key = @k",
+                  ("r", body), ("k", key)).ExecuteNonQueryAsync();
+        await tx.CommitAsync();                                      // key + টাকা + response একসাথে
+        return Results.Content(body, "application/json");
+    }
+    catch (PostgresException e) when (e.SqlState is "23514" or "23505")
+    {
+        await tx.RollbackAsync();                                    // key-ও মুছে গেল → পরে retry সম্ভব
+        return Results.UnprocessableEntity(e.SqlState == "23514" ? "balance যথেষ্ট না" : "এই order আগেই paid");
+    }
+});</pre>
+    <div class="grid2" style="margin-top:14px">
+      <div>
+        <div class="file" style="--dot:var(--sa)"><i></i>PaymentClient.cs — retry + backoff</div>
+<pre class="code" data-lang="cs">async Task&lt;HttpResponseMessage&gt; PayWithRetry(HttpClient http, PayRequest req)
+{
+    var key = Guid.NewGuid().ToString();     // একবারই — সব retry-তে একই key
+    for (int attempt = 0; ; attempt++)
+    {
+        using var msg = new HttpRequestMessage(HttpMethod.Post, "/payments")
+        {
+            Content = JsonContent.Create(req)
+        };
+        msg.Headers.Add("Idempotency-Key", key);
+        try
+        {
+            var res = await http.SendAsync(msg);
+            int code = (int)res.StatusCode;
+            if (code &lt; 500 &amp;&amp; code != 409 &amp;&amp; code != 429) return res;   // সফল বা স্থায়ী 4xx
+        }
+        catch (Exception e) when (e is HttpRequestException or TaskCanceledException)
+        {
+            // timeout / network drop — কাজ হয়েছে কি না জানি না → retry নিরাপদ
+        }
+        if (attempt == 4) throw new Exception("৫ বার চেষ্টা করেও হয়নি");
+        // 200ms, 400ms, 800ms, 1.6s … + jitter
+        var delay = 200 * Math.Pow(2, attempt) + Random.Shared.Next(0, 100);
+        await Task.Delay(TimeSpan.FromMilliseconds(delay));
+    }
+}</pre>
+      </div>
+      <div class="how" style="margin-top:0"><b>খেয়াল করার বিষয়:</b>
+        <ul>
+          <li><b>Key loop-এর বাইরে</b> বানানো — প্রতিটা attempt-এ নতুন key বানালে idempotency শেষ।</li>
+          <li>আসল app-এ key "Pay" screen খোলার সময় বানিয়ে local-এ রাখা ভালো — app restart হলেও একই key।</li>
+          <li><b>Exponential backoff</b>: প্রতিবার অপেক্ষা দ্বিগুণ — server বিপদে থাকলে আরো চাপ না দেওয়া।</li>
+          <li><b>Jitter</b>: হাজার client একসাথে retry করলে (thundering herd) সবাই একই মুহূর্তে আঘাত না করে।</li>
+          <li><code>4xx</code> (409/429 ছাড়া) retry করো না — একই ভুল request বারবার পাঠিয়ে লাভ নেই।</li>
+          <li>Server-এর <code>Results.Content</code> শুধু body replay করে; status code-ও replay করতে চাইলে সেটাও <code>idempotency_keys</code>-এ রাখো।</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- sim -->
+  <section id="sim" style="--c:var(--accent)">
+    <h2><span class="num">▶</span>Simulation — নিজে চাপ দিয়ে দেখো</h2>
+    <p class="lead">Client ⇄ API ⇄ PostgreSQL। Idempotency key <b>OFF</b> করলে server সেকশন ৩-এর মতো সোজা টাকা কাটে; <b>ON</b> করলে সেকশন ৪-এর মতো আগে key দাবি করে। প্রতিটা বাটন <b>একটা</b> payment-এর ইচ্ছা (৳500) — দেখো আসলে কতবার কাটা হয়। নিচের log-এ প্রতিটা SQL আর তার ফল।</p>
+    <div class="card sim">
+      <div class="sim-bar">
+        <div class="seg" id="simMode"><span>Idempotency key</span><button type="button" data-m="off">OFF</button><button type="button" data-m="on" class="on">ON</button></div>
+        <span class="sp"></span>
+        <button type="button" class="btn primary" data-act="pay">Pay ৳500</button>
+        <button type="button" class="btn" data-act="timeout">Network timeout → retry</button>
+        <button type="button" class="btn" data-act="double">Double click (২টা request একসাথে)</button>
+        <button type="button" class="btn" id="simReset">↺ Reset</button>
+      </div>
+      <div class="sim-stage"><svg id="simSvg" viewBox="0 0 560 230" role="img" aria-label="Client, API server আর PostgreSQL-এর মধ্যে request ও response"></svg></div>
+      <div class="sim-explain" id="simExplain"></div>
+      <div class="stats">
+        <div class="stat" id="stBal"><small>Rahim-এর balance</small><b>৳2000</b></div>
+        <div class="stat" id="stWant"><small>User যা দিতে চেয়েছে</small><b>৳0</b></div>
+        <div class="stat" id="stGot"><small>আসলে কাটা হয়েছে</small><b>৳0</b></div>
+      </div>
+      <div class="grid2">
+        <div class="tbox"><div class="file"><i></i>payments</div>
+          <table class="mini"><thead><tr><th>id</th><th>order_id</th><th>amount</th></tr></thead><tbody id="simPay"></tbody></table>
+        </div>
+        <div class="tbox" id="simKeysBox"><div class="file" style="--dot:var(--pd)"><i></i>idempotency_keys</div>
+          <p class="offnote">OFF — server এই table ব্যবহার করছে না</p>
+          <table class="mini"><thead><tr><th>key</th><th>status</th><th>response</th></tr></thead><tbody id="simKeys"></tbody></table>
+        </div>
+      </div>
+      <div class="sim-log" id="simLog"></div>
+    </div>
+    <p class="foot">সহজ রাখতে simulation-এ <code>payments</code>-এ <code>UNIQUE (order_id)</code> নেই (থাকলে OFF অবস্থাতেও দ্বিতীয় charge ধরা পড়ত — সেকশন ৫)। Balance কমে গেলে <code>CHECK (balance &gt;= 0)</code> ভাঙে আর পুরো transaction rollback হয়।</p>
+  </section>
+
+  <!-- summary -->
+  <section id="summary">
+    <h2><span class="num" style="--c:var(--accent)">Σ</span>কোনটা কখন</h2>
+    <div class="card tscroll">
+      <table>
+        <thead><tr><th>Technique</th><th>কী দেয়</th><th>সীমাবদ্ধতা</th></tr></thead>
+        <tbody>
+          <tr><td><b>Idempotent SQL</b><br><code>SET x = v</code>, <code>ON CONFLICT</code>, <code>IF NOT EXISTS</code></td><td>Statement নিজেই বারবার চালানো নিরাপদ</td><td>টাকা কাটার মতো relative কাজ এভাবে লেখা যায় না</td></tr>
+          <tr><td><b>Idempotency key</b><br>table + <code>ON CONFLICT DO NOTHING</code></td><td>যেকোনো POST-কে idempotent করে, <b>একই response</b> replay করে</td><td>Client-কে key পাঠাতে হয়; storage + cleanup job লাগে</td></tr>
+          <tr><td><b>UNIQUE constraint</b><br><code>UNIQUE (order_id)</code></td><td>Data-level গ্যারান্টি — app bug, ভুল key, race সব ধরে</td><td>Natural business key লাগে; response replay দেয় না</td></tr>
+          <tr><td><b>Conditional update</b><br><code>WHERE status = 'pending'</code></td><td>Lock ছাড়াই race-safe transition (READ COMMITTED re-check)</td><td>State machine থাকা resource লাগে; row count দেখে app-কে সিদ্ধান্ত নিতে হয়</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- interview -->
+  <section id="qa">
+    <h2><span class="num" style="--c:var(--accent)">Q</span>Interview-এ যা আসে</h2>
+    <div class="card" style="padding:4px 18px">
+      <details><summary>Idempotent আর safe-এর পার্থক্য কী?</summary><p>Safe operation server-এর state একদমই বদলায় না (<code>GET</code>, <code>SELECT</code>)। Idempotent operation বদলাতে পারে, কিন্তু একবার আর N বারের ফল একই (<code>PUT</code>, <code>DELETE</code>, <code>SET balance = 500</code>)। সব safe operation idempotent, কিন্তু সব idempotent operation safe না।</p></details>
+      <details><summary>DELETE কি সত্যিই idempotent? দ্বিতীয়বার তো 404 আসে।</summary><p>হ্যাঁ। Idempotency state নিয়ে — দুবার পরেও resource নেই, যেমন একবার পরেও নেই। Response ভিন্ন (<code>DELETE 1</code> → <code>DELETE 0</code>, 204 → 404) হওয়া সংজ্ঞা ভাঙে না। তবে "সবচেয়ে পুরনো 10টা মুছো" ধরনের DELETE প্রতিবার আলাদা row মুছে — সেটা idempotent না।</p></details>
+      <details><summary>POST কেন idempotent না? কীভাবে বানাবে?</summary><p>POST মানে "নতুন কিছু তৈরি করো" — server প্রতিবার নতুন id দেয়, ঠিক serial id দিয়ে <code>INSERT</code>-এর মতো। Idempotent বানাতে client একটা <code>Idempotency-Key</code> পাঠায়; server key-টা unique table-এ <code>INSERT … ON CONFLICT DO NOTHING</code> দিয়ে আসল কাজের <b>একই transaction</b>-এ লেখে, আর response save করে replay করে। সাথে business key-তে UNIQUE constraint।</p></details>
+      <details><summary>Idempotency key কতদিন রাখবে? Table তো বাড়তেই থাকবে।</summary><p>Client যতক্ষণ retry করতে পারে তার চেয়ে বেশি সময় — সাধারণত 24 ঘণ্টা থেকে 7 দিন (Stripe অন্তত 24 ঘণ্টা)। একটা scheduled cleanup job চালাও: <code>DELETE FROM idempotency_keys WHERE created_at &lt; now() - interval '24 hours'</code> (বড় table-এ batch করে, <code>created_at</code>-এ index রেখে)। খুব বেশি traffic হলে দিন অনুযায়ী partition করে পুরনো partition <code>DROP</code> করা সবচেয়ে সস্তা। TTL-এর পরে একই key এলে সেটা নতুন request হিসেবে গণ্য হবে — তাই business key-তে UNIQUE constraint রাখা জরুরি।</p></details>
+      <details><summary>Key কে বানাবে — client না server?</summary><p>Client। Server বানালে timeout-এর পর client সেই key জানেই না, তাই retry-তে পাঠাতে পারবে না। Client প্রতিটা <b>user intent</b>-এর জন্য (প্রতিটা HTTP attempt-এর জন্য না) একটা random UUID v4 বানায় — যেমন checkout screen খোলার সময় — আর সব retry-তে সেটাই পাঠায়। Server key-কে user অনুযায়ী scope করে: <code>PRIMARY KEY (user_id, key)</code>।</p></details>
+      <details><summary>Idempotency আর message queue-র "exactly-once delivery" — সম্পর্ক কী?</summary><p>Network-এ সত্যিকারের exactly-once delivery প্রায় অসম্ভব; Kafka/RabbitMQ/SQS সাধারণত at-least-once দেয় — consumer crash করলে একই message আবার আসে। তাই "exactly-once <b>processing</b>" = at-least-once delivery + <b>idempotent consumer</b>। Consumer একটা dedup table রাখে আর message-এর side effect-এর একই transaction-এ id লেখে:</p>
+<pre class="code" data-lang="sql">CREATE TABLE processed_messages (
+  message_id   text PRIMARY KEY,
+  processed_at timestamptz NOT NULL DEFAULT now()
+);
+BEGIN;
+INSERT INTO processed_messages (message_id) VALUES ('evt-9f2c')
+ON CONFLICT DO NOTHING RETURNING message_id;
+-- 0 row → আগেই process হয়েছে, শুধু ack করো
+-- 1 row → আসল কাজ এখানে, তারপর COMMIT, তারপর ack
+COMMIT;</pre></details>
+      <details><summary>Upsert কী? ON CONFLICT DO NOTHING আর DO UPDATE-এর পার্থক্য?</summary><p>Upsert = "থাকলে update, না থাকলে insert" — এক atomic statement-এ। <code>DO NOTHING</code> বিদ্যমান row ছুঁয়ে না, <code>RETURNING</code>-এ 0 row দেয় (idempotency key-র জন্য আদর্শ — "আমি প্রথম কি না" জানা যায়)। <code>DO UPDATE SET col = EXCLUDED.col</code> নতুন মান বসায়, <code>RETURNING</code> সবসময় row দেয়। এটা idempotent শুধু যদি SET-এ absolute মান থাকে। "SELECT করে দেখে INSERT/UPDATE" race-prone; PostgreSQL-এর <code>MERGE</code>-ও concurrent insert-এ unique violation দিতে পারে — তাই concurrent upsert-এ <code>ON CONFLICT</code>-ই নিরাপদ পছন্দ।</p></details>
+      <details><summary>প্রথম request এখনো চলছে, তখন একই key আরেকটা এল — কী হবে?</summary><p>Key insert আর কাজ এক transaction-এ থাকলে দ্বিতীয়টা unique index-এ <b>অপেক্ষা করে</b>, প্রথমটা commit করলে 0 row পেয়ে stored response ফেরত দেয়; প্রথমটা rollback করলে দ্বিতীয়টা নিজেই কাজটা করে (সেকশন ৭)। কাজের মাঝে বাইরের API call থাকলে key আগে <code>processing</code> হিসেবে commit হয় — তখন দ্বিতীয়টাকে <code>409 Conflict</code> দাও, client পরে retry করবে।</p></details>
+    </div>
+  </section>
+
+  <footer><span>WellDev · DBMS &amp; SQL</span><span><a href="../acid/index.html">ACID</a> · <a href="../transactions/index.html">Transaction Isolation →</a></span></footer>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script>
+// Two-lane timelines: [who, sql, output, tag]; tag = [kind, text], kind = ok | bad | wait | info.
+// Every output below was captured by driving two real psql sessions against PostgreSQL 18.
+const STEPS = {
+  racy: [
+    ["A", "BEGIN;"],
+    ["B", "BEGIN;"],
+    ["A", "SELECT id FROM payments\nWHERE order_id = 42;", "(0 rows)", ["info", "এখনো pay হয়নি → charge করি"]],
+    ["B", "SELECT id FROM payments\nWHERE order_id = 42;", "(0 rows)", ["bad", "B-ও একই সিদ্ধান্ত নিল"]],
+    ["A", "UPDATE accounts SET balance = balance - 500\nWHERE id = 1;\nINSERT INTO payments (account_id, order_id, amount)\nVALUES (1, 42, 500) RETURNING id;", "UPDATE 1\nid → <b>1</b>"],
+    ["B", "UPDATE accounts SET balance = balance - 500\nWHERE id = 1;", "", ["wait", "⏳ A-র row lock-এ আটকে"]],
+    ["A", "COMMIT;"],
+    ["B", "-- A COMMIT করতেই ছাড়া পেল", "UPDATE 1", ["info", "check তো আগেই হয়ে গেছে"]],
+    ["B", "INSERT INTO payments (account_id, order_id, amount)\nVALUES (1, 42, 500) RETURNING id;\nCOMMIT;", "id → <b>2</b>\nCOMMIT"],
+    ["A", "SELECT id, order_id, amount FROM payments;\nSELECT balance FROM accounts WHERE id = 1;", "1 | 42 | 500\n2 | 42 | 500\nbalance → <b>1000</b>", ["bad", "double charge!"]],
+  ],
+  onconflict: [
+    ["A", "BEGIN;\nINSERT INTO idempotency_keys (key, request_hash)\nVALUES ('7f3a9c1e-pay-42', 'sha256:9b1d…e4')\nON CONFLICT (key) DO NOTHING\nRETURNING key;", "key → <b>7f3a9c1e-pay-42</b>\nINSERT 0 1", ["ok", "key দখল (এখনো uncommitted)"]],
+    ["B", "BEGIN;\nINSERT INTO idempotency_keys (key, request_hash)\nVALUES ('7f3a9c1e-pay-42', 'sha256:9b1d…e4')\nON CONFLICT (key) DO NOTHING\nRETURNING key;", "", ["wait", "⏳ A-র uncommitted key-এর জন্য অপেক্ষা"]],
+    ["A", "UPDATE accounts SET balance = balance - 500\nWHERE id = 1;\nINSERT INTO payments (account_id, order_id, amount)\nVALUES (1, 42, 500) RETURNING id;\nUPDATE idempotency_keys SET status = 'completed',\n  response = '{\"payment_id\": 1, ...}'\nWHERE key = '7f3a9c1e-pay-42';", "UPDATE 1\nid → <b>1</b>\nUPDATE 1"],
+    ["A", "COMMIT;", "", ["ok", "key + টাকা কাটা একসাথে"]],
+    ["B", "-- A COMMIT করতেই ছাড়া পেল", "(0 rows)\nINSERT 0 0", ["info", "conflict → charge করবে না"]],
+    ["B", "SELECT status, response FROM idempotency_keys\nWHERE key = '7f3a9c1e-pay-42';\nCOMMIT;", "completed | {\"status\": \"paid\", \"balance\": 1500, \"payment_id\": 1}", ["ok", "একই response replay"]],
+    ["A", "SELECT count(*) AS payments,\n  (SELECT balance FROM accounts WHERE id = 1)\nFROM payments;", "payments → <b>1</b> · balance → <b>1500</b>", ["ok", "একবারই কাটা"]],
+  ],
+};
+const HEADS = {
+  racy: ["Request A · প্রথম click", "Request B · দ্বিতীয় click"],
+  onconflict: ["Request A · প্রথম click", "Request B · দ্বিতীয় click"],
+};
+
+const esc = s => s.replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+const KW = {
+  sql: "BEGIN|COMMIT|ROLLBACK|SELECT|FROM|WHERE|UPDATE|SET|INSERT|INTO|VALUES|CREATE|TABLE|INDEX|ALTER|ADD|COLUMN|CONSTRAINT|DROP|DELETE|IF|EXISTS|NOT|NULL|PRIMARY|KEY|UNIQUE|CHECK|REFERENCES|DEFAULT|ON|CONFLICT|DO|NOTHING|RETURNING|EXCLUDED|WITH|AS|AND|IN|LIMIT|ORDER|BY|count|now|interval|gen_random_uuid|int|text|bigserial|timestamptz|jsonb",
+  cs: "async|await|using|var|try|catch|throw|new|if|return|null|string|int|long|for|foreach|in|is|or|when|params|object|Task",
+};
+// Tokenise once so keywords inside strings/comments are left alone. Pre-marked spans (output) are kept.
+function highlight(src, lang) {
+  const com = lang === "cs" ? "\\/\\/[^\\n]*" : "--[^\\n]*";
+  const str = lang === "cs" ? '"(?:[^"\\\\]|\\\\.)*"' : "'(?:[^']|'')*'";
+  const re = new RegExp(`(${com})|(${str})|\\b(\\d+)\\b|\\b(${KW[lang]})\\b|\\b([A-Z][a-z]+[A-Z]\\w*)\\b`, "g");
+  return esc(src).replace(re, (m, c, s, d, k, t) =>
+    c ? `<span class="c">${c}</span>` : s ? `<span class="s">${s}</span>` : d ? `<span class="d">${d}</span>` :
+    k ? `<span class="k">${k}</span>` : lang === "cs" ? `<span class="t">${t}</span>` : t);
+}
+document.querySelectorAll("pre.code").forEach(pre => {
+  const lang = pre.dataset.lang;
+  if (!KW[lang]) return;
+  // Highlight only the plain-text parts; leave hand-marked output spans untouched.
+  [...pre.childNodes].forEach(node => {
+    if (node.nodeType !== 3) return;
+    const span = document.createElement("span");
+    span.innerHTML = highlight(node.textContent, lang);
+    node.replaceWith(...span.childNodes);
+  });
+});
+
+document.querySelectorAll("[data-tl]").forEach(box => {
+  const cell = (who, step) => {
+    if (step[0] !== who) return `<div class="cell ${who.toLowerCase()}"></div>`;
+    const [, sql, out, tag] = step;
+    return `<div class="cell ${who.toLowerCase()} on" data-who="${who}">
+      <pre>${highlight(sql, "sql")}</pre>
+      ${out ? `<div class="out">${out.replace(/\n/g, "<br>")}</div>` : ""}
+      ${tag ? `<span class="tag ${tag[0]}">${tag[1]}</span>` : ""}</div>`;
+  };
+  const [ha, hb] = HEADS[box.dataset.tl];
+  box.innerHTML = `<div class="tl-head"><span></span><span class="a">${ha}</span><span class="b">${hb}</span></div>` +
+    STEPS[box.dataset.tl].map((s, i) => `<div class="row"><span class="n">t${i + 1}</span>${cell("A", s)}${cell("B", s)}</div>`).join("");
+});
+
+/* ---------- Simulation ----------
+   Server logic mirrors the SQL on this page:
+   OFF → BEGIN; UPDATE accounts … balance - 500; INSERT INTO payments …; COMMIT   (section 3)
+   ON  → BEGIN; INSERT INTO idempotency_keys … ON CONFLICT DO NOTHING RETURNING key;
+         1 row → charge + save response; 0 row → return stored response          (section 4)
+   A second request with the same uncommitted key waits until the first commits (section 7);
+   in OFF mode the second UPDATE waits on the accounts row lock, then charges anyway.        */
+(function sim() {
+  const svg = d3.select("#simSvg");
+  const AMOUNT = 500, START = 2000;
+  const BX = { client: 8, api: 220, db: 432 }, BW = 120, BY = 30, BH = 170;
+  const CL = BX.client + BW, AL = BX.api, AR = BX.api + BW, DL = BX.db;
+  const LANE = { "": 112, A: 98, B: 128 };
+  const ABORT = Symbol("abort");
+
+  // static drawing
+  const gBase = svg.append("g");
+  [[CL, AL], [AR, DL]].forEach(([a, b]) => gBase.append("line").attr("class", "wire").attr("x1", a).attr("x2", b).attr("y1", 112).attr("y2", 112));
+  const node = {};
+  [["client", "📱 Client", "Rahim-এর app"], ["api", "API server", "POST /payments"], ["db", "PostgreSQL", "shop db"]].forEach(([id, t, s]) => {
+    const g = gBase.append("g").attr("transform", `translate(${BX[id]},${BY})`);
+    const rect = g.append("rect").attr("class", "nbox").attr("width", BW).attr("height", BH).attr("rx", 14);
+    g.append("text").attr("class", "n-title").attr("x", BW / 2).attr("y", 26).attr("text-anchor", "middle").text(t);
+    g.append("text").attr("class", "n-sub").attr("x", BW / 2).attr("y", 43).attr("text-anchor", "middle").text(s);
+    const stA = g.append("text").attr("class", "n-st").attr("x", BW / 2).attr("y", 136).attr("text-anchor", "middle");
+    const stB = g.append("text").attr("class", "n-st").attr("x", BW / 2).attr("y", 155).attr("text-anchor", "middle");
+    node[id] = { rect, st: { "": stA, A: stA, B: stB } };
+  });
+  const dbG = gBase.append("g").attr("transform", `translate(${BX.db},${BY})`);
+  dbG.append("text").attr("class", "n-lbl").attr("x", BW / 2).attr("y", 70).attr("text-anchor", "middle").text("accounts · Rahim");
+  const balT = dbG.append("text").attr("class", "n-big").attr("x", BW / 2).attr("y", 102).attr("text-anchor", "middle");
+  const gPkt = svg.append("g");
+
+  // state
+  let st, token = 0, busy = false, mode = "on";
+  const reset = () => {
+    token++;
+    gPkt.selectAll("*").interrupt().remove();
+    st = { balance: START, payments: [], keys: new Map(), nextPay: 1, order: 41, wanted: 0, acct: null };
+    Object.values(node).forEach(n => { n.st.A.text(""); n.st.B.text(""); n.rect.classed("hot", false); });
+    d3.select("#simLog").html('<p class="empty">এখনো কোনো request নেই — উপরের একটা বাটন চাপো।</p>');
+    say("Mode বেছে নাও, তারপর একটা বাটন চাপো। <b>ON</b> আর <b>OFF</b> দুই অবস্থাতেই \"Network timeout → retry\" চালিয়ে তুলনা করো।");
+    setBusy(false);
+    render();
+  };
+
+  const sleep = (ms, t) => new Promise(r => setTimeout(r, ms)).then(() => alive(t));
+  const alive = t => { if (t !== token) throw ABORT; };
+  function say(html) { d3.select("#simExplain").html(html); }
+  function status(id, lane, text, cls = "") { node[id].st[lane].attr("class", "n-st " + cls).text(text); }
+  function hot(id, on) { node[id].rect.classed("hot", on); }
+  function pkt(text, cls, y, x) {
+    const w = Math.max(54, text.length * 6.5 + 16);
+    const g = gPkt.append("g").attr("class", "pkt " + cls).attr("transform", `translate(${x},${y})`);
+    g.append("rect").attr("x", -w / 2).attr("y", -10).attr("width", w).attr("height", 20).attr("rx", 7);
+    g.append("text").text(text);
+    return g;
+  }
+  async function fly(t, text, cls, y, x1, x2, dur = 650) {
+    const g = pkt(text, cls, y, x1);
+    try { await g.transition().duration(dur).ease(d3.easeCubicInOut).attr("transform", `translate(${x2},${y})`).end(); }
+    catch (e) { throw ABORT; }
+    g.remove(); alive(t);
+  }
+  function log(lane, sql, res, cls = "") {
+    const box = d3.select("#simLog");
+    box.select(".empty").remove();
+    const who = lane || "•";
+    box.append("div").attr("class", "lg").html(
+      `<span class="w ${lane.toLowerCase()}">${who}</span><span class="q">${highlight(sql, "sql")}</span><span class="r ${cls}">${esc(res)}</span>`);
+    const el = box.node(); el.scrollTop = el.scrollHeight;
+  }
+  function render() {
+    balT.text("৳" + st.balance);
+    const charged = START - st.balance;
+    d3.select("#stBal b").text("৳" + st.balance);
+    d3.select("#stWant b").text("৳" + st.wanted);
+    d3.select("#stGot b").text("৳" + charged);
+    d3.select("#stGot").attr("class", "stat " + (charged > st.wanted ? "bad" : charged ? "ok" : ""));
+    const now = Date.now();
+    const seen = {};
+    st.payments.forEach(p => { seen[p.order] = (seen[p.order] || 0) + 1; });
+    d3.select("#simPay").html(st.payments.length ? st.payments.map(p =>
+      `<tr class="${now - p.t < 1500 ? "fresh" : ""} ${seen[p.order] > 1 ? "dup" : ""}"><td>${p.id}</td><td>${p.order}</td><td>${p.amount}</td></tr>`).join("")
+      : '<tr><td class="empty" colspan="3">কোনো row নেই</td></tr>');
+    const keys = [...st.keys.values()];
+    d3.select("#simKeys").html(keys.length ? keys.map(k =>
+      `<tr class="${now - k.t < 1500 ? "fresh" : ""} ${k.committed ? "" : "unc"}"><td>${k.key}</td><td>${k.committed ? k.status : "processing (uncommitted)"}</td><td>${k.response ? esc(JSON.stringify(k.response)) : "—"}</td></tr>`).join("")
+      : '<tr><td class="empty" colspan="3">কোনো row নেই</td></tr>');
+    d3.select("#simKeysBox").classed("dim", mode === "off");
+  }
+  function setBusy(b) {
+    busy = b;
+    d3.selectAll("[data-act]").property("disabled", b);
+    d3.selectAll("#simMode button").property("disabled", b);
+  }
+
+  // DB side, OFF mode: plain charge, waits on the accounts row lock if another request holds it
+  async function chargeOff(t, r) {
+    const cls = r.lane.toLowerCase();
+    await fly(t, "UPDATE -500", cls || "db", r.y, AR, DL);
+    hot("db", true);
+    if (st.acct) {
+      log(r.lane, "UPDATE accounts SET balance = balance - 500 WHERE id = 1;", "⏳ waiting — row lock (অন্য transaction)", "wait");
+      status("db", r.lane, `${r.lane}: ⏳ row lock`, "wait");
+      const w = pkt("⏳ lock wait", "wait", r.y, DL - 40);
+      await st.acct.p; w.remove(); alive(t);
+    }
+    if (st.balance < AMOUNT) {
+      log(r.lane, "UPDATE accounts SET balance = balance - 500 WHERE id = 1;", 'ERROR: violates check constraint "accounts_balance_check" → ROLLBACK', "bad");
+      status("db", r.lane, `${r.lane ? r.lane + ": " : ""}ROLLBACK`, "bad");
+      await fly(t, "ROLLBACK", "bad", r.y, DL, AR);
+      return { ok: false };
+    }
+    let release; st.acct = { p: new Promise(res => (release = res)) };
+    log(r.lane, "BEGIN;\nUPDATE accounts SET balance = balance - 500 WHERE id = 1;", "UPDATE 1");
+    status("db", r.lane, `${r.lane ? r.lane + ": " : ""}UPDATE 1 🔒`, cls);
+    await sleep(500, t);
+    const pid = st.nextPay++;
+    log(r.lane, "INSERT INTO payments (account_id, order_id, amount)\nVALUES (1, " + r.order + ", 500) RETURNING id;", "id → " + pid);
+    await sleep(450, t);
+    st.balance -= AMOUNT;
+    st.payments.push({ id: pid, order: r.order, amount: AMOUNT, t: Date.now() });
+    st.acct = null; release();
+    log(r.lane, "COMMIT;", "COMMIT", "ok");
+    status("db", r.lane, `${r.lane ? r.lane + ": " : ""}COMMIT #${pid}`, "ok");
+    render();
+    await fly(t, "COMMIT #" + pid, "ok", r.y, DL, AR);
+    return { ok: true, pid, balance: st.balance };
+  }
+
+  // DB side, ON mode: claim the key first; 0 rows → replay stored response
+  async function chargeOn(t, r) {
+    const cls = r.lane.toLowerCase();
+    const claimSql = `BEGIN;\nINSERT INTO idempotency_keys (key, request_hash)\nVALUES ('${r.key}', 'sha256:…')\nON CONFLICT (key) DO NOTHING RETURNING key;`;
+    await fly(t, "INSERT key", cls || "db", r.y, AR, DL);
+    hot("db", true);
+    let k = st.keys.get(r.key), waited = false;
+    if (k && !k.committed) {
+      waited = true;
+      log(r.lane, claimSql, `⏳ waiting — '${r.key}' অন্য transaction-এ uncommitted`, "wait");
+      status("db", r.lane, `${r.lane}: ⏳ key lock`, "wait");
+      say(`<b>${r.lane}</b> একই key insert করতে গিয়ে আটকে গেছে — আগের transaction commit না rollback করবে, PostgreSQL জানে না। তাই অপেক্ষা।`);
+      const w = pkt("⏳ key wait", "wait", r.y, DL - 40);
+      await k.lock; w.remove(); alive(t);
+      k = st.keys.get(r.key);
+    }
+    if (k) {
+      log(r.lane, waited ? "-- (আগের transaction COMMIT করল)" : claimSql, "(0 rows) · INSERT 0 0 → আগে দেখা request");
+      status("db", r.lane, `${r.lane ? r.lane + ": " : ""}INSERT 0 0`, "");
+      await sleep(400, t);
+      log(r.lane, `SELECT status, response FROM idempotency_keys\nWHERE key = '${r.key}';\nCOMMIT;`, `${k.status} | ${JSON.stringify(k.response)}`, "ok");
+      status("db", r.lane, `${r.lane ? r.lane + ": " : ""}cached #${k.response.payment_id}`, "ok");
+      await fly(t, "cached #" + k.response.payment_id, "ok", r.y, DL, AR);
+      return { ok: true, pid: k.response.payment_id, balance: k.response.balance, replay: true };
+    }
+    let release;
+    const entry = { key: r.key, status: "processing", committed: false, response: null, t: Date.now(),
+      lock: new Promise(res => (release = res)) };
+    st.keys.set(r.key, entry);
+    log(r.lane, claimSql, `key → ${r.key} · INSERT 0 1 (নতুন)`, "ok");
+    status("db", r.lane, `${r.lane ? r.lane + ": " : ""}INSERT 0 1 (key)`, cls);
+    render();
+    await sleep(500, t);
+    if (st.balance < AMOUNT) {
+      log(r.lane, "UPDATE accounts SET balance = balance - 500 WHERE id = 1;", 'ERROR: violates check constraint "accounts_balance_check" → ROLLBACK (key-ও মুছে গেল)', "bad");
+      st.keys.delete(r.key); release(); render();
+      status("db", r.lane, `${r.lane ? r.lane + ": " : ""}ROLLBACK`, "bad");
+      await fly(t, "ROLLBACK", "bad", r.y, DL, AR);
+      return { ok: false };
+    }
+    log(r.lane, "UPDATE accounts SET balance = balance - 500 WHERE id = 1;", "UPDATE 1");
+    await sleep(400, t);
+    const pid = st.nextPay++;
+    log(r.lane, "INSERT INTO payments (account_id, order_id, amount)\nVALUES (1, " + r.order + ", 500) RETURNING id;", "id → " + pid);
+    await sleep(400, t);
+    const response = { status: "paid", balance: st.balance - AMOUNT, payment_id: pid };   // jsonb key order
+    log(r.lane, `UPDATE idempotency_keys SET status = 'completed', response = '…'\nWHERE key = '${r.key}';\nCOMMIT;`, "UPDATE 1 · COMMIT", "ok");
+    st.balance -= AMOUNT;
+    st.payments.push({ id: pid, order: r.order, amount: AMOUNT, t: Date.now() });
+    Object.assign(entry, { status: "completed", committed: true, response, t: Date.now() });
+    release();
+    status("db", r.lane, `${r.lane ? r.lane + ": " : ""}COMMIT #${pid}`, "ok");
+    render();
+    await fly(t, "COMMIT #" + pid, "ok", r.y, DL, AR);
+    return { ok: true, pid, balance: response.balance };
+  }
+
+  // one HTTP request: client → API → DB → API, then the response trip (optionally lost)
+  async function request(t, r, { lose = false } = {}) {
+    const cls = r.lane.toLowerCase();
+    const pre = r.lane ? r.lane + " " : "";
+    const label = pre + (mode === "on" ? "POST " + r.key : "POST ৳500");
+    status("client", r.lane, `${pre}→ ${r.attempt > 1 ? "retry" : "request"}`, cls);
+    hot("client", true);
+    await fly(t, label, cls, r.y, CL, AL);
+    hot("api", true);
+    status("api", r.lane, `${pre}processing…`, cls);
+    const res = mode === "on" ? await chargeOn(t, r) : await chargeOff(t, r);
+    const back = res.ok ? `${pre}200 #${res.pid}${res.replay ? " replay" : ""}` : `${pre}422`;
+    status("api", r.lane, back, res.ok ? "ok" : "bad");
+    if (lose) {
+      const mid = (CL + AL) / 2;
+      await fly(t, back, "ok", r.y, AL, mid, 420);
+      const g = pkt("✕ timeout", "bad", r.y, mid);
+      try { await g.transition().delay(350).duration(450).style("opacity", 0).end(); } catch (e) { throw ABORT; }
+      g.remove(); alive(t);
+      status("client", r.lane, "⌛ timeout!", "wait");
+      return { ...res, lost: true };
+    }
+    await fly(t, back, res.ok ? "ok" : "bad", r.y, AL, CL);
+    status("client", r.lane, res.ok ? `${pre}✓ paid #${res.pid}${res.replay ? " (replay)" : ""}` : `${pre}✕ balance কম`, res.ok ? "ok" : "bad");
+    return res;
+  }
+
+  function newIntent() {
+    st.order++;
+    return { order: st.order, key: "k-" + st.order };
+  }
+  function finish(results) {
+    if (results.some(r => r.ok)) st.wanted += AMOUNT;
+    render();
+    const charged = START - st.balance;
+    const extra = charged - st.wanted;
+    if (!results.some(r => r.ok)) say(`Balance যথেষ্ট না — <code>CHECK (balance &gt;= 0)</code> ভেঙেছে, transaction rollback। <b>↺ Reset</b> চাপো।`);
+    else if (extra > 0) say(`<b style="color:var(--bad)">Double charge!</b> User চেয়েছে মোট ৳${st.wanted}, কাটা হয়েছে ৳${charged}। <code>payments</code>-এ একই order_id দুবার (লাল)। এবার <b>ON</b> করে একই বাটন চাপো।`);
+    else say(`<b style="color:var(--ok)">ঠিক আছে:</b> user চেয়েছে ৳${st.wanted}, কাটা হয়েছে ৳${charged}।${results.some(r => r.replay) ? " দ্বিতীয় request টাকা না কেটে <b>একই response</b> (একই payment id) ফেরত পেয়েছে।" : ""}`);
+    Object.keys(node).forEach(id => hot(id, false));
+  }
+
+  const scenarios = {
+    async pay(t) {
+      const it = newIntent();
+      say(mode === "on" ? `Client নতুন payment-এর জন্য key <code>${it.key}</code> বানিয়ে পাঠাল।` : "Client সোজা <code>POST /payments</code> পাঠাল — কোনো key নেই।");
+      const res = await request(t, { ...it, lane: "", y: LANE[""], attempt: 1 });
+      finish([res]);
+    },
+    async timeout(t) {
+      const it = newIntent();
+      say("Request পৌঁছাল, server টাকা কেটে <b>COMMIT</b> করল… কিন্তু response ফেরার পথে network চলে যাবে।");
+      const r1 = await request(t, { ...it, lane: "", y: LANE[""], attempt: 1 }, { lose: true });
+      say(mode === "on"
+        ? `Client timeout দেখল — কাজ হয়েছে কি না জানে না। 1 সেকেন্ড পরে <b>একই key</b> <code>${it.key}</code> দিয়ে retry।`
+        : "Client timeout দেখল — কাজ হয়েছে কি না জানে না। 1 সেকেন্ড পরে একই request আবার পাঠাল (কোনো key নেই, server চিনবে কীভাবে?)।");
+      await sleep(1000, t);
+      const r2 = await request(t, { ...it, lane: "", y: LANE[""], attempt: 2 });
+      finish([r1, r2]);
+    },
+    async double(t) {
+      const it = newIntent();
+      say(mode === "on"
+        ? `দুবার click — দুইটা request, কিন্তু দুটোতেই একই key <code>${it.key}</code> (key বানানো হয়েছে screen খোলার সময়, click-এ না)।`
+        : "দুবার click — দুইটা request প্রায় একসাথে, দুইটা আলাদা transaction।");
+      const results = await Promise.all([
+        request(t, { ...it, lane: "A", y: LANE.A, attempt: 1 }),
+        sleep(220, t).then(() => request(t, { ...it, lane: "B", y: LANE.B, attempt: 1 })),
+      ]);
+      finish(results);
+    },
+  };
+
+  d3.selectAll("[data-act]").on("click", async function () {
+    if (busy) return;
+    const t = token;
+    setBusy(true);
+    Object.values(node).forEach(n => { n.st.A.text(""); n.st.B.text(""); });
+    try { await scenarios[this.dataset.act](t); }
+    catch (e) { if (e !== ABORT) throw e; return; }
+    if (t === token) setBusy(false);
+  });
+  d3.selectAll("#simMode button").on("click", function () {
+    if (busy) return;
+    mode = this.dataset.m;
+    d3.selectAll("#simMode button").classed("on", function () { return this.dataset.m === mode; });
+    render();
+    say(mode === "on" ? "<b>ON:</b> server প্রথমে <code>idempotency_keys</code>-এ key দাবি করবে (সেকশন ৪)।" : "<b>OFF:</b> server key দেখবে না, প্রতিটা request-এ সোজা টাকা কাটবে (সেকশন ৩)।");
+  });
+  d3.select("#simReset").on("click", reset);
+  reset();
+})();
+
+const root = document.documentElement;
+try { const t = localStorage.getItem("welldev-theme"); if (t) root.dataset.theme = t; } catch (e) {}
+document.getElementById("theme").addEventListener("click", () => {
+  const dark = root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  root.dataset.theme = dark ? "light" : "dark";
+  try { localStorage.setItem("welldev-theme", root.dataset.theme); } catch (e) {}
+});
+</script>
+</body>
+</html>
