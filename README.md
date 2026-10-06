@@ -38,6 +38,7 @@ _শীঘ্রই আসছে।_
 ## 05 · Operating System
 
 - [OS, Kernel, Process ও Thread](05-operating-system/01-os-kernel-process-thread.html) — boot থেকে context switch পর্যন্ত, ২৫টি diagram
+- [Process & Thread Internals](05-operating-system/thread-process/index.html) — process/thread কে বানায়, user/kernel space, page table, MMU/TLB, cache, register, core, IMC, stack, PCB/TCB, context switch, driver, NIC
 - [CPU Scheduling](05-operating-system/os-scheduling-algo/index.html) — FCFS, SJF/SRTF, Priority, Round Robin; convoy effect, starvation, time quantum, Gantt chart simulator
 - [Thread Scheduling · Multi-core CPU](05-operating-system/thread/index.html) — process-এর thread কীভাবে ready queue, scheduler আর context switch পেরিয়ে multi-core CPU-তে চলে, 3D simulation
 - [Deadlock](05-operating-system/deadlock/index.html) — DB আর thread-এর উদাহরণ, ৪টি necessary condition, Banker's algorithm simulator, multiprogramming বনাম multitasking
