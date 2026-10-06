@@ -129,7 +129,10 @@ pre.code .g{color:var(--ok);font-style:normal;font-weight:600}
   .row{grid-template-columns:30px minmax(0,1fr)}
   .cell:not(.on){display:none}
   .cell + .cell{border-left:0}
-  .row .cell.on ~ .cell.on{grid-column:2;border-top:1px dashed var(--line)}
+  /* a tick where both lanes act: B's error happens first, then A resumes */
+  .row.both .n{grid-row:1 / 3}
+  .row.both .cell.b{grid-column:2;grid-row:1}
+  .row.both .cell.a{grid-column:2;grid-row:2;border-top:1px dashed var(--line)}
   .cell.on::before{content:attr(data-who);display:inline-block;margin-bottom:4px;font:700 11px var(--sans);color:#fff;background:var(--who);padding:1px 8px;border-radius:6px}
 }
 
@@ -188,12 +191,12 @@ footer{margin-top:56px;padding-top:16px;border-top:1px solid var(--line);display
 #dlSvg .tnode.done circle{stroke:var(--ok);fill:color-mix(in srgb,var(--ok) 10%,var(--surface))}
 #dlSvg .mnode rect{fill:var(--surface-2);stroke:var(--muted);stroke-width:2}
 #dlSvg .mnode.busy rect{stroke:var(--fg)}
-#dlSvg .lbl{font-weight:800;font-size:17px}
-#dlSvg .sub{font-size:12.5px;fill:var(--muted)}
+#dlSvg .lbl{font-weight:800;font-size:19px}
+#dlSvg .sub{font-size:14px;fill:var(--muted)}
 #dlSvg .edge path{fill:none;stroke-width:2.6}
 #dlSvg .edge.hold path{stroke:var(--ok)}
 #dlSvg .edge.wait path{stroke:var(--bad);stroke-dasharray:7 5}
-#dlSvg .edge text{font-size:12px;font-weight:700;paint-order:stroke;stroke:var(--surface);stroke-width:4px;stroke-linejoin:round}
+#dlSvg .edge text{font-size:14px;font-weight:700;paint-order:stroke;stroke:var(--surface);stroke-width:4px;stroke-linejoin:round}
 #dlSvg .edge.hold text{fill:var(--ok)} #dlSvg .edge.wait text{fill:var(--bad)}
 #dlSvg .edge.cyc path{stroke:var(--bad);stroke-width:3.6;stroke-dasharray:9 6;animation:flow 0.9s linear infinite}
 #dlSvg .edge.cyc text{fill:var(--bad)}
@@ -260,6 +263,7 @@ footer{margin-top:56px;padding-top:16px;border-top:1px solid var(--line);display
 .mx .fl{font:700 12px var(--sans)}
 .mx .fl.t{color:var(--ok)} .mx .fl.f{color:var(--faint)}
 .mx tfoot td{background:var(--surface-2);font-weight:600;border-top:1px solid var(--line)}
+@media (max-width:560px){.mx{min-width:0}.mx th,.mx td{padding:5px 3px}.mx td:first-child,.mx th:first-child{padding-left:10px}.mx input{width:2.2em;font-size:12.5px}.mx th{font-size:10.5px;letter-spacing:.02em}}
 .sim-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:12px 14px;border-top:1px solid var(--line)}
 .sim-row label{font:600 13px var(--sans);color:var(--muted)}
 .sim-row select,.sim-row input{font:600 13.5px var(--mono);color:var(--fg);background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:5px 6px}
@@ -540,10 +544,10 @@ pthread_mutex_lock(&amp;A);   // ⏳ A চাই — T1-এর হাতে</pre
         <svg viewBox="0 0 320 240" role="img" aria-label="RAG: R1 থেকে T1, T1 থেকে R2, R2 থেকে T2, T2 থেকে R1 — একটা cycle">
           <defs><marker id="gm" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse" markerUnits="userSpaceOnUse"><path d="M0,0 L10,5 L0,10 z" class="mk-cyc"/></marker></defs>
           <!-- nodes: T1 (60,120), T2 (260,120), R1=Mutex A (160,38), R2=Mutex B (160,202) -->
-          <line class="g-cyc" x1="134" y1="54" x2="84" y2="100" marker-end="url(#gm)"/>
-          <line class="g-cyc g-req" x1="84" y1="140" x2="134" y2="186" marker-end="url(#gm)"/>
-          <line class="g-cyc" x1="186" y1="186" x2="236" y2="140" marker-end="url(#gm)"/>
-          <line class="g-cyc g-req" x1="236" y1="100" x2="186" y2="54" marker-end="url(#gm)"/>
+          <line class="g-cyc" x1="134" y1="63" x2="85" y2="100" marker-end="url(#gm)"/>
+          <line class="g-cyc g-req" x1="85" y1="140" x2="131" y2="176" marker-end="url(#gm)"/>
+          <line class="g-cyc" x1="186" y1="177" x2="235" y2="140" marker-end="url(#gm)"/>
+          <line class="g-cyc g-req" x1="235" y1="100" x2="189" y2="64" marker-end="url(#gm)"/>
           <circle class="g-p" cx="60" cy="120" r="28"/><text x="60" y="125" text-anchor="middle" font-weight="800" font-size="15">T1</text>
           <circle class="g-p" cx="260" cy="120" r="28"/><text x="260" y="125" text-anchor="middle" font-weight="800" font-size="15">T2</text>
           <rect class="g-r" x="120" y="16" width="80" height="44" rx="6"/><circle class="g-dot" cx="160" cy="44" r="4"/><text x="160" y="33" text-anchor="middle" font-size="12" font-weight="700">Mutex A</text>
@@ -716,7 +720,7 @@ safe  ⇔  সবার Finish == true</pre>
       <div class="bar">
         <span style="font:600 13px var(--sans);color:var(--muted)">Preset:</span>
         <button type="button" class="btn on" data-preset="book">Textbook (safe)</button>
-        <button type="button" class="btn" data-preset="unsafe">Unsafe state</button>
+        <button type="button" class="btn" data-preset="unsafe" title="Textbook state-এ P1 (1,0,2) আর তারপর P0 (0,2,0) অন্ধভাবে দিলে যা হতো">Unsafe state</button>
         <span class="sp"></span>
         <button type="button" class="btn primary" id="bkCheck">▶ Check safe state</button>
       </div>
@@ -736,7 +740,7 @@ safe  ⇔  সবার Finish == true</pre>
       </div>
       <p class="verdict" id="rqOut"></p>
     </div>
-    <p class="foot">Grant হলে নতুন state টেবিলে বসে যায় — পরপর একাধিক request দিয়ে দেখতে পারো (যেমন উপরের তিনটা: P1 (1,0,2), তারপর P4 (3,3,0), তারপর P0 (0,2,0))।</p>
+    <p class="foot">"Unsafe state" preset = textbook state-এ P1 (1,0,2) আর তারপর P0 (0,2,0) safety check ছাড়া দিয়ে দিলে যা হতো। Grant হলে নতুন state টেবিলে বসে যায় — পরপর একাধিক request দিয়ে দেখতে পারো (যেমন উপরের তিনটা: P1 (1,0,2), তারপর P4 (3,3,0), তারপর P0 (0,2,0))।</p>
 
     <div class="how"><b>Banker's-এর সীমাবদ্ধতা:</b>
       <ul>
@@ -883,7 +887,7 @@ document.querySelectorAll("[data-tl]").forEach(box => {
       ${tag ? `<span class="tag ${tag[0]}">${tag[1]}</span>` : ""}</div>`;
   };
   box.innerHTML = `<div class="tl-head"><span></span><span class="a">Transaction A · Rahim → Karim</span><span class="b">Transaction B · Karim → Rahim</span></div>` +
-    STEPS[box.dataset.tl].map((s, i) => `<div class="row"><span class="n">t${i + 1}</span>${cell("A", s)}${cell("B", s)}</div>`).join("");
+    STEPS[box.dataset.tl].map((s, i) => `<div class="row${Array.isArray(s[0]) ? " both" : ""}"><span class="n">t${i + 1}</span>${cell("A", s)}${cell("B", s)}</div>`).join("");
 });
 
 /* ===================== two threads, two mutexes — D3 animation ===================== */
@@ -1106,14 +1110,14 @@ function request(s, p, req) {
     { t: "② তারপর P4 চায় (3, 3, 0)", r: r2, steps: [
       `Request ≤ Need(P4) = ${vec(needS1[4])} ✓`,
       `Request ≤ Available = ${vec(s1.avail)}? না — A লাগবে 3, খালি আছে 2`], res: "WAIT — এখন যথেষ্ট resource নেই" },
-    { t: "③ অথবা P0 চায় (0, 2, 0)", r: r3, steps: [
+    { t: "③ তারপর P0 চায় (0, 2, 0)", r: r3, steps: [
       `Request ≤ Need(P0) = ${vec(needS1[0])} ✓`,
       `Request ≤ Available = ${vec(s1.avail)} ✓ — resource খালি আছে!`,
       `ধরে নিই দিলাম → Available = ${vec(r3.next.avail)}`,
       `Safety check → কারো Need ≤ ${vec(r3.next.avail)} না (P1-এর Need (0,2,0) চায় B=2, P3-এর (0,1,1) চায় C=1) → unsafe`], res: "WAIT — দিলে state unsafe হতো" },
   ];
   document.getElementById("bkReqs").innerHTML = reqCards.map(c => `<div class="card" style="--rc:${C[c.r.status]}"><h4>${c.t}</h4><ol>${c.steps.map(s => `<li>${s}</li>`).join("")}</ol><span class="res">${c.res}</span></div>`).join("") +
-    `<div class="card" style="--rc:var(--bad)"><h4>④ ভুল request: P3 চায় (1, 0, 0)</h4><ol><li>Need(P3) = ${vec(needB[3])} — A আর লাগার কথাই না</li><li>Request &gt; Need → process তার ঘোষিত Max ভাঙছে</li></ol><span class="res">ERROR — request বাতিল (${request(B, 3, [1, 0, 0]).status})</span></div>`;
+    `<div class="card" style="--rc:var(--bad)"><h4>④ ভুল request: P3 চায় (1, 0, 0)</h4><ol><li>Need(P3) = ${vec(needB[3])} — A আর লাগার কথাই না</li><li>Request &gt; Need → process তার ঘোষিত Max ভাঙছে</li></ol><span class="res">${request(B, 3, [1, 0, 0]).status === "error" ? "ERROR — request বাতিল" : "?"}</span></div>`;
 
   // ---- interactive simulator ----
   let preset = "book", S = clone(PRESETS[preset]), run = 0;
@@ -1188,7 +1192,7 @@ function request(s, p, req) {
       const stuck = res.finish.map((f, i) => f ? null : P(i)).filter(Boolean);
       res.finish.forEach((f, i) => { if (!f) { const el = mx.querySelector(`[data-fin="${i}"]`); el.textContent = "false"; } });
       verdict.className = "verdict bad";
-      verdict.innerHTML = `<b>UNSAFE ✗</b> — Work ${vec(res.work)} দিয়ে ${stuck.join(", ")}-এর কারো Need মেটানো যায় না। সবাই এখন Max চাইলে deadlock হবে।`;
+      verdict.innerHTML = `<b>UNSAFE ✗</b> — Work ${vec(res.work)} দিয়ে ${stuck.join(", ")}-এর কারো Need মেটানো যায় না। OS আর গ্যারান্টি দিতে পারে না — সবাই বাকি Need চাইলে deadlock হবে।`;
     }
   }
 
