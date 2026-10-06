@@ -244,6 +244,7 @@ pre.code{background:var(--code-bg);border:1px solid var(--line);border-radius:12
           <label for="scenario">ঘটনা</label>
           <select id="scenario">
             <option value="bad">পথে bit নষ্ট (CRC ধরবে)</option>
+            <option value="csum">Router এর ভেতরে নষ্ট (checksum ধরবে)</option>
             <option value="lost">Router এ packet হারানো</option>
             <option value="clean">সব ঠিক</option>
           </select>
@@ -360,7 +361,7 @@ pre.code{background:var(--code-bg);border:1px solid var(--line);border-radius:12
       const frameOf = p => [...DST_MAC, ...SRC_MAC, 0x08, 0x00, ...SRC_IP, ...DST_IP, ...tcpNoSum, ...u16(chk), ...p];
       const crc = crc32(frameOf(payload));
       const badPayload = payload.slice(); badPayload[0] ^= 0x04;
-      return { k, len, seq, payload, text: show(payload), chk, crc, badPayload, badText: show(badPayload), crcBad: crc32(frameOf(badPayload)) };
+      return { k, len, seq, payload, text: show(payload), chk, crc, badPayload, badText: show(badPayload), crcBad: crc32(frameOf(badPayload)), chkBad: inetChecksum([...tcpNoSum, ...badPayload]) };
     });
     D = { n, sizes, segs, ackFinal: ISN + 1 + n, hex: all.slice(0, 6).map(b => b.toString(16).padStart(2, '0')).join(' ') + (n > 6 ? ' …' : '') };
   }
@@ -382,6 +383,7 @@ pre.code{background:var(--code-bg);border:1px solid var(--line);border-radius:12
         text: 'বাম টাওয়ার আপনার ল্যাপটপ, ডান টাওয়ার চ্যাট সার্ভার। দুটোতেই একই ৭টা লেয়ার। যেকোনো লেয়ারে ক্লিক করলে সেই ধাপে চলে যাবে। এই যাত্রায় দেখবেন মেসেজ কীভাবে ৩টা segment এ ভাগ হয়, আর প্রতিটায় seq, checksum আর CRC কীভাবে বসে। ' +
           (sc === 'bad' ? 'তারপর পথে একটা segment এর bit নষ্ট হবে। দেখবেন CRC কীভাবে সেটা ধরে আর TCP কীভাবে আবার আনায়।'
             : sc === 'lost' ? 'তারপর Router একটা segment ফেলে দেবে। দেখবেন seq নম্বর দেখে TCP কীভাবে বোঝে আর আবার আনায়।'
+            : sc === 'csum' ? 'তারপর Router এর memory তে একটা segment নষ্ট হবে, আর Router নতুন CRC বসিয়ে দেবে। দেখবেন CRC কেন এটা ধরতে পারে না, আর শেষ প্রাপকের TCP checksum কীভাবে ধরে।'
             : 'এবার কোনো সমস্যা হবে না, প্রতিটা চেক পাস করবে।'),
         code: `message  "${S.msg}"\nbytes    ${D.n}\nভাগ      ৩টা segment (${D.sizes.join(' + ')} বাইট)` };
       case 's7': return { li: 0, title: 'Layer 7 · Application', dir: SEND,
@@ -411,27 +413,37 @@ pre.code{background:var(--code-bg);border:1px solid var(--line);border-radius:12
       case 'wire': return { li: -2, title: 'তার দিয়ে যাত্রা', dir: 'Physical medium · মাঝে Router',
         text: sc === 'bad' ? `৩টা frame পরপর যাচ্ছে। seg 2 যখন Router পার হচ্ছে, তারে electrical noise এর কারণে একটা bit উল্টে গেল। "${s1.text}" হয়ে গেল "${s1.badText}"। প্রেরক বা প্রাপক কেউ এখনো জানে না।`
           : sc === 'lost' ? 'seg 2 Router এ পৌঁছালে Router এর queue ভর্তি ছিল, তাই সে packet টা ফেলে দিল (drop)। ইন্টারনেটে এটা খুবই সাধারণ ঘটনা। প্রাপক জানেই না যে একটা packet আসার কথা ছিল।'
+          : sc === 'csum' ? `seg 2 Router এ পৌঁছায়। Router আগে CRC চেক করে ✓, তারপর frame খুলে packet টা নিজের memory তে রাখে। ঠিক তখন memory তে একটা bit উল্টে গেল (খারাপ RAM বা bug)। "${s1.text}" হয়ে গেল "${s1.badText}"। এরপর Router নতুন MAC header আর নতুন CRC বসিয়ে পাঠায়। নতুন CRC হিসাব হলো নষ্ট ডেটার উপরেই!`
           : '৩টা frame পরপর তার দিয়ে যাচ্ছে। Router প্রতিটার IP দেখে পথ ঠিক করে, নতুন MAC আর নতুন CRC বসিয়ে আবার পাঠায়।',
         code: sc === 'bad' ? `seg 2 byte 1: ${bin8(s1.payload[0])} → ${bin8(s1.badPayload[0])}\n                     ^ ১টা bit উল্টে গেছে`
-          : sc === 'lost' ? `seg 2 (seq ${s1.seq})  router queue full → drop ✗` : '৩টা frame → Router → সার্ভার' };
+          : sc === 'lost' ? `seg 2 (seq ${s1.seq})  router queue full → drop ✗`
+          : sc === 'csum' ? `ঢোকার সময়  FCS ${h32(s1.crc)}  CRC ✓\nmemory তে  byte 1: ${bin8(s1.payload[0])} → ${bin8(s1.badPayload[0])}\nবের হওয়ার সময়  নতুন FCS ${h32(s1.crcBad)}  (নষ্ট ডেটার উপর)\nTCP header এ checksum এখনো ${h16(s1.chk)} (আসল ডেটার)` : '৩টা frame → Router → সার্ভার' };
       case 'r1': return { li: 6, title: 'Layer 1 · Physical', dir: RECV,
-        text: 'সার্ভারের নেটওয়ার্ক কার্ড সিগন্যাল থেকে আবার bit পড়ে frame বানায়। ' + (sc === 'lost' ? 'এসেছে মাত্র ২টা frame।' : sc === 'bad' ? 'seg 2 এর একটা bit নষ্ট, কিন্তু Physical লেয়ার শুধু bit পড়ে, ঠিক-ভুল বোঝে না।' : '৩টাই এসেছে।'),
+        text: 'সার্ভারের নেটওয়ার্ক কার্ড সিগন্যাল থেকে আবার bit পড়ে frame বানায়। ' + (sc === 'lost' ? 'এসেছে মাত্র ২টা frame।' : (sc === 'bad' || sc === 'csum') ? 'seg 2 এর একটা bit নষ্ট, কিন্তু Physical লেয়ার শুধু bit পড়ে, ঠিক-ভুল বোঝে না।' : '৩টাই এসেছে।'),
         code: (sc === 'lost' ? [g[0], g[2]] : g).map(s => `frame এলো  (seq ${s.seq})`).join('\n') };
       case 'r2': return { li: 5, title: 'Layer 2 · Data Link: CRC চেক', dir: RECV,
         text: 'প্রাপক প্রতিটা frame এর CRC-32 নিজে আবার হিসাব করে, আর frame এর শেষের FCS এর সাথে মেলায়। ' +
-          (sc === 'bad' ? 'seg 1 আর 3 মিলেছে ✓। seg 2 মেলেনি ✗, কারণ একটা bit বদলে গেছে। Data Link লেয়ার নষ্ট frame চুপচাপ ফেলে দেয়, কাউকে জানায় না। আবার চাওয়ার দায়িত্ব TCP এর।' : 'সবগুলো মিলেছে ✓।'),
+          (sc === 'bad' ? 'seg 1 আর 3 মিলেছে ✓। seg 2 মেলেনি ✗, কারণ একটা bit বদলে গেছে। Data Link লেয়ার নষ্ট frame চুপচাপ ফেলে দেয়, কাউকে জানায় না। আবার চাওয়ার দায়িত্ব TCP এর।'
+            : sc === 'csum' ? 'তিনটাই মিলেছে ✓, seg 2 ও! কারণ seg 2 এর FCS টা Router নষ্ট ডেটার উপরেই নতুন করে হিসাব করেছিল। CRC শুধু শেষ hop এর তার পাহারা দেয়: "Router থেকে আমার কাছে আসার পথে কিছু বদলেছে কি?" না, বদলায়নি। তাই নষ্ট segment টা CRC পার হয়ে উপরে উঠে যায়।'
+            : 'সবগুলো মিলেছে ✓।'),
         code: g.filter(s => !(sc === 'lost' && s.k === 1)).map(s => {
-          const bad = sc === 'bad' && s.k === 1;
+          const bad = sc === 'bad' && s.k === 1, cs = sc === 'csum' && s.k === 1;
+          if (cs) return `frame 2  FCS ${h32(s.crcBad)}  (Router এর নতুন)\n         হিসাব ${h32(s.crcBad)}  ✓ মিলেছে, কিন্তু ডেটা নষ্ট!`;
           return `frame ${s.k + 1}  FCS ${h32(s.crc)}\n         হিসাব ${h32(bad ? s.crcBad : s.crc)}  ${bad ? '✗ মেলেনি → drop' : '✓'}`;
         }).join('\n') };
       case 'r3': return { li: 4, title: 'Layer 3 · Network', dir: RECV,
-        text: 'IP header দেখে: destination IP কি আমার? হ্যাঁ। IP header খুলে segment উপরে দেয়। ' + (sc === 'bad' ? 'seg 2 এর frame আগেই ফেলে দেওয়া হয়েছে, তাই উপরে উঠল মাত্র ২টা।' : sc === 'lost' ? 'উপরে উঠল ২টা।' : ''),
+        text: 'IP header দেখে: destination IP কি আমার? হ্যাঁ। IP header খুলে segment উপরে দেয়। ' + (sc === 'bad' ? 'seg 2 এর frame আগেই ফেলে দেওয়া হয়েছে, তাই উপরে উঠল মাত্র ২টা।' : sc === 'lost' ? 'উপরে উঠল ২টা।' : sc === 'csum' ? 'তিনটাই উপরে উঠল। IP header ঠিক আছে, নষ্ট হয়েছে শুধু ভেতরের data।' : ''),
         code: 'IP dst 93.184.216.34 = আমি ✓' };
       case 'r4': return { li: 3, title: 'Layer 4 · Transport: checksum আর seq চেক', dir: RECV,
-        text: sc === 'clean'
+        text: sc === 'csum'
+          ? `TCP প্রতিটা segment এর checksum আবার হিসাব করে। seg 1 আর 3 ✓। seg 2 এর header এ লেখা ${h16(s1.chk)} (প্রেরক আসল ডেটা দেখে লিখেছিল), কিন্তু এখন হিসাব করে আসছে ${h16(s1.chkBad)} ✗। মানে পথের কোথাও ডেটা বদলেছে। TCP segment টা ফেলে দেয়। ফলে seq ${s1.seq} নেই, ${g[2].seq} বাফারে অপেক্ষা করে।`
+          : sc === 'clean'
           ? 'TCP প্রতিটা segment এর checksum আবার হিসাব করে মেলায় ✓। তারপর seq দেখে: 1001, তারপর 1005, তারপর 1009। ঠিক যেমন প্রত্যাশা ছিল, কোনো ফাঁক নেই।'
           : `TCP প্রতিটা segment এর checksum আবার হিসাব করে মেলায় ✓। তারপর seq দেখে: প্রত্যাশা ছিল ${g[0].seq}, এসেছে ${g[0].seq} ✓। এরপর প্রত্যাশা ${s1.seq}, কিন্তু এসেছে ${g[2].seq}! মাঝে ${s1.seq}–${g[2].seq - 1} বাইটগুলো নেই। মানে একটা segment মিস। ${g[2].seq} কে বাফারে রেখে দেয়, অ্যাপকে এখনো দেয় না।`,
-        code: (sc === 'clean' ? g : [g[0], g[2]]).map(s => `seg ${s.k + 1}  checksum ${h16(s.chk)} ✓`).join('\n') + '\n\n' +
+        code: sc === 'csum'
+          ? g.map(s => s.k === 1 ? `seg 2  header ${h16(s.chk)}  হিসাব ${h16(s.chkBad)}  ✗ → drop` : `seg ${s.k + 1}  checksum ${h16(s.chk)} ✓`).join('\n') +
+            `\n\nপ্রত্যাশা ${g[0].seq} ← এলো ${g[0].seq} ✓\nপ্রত্যাশা ${s1.seq} ← নেই ✗ gap!\n${g[2].seq} বাফারে রাখা হলো`
+          : (sc === 'clean' ? g : [g[0], g[2]]).map(s => `seg ${s.k + 1}  checksum ${h16(s.chk)} ✓`).join('\n') + '\n\n' +
           (sc === 'clean' ? g.map(s => `প্রত্যাশা ${s.seq} ← এলো ${s.seq} ✓`).join('\n')
             : `প্রত্যাশা ${g[0].seq} ← এলো ${g[0].seq} ✓\nপ্রত্যাশা ${s1.seq} ← এলো ${g[2].seq} ✗ gap!\n${g[2].seq} বাফারে রাখা হলো`) };
       case 'dupack': return { li: 3, title: 'Duplicate ACK: "1005 পাঠাও"', dir: 'প্রাপক → প্রেরক',
@@ -449,7 +461,7 @@ pre.code{background:var(--code-bg);border:1px solid var(--line);border-radius:12
       case 'r5': return { li: 2, title: 'Layer 5 · Session', dir: RECV, text: 'জোড়া লাগানো ডেটা Session লেয়ারে আসে। Session 7f2c দেখে সার্ভার চিনে নেয় কোন ইউজারের আলাপ।', code: '- SID   session 7f2c ✓' };
       case 'r6': return { li: 1, title: 'Layer 6 · Presentation', dir: RECV, text: 'UTF-8 বাইট থেকে আবার পড়ার মতো টেক্সট।', code: `${D.hex} → "${S.msg}"` };
       case 'r7': return { li: 0, title: 'Layer 7 · Application', dir: RECV,
-        text: `অ্যাপ পেল "${S.msg}"। পুরোটা, সঠিক, ক্রমমতো। ` + (sc === 'clean' ? 'সব চেক পাস করেছে।' : 'পথে ভুল হয়েছিল, কিন্তু CRC, checksum, seq আর ACK মিলে সেটা ঠিক করে নিয়েছে। অ্যাপ কিছু টেরই পায়নি।'),
+        text: `অ্যাপ পেল "${S.msg}"। পুরোটা, সঠিক, ক্রমমতো। ` + (sc === 'clean' ? 'সব চেক পাস করেছে।' : sc === 'csum' ? 'CRC যে ভুল ধরতে পারেনি, end-to-end TCP checksum সেটা ধরেছে, আর seq + ACK দিয়ে আবার আনিয়েছে। অ্যাপ কিছু টেরই পায়নি।' : 'পথে ভুল হয়েছিল, কিন্তু CRC, checksum, seq আর ACK মিলে সেটা ঠিক করে নিয়েছে। অ্যাপ কিছু টেরই পায়নি।'),
         code: `✓ delivered: "${S.msg}"` };
     }
   }
@@ -458,7 +470,8 @@ pre.code{background:var(--code-bg);border:1px solid var(--line);border-radius:12
   function segStatus(k, id) {
     const i = at(id), sc = S.scenario, hit = k === 1 && sc !== 'clean';
     if (i <= at('s1')) return i >= at('s2') ? ['frame তৈরি', 'info'] : i >= at('s3') ? ['packet তৈরি', 'info'] : ['segment তৈরি', 'info'];
-    if (id === 'wire') return hit ? (sc === 'lost' ? ['Router এ drop ✗', 'bad'] : ['noise: bit উল্টেছে', 'warn']) : ['পথে', 'info'];
+    if (id === 'wire') return hit ? (sc === 'lost' ? ['Router এ drop ✗', 'bad'] : sc === 'csum' ? ['Router memory তে bit উল্টেছে', 'warn'] : ['noise: bit উল্টেছে', 'warn']) : ['পথে', 'info'];
+    if (hit && sc === 'csum' && i < at('retx')) return id === 'r1' ? ['পৌঁছেছে (নষ্ট)', 'warn'] : id === 'r2' ? ['CRC ✓ (Router এর নতুন FCS)', 'warn'] : id === 'r3' ? ['IP ✓ (data নষ্ট)', 'warn'] : ['checksum ✗ → ফেলে দেওয়া', 'bad'];
     if (hit && i < at('retx')) return sc === 'lost' ? ['হারিয়ে গেছে', 'bad'] : id === 'r1' ? ['পৌঁছেছে (নষ্ট)', 'warn'] : ['CRC ✗ → ফেলে দেওয়া', 'bad'];
     if (hit && id === 'retx') return ['আবার পাঠানো হচ্ছে', 'warn'];
     if (hit && id === 'rretx') return ['CRC ✓ checksum ✓ gap পূরণ', 'ok'];
@@ -477,7 +490,7 @@ pre.code{background:var(--code-bg);border:1px solid var(--line);border-radius:12
       const rows = D.segs.map(s => {
         const [t, kind] = segStatus(s.k, id);
         const chk = i >= at('s4chk') ? h16(s.chk) : '—';
-        const fcs = i >= at('s2') ? h32(s.crc) : '—';
+        const fcs = i >= at('s2') ? h32(sc === 'csum' && s.k === 1 && i >= at('r1') && i < at('retx') ? s.crcBad : s.crc) : '—';
         return `<tr><td class="m">${s.k + 1}</td><td class="m">${s.seq}</td><td class="m">"${esc(s.text)}"</td><td class="m">${chk}</td><td class="m">${fcs}</td><td><span class="b ${kind}">${t}</span></td></tr>`;
       }).join('');
       tbl.innerHTML = `<table><thead><tr><th>#</th><th>seq</th><th>data</th><th>checksum</th><th>FCS (CRC-32)</th><th>অবস্থা</th></tr></thead><tbody>${rows}</tbody></table>`;
@@ -689,10 +702,10 @@ pre.code{background:var(--code-bg);border:1px solid var(--line);border-radius:12
   }
   function segState(k, id) {
     const seg = D.segs[k], sc = S.scenario, i = at(id);
-    const isBad = k === 1 && sc === 'bad', isLost = k === 1 && sc === 'lost';
+    const isBad = k === 1 && sc === 'bad', isLost = k === 1 && sc === 'lost', isCsum = k === 1 && sc === 'csum';
     const lbl = `seq ${seg.seq}`;
-    const dropPos = isLost ? { x: W / 2, y: G.wireY + 34 } : { x: G.laneR - 26, y: cy(5) + 30 };
-    const gone = { op: 0, to: dropPos, slices: FULL, bad: isBad ? 1 : 0, label: lbl };
+    const dropPos = isLost ? { x: W / 2, y: G.wireY + 34 } : isCsum ? { x: G.laneR - 26, y: cy(3) + 30 } : { x: G.laneR - 26, y: cy(5) + 30 };
+    const gone = { op: 0, to: dropPos, slices: isCsum ? { tcp: 1, payload: 1 } : FULL, bad: (isBad || isCsum) ? 1 : 0, label: lbl };
     const T = { tcp: 1, payload: 1 };
     if (i < at('s4seg')) return { op: 0, to: P('S', 3, -1), slices: T, label: lbl };
     const d = k * 0.12;
@@ -705,14 +718,17 @@ pre.code{background:var(--code-bg);border:1px solid var(--line);border-radius:12
       case 'wire':
         if (isLost) return { via: [WS(), { x: W / 2, y: G.wireY }], to: dropPos, delay: k * 0.55, op: 0, fadeLate: 1, slices: FULL, bits: 1, label: lbl, badge: ['router drop ✗', 'bad'], badgeAfterX: W / 2 - 4 };
         return { via: [WS(), WR()], to: P('R', 6, k), delay: k * 0.55, slices: FULL, bits: 1, label: lbl,
-          ...(isBad ? { badAfterX: W / 2, badge: ['noise ⚡ bit উল্টেছে', 'warn'], badgeAfterX: W / 2 } : {}) };
+          ...(isBad ? { badAfterX: W / 2, badge: ['noise ⚡ bit উল্টেছে', 'warn'], badgeAfterX: W / 2 } : {}),
+          ...(isCsum ? { badAfterX: W / 2, badge: ['Router memory ⚡ নতুন CRC', 'warn'], badgeAfterX: W / 2 } : {}) };
       case 'r1': if (isLost) return gone;
-        return { to: P('R', 6, k), slices: FULL, bits: 1, bad: isBad ? 1 : 0, label: lbl, badge: isBad ? ['নষ্ট (কেউ জানে না)', 'warn'] : null };
+        return { to: P('R', 6, k), slices: FULL, bits: 1, bad: (isBad || isCsum) ? 1 : 0, label: lbl, badge: (isBad || isCsum) ? ['নষ্ট (কেউ জানে না)', 'warn'] : null };
       case 'r2': if (isLost) return gone;
+        if (isCsum) return { to: P('R', 5, k), delay: d, slices: FULL, bad: 1, label: lbl, badge: ['CRC ✓ (তবু নষ্ট!)', 'warn'] };
         return { to: P('R', 5, k), delay: d, slices: FULL, bad: isBad ? 1 : 0, label: lbl, badge: isBad ? ['CRC ✗', 'bad'] : ['CRC ✓', 'ok'] };
       case 'r3': if (isLost) return gone;
         if (isBad) return { to: dropPos, op: 0, slices: FULL, bad: 1, label: lbl, badge: ['frame ফেলে দেওয়া', 'bad'] };
-        return { to: P('R', 4, k), delay: d, slices: { ip: 1, ...T }, label: lbl, badge: ['IP ✓', 'ok'] };
+        return { to: P('R', 4, k), delay: d, slices: { ip: 1, ...T }, bad: isCsum ? 1 : 0, label: lbl, badge: ['IP ✓', 'ok'] };
+      case 'r4': if (isCsum) return { to: P('R', 3, k), delay: d, slices: T, bad: 1, label: lbl, badge: ['checksum ✗ → drop', 'bad'] };
     }
     if (k === 1 && sc !== 'clean' && i < at('retx')) return gone;
     if (id === 'retx' && k === 1)
