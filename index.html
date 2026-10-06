@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WellDev</title>
+<meta name="description" content="Software engineering interview prep — OOP, design, SQL, security, OS — বাংলায়, ছবি আর কোড সহ।">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f5f7fc; --surface:#ffffff; --surface-2:#f1f4fa; --text:#0f172a; --muted:#5b6478; --faint:#94a0b8; --line:#e4e8f1;
+  --shadow:0 1px 2px rgba(15,23,42,.04),0 10px 30px -12px rgba(15,23,42,.14);
+  --shadow-lg:0 2px 4px rgba(15,23,42,.05),0 26px 50px -22px rgba(30,41,99,.32);
+  --sans:"Inter","Hind Siliguri",ui-sans-serif,-apple-system,"Segoe UI",sans-serif;
+  --bn:"Hind Siliguri","Inter",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0b0f1a; --surface:#121827; --surface-2:#182033; --text:#e7ecf6; --muted:#9aa6bf; --faint:#66728c; --line:#232c42;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6); --shadow-lg:0 26px 50px -22px rgba(0,0,0,.75);
+}}
+:root[data-theme="dark"]{
+  --bg:#0b0f1a; --surface:#121827; --surface-2:#182033; --text:#e7ecf6; --muted:#9aa6bf; --faint:#66728c; --line:#232c42;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6); --shadow-lg:0 26px 50px -22px rgba(0,0,0,.75);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--text);font:15.5px/1.6 var(--sans);-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto 0;height:520px;z-index:-1;pointer-events:none;
+  background:radial-gradient(640px 280px at 15% -40px,color-mix(in srgb,#6366f1 16%,transparent),transparent 70%),
+             radial-gradient(560px 260px at 88% -60px,color-mix(in srgb,#ec4899 13%,transparent),transparent 70%)}
+a{color:inherit;text-decoration:none}
+button{font:inherit;color:inherit}
+.wrap{max-width:1120px;margin:0 auto;padding:22px 24px 80px}
+
+/* top bar */
+.top{display:flex;align-items:center;gap:12px;margin-bottom:26px}
+.logo{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;color:#fff;font:800 15px var(--mono);
+  background:linear-gradient(135deg,#6366f1,#8b5cf6 55%,#ec4899);box-shadow:0 8px 18px -8px #8b5cf6}
+.top b{font-size:18px;font-weight:800;letter-spacing:-.02em}
+.top small{display:block;color:var(--muted);font-size:12.5px;font-family:var(--bn)}
+.top-actions{margin-left:auto;display:flex;gap:8px}
+.pill{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 14px;font-size:13px;color:var(--muted);cursor:pointer;box-shadow:var(--shadow)}
+.pill:hover{color:var(--text)}
+
+/* hero */
+.hero{border-radius:26px;padding:42px 44px;color:#fff;position:relative;overflow:hidden;box-shadow:var(--shadow-lg);
+  background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 45%,#db2777 100%)}
+.hero::after{content:"";position:absolute;right:-80px;top:-100px;width:380px;height:380px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.22),transparent 65%)}
+.hero .eyebrow{font-size:12.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;opacity:.85}
+.hero h1{font-size:clamp(32px,5.2vw,54px);line-height:1.05;letter-spacing:-.035em;margin:10px 0 14px;font-weight:800}
+.hero p{max-width:620px;opacity:.93;font-family:var(--bn);font-size:17px;line-height:1.75;margin:0}
+.stats{display:flex;flex-wrap:wrap;gap:10px;margin-top:24px;position:relative;z-index:1}
+.stat{background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.26);backdrop-filter:blur(6px);border-radius:14px;padding:10px 16px;min-width:112px}
+.stat b{display:block;font-size:24px;line-height:1.1;font-weight:800}
+.stat span{font-size:12.5px;opacity:.88;font-family:var(--bn)}
+.search{position:relative;margin-top:24px;max-width:460px;z-index:1}
+.search svg{position:absolute;left:14px;top:13px;color:rgba(255,255,255,.75)}
+#q{width:100%;padding:11px 14px 11px 40px;border-radius:12px;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.14);color:#fff;font:inherit;font-size:15px;outline:none}
+#q::placeholder{color:rgba(255,255,255,.72)}
+#q:focus{background:rgba(255,255,255,.22);border-color:rgba(255,255,255,.6)}
+
+/* nav chips */
+.jump{display:flex;flex-wrap:wrap;gap:8px;margin:22px 0 4px}
+.jump a{display:inline-flex;align-items:center;gap:8px;padding:6px 14px 6px 6px;border-radius:999px;background:var(--surface);border:1px solid var(--line);font-size:14px;font-weight:600;box-shadow:var(--shadow)}
+.jump a span{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font:700 11px var(--mono);color:#fff;background:var(--c)}
+.jump a:hover{border-color:var(--c)}
+
+/* tracks */
+.track{margin-top:40px;scroll-margin-top:20px}
+.track-head{display:flex;align-items:center;gap:14px;margin-bottom:16px}
+.track-num{flex:none;width:46px;height:46px;border-radius:14px;display:grid;place-items:center;color:#fff;font:800 16px var(--mono);
+  background:linear-gradient(135deg,var(--c),color-mix(in srgb,var(--c) 60%,#ec4899));box-shadow:0 8px 18px -10px var(--c)}
+.track-head h2{margin:0;font-size:24px;letter-spacing:-.02em;font-weight:800}
+.track-head p{margin:0;color:var(--muted);font-family:var(--bn);font-size:14.5px}
+.track-head .count{margin-left:auto;font-size:12.5px;font-weight:600;color:var(--c);background:color-mix(in srgb,var(--c) 11%,transparent);padding:3px 11px;border-radius:999px;white-space:nowrap}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+
+.card{display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);border-radius:18px;overflow:hidden;box-shadow:var(--shadow);transition:transform .18s,box-shadow .18s,border-color .18s;position:relative}
+.card:hover{transform:translateY(-3px);box-shadow:var(--shadow-lg);border-color:color-mix(in srgb,var(--c) 45%,var(--line))}
+.card .band{height:6px;background:linear-gradient(90deg,var(--c),color-mix(in srgb,var(--c) 55%,#ec4899))}
+.card .body{padding:18px 20px 16px;display:flex;flex-direction:column;gap:8px;flex:1}
+.card .kicker{display:flex;align-items:center;gap:8px;font-size:11.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--c)}
+.card .kicker .ext{margin-left:auto;width:28px;height:28px;border-radius:9px;display:grid;place-items:center;background:color-mix(in srgb,var(--c) 12%,transparent);color:var(--c);transition:transform .18s}
+.card:hover .kicker .ext{transform:translate(2px,-2px)}
+.card h3{margin:0;font-size:19px;line-height:1.25;letter-spacing:-.015em;font-weight:750}
+.card p{margin:0;color:var(--muted);font-family:var(--bn);font-size:14.5px;line-height:1.65}
+.tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:auto;padding-top:6px}
+.tags span{font:500 11.5px var(--mono);padding:2px 8px;border-radius:7px;background:var(--surface-2);color:var(--muted)}
+.card .meta{display:flex;gap:14px;padding:11px 20px;border-top:1px solid var(--line);font-size:12.5px;color:var(--muted);background:color-mix(in srgb,var(--surface-2) 50%,transparent)}
+.card .meta b{color:var(--text)}
+
+.soon{border:2px dashed var(--line);border-radius:18px;padding:22px;display:flex;align-items:center;gap:14px;color:var(--muted);font-family:var(--bn)}
+.soon b{display:block;color:var(--text);font-family:var(--sans)}
+.soon .ic{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:color-mix(in srgb,var(--c) 12%,transparent);color:var(--c);font-size:18px}
+.empty{display:none;margin-top:30px;text-align:center;color:var(--muted);font-family:var(--bn)}
+footer{margin-top:60px;padding-top:20px;border-top:1px solid var(--line);color:var(--faint);font-size:13px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px}
+footer a:hover{color:var(--text)}
+
+@media (max-width:640px){
+  .wrap{padding:16px 16px 60px}
+  .hero{padding:28px 22px;border-radius:20px}
+  .track-head{flex-wrap:wrap}
+  .track-head .count{margin-left:60px}
+  .grid{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <span class="logo">W</span>
+    <div><b>WellDev</b><small>Interview prep · বাংলায়</small></div>
+    <div class="top-actions">
+      <a class="pill" href="https://github.com/mdabarik/welldev" target="_blank" rel="noopener">GitHub ↗</a>
+      <button class="pill" id="theme" type="button">Theme</button>
+    </div>
+  </div>
+
+  <section class="hero">
+    <div class="eyebrow">Software Engineering · Interview Prep</div>
+    <h1>সব নোট, এক জায়গায়।</h1>
+    <p>OOP, design principle, design pattern, SQL, web security আর operating system — সহজ বাংলায়, ছবি আর কোড সহ। যেকোনো কার্ডে click করলে গাইডটা নতুন tab-এ খুলবে।</p>
+    <div class="stats" id="stats"></div>
+    <div class="search">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="q" type="search" placeholder="খুঁজুন — SOLID, JOIN, kernel, JWT…  ( / )" autocomplete="off" aria-label="Search guides">
+    </div>
+  </section>
+
+  <nav class="jump" id="jump"></nav>
+  <main id="tracks"></main>
+  <div class="empty" id="empty">কিছু পাওয়া যায়নি।</div>
+
+  <footer><span>WellDev · Mohammad Abdul Barik</span><a href="https://github.com/mdabarik/welldev" target="_blank" rel="noopener">github.com/mdabarik/welldev ↗</a></footer>
+</div>
+
+<script>
+// Every guide in the repo. Add a new page here and it shows up automatically.
+const TRACKS = [
+  { id: "dsa", n: "01", title: "DSA & Problem Solving", blurb: "Data structure আর algorithm", color: "#0ea5e9", guides: [] },
+  { id: "oop", n: "02", title: "OOP & Design", blurb: "OOP থেকে UML, principle আর pattern পর্যন্ত", color: "#6366f1", guides: [
+    { href: "02-oop-java/oop/index.html", kicker: "OOP", title: "OOP in C#",
+      desc: "৪টি পিলার, sealed ও private constructor, upcasting-downcasting, diamond problem, coupling ও cohesion।",
+      tags: ["Encapsulation", "Polymorphism", "C#"], meta: [["11", "topics"], ["4", "C# files"]] },
+    { href: "02-oop-java/oop/ood/index.html", kicker: "OOD · UML", title: "UML Class Diagram",
+      desc: "১৪টি UML ডায়াগ্রাম, ক্লাস বক্স, multiplicity আর ৬টি relationship — আসল UML চিহ্নে আঁকা।",
+      tags: ["Aggregation", "Composition", "Java"], meta: [["6", "relationships"], ["14", "diagram types"]] },
+    { href: "02-oop-java/design-principle/kiss-dry-yagni-soc/index.html", kicker: "Design Principle", title: "DRY, KISS, YAGNI ও SoC",
+      desc: "৪টি বেসিক নীতি — বাস্তব উদাহরণ আর একই C# কোডের Bad বনাম Good ভার্সন।",
+      tags: ["Clean code", "C#"], meta: [["4", "principles"]] },
+    { href: "02-oop-java/design-principle/solid/index.html", kicker: "Design Principle", title: "SOLID Principles",
+      desc: "SRP, OCP, LSP, ISP, DIP — Violation বনাম Solution কোড আর এক নজরে cheat sheet।",
+      tags: ["SRP", "DIP", "C#"], meta: [["5", "principles"], ["11", "C# files"]] },
+    { href: "02-oop-java/design-pattern/index.html", kicker: "Design Pattern", title: "Design Patterns",
+      desc: "Creational, Structural, Behavioural — প্রতিটি pattern বাংলায় ব্যাখ্যা ও C# কোড সহ।",
+      tags: ["Singleton", "Strategy", "C#"], meta: [["23", "patterns"], ["3", "categories"]] },
+  ]},
+  { id: "sql", n: "03", title: "DBMS & SQL", blurb: "Query, join, aggregate, window function", color: "#10b981", guides: [
+    { href: "03-dbms-sql/top-50-sql/index.html", kicker: "LeetCode", title: "SQL 50 — Visual Guide",
+      desc: "৫০টি problem, PostgreSQL solution আর প্রতিটি JOIN, CTE, GROUP BY, window function-এর পরের আসল table।",
+      tags: ["PostgreSQL", "JOIN", "Window"], meta: [["50", "problems"], ["7", "sections"]] },
+    { href: "03-dbms-sql/dbms-theory/n+1 query.png", kicker: "DBMS Theory", title: "N+1 Query Problem",
+      desc: "N+1 query সমস্যা কী আর কীভাবে এড়ানো যায় — একটা ছবিতে।",
+      tags: ["ORM", "Performance"], meta: [["1", "diagram"]] },
+  ]},
+  { id: "security", n: "04", title: "Resume Projects · Security", blurb: "Web security আর data security", color: "#f59e0b", guides: [
+    { href: "04-resume-projects/01-xss-csrf-jwt-refresh-token-access-token/01-xss-csrf-jwt-refresh-token-access-token.html", kicker: "Web Security", title: "XSS, CSRF ও JWT",
+      desc: "XSS-এর ৩ ধরন, SQL injection, CSRF, আর access ও refresh token দিয়ে authentication।",
+      tags: ["XSS", "CSRF", "JWT"], meta: [["4", "diagrams"]] },
+    { href: "04-resume-projects/02-encoding-encryption-hashing/02-encoding-encryption-hashing.html", kicker: "Data Security", title: "Encoding, Encryption ও Hashing",
+      desc: "তিনটার পার্থক্য — format বদলানো, গোপন রাখা আর verify করা; password hashing-এ salt ও cost factor।",
+      tags: ["Base64", "AES / RSA", "bcrypt"], meta: [["3", "diagrams"]] },
+  ]},
+  { id: "os", n: "05", title: "Operating System", blurb: "Kernel, process, thread, scheduling", color: "#ec4899", guides: [
+    { href: "05-operating-system/01-os-kernel-process-thread.html", kicker: "OS", title: "OS, Kernel, Process ও Thread",
+      desc: "Boot থেকে GUI, CPU core-এর ভেতর, process ও thread তৈরি, scheduling আর context switch — ধাপে ধাপে।",
+      tags: ["Kernel", "Scheduler", "Context switch"], meta: [["7", "chapters"], ["25", "diagrams"]] },
+  ]},
+  { id: "net", n: "06", title: "Networking", blurb: "TCP/IP, HTTP, DNS", color: "#14b8a6", guides: [] },
+];
+
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const all = TRACKS.flatMap(t => t.guides);
+const bn = n => String(n).replace(/\d/g, d => "০১২৩৪৫৬৭৮৯"[d]);
+document.getElementById("stats").innerHTML = [
+  [all.length, "গাইড"], [TRACKS.filter(t => t.guides.length).length, "বিষয়"],
+  [50, "SQL problem"], [23, "design pattern"],
+].map(([v, l]) => `<div class="stat"><b>${v}</b><span>${l}</span></div>`).join("");
+document.getElementById("jump").innerHTML = TRACKS.map(t =>
+  `<a href="#${t.id}" style="--c:${t.color}"><span>${t.n}</span>${esc(t.title.split(" · ")[0])}</a>`).join("");
+
+const arrow = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M7 17 17 7M8 7h9v9"/></svg>`;
+function render(q = "") {
+  const words = q.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const hit = g => !words.length || words.every(w => [g.title, g.kicker, g.desc, ...g.tags].join(" ").toLowerCase().includes(w));
+  let shown = 0;
+  document.getElementById("tracks").innerHTML = TRACKS.map(t => {
+    const gs = t.guides.filter(hit);
+    if (words.length && !gs.length) return "";
+    shown += gs.length;
+    const body = t.guides.length
+      ? `<div class="grid">${gs.map(g => `
+        <a class="card" href="${encodeURI(g.href)}" target="_blank" rel="noopener" style="--c:${t.color}">
+          <div class="band"></div>
+          <div class="body">
+            <div class="kicker">${esc(g.kicker)}<span class="ext">${arrow}</span></div>
+            <h3>${esc(g.title)}</h3>
+            <p>${esc(g.desc)}</p>
+            <div class="tags">${g.tags.map(x => `<span>${esc(x)}</span>`).join("")}</div>
+          </div>
+          <div class="meta">${g.meta.map(([v, l]) => `<span><b>${v}</b> ${esc(l)}</span>`).join("")}</div>
+        </a>`).join("")}</div>`
+      : `<div class="soon" style="--c:${t.color}"><span class="ic">✎</span><div><b>শীঘ্রই আসছে</b>${esc(t.blurb)} — নোট তৈরি হচ্ছে।</div></div>`;
+    return `<section class="track" id="${t.id}" style="--c:${t.color}">
+      <div class="track-head"><span class="track-num">${t.n}</span><div><h2>${esc(t.title)}</h2><p>${esc(t.blurb)}</p></div>
+      <span class="count">${t.guides.length ? `${bn(t.guides.length)}টি গাইড` : "শীঘ্রই"}</span></div>${body}</section>`;
+  }).join("");
+  document.getElementById("empty").style.display = words.length && !shown ? "block" : "none";
+}
+render();
+const q = document.getElementById("q");
+q.addEventListener("input", () => render(q.value));
+document.addEventListener("keydown", e => {
+  if (e.key === "/" && document.activeElement !== q) { e.preventDefault(); q.focus(); }
+  if (e.key === "Escape") { q.value = ""; render(); q.blur(); }
+});
+
+const root = document.documentElement;
+try { const t = localStorage.getItem("welldev-theme"); if (t) root.dataset.theme = t; } catch (e) {}
+document.getElementById("theme").addEventListener("click", () => {
+  const dark = root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  root.dataset.theme = dark ? "light" : "dark";
+  try { localStorage.setItem("welldev-theme", root.dataset.theme); } catch (e) {}
+});
+</script>
+</body>
+</html>

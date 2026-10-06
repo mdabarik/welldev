@@ -2,6 +2,8 @@
 
 Software engineering interview prep — বাংলায় ব্যাখ্যা, ছবি আর কোড সহ। প্রতিটি page একটা HTML file; download করে browser-এ খুললেই চলবে।
 
+**সব গাইড এক জায়গায়: [index.html](index.html)** — রঙিন হোম পেজ, যেখান থেকে প্রতিটা গাইড নতুন tab-এ খোলে।
+
 ## 01 · DSA & Problem Solving
 
 _শীঘ্রই আসছে।_
