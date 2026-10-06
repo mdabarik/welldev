@@ -1,6 +1,29 @@
 # welldev
 
+Software engineering interview prep — বাংলায় ব্যাখ্যা, ছবি আর কোড সহ। প্রতিটি page একটা HTML file; download করে browser-এ খুললেই চলবে।
+
+## 01 · DSA & Problem Solving
+
+_শীঘ্রই আসছে।_
+
 ## 02 · OOP (Java)
 
 - [Design Patterns](02-oop-java/design-pattern/index.html) — Creational, Structural, Behavioural pattern, বাংলা ব্যাখ্যা ও C# কোড সহ
-- [SOLID Principles](02-oop-java/solid/index.html) — SRP, OCP, LSP, ISP, DIP — Violation বনাম Solution কোড আর এক নজরে cheat sheet
+- [SOLID Principles](02-oop-java/design-principle/solid/index.html) — SRP, OCP, LSP, ISP, DIP — Violation বনাম Solution কোড আর এক নজরে cheat sheet
+
+## 03 · DBMS & SQL
+
+- [LeetCode SQL 50 — Visual Guide](03-dbms-sql/leetcode-sql-50-visual-guide.html) — ৫০টি problem, PostgreSQL solution আর প্রতিটি ধাপের intermediate table
+
+## 04 · Resume Projects
+
+- [XSS, CSRF, JWT, Access ও Refresh Token](04-resume-projects/01-xss-csrf-jwt-refresh-token-access-token/01-xss-csrf-jwt-refresh-token-access-token.html)
+- [Encoding, Encryption ও Hashing](04-resume-projects/02-encoding-encryption-hashing/02-encoding-encryption-hashing.html)
+
+## 05 · Operating System
+
+- [OS, Kernel, Process ও Thread](05-operating-system/01-os-kernel-process-thread.html) — boot থেকে context switch পর্যন্ত, ২৫টি diagram
+
+## 06 · Networking
+
+_শীঘ্রই আসছে।_
