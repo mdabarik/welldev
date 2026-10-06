@@ -1,0 +1,556 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OS, Kernel, Process ও Thread</title>
+<meta name="description" content="Operating System, Kernel, Boot, CPU, Process, Thread, Scheduling ও Context Switch — ছবি দিয়ে ধাপে ধাপে।">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f6f7fb;
+    --card: #ffffff;
+    --text: #1c1f2a;
+    --muted: #667085;
+    --faint: #98a2b3;
+    --line: #e6e8ef;
+    --soft: #f1f3f9;
+    --accent: #4f46e5;
+    --shadow: 0 1px 2px rgba(16, 24, 40, .04), 0 8px 28px rgba(16, 24, 40, .06);
+    --font: "Hind Siliguri", ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans Bengali", Roboto, Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f1116; --card: #171a22; --text: #e8eaf0; --muted: #a0a8ba; --faint: #6f7890;
+      --line: #262b36; --soft: #1e222c; --accent: #8b85ff; --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 8px 28px rgba(0, 0, 0, .25);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1116; --card: #171a22; --text: #e8eaf0; --muted: #a0a8ba; --faint: #6f7890;
+    --line: #262b36; --soft: #1e222c; --accent: #8b85ff; --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 8px 28px rgba(0, 0, 0, .25);
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 20px; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 17px/1.75 var(--font); -webkit-font-smoothing: antialiased; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .82em; background: var(--soft); padding: .1em .4em; border-radius: 5px; }
+  button { font: inherit; color: inherit; }
+
+  #progress { position: fixed; top: 0; left: 0; height: 3px; width: 0; background: var(--accent); z-index: 50; }
+
+  /* ---------- hero */
+  .hero { max-width: 1140px; margin: 0 auto; padding: 56px 24px 8px; }
+  .eyebrow { font-size: 14px; font-weight: 600; color: var(--accent); letter-spacing: .02em; }
+  .hero h1 { font-size: clamp(30px, 4.4vw, 46px); line-height: 1.2; margin: 6px 0 12px; font-weight: 700; letter-spacing: -.01em; }
+  .hero p { color: var(--muted); max-width: 720px; margin: 0; font-size: 18px; }
+  .hero-meta { display: flex; gap: 18px; flex-wrap: wrap; margin-top: 16px; color: var(--muted); font-size: 15px; }
+  .hero-meta b { color: var(--text); }
+  .roadmap { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 26px; }
+  .roadmap a {
+    display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px 6px 6px; border-radius: 999px;
+    background: var(--card); border: 1px solid var(--line); color: var(--text); font-size: 15px; box-shadow: var(--shadow);
+  }
+  .roadmap a:hover { text-decoration: none; border-color: var(--hue); }
+  .roadmap .dot { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; font-weight: 700; color: #fff; background: var(--hue); }
+  .roadmap .arrow { color: var(--faint); }
+  #themeBtn {
+    position: fixed; top: 14px; right: 14px; z-index: 40; border: 1px solid var(--line); background: var(--card);
+    color: var(--muted); border-radius: 999px; padding: 4px 12px; font-size: 14px; cursor: pointer; box-shadow: var(--shadow);
+  }
+
+  /* ---------- layout */
+  .layout { max-width: 1140px; margin: 0 auto; padding: 32px 24px 80px; display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 40px; }
+  .toc { position: sticky; top: 20px; align-self: start; max-height: calc(100vh - 40px); overflow-y: auto; padding-right: 4px; scrollbar-width: thin; }
+  .toc-title { font-size: 13px; font-weight: 700; color: var(--faint); letter-spacing: .06em; text-transform: uppercase; margin-bottom: 8px; }
+  .toc-part { margin-bottom: 10px; }
+  .toc-part > a { display: flex; gap: 8px; align-items: baseline; font-weight: 600; font-size: 15px; color: var(--text); padding: 4px 8px; border-radius: 8px; }
+  .toc-part > a .num { color: var(--hue); font-size: 13px; min-width: 18px; }
+  .toc-part ul { list-style: none; margin: 2px 0 0; padding: 0 0 0 26px; border-left: 2px solid var(--line); margin-left: 16px; }
+  .toc-part li a { display: block; font-size: 14px; line-height: 1.45; color: var(--muted); padding: 4px 8px; border-radius: 6px; margin-left: -2px; border-left: 2px solid transparent; }
+  .toc a:hover { background: var(--soft); text-decoration: none; }
+  .toc li a.active { color: var(--text); border-left-color: var(--hue); background: var(--soft); font-weight: 500; }
+  #tocBtn { display: none; }
+  #scrim { display: none; }
+
+  /* ---------- part */
+  .part { margin-bottom: 64px; }
+  .part-head { display: flex; gap: 18px; align-items: flex-start; margin-bottom: 22px; }
+  .part-num { font-size: 44px; font-weight: 700; line-height: 1; color: var(--hue); min-width: 64px; padding-top: 6px; }
+  .part-label { font-size: 14px; font-weight: 600; color: var(--hue); }
+  .part-head h2 { margin: 0 0 6px; font-size: clamp(24px, 3vw, 30px); line-height: 1.25; }
+  .part-head p { margin: 0; color: var(--muted); }
+
+  /* ---------- lesson */
+  .lesson { background: var(--card); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); padding: 26px 28px; margin-bottom: 22px; }
+  .lesson-top { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+  .pill { font-size: 13px; font-weight: 600; color: var(--hue); background: color-mix(in srgb, var(--hue) 12%, transparent); padding: 2px 10px; border-radius: 999px; }
+  .lesson h3 { margin: 0 0 8px; font-size: 22px; line-height: 1.35; }
+  .lesson .intro { margin: 0 0 18px; color: var(--muted); }
+  .frame { display: block; width: 100%; padding: 0; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: #fff; cursor: zoom-in; position: relative; }
+  .frame img { display: block; width: 100%; height: auto; transition: transform .25s ease; }
+  .frame:hover img { transform: scale(1.01); }
+  .frame .hint { position: absolute; right: 10px; bottom: 10px; background: rgba(17, 20, 28, .72); color: #fff; font-size: 13px; padding: 3px 10px; border-radius: 999px; opacity: 0; transition: opacity .2s; }
+  .frame:hover .hint, .frame:focus-visible .hint { opacity: 1; }
+  .points-title { margin: 20px 0 6px; font-size: 15px; font-weight: 700; }
+  .points { margin: 0; padding: 0; list-style: none; }
+  .points li { position: relative; padding-left: 22px; margin: 6px 0; }
+  .points li::before { content: ""; position: absolute; left: 4px; top: .72em; width: 7px; height: 7px; border-radius: 50%; background: var(--hue); }
+  .remember { margin-top: 18px; padding: 12px 16px; border-radius: 12px; background: color-mix(in srgb, var(--hue) 9%, transparent); border-left: 3px solid var(--hue); }
+  .remember b { color: var(--hue); }
+  .lesson-foot { margin-top: 14px; font-size: 14px; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; color: var(--faint); }
+
+  /* ---------- summary */
+  .summary { background: var(--card); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); padding: 26px 28px; }
+  .summary h2 { margin: 0 0 14px; font-size: 26px; }
+  .summary ol { margin: 0; padding: 0; list-style: none; counter-reset: s; }
+  .summary li { display: grid; grid-template-columns: 34px 1fr; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); }
+  .summary li:first-child { border-top: 0; }
+  .summary .dot { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; font-weight: 700; color: #fff; background: var(--hue); margin-top: 2px; }
+  .summary li b { display: block; }
+  .summary li span { color: var(--muted); }
+
+  footer { text-align: center; color: var(--faint); font-size: 14px; padding: 0 0 40px; }
+
+  /* ---------- lightbox */
+  .lightbox { position: fixed; inset: 0; z-index: 60; background: rgba(8, 10, 15, .9); display: none; overflow: auto; padding: 52px 12px 16px; }
+  .lightbox.show { display: block; }
+  .lightbox img { display: block; margin: 0 auto; width: min(100%, 1600px); border-radius: 8px; cursor: zoom-out; }
+  .lightbox.full img { width: auto; max-width: none; }
+  .lb-bar { position: fixed; top: 12px; left: 14px; right: 14px; display: flex; justify-content: space-between; align-items: center; gap: 10px; color: #fff; font-size: 15px; }
+  .lb-bar button { background: rgba(255, 255, 255, .14); color: #fff; border: 0; padding: 5px 12px; border-radius: 8px; cursor: pointer; font-size: 14px; }
+
+  @media (max-width: 1000px) {
+    .layout { grid-template-columns: minmax(0, 1fr); }
+    .toc {
+      position: fixed; top: 0; left: 0; bottom: 0; width: min(320px, 86vw); height: 100vh; height: 100dvh; max-height: none; z-index: 45;
+      background: var(--card); border-right: 1px solid var(--line); padding: 20px 16px; transform: translateX(-102%); transition: transform .25s ease;
+    }
+    body.toc-open .toc { transform: none; }
+    body.toc-open #scrim { display: block; position: fixed; inset: 0; z-index: 44; background: rgba(0, 0, 0, .35); }
+    #tocBtn {
+      display: block; position: fixed; left: 14px; bottom: 16px; z-index: 40; border: 1px solid var(--line); background: var(--card);
+      border-radius: 999px; padding: 7px 16px; font-size: 15px; box-shadow: var(--shadow); cursor: pointer;
+    }
+  }
+  @media (max-width: 640px) {
+    body { font-size: 16px; }
+    .hero { padding: 48px 16px 4px; }
+    .layout { padding: 24px 14px 70px; }
+    .lesson, .summary { padding: 18px 16px; border-radius: 14px; }
+    .part-num { font-size: 34px; min-width: 48px; }
+    .lesson h3 { font-size: 19px; }
+    .roadmap .arrow { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div id="progress"></div>
+<button id="themeBtn" type="button" aria-label="Light / dark theme">Theme</button>
+
+<header class="hero">
+  <div class="eyebrow">Operating System · ছবি দিয়ে ধাপে ধাপে</div>
+  <h1>OS, Kernel, Process ও Thread</h1>
+  <p>Computer চালু হওয়া থেকে শুরু করে একটা thread CPU-তে চলা পর্যন্ত — পুরো পথটা একটার পর একটা ছবিতে। প্রতিটা ছবির আগে ছোট ব্যাখ্যা, পরে মূল কথা। ছবিতে click করলে বড় করে দেখা যাবে।</p>
+  <div class="hero-meta" id="heroMeta"></div>
+  <nav class="roadmap" id="roadmap" aria-label="শেখার পথ"></nav>
+</header>
+
+<div class="layout">
+  <aside class="toc" id="toc" aria-label="সূচিপত্র"></aside>
+  <div id="scrim"></div>
+  <main id="content"></main>
+</div>
+<button id="tocBtn" type="button">☰ সূচিপত্র</button>
+
+<footer>WellDev · 05-operating-system</footer>
+
+<div class="lightbox" id="lb" role="dialog" aria-modal="true" aria-label="Image viewer">
+  <div class="lb-bar"><span id="lbTitle"></span><span><button type="button" id="lbFull">Actual size</button> <button type="button" id="lbClose">Close ✕</button></span></div>
+  <img id="lbImg" alt="">
+</div>
+
+<script>
+/* Learning order: big picture → boot → CPU → process → thread → scheduling → a real server.
+   Each lesson: image in src/, a short intro, key points and one line to remember. */
+const PARTS = [
+  {
+    id: "os", hue: "#4f46e5", short: "OS-এর বড় ছবি",
+    title: "Operating System-এর বড় ছবি",
+    intro: "শুরুতে পুরো ছবিটা: OS কয়টা layer-এ ভাগ, তার কেন্দ্রে থাকা kernel আসলে কী, আর kernel কীভাবে কাজ করে।",
+    remember: "OS হলো hardware manage করা আর program-কে service দেওয়ার software; তার core হলো kernel।",
+    lessons: [
+      { src: "os-layers", title: "Operating System-এ কী কী থাকে?",
+        intro: "OS একটা একক program না — কয়েকটা layer। উপরের app-গুলো সরাসরি hardware ছুঁতে পারে না; তারা library আর system call হয়ে kernel-এর কাছে অনুরোধ পাঠায়, আর kernel hardware চালায়।",
+        points: [
+          "<b>User space:</b> browser, editor, game — আর libc / Win32 / POSIX-এর মতো library।",
+          "<b>System call interface:</b> user space থেকে kernel space-এ ঢোকার নিয়ন্ত্রিত দরজা।",
+          "<b>Kernel:</b> process management, CPU scheduler, memory ও virtual memory, file system, device driver, network stack, IPC, security।",
+          "<b>Hardware:</b> CPU, RAM, SSD, network card, keyboard/mouse, display।",
+        ],
+        remember: "App → library → system call → kernel → hardware — এই পথেই সব কাজ হয়।" },
+      { src: "kernel-software-or-hardware", title: "Kernel কি software নাকি hardware?",
+        intro: "Kernel নাম শুনে অনেকে ভাবে এটা CPU-র ভেতরের কিছু। আসলে kernel একটা program — তবে সবচেয়ে বেশি ক্ষমতাওয়ালা (privileged) program।",
+        points: [
+          "Kernel OS-এর অংশ; Windows, Linux, macOS, Android — সবারই kernel আছে।",
+          "OS install করলে kernel file SSD-তে লেখা হয়; computer চালু হলে bootloader সেটা RAM-এ load করে।",
+          "Kernel <b>kernel mode</b>-এ চলে, তাই hardware ও memory-তে পূর্ণ access পায়; সাধারণ app <b>user mode</b>-এ সীমিত access নিয়ে চলে।",
+          "Hardware নিজের কাজ নিজে করে; kernel driver দিয়ে সেটা নিয়ন্ত্রণ আর coordinate করে।",
+        ],
+        remember: "Kernel = software। Boot-এর সময় RAM-এ load হয়ে software আর hardware-এর মাঝে নিরাপদ control layer হয়।" },
+      { src: "kernel-how-it-works", title: "Kernel কীভাবে কাজ করে — A to Z",
+        intro: "Kernel-এর কাজের তালিকা লম্বা, কিন্তু একটা app কিছু চাইলে প্রতিবার প্রায় একই ছন্দে কাজ হয়।",
+        points: [
+          "App একটা কাজ চায় (যেমন file read) এবং system call করে।",
+          "CPU user mode থেকে kernel mode-এ যায়; kernel request যাচাই করে।",
+          "Scheduler CPU time ঠিক করে; memory, file system বা driver দিয়ে কাজ হয়; hardware I/O শেষ হলে interrupt আসে।",
+          "ফলাফল app-এ ফেরে, CPU আবার user mode-এ ফিরে যায়।",
+        ],
+        remember: "Kernel হলো software request আর hardware resource-এর মাঝের bridge।" },
+    ],
+  },
+  {
+    id: "boot", hue: "#0d9488", short: "Install ও Boot",
+    title: "Install থেকে Boot, তারপর GUI",
+    intro: "Kernel SSD-তে কীভাবে আসে, power button চাপলে কীভাবে RAM-এ ওঠে, আর তারপর screen-এ desktop কীভাবে আসে।",
+    remember: "Install-এ kernel SSD-তে যায়, boot-এ RAM-এ ওঠে, তারপর user space GUI আনে।",
+    lessons: [
+      { src: "os-install", title: "OS install করার সময় আসলে কী হয়?",
+        intro: "OS install মানে কিছু ‘চালু করা’ না — SSD-তে ঠিকমতো জিনিস সাজিয়ে রাখা, যাতে পরে boot করা যায়।",
+        points: [
+          "Installer USB/DVD থেকে boot করে চলে।",
+          "SSD partition হয়: EFI System Partition (ESP, FAT32), OS/Root (NTFS বা ext4), দরকারে recovery বা data।",
+          "Kernel (<code>vmlinuz</code> / <code>ntoskrnl.exe</code>), system file, driver, library SSD-তে copy হয়।",
+          "Bootloader (Windows Boot Manager বা GRUB) install হয়, আর UEFI firmware-এর NVRAM-এ boot entry লেখা হয় — যেটা bootloader file-এর path জানে।",
+        ],
+        remember: "Install = file copy + bootloader setup + UEFI boot entry। Boot-এর সময় kernel নতুন করে install হয় না।" },
+      { src: "power-on-boot", title: "Computer power on করলে কী হয়?",
+        intro: "Power button থেকে kernel চালু হওয়া পর্যন্ত একটা chain — প্রতিটা ধাপ পরের ধাপটাকে load করে।",
+        points: [
+          "CPU motherboard-এর ROM/Flash থেকে firmware (UEFI/BIOS) চালায়; POST-এ RAM, CPU, storage, GPU check হয়।",
+          "Firmware NVRAM-এর boot entry দেখে SSD আর তার ESP খুঁজে পায়, সেখান থেকে EFI bootloader load করে।",
+          "Bootloader config (<code>grub.cfg</code>) পড়ে kernel আর initramfs RAM-এ আনে।",
+          "Boot parameter (<code>root=…</code>, <code>quiet</code>) দিয়ে kernel-এর entry point-এ control দেয় — এখন CPU kernel-এর code চালায়।",
+        ],
+        remember: "Hardware raw SSD address মনে রাখে না — NVRAM-এ boot entry থাকে, যেটা bootloader-এর path জানে।" },
+      { src: "kernel-to-gui", title: "Kernel শুরু হওয়ার পর GUI কীভাবে আসে?",
+        intro: "Kernel চালু হলেই desktop আসে না। Kernel শুধু system প্রস্তুত করে; GUI আসে user space-এর program থেকে।",
+        points: [
+          "Kernel memory, scheduler, interrupt, driver, file system initialize করে আর root file system mount করে।",
+          "প্রথম user-space process <b>init/systemd</b> চালু হয় — সে network, udev, dbus-এর মতো service চালায়।",
+          "Display server (Xorg / Wayland) আর login manager (GDM, SDDM, LightDM) login screen দেখায়।",
+          "Login-এর পর desktop environment (GNOME, KDE, XFCE) load হয়।",
+        ],
+        remember: "Kernel নিজে GUI দেখায় না — GUI হলো user-space program।" },
+    ],
+  },
+  {
+    id: "cpu", hue: "#d97706", short: "CPU ও Kernel",
+    title: "CPU-এর ভিতরে, আর Kernel-এর সাথে সম্পর্ক",
+    intro: "Process আর thread বোঝার আগে দেখে নিই instruction আসলে কোথায় চলে — core, register, cache, MMU — আর kernel কীভাবে CPU ব্যবহার করে।",
+    remember: "CPU core শুধু instruction চালায়; কোন code চলবে আর memory কীভাবে map হবে সেটা kernel ঠিক করে।",
+    lessons: [
+      { src: "cpu-core-structure", title: "CPU core-এর ভিতরে কী থাকে, আর কোনগুলো shared?",
+        intro: "একটা CPU chip-এ কয়েকটা core থাকে। প্রতিটা core নিজেই instruction চালাতে পারে, কিন্তু কিছু অংশ সব core মিলে ব্যবহার করে।",
+        points: [
+          "<b>প্রতি core-এর নিজের:</b> fetch/decode, control unit, ALU, FPU/SIMD, registers, load/store unit, branch predictor, TLB, L1 instruction ও L1 data cache, সাধারণত L2।",
+          "<b>সব core মিলে shared:</b> L3 (last level cache), interconnect (ring bus / mesh), memory controller, I/O (PCIe, USB), কিছু CPU-তে integrated GPU।",
+          "Instruction pipeline-এ ধাপে ধাপে চলে: fetch → decode → execute → memory → write back।",
+        ],
+        remember: "সাধারণত L1 private, L3 shared — তবে সব architecture এক রকম না।" },
+      { src: "cpu-core-private-shared", title: "Registers, MMU, L1/L2 আর shared L3, IMC",
+        intro: "Data কত দ্রুত পাওয়া যায় তা নির্ভর করে সেটা কোথায় আছে — register-এ, cache-এ, না RAM-এ।",
+        points: [
+          "<b>Registers:</b> সবচেয়ে ছোট আর সবচেয়ে দ্রুত; ALU সরাসরি এগুলো ব্যবহার করে।",
+          "<b>L1 → L2 → L3 → RAM:</b> যত নিচে তত বড়, কিন্তু তত ধীর।",
+          "<b>MMU</b> virtual address → physical address করে; আগে TLB-তে খোঁজে, না পেলে page table walk।",
+          "<b>IMC</b> (Integrated Memory Controller) RAM-এর সাথে যোগাযোগ করে।",
+        ],
+        remember: "Program virtual address ব্যবহার করে; MMU সেটা আসল RAM address-এ বদলায়।" },
+      { src: "cpu-register-set", title: "CPU register set: PC, SP, general registers, flags",
+        intro: "PC, SP, AX — এগুলো একটা register-এর ভেতরের ঘর না, প্রত্যেকটা আলাদা register। সব মিলে register set।",
+        points: [
+          "<b>PC</b> (program counter / IP): পরের instruction-এর address।",
+          "<b>SP</b>: stack-এর top; function call-এ return address push হয় আর SP কমে, return-এ pop হয়।",
+          "<b>General-purpose</b> (RAX, RBX…): operand, address, মাঝের ফলাফল।",
+          "<b>Flags</b> (RFLAGS): ZF zero, CF carry, SF sign, OF overflow, IF interrupt enable।",
+          "এক instruction-এর চক্র: PC থেকে fetch → decode → ALU execute → register-এ result, flag update → PC সামনে যায়।",
+        ],
+        remember: "যে thread এখন চলছে, register-গুলোতে তারই অবস্থা থাকে — context switch বুঝতে এটা লাগবে।" },
+      { src: "kernel-cpu-user-app", title: "Kernel, CPU core আর user app — কে কী করে?",
+        intro: "Kernel কোনো আলাদা machine না, আর সাধারণ app process-ও না। একই CPU core কখনো app-এর code চালায়, কখনো kernel-এর।",
+        points: [
+          "Kernel = privileged OS code; kernel thread থাকতে পারে, কিন্তু kernel নিজে user app-এর মতো process না।",
+          "CPU core শুধু instruction চালায় — user mode বা kernel mode, যে mode-এ code দেওয়া হয়।",
+          "<b>System call:</b> app → syscall instruction → kernel mode → service → ফল নিয়ে আবার user mode।",
+          "<b>Interrupt:</b> keyboard, network packet, disk, timer → CPU kernel mode-এ handler চালায় → দরকারে scheduler।",
+        ],
+        remember: "Syscall (app চায়) আর interrupt (hardware জানায়) — দুই পথেই CPU kernel mode-এ ঢোকে।" },
+      { src: "kernel-ram-write-flow", title: "Kernel থেকে RAM-এ write আসলে কীভাবে হয়?",
+        intro: "‘Kernel RAM-এ লেখে’ বলা হলেও আসল কাজ ভাগ করা: kernel সিদ্ধান্ত দেয়, বাকিটা hardware করে।",
+        points: [
+          "Kernel ঠিক করে কোন memory লাগবে, page table configure করে।",
+          "CPU store instruction চালায়; MMU virtual address → physical address করে আর permission check করে।",
+          "Data আগে cache-এ যায় (write-back বা write-through)।",
+          "IMC DDR protocol-এ memory bus দিয়ে RAM-এ লেখে; DMA হলে device নিজেই RAM-এ লেখে, kernel শুধু setup করে।",
+        ],
+        remember: "Kernel সিদ্ধান্ত দেয়, CPU instruction চালায়, MMU address map করে, IMC RAM-এ পৌঁছে দেয়।" },
+    ],
+  },
+  {
+    id: "process", hue: "#e11d48", short: "Process",
+    title: "Process",
+    intro: "Program হলো disk-এ থাকা file; সেটা চালালে হয় process। দেখি process-এর ভেতরে কী থাকে আর kernel কীভাবে সেটা বানায়।",
+    remember: "Process = resource container: নিজের address space আর OS resource, kernel বানায়।",
+    lessons: [
+      { src: "process-contains", title: "একটা process-এর ভিতরে কী থাকে?",
+        intro: "Process মানে শুধু code না — code-এর সাথে memory, চলার অবস্থা আর OS-এর দেওয়া resource।",
+        points: [
+          "<b>Virtual address space</b> (নিচ থেকে উপরে): code/text, data, BSS, heap (উপরে বাড়ে), shared libraries, stack (নিচে নামে)।",
+          "<b>Control info</b> (PCB-তে): PID/PPID, state, program counter, CPU registers, priority, page table।",
+          "<b>Resource:</b> open file/socket, credentials (user/group ID), environment variable, command-line argument, signal handler, thread-এর list।",
+        ],
+        remember: "প্রতিটা process-এর নিজের আলাদা virtual address space — একটা আরেকটার memory সরাসরি ছুঁতে পারে না।" },
+      { src: "process-creation", title: "App চালু করলে process কীভাবে তৈরি হয়?",
+        intro: "Icon-এ click করলে সরাসরি kernel-এ কিছু যায় না — একটা চলমান program (shell বা launcher) kernel-কে অনুরোধ করে।",
+        points: [
+          "Shell, desktop বা launcher request তৈরি করে।",
+          "Library (libc, Win32) system call করে — Linux-এ <code>fork()</code> + <code>exec()</code>, Windows-এ <code>CreateProcess()</code>।",
+          "Kernel PID দেয়, PCB বানায়, virtual address space ও page table set করে, program-এর code/data map করে, main thread আর file handle (stdin/stdout/stderr) তৈরি করে।",
+          "Process ready queue-তে যায়; scheduler বেছে নিলে CPU সেটা user mode-এ চালায়।",
+        ],
+        remember: "Request আসে আরেকটা চলমান program থেকে, কিন্তু process বানায় kernel।" },
+      { src: "process-creation-order", title: "একসাথে অনেক request এলে kernel কোনটা আগে বানায়?",
+        intro: "Browser, terminal, editor প্রায় একসাথে চালু করলে kernel কোনটা আগে বানাবে?",
+        points: [
+          "Request সাধারণত arrival order (FIFO)-এ আসে; kernel lock দিয়ে critical section এক এক করে handle করে।",
+          "Priority/policy আর kernel resource-এর availability-ও প্রভাব ফেলে।",
+          "প্রতিটার জন্য: PID → PCB → address space → main thread → state = Ready।",
+          "চলার order ঠিক করে scheduler (CFS, priority, round-robin) — সেটা তৈরির order থেকে আলাদা হতে পারে।",
+        ],
+        remember: "Creation order ≠ scheduling order।" },
+    ],
+  },
+  {
+    id: "thread", hue: "#7c3aed", short: "Thread",
+    title: "Thread",
+    intro: "Process হলো ঘর, thread হলো ঘরের ভেতরে কাজ করা মানুষ। প্রতিটা process অন্তত একটা thread নিয়ে শুরু হয়।",
+    remember: "Thread = execution unit: নিজের stack, register, PC; বাকি সব process-এর সাথে share করে।",
+    lessons: [
+      { src: "main-thread", title: "Process-এর main thread",
+        intro: "Kernel process বানানোর সাথে সাথে তার প্রথম thread-ও বানায় — main thread।",
+        points: [
+          "Main thread program-এর entry point থেকে শুরু: runtime startup (CRT / language runtime) → <code>main()</code>।",
+          "Startup code চালায়, দরকারে worker thread বানায়, main logic বা UI/event loop চালায়।",
+          "Shared resource coordinate করে; শেষে worker thread-গুলো join করে আর shutdown করে।",
+        ],
+        remember: "প্রতিটা process অন্তত একটা thread — main thread — নিয়ে শুরু হয়।" },
+      { src: "thread-creation", title: "নতুন thread কে বানায় — main thread নাকি kernel?",
+        intro: "Main thread নিজে নতুন thread বানায় না — সে শুধু চায়; আসলে বানায় kernel।",
+        points: [
+          "চলমান thread library call করে: <code>pthread_create()</code>, C++ <code>std::thread</code>, Java <code>new Thread()</code>, Windows <code>CreateThread()</code>।",
+          "Library system call করে (Linux-এ <code>clone()</code>)।",
+          "Kernel TCB বানায়, আলাদা stack দেয়, CPU context (register, PC) set করে, TID দেয়, একই address space-এ যুক্ত করে, ready queue-তে রাখে।",
+          "শুধু main thread না — process-এর যেকোনো চলমান thread নতুন thread চাইতে পারে।",
+        ],
+        remember: "Thread request করে, kernel create করে।" },
+      { src: "process-threads-overview", title: "Process ও thread — পুরো ছবি",
+        intro: "সব একসাথে: process-এর memory-তে thread-গুলো কীভাবে থাকে, কী share করে, আর একটা thread কীভাবে instruction চালায়।",
+        points: [
+          "<b>Shared:</b> code, global data, heap, open file, socket।",
+          "<b>প্রতি thread-এর নিজের:</b> stack, registers, PC, state, scheduling info — address space-এ প্রতিটা stack আলাদা জায়গায়।",
+          "Thread CPU-তে: register load → PC থেকে instruction fetch → execute → PC পরেরটায় → আবার।",
+          "Keyboard/mouse input event হিসেবে আসে: driver → OS → app-এর event queue → main thread-এর event loop handle করে।",
+        ],
+        remember: "Process = resource container, thread = execution unit।" },
+    ],
+  },
+  {
+    id: "scheduling", hue: "#0284c7", short: "Scheduling",
+    title: "State, Queue, Scheduling ও Context Switch",
+    intro: "অনেক process/thread, কিন্তু core কম। কে কখন CPU পাবে সেটা scheduling, আর এক thread থেকে আরেকটায় যাওয়া হলো context switch।",
+    remember: "Scheduler ready thread বেছে নেয়; context switch register save/restore করে core-কে অন্য thread-এ দেয়।",
+    lessons: [
+      { src: "ready-queue-simple", title: "সবচেয়ে সহজ মডেল: ready queue থেকে CPU",
+        intro: "শুরু করি সবচেয়ে সহজ ছবি দিয়ে — পরে ধাপে ধাপে আসল ছবিতে যাব।",
+        points: [
+          "Process চলার জন্য প্রস্তুত হলে scheduler তাকে ready queue-তে রাখে।",
+          "Scheduler queue থেকে একটা বেছে CPU-তে চালায় (P1, P2, P3 …)।",
+          "এক থেকে আরেকটায় যাওয়ার সময় context switch হয়।",
+        ],
+        remember: "Ready queue = CPU-র জন্য অপেক্ষার লাইন।" },
+      { src: "process-states-queues", title: "Process-এর state আর queue",
+        intro: "Process সবসময় ready queue-তে থাকে না — জীবনে কয়েকটা state ঘুরে বেড়ায়।",
+        points: [
+          "New → (admitted) Ready → (dispatch) Running → (exit) Terminated।",
+          "Time slice শেষ / preemption: Running → Ready।",
+          "I/O বা event-এর অপেক্ষা: Running → Waiting/Blocked; event শেষ হলে আবার Ready।",
+          "Wait queue অনেকগুলো: disk I/O, keyboard, network, timer/sleep।",
+        ],
+        remember: "Ready হলে ready queue, অপেক্ষা হলে wait queue, event শেষ হলে আবার ready queue।" },
+      { src: "queues-scheduling-multicore", title: "Queue-তে আসলে কী থাকে, আর multicore হলে কী হয়?",
+        intro: "Ready queue-তে কি পুরো process বসে থাকে? না — শুধু একটা reference। আর core বেশি হলে একসাথে বেশি কাজ চলে।",
+        points: [
+          "Ready queue পুরো process memory রাখে না — PCB-র reference রাখে।",
+          "PCB-তে PID, state, saved registers, PC, priority, memory map; code/data/heap/stack থাকে process-এর virtual address space-এ।",
+          "Scheduler policy (priority, fair share) দিয়ে বেছে নেয়; dispatcher CPU context load করে চালায়।",
+          "Single core-এ এক সময়ে একটা; multicore-এ প্রতি core-এ একটা করে একসাথে।",
+        ],
+        remember: "Queue-তে reference, memory-তে আসল জিনিস।" },
+      { src: "scheduling-process-or-thread-bn", title: "CPU আসলে process schedule করে, নাকি thread?",
+        intro: "বইয়ে লেখা ‘scheduler process select করে’, আবার অনেকে বলে ‘thread select করে’ — কোনটা ঠিক?",
+        points: [
+          "<b>Simplified model:</b> প্রতি process-এ কার্যত একটা thread ধরলে বলা যায় ‘process schedule হয়’।",
+          "<b>Modern OS:</b> ready queue-তে runnable thread (task) থাকে; scheduler thread বেছে নেয়।",
+          "দুটো কথা contradiction না — একটা সহজ করে বলা, আরেকটা আসল behavior।",
+        ],
+        remember: "Modern OS scheduler মূলত thread schedule করে।" },
+      { src: "scheduling-process-or-thread", title: "Process না thread — multicore-সহ পুরো ছবি",
+        intro: "একই কথা English diagram-এ, এবার কয়েকটা process, কয়েকটা thread আর দুটো core দিয়ে।",
+        points: [
+          "Process P1-এর T1, T2, T3 আর P2-এর T4, T5 — সব runnable thread ready queue-তে।",
+          "Core 1-এ P1-এর T2, Core 2-এ P2-এর T4 — একই সময়ে চলতে পারে।",
+          "একই process-এর thread-ও আলাদা core-এ একসাথে চলতে পারে।",
+          "Single core-এ thread-গুলো time slice নিয়ে পালা করে চলে।",
+        ],
+        remember: "Process একাধিক thread রাখলে প্রতিটা thread আলাদাভাবে schedule হতে পারে।" },
+      { src: "context-switch-registers", title: "Context switch: register value কোথায় save হয়, কীভাবে restore হয়?",
+        intro: "Core একটা, thread অনেক — তাহলে T1 থামিয়ে T2 চালালে T1-এর register value হারায় না কেন? উত্তর: kernel সেগুলো RAM-এ রেখে দেয়।",
+        points: [
+          "চলার সময় PC, SP, AX… flags-এ চলমান thread-এর অবস্থা থাকে, প্রতি instruction-এ বদলায়।",
+          "<b>Trigger:</b> timer interrupt (time slice শেষ), I/O wait, lock/sleep-এ block, বা higher-priority thread ready।",
+          "<b>Save:</b> kernel T1-এর সব register value RAM-এ T1-এর TCB-তে লেখে।",
+          "<b>Load:</b> T2-এর TCB থেকে saved value CPU register-এ load করে — এখন CPU T2 চালায়।",
+          "পরে T1 CPU পেলে তার value restore হয়, ঠিক যেখানে থেমেছিল সেখান থেকে চলে।",
+        ],
+        remember: "Save-and-restore দিয়েই এক core অনেক thread চালায়।" },
+    ],
+  },
+  {
+    id: "server", hue: "#16a34a", short: "Web Server",
+    title: "OS-এর উপর চলা একটা server: Apache ও Nginx",
+    intro: "এতক্ষণ যা শিখলাম — process, thread, event, I/O — বাস্তব একটা web server-এ কীভাবে দেখা যায়।",
+    remember: "Apache process/thread দিয়ে request সামলায়, Nginx অল্প কয়েকটা worker-এর event loop দিয়ে।",
+    lessons: [
+      { src: "web-server-architecture", title: "Web server কী, আর Apache বনাম Nginx-এর architecture",
+        intro: "Web server হলো একটা program (process) যা port 80/443-এ HTTP request শোনে আর response দেয়। Process/thread-এর ধারণা এখানে সরাসরি কাজে লাগে।",
+        points: [
+          "Basic flow: browser request → web server → static file, বা application server / database থেকে data → HTTP response।",
+          "<b>Apache:</b> master process অনেক child process/thread চালায়; MPM: prefork (প্রতি request-এ process), worker (multi-threaded), event।",
+          "<b>Nginx:</b> master process + কয়েকটা worker; প্রতিটা worker event loop-এ non-blocking I/O দিয়ে হাজারো connection সামলায়, memory কম লাগে।",
+          "পুরো পথ: DNS → TCP (+TLS) → HTTP request → web server → resource → HTTP response।",
+        ],
+        remember: "Apache: process/thread-based; Nginx: event-driven, non-blocking।" },
+      { src: "apache-nginx-overview", title: "বাস্তব setup: reverse proxy আর load balancing",
+        intro: "বাস্তবে Nginx সাধারণত সবার সামনে একটা entry point হিসেবে থাকে, পেছনে থাকে application server আর database।",
+        points: [
+          "<b>Apache:</b> পুরোনো, stable, module-ভিত্তিক (.htaccess, mod_php); traditional site আর PHP-তে বেশি।",
+          "<b>Nginx</b> reverse proxy + load balancer: SSL terminate, domain/path অনুযায়ী routing, caching, compression, rate limiting।",
+          "Web server-এর ভেতরে: connection handling → request processing → static file বা reverse proxy → logging।",
+          "Client → Nginx → app server (Node.js, Spring, Django) → database → response ফেরত।",
+        ],
+        remember: "Nginx সামনে এক entry point, পেছনে অনেক app server।" },
+    ],
+  },
+];
+
+/* ---------- render */
+const bn = n => String(n).replace(/\d/g, d => "০১২৩৪৫৬৭৮৯"[d]);
+const pad = n => bn(String(n).padStart(2, "0"));
+const total = PARTS.reduce((a, p) => a + p.lessons.length, 0);
+let n = 0;
+PARTS.forEach(p => p.lessons.forEach(l => { l.n = ++n; l.id = "l-" + l.src; }));
+
+document.getElementById("heroMeta").innerHTML =
+  `<span><b>${bn(PARTS.length)}</b>টি অধ্যায়</span><span><b>${bn(total)}</b>টি diagram</span><span>উপর থেকে নিচে পড়লেই পুরো পথ</span>`;
+document.getElementById("roadmap").innerHTML = PARTS.map((p, i) =>
+  `<a href="#${p.id}" style="--hue:${p.hue}"><span class="dot">${bn(i + 1)}</span>${p.short}</a>${i < PARTS.length - 1 ? '<span class="arrow">→</span>' : ""}`).join("");
+
+document.getElementById("toc").innerHTML = `<div class="toc-title">সূচিপত্র</div>` + PARTS.map((p, i) => `
+  <div class="toc-part" style="--hue:${p.hue}">
+    <a href="#${p.id}"><span class="num">${pad(i + 1)}</span>${p.short}</a>
+    <ul>${p.lessons.map(l => `<li><a href="#${l.id}" data-lesson="${l.id}">${l.title}</a></li>`).join("")}</ul>
+  </div>`).join("") + `<div class="toc-part"><a href="#summary"><span class="num">✓</span>এক নজরে</a></div>`;
+
+const flat = PARTS.flatMap(p => p.lessons);
+document.getElementById("content").innerHTML = PARTS.map((p, i) => `
+  <section class="part" id="${p.id}" style="--hue:${p.hue}">
+    <div class="part-head">
+      <div class="part-num">${pad(i + 1)}</div>
+      <div><div class="part-label">অধ্যায় ${bn(i + 1)} · ${bn(p.lessons.length)}টি diagram</div><h2>${p.title}</h2><p>${p.intro}</p></div>
+    </div>
+    ${p.lessons.map(l => {
+      const path = `src/${l.src}.webp`, next = flat[l.n];
+      return `<article class="lesson" id="${l.id}">
+        <div class="lesson-top"><span class="pill">পাঠ ${bn(l.n)} / ${bn(total)}</span></div>
+        <h3>${l.title}</h3>
+        <p class="intro">${l.intro}</p>
+        <button class="frame" type="button" data-zoom="${path}" data-title="${l.title}">
+          <img src="${path}" alt="${l.title}" loading="lazy"><span class="hint">বড় করে দেখুন</span>
+        </button>
+        <div class="points-title">মূল কথা</div>
+        <ul class="points">${l.points.map(x => `<li>${x}</li>`).join("")}</ul>
+        <div class="remember"><b>মনে রাখো:</b> ${l.remember}</div>
+        <div class="lesson-foot"><a href="${path}" target="_blank" rel="noopener">ছবি নতুন tab-এ খুলুন ↗</a>${next ? `<a href="#${next.id}">পরের পাঠ: ${next.title} ↓</a>` : `<a href="#summary">এক নজরে পুরো পথ ↓</a>`}</div>
+      </article>`;
+    }).join("")}
+  </section>`).join("") + `
+  <section class="summary" id="summary">
+    <h2>এক নজরে পুরো পথ</h2>
+    <ol>${PARTS.map((p, i) => `<li style="--hue:${p.hue}"><span class="dot">${bn(i + 1)}</span><div><b>${p.title}</b><span>${p.remember}</span></div></li>`).join("")}</ol>
+  </section>`;
+
+/* ---------- lightbox */
+const lb = document.getElementById("lb"), lbImg = document.getElementById("lbImg"), lbFull = document.getElementById("lbFull");
+const closeLb = () => { lb.classList.remove("show"); document.body.style.overflow = ""; };
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-zoom]");
+  if (b) {
+    lbImg.src = b.dataset.zoom; lbImg.alt = b.dataset.title;
+    document.getElementById("lbTitle").textContent = b.dataset.title;
+    lb.classList.remove("full"); lbFull.textContent = "Actual size";
+    lb.classList.add("show"); document.body.style.overflow = "hidden";
+    return;
+  }
+  if (e.target.closest(".toc a")) document.body.classList.remove("toc-open");
+});
+lbFull.addEventListener("click", () => { lbFull.textContent = lb.classList.toggle("full") ? "Fit to screen" : "Actual size"; });
+document.getElementById("lbClose").addEventListener("click", closeLb);
+lbImg.addEventListener("click", closeLb);
+lb.addEventListener("click", e => { if (e.target === lb) closeLb(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape") { closeLb(); document.body.classList.remove("toc-open"); } });
+
+/* ---------- table of contents: mobile drawer + current lesson */
+document.getElementById("tocBtn").addEventListener("click", () => document.body.classList.toggle("toc-open"));
+document.getElementById("scrim").addEventListener("click", () => document.body.classList.remove("toc-open"));
+const tocLinks = new Map([...document.querySelectorAll("[data-lesson]")].map(a => [a.dataset.lesson, a]));
+const spy = new IntersectionObserver(entries => entries.forEach(en => {
+  if (!en.isIntersecting) return;
+  tocLinks.forEach(a => a.classList.remove("active"));
+  const a = tocLinks.get(en.target.id);
+  if (a) { a.classList.add("active"); a.scrollIntoView({ block: "nearest" }); }
+}), { rootMargin: "-35% 0px -60% 0px" });
+document.querySelectorAll(".lesson").forEach(el => spy.observe(el));
+
+/* ---------- reading progress */
+const bar = document.getElementById("progress");
+addEventListener("scroll", () => {
+  const h = document.documentElement.scrollHeight - innerHeight;
+  bar.style.width = (h > 0 ? scrollY / h * 100 : 0) + "%";
+}, { passive: true });
+
+/* ---------- theme */
+const root = document.documentElement;
+try { const t = localStorage.getItem("os-notes-theme"); if (t) root.dataset.theme = t; } catch (e) {}
+document.getElementById("themeBtn").addEventListener("click", () => {
+  const dark = root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  root.dataset.theme = dark ? "light" : "dark";
+  try { localStorage.setItem("os-notes-theme", root.dataset.theme); } catch (e) {}
+});
+</script>
+</body>
+</html>

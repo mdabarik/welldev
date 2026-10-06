@@ -1,0 +1,561 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Web Security Notes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f6f7fb;
+    --surface: #ffffff;
+    --surface-2: #f0f2f8;
+    --text: #1b1f2a;
+    --muted: #5b6377;
+    --border: #e1e5ef;
+    --accent: #3b5bdb;
+    --xss: #e8590c;
+    --sql: #c92a2a;
+    --csrf: #7048e8;
+    --jwt: #2b8a3e;
+    --shadow: 0 1px 2px rgba(20, 24, 40, .06), 0 8px 24px rgba(20, 24, 40, .06);
+    --radius: 14px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f1218;
+      --surface: #171b24;
+      --surface-2: #1e2330;
+      --text: #e7eaf2;
+      --muted: #9aa3b8;
+      --border: #2a3040;
+      --accent: #748ffc;
+      --xss: #ff922b;
+      --sql: #ff6b6b;
+      --csrf: #9775fa;
+      --jwt: #51cf66;
+      --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 8px 24px rgba(0, 0, 0, .25);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1218;
+    --surface: #171b24;
+    --surface-2: #1e2330;
+    --text: #e7eaf2;
+    --muted: #9aa3b8;
+    --border: #2a3040;
+    --accent: #748ffc;
+    --xss: #ff922b;
+    --sql: #ff6b6b;
+    --csrf: #9775fa;
+    --jwt: #51cf66;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 8px 24px rgba(0, 0, 0, .25);
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 76px; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Hind Siliguri", system-ui, -apple-system, "Segoe UI", sans-serif;
+    line-height: 1.65;
+    font-size: 16px;
+  }
+  code, .mono { font-family: "JetBrains Mono", ui-monospace, Menlo, monospace; font-size: .88em; }
+
+  /* ---------- Top bar ---------- */
+  .topbar {
+    position: sticky; top: 0; z-index: 10;
+    background: color-mix(in srgb, var(--bg) 85%, transparent);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border);
+  }
+  .topbar-inner {
+    max-width: 1180px; margin: 0 auto; padding: 12px 16px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .brand { font-weight: 700; white-space: nowrap; }
+  .nav { display: flex; gap: 6px; overflow-x: auto; flex: 1; scrollbar-width: none; }
+  .nav::-webkit-scrollbar { display: none; }
+  .nav a {
+    text-decoration: none; color: var(--muted); font-weight: 500; font-size: 14px;
+    padding: 6px 12px; border-radius: 999px; white-space: nowrap;
+    border: 1px solid transparent; transition: .15s;
+  }
+  .nav a:hover, .nav a.active { color: var(--text); background: var(--surface); border-color: var(--border); }
+  .theme-btn {
+    border: 1px solid var(--border); background: var(--surface); color: var(--text);
+    width: 36px; height: 36px; border-radius: 10px; cursor: pointer; font-size: 16px; flex: none;
+  }
+
+  /* ---------- Hero ---------- */
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 16px; }
+  .hero { padding: 48px 0 28px; }
+  .eyebrow {
+    display: inline-block; font-size: 13px; font-weight: 600; letter-spacing: .04em;
+    color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent);
+    padding: 4px 10px; border-radius: 999px; margin-bottom: 14px;
+  }
+  .hero h1 { font-size: clamp(28px, 5vw, 44px); line-height: 1.2; margin: 0 0 12px; }
+  .hero p { color: var(--muted); font-size: 17px; max-width: 720px; margin: 0; }
+
+  .cards {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 14px; margin-top: 28px;
+  }
+  .card {
+    display: block; text-decoration: none; color: inherit;
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 18px; box-shadow: var(--shadow); transition: transform .15s, border-color .15s;
+    border-top: 4px solid var(--c);
+  }
+  .card:hover { transform: translateY(-2px); border-color: var(--c); }
+  .card .num { font-size: 13px; font-weight: 600; color: var(--c); }
+  .card h3 { margin: 4px 0 6px; font-size: 19px; }
+  .card p { margin: 0; color: var(--muted); font-size: 14.5px; }
+
+  /* ---------- Sections ---------- */
+  section.topic { padding: 36px 0; border-top: 1px solid var(--border); }
+  .topic-head { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+  .badge {
+    flex: none; width: 42px; height: 42px; border-radius: 12px;
+    display: grid; place-items: center; font-weight: 700; color: #fff; background: var(--c);
+  }
+  .topic-head h2 { margin: 0; font-size: clamp(22px, 3.4vw, 30px); line-height: 1.25; }
+  .topic-head .sub { color: var(--muted); font-size: 15px; }
+
+  .figure {
+    margin: 0; background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden;
+  }
+  .figure button {
+    all: unset; display: block; width: 100%; cursor: zoom-in; position: relative;
+  }
+  .figure img { display: block; width: 100%; height: auto; background: #fff; }
+  .zoom-hint {
+    position: absolute; right: 12px; bottom: 12px; font-size: 13px; font-weight: 600;
+    background: rgba(0, 0, 0, .65); color: #fff; padding: 4px 10px; border-radius: 999px;
+    opacity: 0; transition: opacity .15s;
+  }
+  .figure button:hover .zoom-hint, .figure button:focus-visible .zoom-hint { opacity: 1; }
+  .figure figcaption {
+    padding: 10px 16px; font-size: 14px; color: var(--muted);
+    border-top: 1px solid var(--border); display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+  }
+  .figure figcaption a { color: var(--accent); text-decoration: none; font-weight: 500; }
+
+  .subhead { margin: 32px 0 14px; font-size: 19px; }
+  .points {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 14px; margin-top: 18px;
+  }
+  .point {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 16px 18px;
+  }
+  .point h4 { margin: 0 0 8px; font-size: 16px; color: var(--c); }
+  .point ul { margin: 0; padding-left: 18px; }
+  .point li { margin: 3px 0; }
+  .point code {
+    background: var(--surface-2); padding: 1px 6px; border-radius: 6px; word-break: break-word;
+  }
+
+  /* ---------- Compare table ---------- */
+  .table-wrap {
+    overflow-x: auto; background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); box-shadow: var(--shadow);
+  }
+  table { border-collapse: collapse; width: 100%; min-width: 640px; font-size: 15px; }
+  th, td { padding: 12px 14px; text-align: left; border-bottom: 1px solid var(--border); vertical-align: top; }
+  thead th { background: var(--surface-2); font-weight: 600; }
+  tbody th { font-weight: 600; color: var(--muted); white-space: nowrap; }
+  tr:last-child td, tr:last-child th { border-bottom: 0; }
+  .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--c); margin-right: 6px; }
+
+  footer { padding: 28px 0 48px; color: var(--muted); font-size: 14px; text-align: center; border-top: 1px solid var(--border); }
+
+  /* ---------- Lightbox ---------- */
+  .lightbox {
+    position: fixed; inset: 0; z-index: 50; background: rgba(8, 10, 16, .92);
+    display: none; overflow: auto; padding: 56px 16px 24px;
+  }
+  .lightbox.open { display: block; }
+  .lightbox img { display: block; margin: 0 auto; max-width: none; width: min(100%, 1800px); border-radius: 8px; cursor: zoom-out; }
+  .lightbox.full img { width: auto; max-width: none; cursor: zoom-out; }
+  .lb-bar {
+    position: fixed; top: 10px; right: 12px; left: 12px; display: flex; justify-content: space-between; align-items: center; gap: 8px;
+    color: #fff; font-size: 14px;
+  }
+  .lb-bar button {
+    background: rgba(255, 255, 255, .12); color: #fff; border: 1px solid rgba(255, 255, 255, .2);
+    padding: 6px 12px; border-radius: 8px; cursor: pointer; font: inherit;
+  }
+  .lb-actions { display: flex; gap: 8px; }
+
+  @media (max-width: 600px) {
+    .brand { display: none; }
+    .hero { padding-top: 32px; }
+    .zoom-hint { opacity: 1; }
+  }
+  @media print {
+    .topbar, .theme-btn, .zoom-hint, .lightbox { display: none !important; }
+    section.topic { break-inside: avoid-page; }
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <span class="brand">🔐 Web Security</span>
+    <nav class="nav" id="nav">
+      <a href="#xss-sql">XSS &amp; SQLi</a>
+      <a href="#csrf">CSRF</a>
+      <a href="#jwt">JWT &amp; Tokens</a>
+      <a href="#compare">তুলনা</a>
+    </nav>
+    <button class="theme-btn" id="themeBtn" aria-label="Toggle theme" title="Light / Dark">🌓</button>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero">
+    <span class="eyebrow">Interview Prep · Web Security</span>
+    <h1>XSS, SQL Injection, CSRF ও JWT<br>(Access &amp; Refresh Token)</h1>
+    <p>Web application-এর সবচেয়ে common security vulnerability আর authentication flow — ছবি দিয়ে সহজ ব্যাখ্যা। যেকোনো ছবিতে click করলে বড় করে দেখা যাবে।</p>
+
+    <div class="cards">
+      <a class="card" href="#xss-sql" style="--c: var(--xss)">
+        <div class="num">01</div>
+        <h3>XSS ও SQL Injection</h3>
+        <p>Malicious script / SQL inject করে browser বা database-কে ঠকানো।</p>
+      </a>
+      <a class="card" href="#csrf" style="--c: var(--csrf)">
+        <div class="num">02</div>
+        <h3>CSRF</h3>
+        <p>Logged-in user-এর browser দিয়ে অজান্তে unwanted request পাঠানো।</p>
+      </a>
+      <a class="card" href="#jwt" style="--c: var(--jwt)">
+        <div class="num">03</div>
+        <h3>JWT, Access &amp; Refresh Token</h3>
+        <p>Authentication vs Authorization, login flow ও token refresh।</p>
+      </a>
+    </div>
+  </section>
+
+  <!-- ===================== 1. XSS & SQL Injection ===================== -->
+  <section class="topic" id="xss-sql" style="--c: var(--xss)">
+    <div class="topic-head">
+      <div class="badge">1</div>
+      <div>
+        <h2>XSS ও SQL Injection</h2>
+        <div class="sub">Client-side vs Server-side injection attack</div>
+      </div>
+    </div>
+
+    <figure class="figure">
+      <button type="button" data-zoom="src/xss-sql-injection.webp" data-title="XSS ও SQL Injection">
+        <img src="src/xss-sql-injection.webp" alt="XSS ও SQL Injection infographic: attack flow, types, examples and prevention" loading="lazy">
+        <span class="zoom-hint">🔍 বড় করে দেখুন</span>
+      </button>
+      <figcaption>
+        <span>XSS ও SQL Injection — কী? কীভাবে কাজ করে?</span>
+        <a href="src/xss-sql-injection.webp" target="_blank" rel="noopener">নতুন tab-এ খুলুন ↗</a>
+      </figcaption>
+    </figure>
+
+    <div class="points">
+      <div class="point" style="--c: var(--xss)">
+        <h4>XSS (Cross-Site Scripting)</h4>
+        <ul>
+          <li>Attacker trusted site-এ malicious JS inject করে, victim-এর <b>browser</b>-এ run হয়।</li>
+          <li>ধরন: <b>Stored</b>, <b>Reflected</b>, <b>DOM-based</b>।</li>
+          <li>Impact: cookie চুরি, session hijack, fake form।</li>
+        </ul>
+      </div>
+      <div class="point" style="--c: var(--sql)">
+        <h4>SQL Injection</h4>
+        <ul>
+          <li>Input দিয়ে SQL query manipulate করা — <code>' OR '1'='1</code></li>
+          <li>Cause: string concatenation দিয়ে query বানানো।</li>
+          <li>Impact: login bypass, data leak, data delete।</li>
+        </ul>
+      </div>
+      <div class="point" style="--c: var(--jwt)">
+        <h4>Prevention</h4>
+        <ul>
+          <li><b>XSS:</b> output encoding, CSP, HttpOnly cookie, unsafe <code>innerHTML</code> এড়ানো।</li>
+          <li><b>SQLi:</b> <code>PreparedStatement</code> / parameterized query, ORM, least privilege।</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3 class="subhead">XSS-এর ৩ ধরন — Stored, Reflected, DOM-based</h3>
+
+    <figure class="figure">
+      <button type="button" data-zoom="src/xss-types.webp" data-title="XSS-এর ৩ ধরন">
+        <img src="src/xss-types.webp" alt="XSS types infographic: stored, reflected and DOM-based XSS attack flows and prevention" loading="lazy">
+        <span class="zoom-hint">🔍 বড় করে দেখুন</span>
+      </button>
+      <figcaption>
+        <span>XSS (Cross-Site Scripting) — ৩ ধরনের আক্রমণ</span>
+        <a href="src/xss-types.webp" target="_blank" rel="noopener">নতুন tab-এ খুলুন ↗</a>
+      </figcaption>
+    </figure>
+
+    <div class="points">
+      <div class="point" style="--c: var(--sql)">
+        <h4>Stored XSS (Persistent)</h4>
+        <ul>
+          <li>Script server / database-এ <b>save</b> হয় (যেমন comment box)।</li>
+          <li>পরে যে-ই page খোলে, তার browser-এ run হয় — অনেক user আক্রান্ত।</li>
+        </ul>
+      </div>
+      <div class="point" style="--c: var(--jwt)">
+        <h4>Reflected XSS (Non-Persistent)</h4>
+        <ul>
+          <li>Script <b>URL / form input</b>-এ থাকে, database-এ save হয় না।</li>
+          <li>Server response-এ সেটা ফেরত দেয় — victim-কে link-এ click করাতে হয়।</li>
+        </ul>
+      </div>
+      <div class="point" style="--c: var(--csrf)">
+        <h4>DOM-based XSS</h4>
+        <ul>
+          <li>ভুলটা <b>frontend JavaScript</b>-এ — server জড়িত নাও থাকতে পারে।</li>
+          <li>যেমন URL থেকে নিয়ে <code>innerHTML</code>-এ বসানো; নিরাপদ: <code>textContent</code>।</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== 2. CSRF ===================== -->
+  <section class="topic" id="csrf" style="--c: var(--csrf)">
+    <div class="topic-head">
+      <div class="badge">2</div>
+      <div>
+        <h2>CSRF (Cross-Site Request Forgery)</h2>
+        <div class="sub">Browser automatically cookie পাঠায় — সেটাকেই exploit করা হয়</div>
+      </div>
+    </div>
+
+    <figure class="figure">
+      <button type="button" data-zoom="src/csrf.webp" data-title="CSRF">
+        <img src="src/csrf.webp" alt="CSRF infographic: attack flow, why it works and how to prevent it" loading="lazy">
+        <span class="zoom-hint">🔍 বড় করে দেখুন</span>
+      </button>
+      <figcaption>
+        <span>CSRF — কী? কীভাবে কাজ করে?</span>
+        <a href="src/csrf.webp" target="_blank" rel="noopener">নতুন tab-এ খুলুন ↗</a>
+      </figcaption>
+    </figure>
+
+    <div class="points">
+      <div class="point">
+        <h4>Attack Flow</h4>
+        <ul>
+          <li>User <code>bank.com</code>-এ logged in (session cookie আছে)।</li>
+          <li>অন্য tab-এ <code>attacker.com</code> খোলে — hidden form / img request।</li>
+          <li>Browser cookie সহ request পাঠায়, server ভাবে legitimate।</li>
+        </ul>
+      </div>
+      <div class="point">
+        <h4>Why it works</h4>
+        <ul>
+          <li>Browser নিজে থেকে cookie attach করে।</li>
+          <li>Server request-এর <b>intention</b> verify করে না।</li>
+        </ul>
+      </div>
+      <div class="point">
+        <h4>Prevention</h4>
+        <ul>
+          <li><b>CSRF token</b> (hidden field, server match করে)।</li>
+          <li><code>SameSite=Lax/Strict</code> cookie।</li>
+          <li>Origin / Referer check, sensitive action-এ OTP।</li>
+          <li>GET দিয়ে state change করা যাবে না।</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== 3. JWT ===================== -->
+  <section class="topic" id="jwt" style="--c: var(--jwt)">
+    <div class="topic-head">
+      <div class="badge">3</div>
+      <div>
+        <h2>JWT, Access Token ও Refresh Token</h2>
+        <div class="sub">Authentication → Authorization → Token refresh</div>
+      </div>
+    </div>
+
+    <figure class="figure">
+      <button type="button" data-zoom="src/jwt-access-refresh-token.webp" data-title="JWT, Access & Refresh Token">
+        <img src="src/jwt-access-refresh-token.webp" alt="JWT infographic: authentication vs authorization, JWT structure, login, protected API and refresh token flows" loading="lazy">
+        <span class="zoom-hint">🔍 বড় করে দেখুন</span>
+      </button>
+      <figcaption>
+        <span>How JWT, Authentication, Authorization, Access Token &amp; Refresh Token Work</span>
+        <a href="src/jwt-access-refresh-token.webp" target="_blank" rel="noopener">নতুন tab-এ খুলুন ↗</a>
+      </figcaption>
+    </figure>
+
+    <div class="points">
+      <div class="point">
+        <h4>AuthN vs AuthZ</h4>
+        <ul>
+          <li><b>Authentication</b> = Who are you? (login)</li>
+          <li><b>Authorization</b> = What can you do? (role / permission)</li>
+          <li>আগে authentication, তারপর authorization।</li>
+        </ul>
+      </div>
+      <div class="point">
+        <h4>JWT Structure</h4>
+        <ul>
+          <li><code>header.payload.signature</code></li>
+          <li>Payload শুধু <b>encoded</b>, encrypted না — secret রাখা যাবে না।</li>
+          <li>Signature দিয়ে verify হয় token change হয়নি।</li>
+        </ul>
+      </div>
+      <div class="point">
+        <h4>Access vs Refresh</h4>
+        <ul>
+          <li><b>Access token:</b> short-lived (5–15 min), প্রতিটা API call-এ।</li>
+          <li><b>Refresh token:</b> long-lived, শুধু নতুন access token নিতে।</li>
+          <li><code>401</code> = not authenticated, <code>403</code> = not allowed।</li>
+          <li>Token rotation + HttpOnly Secure cookie recommended।</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== Compare ===================== -->
+  <section class="topic" id="compare" style="--c: var(--accent)">
+    <div class="topic-head">
+      <div class="badge">⚖</div>
+      <div>
+        <h2>Quick তুলনা</h2>
+        <div class="sub">Interview-এর আগে এক নজরে</div>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th></th>
+            <th><span class="dot" style="--c: var(--xss)"></span>XSS</th>
+            <th><span class="dot" style="--c: var(--sql)"></span>SQL Injection</th>
+            <th><span class="dot" style="--c: var(--csrf)"></span>CSRF</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th>Target</th>
+            <td>Victim-এর browser</td>
+            <td>Server-এর database</td>
+            <td>Logged-in user-এর session</td>
+          </tr>
+          <tr>
+            <th>কী inject / forge হয়</th>
+            <td>Malicious JavaScript</td>
+            <td>Malicious SQL</td>
+            <td>Unwanted HTTP request</td>
+          </tr>
+          <tr>
+            <th>Typical impact</th>
+            <td>Cookie theft, session hijack</td>
+            <td>Auth bypass, data leak / delete</td>
+            <td>Money transfer, email / password change</td>
+          </tr>
+          <tr>
+            <th>Main prevention</th>
+            <td>Output encoding, CSP, HttpOnly</td>
+            <td>Prepared statements, ORM</td>
+            <td>CSRF token, SameSite cookie</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">WellDev · 04-resume-projects / 01-xss-csrf-jwt-refresh-token-access-token</div>
+</footer>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Image viewer">
+  <div class="lb-bar">
+    <span id="lbTitle"></span>
+    <div class="lb-actions">
+      <button type="button" id="lbFull">Actual size</button>
+      <button type="button" id="lbClose">✕ Close</button>
+    </div>
+  </div>
+  <img id="lbImg" alt="">
+</div>
+
+<script>
+  // Theme toggle (remembered per browser)
+  (function () {
+    const root = document.documentElement;
+    try {
+      const saved = localStorage.getItem("theme");
+      if (saved) root.dataset.theme = saved;
+    } catch (e) {}
+    document.getElementById("themeBtn").addEventListener("click", () => {
+      const isDark = root.dataset.theme
+        ? root.dataset.theme === "dark"
+        : matchMedia("(prefers-color-scheme: dark)").matches;
+      root.dataset.theme = isDark ? "light" : "dark";
+      try { localStorage.setItem("theme", root.dataset.theme); } catch (e) {}
+    });
+  })();
+
+  // Lightbox
+  (function () {
+    const lb = document.getElementById("lightbox");
+    const img = document.getElementById("lbImg");
+    const title = document.getElementById("lbTitle");
+    const fullBtn = document.getElementById("lbFull");
+
+    function open(src, t) {
+      img.src = src; img.alt = t; title.textContent = t;
+      lb.classList.remove("full"); fullBtn.textContent = "Actual size";
+      lb.classList.add("open"); document.body.style.overflow = "hidden";
+    }
+    function close() {
+      lb.classList.remove("open"); document.body.style.overflow = "";
+    }
+    document.querySelectorAll("[data-zoom]").forEach(btn =>
+      btn.addEventListener("click", () => open(btn.dataset.zoom, btn.dataset.title))
+    );
+    fullBtn.addEventListener("click", () => {
+      const full = lb.classList.toggle("full");
+      fullBtn.textContent = full ? "Fit to screen" : "Actual size";
+    });
+    document.getElementById("lbClose").addEventListener("click", close);
+    img.addEventListener("click", close);
+    lb.addEventListener("click", e => { if (e.target === lb) close(); });
+    document.addEventListener("keydown", e => { if (e.key === "Escape") close(); });
+  })();
+
+  // Highlight active nav link on scroll
+  (function () {
+    const links = [...document.querySelectorAll("#nav a")];
+    const map = new Map(links.map(a => [a.getAttribute("href").slice(1), a]));
+    const io = new IntersectionObserver(entries => {
+      entries.forEach(en => {
+        if (en.isIntersecting) {
+          links.forEach(l => l.classList.remove("active"));
+          map.get(en.target.id)?.classList.add("active");
+        }
+      });
+    }, { rootMargin: "-40% 0px -55% 0px" });
+    map.forEach((_, id) => { const el = document.getElementById(id); if (el) io.observe(el); });
+  })();
+</script>
+</body>
+</html>

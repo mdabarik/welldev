@@ -1,0 +1,533 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Encoding Encryption Hashing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f6f7fb;
+    --surface: #ffffff;
+    --surface-2: #f0f2f8;
+    --text: #1b1f2a;
+    --muted: #5b6377;
+    --border: #e1e5ef;
+    --accent: #3b5bdb;
+    --c1: #e8590c;
+    --c2: #c92a2a;
+    --c3: #7048e8;
+    --c4: #2b8a3e;
+    --shadow: 0 1px 2px rgba(20, 24, 40, .06), 0 8px 24px rgba(20, 24, 40, .06);
+    --radius: 14px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f1218;
+      --surface: #171b24;
+      --surface-2: #1e2330;
+      --text: #e7eaf2;
+      --muted: #9aa3b8;
+      --border: #2a3040;
+      --accent: #748ffc;
+      --c1: #ff922b;
+      --c2: #ff6b6b;
+      --c3: #9775fa;
+      --c4: #51cf66;
+      --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 8px 24px rgba(0, 0, 0, .25);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1218;
+    --surface: #171b24;
+    --surface-2: #1e2330;
+    --text: #e7eaf2;
+    --muted: #9aa3b8;
+    --border: #2a3040;
+    --accent: #748ffc;
+    --c1: #ff922b;
+    --c2: #ff6b6b;
+    --c3: #9775fa;
+    --c4: #51cf66;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 8px 24px rgba(0, 0, 0, .25);
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 76px; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Hind Siliguri", system-ui, -apple-system, "Segoe UI", sans-serif;
+    line-height: 1.65;
+    font-size: 16px;
+  }
+  code, .mono { font-family: "JetBrains Mono", ui-monospace, Menlo, monospace; font-size: .88em; }
+
+  /* ---------- Top bar ---------- */
+  .topbar {
+    position: sticky; top: 0; z-index: 10;
+    background: color-mix(in srgb, var(--bg) 85%, transparent);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border);
+  }
+  .topbar-inner {
+    max-width: 1180px; margin: 0 auto; padding: 12px 16px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .brand { font-weight: 700; white-space: nowrap; }
+  .nav { display: flex; gap: 6px; overflow-x: auto; flex: 1; scrollbar-width: none; }
+  .nav::-webkit-scrollbar { display: none; }
+  .nav a {
+    text-decoration: none; color: var(--muted); font-weight: 500; font-size: 14px;
+    padding: 6px 12px; border-radius: 999px; white-space: nowrap;
+    border: 1px solid transparent; transition: .15s;
+  }
+  .nav a:hover, .nav a.active { color: var(--text); background: var(--surface); border-color: var(--border); }
+  .theme-btn {
+    border: 1px solid var(--border); background: var(--surface); color: var(--text);
+    width: 36px; height: 36px; border-radius: 10px; cursor: pointer; font-size: 16px; flex: none;
+  }
+
+  /* ---------- Hero ---------- */
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 16px; }
+  .hero { padding: 48px 0 28px; }
+  .eyebrow {
+    display: inline-block; font-size: 13px; font-weight: 600; letter-spacing: .04em;
+    color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent);
+    padding: 4px 10px; border-radius: 999px; margin-bottom: 14px;
+  }
+  .hero h1 { font-size: clamp(28px, 5vw, 44px); line-height: 1.2; margin: 0 0 12px; }
+  .hero p { color: var(--muted); font-size: 17px; max-width: 720px; margin: 0; }
+
+  .cards {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 14px; margin-top: 28px;
+  }
+  .card {
+    display: block; text-decoration: none; color: inherit;
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 18px; box-shadow: var(--shadow); transition: transform .15s, border-color .15s;
+    border-top: 4px solid var(--c);
+  }
+  .card:hover { transform: translateY(-2px); border-color: var(--c); }
+  .card .num { font-size: 13px; font-weight: 600; color: var(--c); }
+  .card h3 { margin: 4px 0 6px; font-size: 19px; }
+  .card p { margin: 0; color: var(--muted); font-size: 14.5px; }
+
+  /* ---------- Sections ---------- */
+  section.topic { padding: 36px 0; border-top: 1px solid var(--border); }
+  .topic-head { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+  .badge {
+    flex: none; width: 42px; height: 42px; border-radius: 12px;
+    display: grid; place-items: center; font-weight: 700; color: #fff; background: var(--c);
+  }
+  .topic-head h2 { margin: 0; font-size: clamp(22px, 3.4vw, 30px); line-height: 1.25; }
+  .topic-head .sub { color: var(--muted); font-size: 15px; }
+
+  .figure {
+    margin: 0; background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden;
+  }
+  .figure button {
+    all: unset; display: block; width: 100%; cursor: zoom-in; position: relative;
+  }
+  .figure img { display: block; width: 100%; height: auto; background: #fff; }
+  .zoom-hint {
+    position: absolute; right: 12px; bottom: 12px; font-size: 13px; font-weight: 600;
+    background: rgba(0, 0, 0, .65); color: #fff; padding: 4px 10px; border-radius: 999px;
+    opacity: 0; transition: opacity .15s;
+  }
+  .figure button:hover .zoom-hint, .figure button:focus-visible .zoom-hint { opacity: 1; }
+  .figure figcaption {
+    padding: 10px 16px; font-size: 14px; color: var(--muted);
+    border-top: 1px solid var(--border); display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+  }
+  .figure figcaption a { color: var(--accent); text-decoration: none; font-weight: 500; }
+
+  .points {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 14px; margin-top: 18px;
+  }
+  .point {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 16px 18px;
+  }
+  .point h4 { margin: 0 0 8px; font-size: 16px; color: var(--c); }
+  .point ul { margin: 0; padding-left: 18px; }
+  .point li { margin: 3px 0; }
+  .point code {
+    background: var(--surface-2); padding: 1px 6px; border-radius: 6px; word-break: break-word;
+  }
+
+  /* ---------- Compare table ---------- */
+  .table-wrap {
+    overflow-x: auto; background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); box-shadow: var(--shadow);
+  }
+  table { border-collapse: collapse; width: 100%; min-width: 640px; font-size: 15px; }
+  th, td { padding: 12px 14px; text-align: left; border-bottom: 1px solid var(--border); vertical-align: top; }
+  thead th { background: var(--surface-2); font-weight: 600; }
+  tbody th { font-weight: 600; color: var(--muted); white-space: nowrap; }
+  tr:last-child td, tr:last-child th { border-bottom: 0; }
+  .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--c); margin-right: 6px; }
+
+  footer { padding: 28px 0 48px; color: var(--muted); font-size: 14px; text-align: center; border-top: 1px solid var(--border); }
+
+  /* ---------- Lightbox ---------- */
+  .lightbox {
+    position: fixed; inset: 0; z-index: 50; background: rgba(8, 10, 16, .92);
+    display: none; overflow: auto; padding: 56px 16px 24px;
+  }
+  .lightbox.open { display: block; }
+  .lightbox img { display: block; margin: 0 auto; max-width: none; width: min(100%, 1800px); border-radius: 8px; cursor: zoom-out; }
+  .lightbox.full img { width: auto; max-width: none; cursor: zoom-out; }
+  .lb-bar {
+    position: fixed; top: 10px; right: 12px; left: 12px; display: flex; justify-content: space-between; align-items: center; gap: 8px;
+    color: #fff; font-size: 14px;
+  }
+  .lb-bar button {
+    background: rgba(255, 255, 255, .12); color: #fff; border: 1px solid rgba(255, 255, 255, .2);
+    padding: 6px 12px; border-radius: 8px; cursor: pointer; font: inherit;
+  }
+  .lb-actions { display: flex; gap: 8px; }
+
+  @media (max-width: 600px) {
+    .brand { display: none; }
+    .hero { padding-top: 32px; }
+    .zoom-hint { opacity: 1; }
+  }
+  @media print {
+    .topbar, .theme-btn, .zoom-hint, .lightbox { display: none !important; }
+    section.topic { break-inside: avoid-page; }
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <span class="brand">🔐 Data Security</span>
+    <nav class="nav" id="nav">
+      <a href="#encoding">Encoding</a>
+      <a href="#encryption">Encryption</a>
+      <a href="#hashing">Hashing</a>
+      <a href="#compare">তুলনা</a>
+    </nav>
+    <button class="theme-btn" id="themeBtn" aria-label="Toggle theme" title="Light / Dark">🌓</button>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero">
+    <span class="eyebrow">Interview Prep · Data Security</span>
+    <h1>Encoding, Encryption ও Hashing</h1>
+    <p>তিনটাই data-কে অন্য রূপে বদলায়, কিন্তু উদ্দেশ্য সম্পূর্ণ আলাদা — format বদলানো, গোপন রাখা, আর verify করা। যেকোনো ছবিতে click করলে বড় করে দেখা যাবে।</p>
+
+    <div class="cards">
+      <a class="card" href="#encoding" style="--c: var(--c1)">
+        <div class="num">01</div>
+        <h3>Encoding</h3>
+        <p>Format / representation বদলানো। কোনো key নেই, security নেই।</p>
+      </a>
+      <a class="card" href="#encryption" style="--c: var(--c3)">
+        <div class="num">02</div>
+        <h3>Encryption</h3>
+        <p>Key দিয়ে data গোপন করা। সঠিক key থাকলে আবার ফেরত আনা যায়।</p>
+      </a>
+      <a class="card" href="#hashing" style="--c: var(--c4)">
+        <div class="num">03</div>
+        <h3>Hashing</h3>
+        <p>One-way fixed-length fingerprint। Password storage-এর জন্য।</p>
+      </a>
+    </div>
+  </section>
+
+  <!-- ===================== 1. Encoding ===================== -->
+  <section class="topic" id="encoding" style="--c: var(--c1)">
+    <div class="topic-head">
+      <div class="badge">1</div>
+      <div>
+        <h2>Encoding</h2>
+        <div class="sub">নির্দিষ্ট নিয়ম (agreed rule) দিয়ে data-এর format বদলানো</div>
+      </div>
+    </div>
+
+    <figure class="figure">
+      <button type="button" data-zoom="src/encoding.webp" data-title="Encoding">
+        <img src="src/encoding.webp" alt="Encoding infographic: flow, ASCII/UTF-8 and Base64 examples, common encodings" loading="lazy">
+        <span class="zoom-hint">🔍 বড় করে দেখুন</span>
+      </button>
+      <figcaption>
+        <span>Encoding কী এবং কীভাবে কাজ করে?</span>
+        <a href="src/encoding.webp" target="_blank" rel="noopener">নতুন tab-এ খুলুন ↗</a>
+      </figcaption>
+    </figure>
+
+    <div class="points">
+      <div class="point">
+        <h4>কীভাবে কাজ করে</h4>
+        <ul>
+          <li>Original data → Encoder (rule) → Encoded output → Decoder → Original।</li>
+          <li>Rule জানা থাকলে যে কেউ decode করতে পারে।</li>
+        </ul>
+      </div>
+      <div class="point">
+        <h4>উদাহরণ</h4>
+        <ul>
+          <li><code>"A"</code> → ASCII <code>65</code> → <code>01000001</code></li>
+          <li><code>"Man"</code> → Base64 <code>TWFu</code></li>
+          <li>ASCII, UTF-8, UTF-16, Base64, URL Encoding।</li>
+        </ul>
+      </div>
+      <div class="point">
+        <h4>মনে রাখো</h4>
+        <ul>
+          <li>Encoding <b>≠</b> Encryption — data লুকানোর জন্য না।</li>
+          <li>উদ্দেশ্য: data transfer, storage compatibility, binary-কে text হিসেবে পাঠানো।</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== 2. Encryption ===================== -->
+  <section class="topic" id="encryption" style="--c: var(--c3)">
+    <div class="topic-head">
+      <div class="badge">2</div>
+      <div>
+        <h2>Encryption</h2>
+        <div class="sub">Plaintext → Ciphertext, শুধু সঠিক key দিয়ে ফেরত আনা যায়</div>
+      </div>
+    </div>
+
+    <figure class="figure">
+      <button type="button" data-zoom="src/encryption.webp" data-title="Encryption">
+        <img src="src/encryption.webp" alt="Encryption infographic: flow, symmetric vs asymmetric encryption, key concepts" loading="lazy">
+        <span class="zoom-hint">🔍 বড় করে দেখুন</span>
+      </button>
+      <figcaption>
+        <span>Encryption কী এবং কীভাবে কাজ করে?</span>
+        <a href="src/encryption.webp" target="_blank" rel="noopener">নতুন tab-এ খুলুন ↗</a>
+      </figcaption>
+    </figure>
+
+    <div class="points">
+      <div class="point">
+        <h4>Symmetric</h4>
+        <ul>
+          <li>Encrypt ও decrypt — <b>একই key</b>।</li>
+          <li>উদাহরণ: <b>AES</b>।</li>
+          <li>দ্রুত, বড় data-র জন্য ভালো; কিন্তু key নিরাপদে share করা কঠিন।</li>
+        </ul>
+      </div>
+      <div class="point">
+        <h4>Asymmetric</h4>
+        <ul>
+          <li><b>Public key</b> দিয়ে encrypt, <b>Private key</b> দিয়ে decrypt।</li>
+          <li>উদাহরণ: <b>RSA</b>, <b>ECC</b>।</li>
+          <li>ধীর, কিন্তু key exchange ও digital signature-এ দরকারি (HTTPS)।</li>
+        </ul>
+      </div>
+      <div class="point">
+        <h4>কেন ব্যবহার হয়</h4>
+        <ul>
+          <li>Data confidentiality।</li>
+          <li>Secure communication (HTTPS / TLS)।</li>
+          <li>File ও database সুরক্ষিত রাখা, secure messaging।</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== 3. Hashing ===================== -->
+  <section class="topic" id="hashing" style="--c: var(--c4)">
+    <div class="topic-head">
+      <div class="badge">3</div>
+      <div>
+        <h2>Hashing ও Password Security</h2>
+        <div class="sub">One-way function — password + salt → hash</div>
+      </div>
+    </div>
+
+    <figure class="figure">
+      <button type="button" data-zoom="src/hashing.webp" data-title="Hashing ও Password Security">
+        <img src="src/hashing.webp" alt="Hashing infographic: password registration and login verification, salt, cost factor, good practices" loading="lazy">
+        <span class="zoom-hint">🔍 বড় করে দেখুন</span>
+      </button>
+      <figcaption>
+        <span>Hashing কী এবং Password Security-তে কীভাবে কাজ করে?</span>
+        <a href="src/hashing.webp" target="_blank" rel="noopener">নতুন tab-এ খুলুন ↗</a>
+      </figcaption>
+    </figure>
+
+    <div class="points">
+      <div class="point">
+        <h4>Sign up ও Login</h4>
+        <ul>
+          <li><b>Sign up:</b> password + random salt → hash → DB-তে algorithm, salt, cost, hash রাখা।</li>
+          <li><b>Login:</b> DB থেকে salt + settings নিয়ে আবার hash করে compare।</li>
+          <li>Hash মিললে login success, না মিললে fail।</li>
+        </ul>
+      </div>
+      <div class="point">
+        <h4>Salt ও Cost Factor</h4>
+        <ul>
+          <li><b>Salt:</b> প্রতিটা password-এর জন্য unique random value — rainbow table আটকায়।</li>
+          <li><b>Cost factor:</b> hashing ইচ্ছা করে slow করে — brute-force কঠিন হয়।</li>
+          <li>bcrypt cost <code>10–14</code>, Argon2 <code>m, t, p</code>।</li>
+        </ul>
+      </div>
+      <div class="point">
+        <h4>Good Practices</h4>
+        <ul>
+          <li><b>bcrypt / Argon2 / scrypt</b> ব্যবহার করো।</li>
+          <li>শুধু <code>SHA-256</code> password-এর জন্য যথেষ্ট না (খুব fast)।</li>
+          <li>কখনো plain password store করবে না।</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== Compare ===================== -->
+  <section class="topic" id="compare" style="--c: var(--accent)">
+    <div class="topic-head">
+      <div class="badge">⚖</div>
+      <div>
+        <h2>Quick তুলনা</h2>
+        <div class="sub">Interview-এর আগে এক নজরে</div>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th></th>
+            <th><span class="dot" style="--c: var(--c1)"></span>Encoding</th>
+            <th><span class="dot" style="--c: var(--c3)"></span>Encryption</th>
+            <th><span class="dot" style="--c: var(--c4)"></span>Hashing</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th>উদ্দেশ্য</th>
+            <td>Format / representation বদলানো</td>
+            <td>Data গোপন রাখা (confidentiality)</td>
+            <td>Verify করা (integrity, password)</td>
+          </tr>
+          <tr>
+            <th>Reversible?</th>
+            <td>হ্যাঁ — rule জানলেই</td>
+            <td>হ্যাঁ — শুধু সঠিক key দিয়ে</td>
+            <td>না — one-way</td>
+          </tr>
+          <tr>
+            <th>Key লাগে?</th>
+            <td>না</td>
+            <td>হ্যাঁ</td>
+            <td>না (তবে salt ব্যবহার হয়)</td>
+          </tr>
+          <tr>
+            <th>Security দেয়?</th>
+            <td>না</td>
+            <td>হ্যাঁ</td>
+            <td>হ্যাঁ (সঠিক algorithm দিলে)</td>
+          </tr>
+          <tr>
+            <th>Output length</th>
+            <td>Input-এর উপর নির্ভর করে</td>
+            <td>Input-এর উপর নির্ভর করে</td>
+            <td>সবসময় fixed-length</td>
+          </tr>
+          <tr>
+            <th>উদাহরণ</th>
+            <td>ASCII, UTF-8, Base64, URL</td>
+            <td>AES, RSA, ECC</td>
+            <td>bcrypt, Argon2, scrypt, SHA-256</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">WellDev · 04-resume-projects / 02-encoding-encryption-hashing</div>
+</footer>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Image viewer">
+  <div class="lb-bar">
+    <span id="lbTitle"></span>
+    <div class="lb-actions">
+      <button type="button" id="lbFull">Actual size</button>
+      <button type="button" id="lbClose">✕ Close</button>
+    </div>
+  </div>
+  <img id="lbImg" alt="">
+</div>
+
+<script>
+  // Theme toggle (remembered per browser)
+  (function () {
+    const root = document.documentElement;
+    try {
+      const saved = localStorage.getItem("theme");
+      if (saved) root.dataset.theme = saved;
+    } catch (e) {}
+    document.getElementById("themeBtn").addEventListener("click", () => {
+      const isDark = root.dataset.theme
+        ? root.dataset.theme === "dark"
+        : matchMedia("(prefers-color-scheme: dark)").matches;
+      root.dataset.theme = isDark ? "light" : "dark";
+      try { localStorage.setItem("theme", root.dataset.theme); } catch (e) {}
+    });
+  })();
+
+  // Lightbox
+  (function () {
+    const lb = document.getElementById("lightbox");
+    const img = document.getElementById("lbImg");
+    const title = document.getElementById("lbTitle");
+    const fullBtn = document.getElementById("lbFull");
+
+    function open(src, t) {
+      img.src = src; img.alt = t; title.textContent = t;
+      lb.classList.remove("full"); fullBtn.textContent = "Actual size";
+      lb.classList.add("open"); document.body.style.overflow = "hidden";
+    }
+    function close() {
+      lb.classList.remove("open"); document.body.style.overflow = "";
+    }
+    document.querySelectorAll("[data-zoom]").forEach(btn =>
+      btn.addEventListener("click", () => open(btn.dataset.zoom, btn.dataset.title))
+    );
+    fullBtn.addEventListener("click", () => {
+      const full = lb.classList.toggle("full");
+      fullBtn.textContent = full ? "Fit to screen" : "Actual size";
+    });
+    document.getElementById("lbClose").addEventListener("click", close);
+    img.addEventListener("click", close);
+    lb.addEventListener("click", e => { if (e.target === lb) close(); });
+    document.addEventListener("keydown", e => { if (e.key === "Escape") close(); });
+  })();
+
+  // Highlight active nav link on scroll
+  (function () {
+    const links = [...document.querySelectorAll("#nav a")];
+    const map = new Map(links.map(a => [a.getAttribute("href").slice(1), a]));
+    const io = new IntersectionObserver(entries => {
+      entries.forEach(en => {
+        if (en.isIntersecting) {
+          links.forEach(l => l.classList.remove("active"));
+          map.get(en.target.id)?.classList.add("active");
+        }
+      });
+    }, { rootMargin: "-40% 0px -55% 0px" });
+    map.forEach((_, id) => { const el = document.getElementById(id); if (el) io.observe(el); });
+  })();
+</script>
+</body>
+</html>
