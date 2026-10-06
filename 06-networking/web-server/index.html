@@ -173,8 +173,126 @@ tr:last-child td{border-bottom:0}
 .note{background:var(--surface);border:1px solid var(--line);border-top:4px solid var(--c);border-radius:16px;padding:16px 18px;box-shadow:var(--shadow)}
 .note h3{margin:0 0 6px;font:800 17px var(--sans);letter-spacing:-.015em}
 .note p{margin:0;font-size:15px}
+
+/* TCP stack explainer */
+.tcp-guide{display:grid;gap:16px}
+.tcp-stage{padding:20px;background:var(--surface);border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow);overflow:hidden}
+.tcp-map{display:grid;grid-template-columns:minmax(240px,1fr) minmax(250px,.8fr) minmax(240px,1fr);gap:18px;align-items:stretch}
+.tcp-device{display:grid;gap:9px;padding:16px;border:1px solid var(--line);border-radius:16px;background:var(--surface-2);position:relative}
+.tcp-device.client{border-top:4px solid var(--c-browser)}
+.tcp-device.server{border-top:4px solid var(--c-nginx)}
+.tcp-device h3{margin:0;font:800 18px var(--sans);letter-spacing:-.015em}
+.tcp-device .machine{margin:-5px 0 2px;color:var(--muted);font:500 12px var(--mono)}
+.tcp-layer{padding:11px 13px;border:1px solid var(--line);border-radius:11px;background:var(--surface)}
+.tcp-layer-top b{display:block;font:700 14px var(--sans)}
+.tcp-layer span{display:block;margin-top:2px;color:var(--muted);font-size:13.5px}
+.tcp-layer-top{display:flex!important;align-items:center;justify-content:space-between;gap:8px;margin:0 0 4px!important}
+.tcp-layer-top b{min-width:0}
+.step-tag{flex:none;padding:2px 7px;border-radius:6px;color:#fff!important;background:var(--accent);font:700 10px var(--mono)!important}
+.osi-tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}
+.osi-tags span{margin:0!important;padding:2px 7px;border:1px solid color-mix(in srgb,var(--c-kernel) 30%,var(--line));border-radius:6px;background:var(--surface);font:600 10.5px var(--mono);color:var(--muted)}
+.upper-stack{display:grid;gap:5px;margin-top:8px}
+.upper-layer{display:grid;grid-template-columns:42px 1fr;gap:7px;align-items:start;padding:6px 8px;border:1px solid var(--line);border-radius:7px;background:var(--surface);font-size:11.5px;line-height:1.35;color:var(--muted)}
+.upper-layer b{display:block!important;color:var(--accent);font:800 10.5px var(--mono)!important}
+.upper-layer span{display:block!important;margin:0!important;font-size:11.5px!important}
+.upper-note{margin-top:7px!important;font-size:11px!important;font-style:italic;color:var(--faint)!important}
+.tcp-layer.app{border-left:4px solid var(--c-app)}
+.tcp-layer.sock{border-left:4px solid var(--warn);background:color-mix(in srgb,var(--warn) 6%,var(--surface))}
+.tcp-layer.stack{border-left:4px solid var(--c-kernel);background:color-mix(in srgb,var(--c-kernel) 8%,var(--surface))}
+.tcp-layer.nic{border-left:4px solid var(--c-net)}
+.tcp-door{display:flex;align-items:center;justify-content:center;gap:7px;color:var(--warn);font:700 12px var(--mono)}
+.tcp-door::before,.tcp-door::after{content:"";height:1px;flex:1;background:color-mix(in srgb,var(--warn) 45%,var(--line))}
+.tcp-wire{display:grid;align-content:center;gap:11px;padding:14px 0}
+.tcp-wire h3{margin:0 0 4px;text-align:center;font:800 15px var(--sans)}
+.tcp-packet{display:grid;grid-template-columns:42px 1fr 42px;align-items:center;gap:7px;color:var(--muted);font:600 11px var(--mono)}
+.tcp-packet i{height:2px;background:currentColor;position:relative}
+.tcp-packet i::after{content:"";position:absolute;right:-1px;top:-3px;border-left:7px solid currentColor;border-top:4px solid transparent;border-bottom:4px solid transparent}
+.tcp-packet.back i::after{right:auto;left:-1px;border-left:0;border-right:7px solid currentColor}
+.tcp-packet b{padding:5px 8px;border-radius:8px;text-align:center;color:#fff;background:var(--c-kernel);font:700 11px var(--mono)}
+.tcp-packet .from,.tcp-packet .to{text-align:center}
+.tcp-packet.back{direction:rtl}.tcp-packet.back>*{direction:ltr}
+.tcp-ready{text-align:center;color:var(--ok);font:700 12px var(--sans);padding-top:3px}
+.tcp-logical{text-align:center;color:var(--muted);font-size:11.5px;line-height:1.4}
+.osi-guide{margin-top:16px;padding:18px;border:1px solid var(--line);border-radius:16px;background:var(--surface-2)}
+.osi-guide-head{display:flex;align-items:start;justify-content:space-between;gap:14px;margin-bottom:13px}
+.osi-guide-head h3{margin:0;font:800 18px var(--sans)}
+.osi-guide-head p{margin:2px 0 0;color:var(--muted);font-size:14px;max-width:820px}
+.osi-stack{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:7px}
+.osi-layer{min-width:0;padding:10px 8px;border:1px solid var(--line);border-radius:10px;background:var(--surface);text-align:center}
+.osi-layer b{display:block;color:var(--accent);font:800 12px var(--mono)}
+.osi-layer strong{display:block;margin:3px 0 2px;font:700 12.5px var(--sans)}
+.osi-layer span{display:block;color:var(--muted);font-size:11.5px;line-height:1.35}
+.osi-location{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:11px}
+.osi-location div{padding:9px 11px;border-radius:9px;background:var(--surface);border:1px solid var(--line);font-size:12.5px;color:var(--muted)}
+.osi-location b{color:var(--fg)}
+.tcp-defs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.tcp-def{padding:17px 18px;background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow)}
+.tcp-def .num{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;margin-bottom:10px;color:#fff;background:var(--hero);font:800 13px var(--mono)}
+.tcp-def h3{margin:0 0 6px;font:800 17px var(--sans)}
+.tcp-def p{margin:0;color:var(--muted);font-size:14.5px}
+.tcp-lessons{display:grid;gap:14px}
+.tcp-lesson{padding:20px;background:var(--surface);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow)}
+.tcp-lesson-head{display:flex;align-items:center;gap:11px;margin-bottom:13px}
+.tcp-lesson-head .ico{flex:none;width:38px;height:38px;border-radius:11px;display:grid;place-items:center;color:#fff;background:var(--hero);font:800 15px var(--mono)}
+.tcp-lesson-head h3{margin:0;font:800 19px var(--sans);letter-spacing:-.015em}
+.tcp-lesson-head p{margin:1px 0 0;color:var(--muted);font-size:13.5px}
+.tcp-lesson-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.tcp-mini{padding:15px;border:1px solid var(--line);border-radius:13px;background:var(--surface-2)}
+.tcp-mini h4{margin:0 0 8px;font:800 15px var(--sans)}
+.tcp-mini p{margin:0;color:var(--muted);font-size:14.5px}
+.tcp-list{list-style:none;margin:0;padding:0;display:grid;gap:7px}
+.tcp-list li{display:grid;grid-template-columns:20px 1fr;gap:7px;align-items:start;font-size:14.5px}
+.tcp-list li::before{content:"✓";color:var(--ok);font-weight:800}
+.os-chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:11px}
+.os-chips span{padding:5px 9px;border:1px solid var(--line);border-radius:8px;background:var(--surface);font:600 12px var(--sans);color:var(--muted)}
+.tcp-code{margin:11px 0 0;padding:13px 15px;border:1px solid var(--code-line);border-radius:11px;background:var(--code-bg);color:var(--fg);font:12.5px/1.7 var(--mono);white-space:pre-wrap;overflow-x:auto}
+.tcp-call{margin:11px 0 0;padding:11px 13px;border-left:4px solid var(--accent);border-radius:0 10px 10px 0;background:color-mix(in srgb,var(--accent) 7%,var(--surface));font-size:14.5px}
+.tcp-steps{list-style:none;counter-reset:tcpstep;margin:0;padding:0;display:grid;gap:9px}
+.tcp-steps li{counter-increment:tcpstep;display:grid;grid-template-columns:28px 1fr;gap:9px;align-items:start;font-size:14.5px}
+.tcp-steps li::before{content:counter(tcpstep);width:25px;height:25px;border-radius:8px;display:grid;place-items:center;color:#fff;background:var(--c-kernel);font:700 11px var(--mono)}
+.tcp-path{margin-top:12px;padding:13px;border:1px dashed color-mix(in srgb,var(--c-kernel) 45%,var(--line));border-radius:11px;text-align:center;background:color-mix(in srgb,var(--c-kernel) 5%,var(--surface));font:600 12px/1.8 var(--mono)}
+.tcp-answer{display:grid;grid-template-columns:auto 1fr;gap:13px;align-items:start;padding:17px 19px;border:1px solid color-mix(in srgb,var(--ok) 35%,var(--line));border-radius:16px;background:color-mix(in srgb,var(--ok) 7%,var(--surface))}
+.tcp-answer .tick{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;color:#fff;background:var(--ok);font:800 18px var(--sans)}
+.tcp-answer p{margin:0}.tcp-answer strong{display:block;margin-bottom:3px;font:800 16px var(--sans)}
+
+/* TLS handshake explainer */
+.tls-guide{display:grid;gap:16px}
+.tls-stage{padding:20px;background:var(--surface);border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow)}
+.tls-prereq{display:flex;align-items:center;justify-content:center;gap:9px;margin-bottom:16px;padding:10px 14px;border:1px solid color-mix(in srgb,var(--ok) 35%,var(--line));border-radius:11px;background:color-mix(in srgb,var(--ok) 7%,var(--surface));color:var(--ok);font:700 13px var(--sans)}
+.tls-prereq span{width:23px;height:23px;border-radius:50%;display:grid;place-items:center;color:#fff;background:var(--ok)}
+.tls-head,.tls-row{display:grid;grid-template-columns:minmax(180px,1fr) minmax(280px,1.15fr) minmax(180px,1fr);gap:14px;align-items:center}
+.tls-head{margin-bottom:9px}
+.tls-peer{padding:11px 13px;border-radius:11px;color:#fff;background:linear-gradient(135deg,var(--c-browser),#2563eb)}
+.tls-peer.server{background:linear-gradient(135deg,var(--c-nginx),#059669);text-align:right}
+.tls-peer b{display:block;font:800 14px var(--sans)}.tls-peer span{font:500 11px var(--mono);opacity:.88}
+.tls-center{text-align:center;color:var(--muted);font:700 11px var(--mono)}
+.tls-row{padding:11px 0;border-top:1px dashed var(--line)}
+.tls-side{padding:10px 12px;border-radius:10px;background:var(--surface-2);font-size:13.5px;color:var(--muted)}
+.tls-side b{display:block;color:var(--fg);font:700 13.5px var(--sans)}
+.tls-side.empty{visibility:hidden}
+.tls-msg{display:grid;grid-template-columns:auto 1fr auto;gap:7px;align-items:center;color:var(--accent)}
+.tls-msg.reverse{direction:rtl;color:var(--c-nginx)}.tls-msg.reverse>*{direction:ltr}
+.tls-msg .step{width:24px;height:24px;border-radius:7px;display:grid;place-items:center;color:#fff;background:var(--accent);font:700 10px var(--mono)}
+.tls-msg.reverse .step{background:var(--c-nginx)}
+.tls-msg .step em{color:#fff;font-style:normal}
+.tls-msg .arrow{height:2px;background:currentColor;position:relative}
+.tls-msg .arrow::after{content:"";position:absolute;right:-1px;top:-3px;border-left:7px solid currentColor;border-top:4px solid transparent;border-bottom:4px solid transparent}
+.tls-msg.reverse .arrow::after{right:auto;left:-1px;border-left:0;border-right:7px solid currentColor}
+.tls-msg .label{min-width:90px;padding:6px 8px;border:1px solid currentColor;border-radius:8px;background:var(--surface);text-align:center;font:700 10.5px/1.3 var(--mono)}
+.tls-local{display:flex;align-items:center;justify-content:center;gap:8px;padding:8px 10px;border:1px dashed color-mix(in srgb,var(--warn) 50%,var(--line));border-radius:10px;background:color-mix(in srgb,var(--warn) 6%,var(--surface));color:var(--warn);font:700 11px var(--mono)}
+.tls-secure{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px;padding:12px 14px;border-radius:11px;background:linear-gradient(90deg,color-mix(in srgb,var(--ok) 12%,var(--surface)),color-mix(in srgb,var(--accent) 10%,var(--surface)));border:1px solid color-mix(in srgb,var(--ok) 30%,var(--line));color:var(--ok);font:800 12px var(--mono)}
+.tls-secure i{height:3px;border-radius:3px;background:currentColor;position:relative}.tls-secure i::before,.tls-secure i::after{content:"";position:absolute;top:-3px;border-top:4px solid transparent;border-bottom:4px solid transparent}.tls-secure i::before{left:0;border-right:7px solid currentColor}.tls-secure i::after{right:0;border-left:7px solid currentColor}
+.tls-after{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.tls-fact{padding:15px 16px;border:1px solid var(--line);border-radius:14px;background:var(--surface);box-shadow:var(--shadow)}
+.tls-fact h3{margin:0 0 5px;font:800 16px var(--sans)}.tls-fact p{margin:0;color:var(--muted);font-size:14px}
+.tls-note{padding:14px 16px;border-left:4px solid var(--accent);border-radius:0 12px 12px 0;background:color-mix(in srgb,var(--accent) 7%,var(--surface));font-size:14.5px}
+.tls-note p{margin:0}
 footer{color:var(--faint);font-size:13px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;border-top:1px solid var(--line);padding-top:16px}
-@media (max-width:640px){.hero{padding:24px 20px;border-radius:20px}.wf-row{grid-template-columns:110px minmax(0,1fr) 52px}.stats{grid-template-columns:1fr}}
+@media (max-width:1050px){.osi-stack{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media (max-width:900px){.tcp-map{grid-template-columns:1fr}.tcp-wire{padding:4px 12%;}.tcp-defs,.tcp-lesson-grid,.tls-after{grid-template-columns:1fr}.tcp-packet{grid-template-columns:54px 1fr 54px}.osi-location{grid-template-columns:1fr}.tls-head,.tls-row{grid-template-columns:minmax(135px,.75fr) minmax(230px,1.25fr) minmax(135px,.75fr)}}
+@media (max-width:640px){.hero{padding:24px 20px;border-radius:20px}.wf-row{grid-template-columns:110px minmax(0,1fr) 52px}.stats{grid-template-columns:1fr}.tcp-stage{padding:13px}.tcp-wire{padding:4px 0}.tcp-answer{grid-template-columns:1fr}.tcp-answer .tick{width:30px;height:30px}}
+@media (max-width:640px){.tls-stage{padding:13px}.tls-head{grid-template-columns:1fr 1fr}.tls-head .tls-center{display:none}.tls-row{grid-template-columns:1fr}.tls-side{order:2}.tls-side.empty{display:none}.tls-msg,.tls-local,.tls-secure{order:1}.tls-peer.server{text-align:left}.tls-row .tls-side:last-child:not(.empty){order:3}}
+@media (max-width:560px){.osi-stack{grid-template-columns:1fr 1fr}.osi-guide{padding:13px}.osi-guide-head{display:block}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
@@ -397,6 +515,270 @@ footer{color:var(--faint);font-size:13px;display:flex;justify-content:space-betw
       <div class="note" style="--c:var(--c-app)"><h3>App server কেন আলাদা?</h3><p>Node, Spring, Django-তে আপনার business logic চলে। Nginx এটা সামনে থেকে আড়াল করে — app crash করলে Nginx অন্তত <code>502</code> দেখাতে পারে, আর একাধিক app instance-এ ভাগ করে দিতে পারে।</p></div>
       <div class="note" style="--c:var(--c-redis)"><h3>Keep-alive আর cache</h3><p>প্রথম request-এ DNS, TCP, TLS-এ সময় যায়। একই connection খোলা থাকে (keep-alive), তাই পরের request এগুলো ছাড়াই যায়। Redis cache থাকলে database পর্যন্তই যেতে হয় না।</p></div>
     </div>
+  </section>
+
+  <section class="tcp-guide" aria-labelledby="tcp-guide-title">
+    <div>
+      <h2 class="sect-h" id="tcp-guide-title">TCP connection setup কীভাবে হয়?</h2>
+      <p class="sect-p">Browser বা Nginx নিজের হাতে TCP segment বানায় না। তারা socket-এর মাধ্যমে operating system-কে বলে; দুই computer-এর OS networking stack তখন connection setup করে। এই flow-তেই TCP stack, socket ও OSI layer কোথায় কাজ করে দেখুন।</p>
+    </div>
+
+    <div class="tcp-stage">
+      <div class="tcp-map">
+        <article class="tcp-device client">
+          <h3>Client computer</h3>
+          <p class="machine">Request path · Step 1 ↓ 4</p>
+          <div class="tcp-layer app">
+            <span class="tcp-layer-top"><b>Browser · application</b><span class="step-tag">STEP 1</span></span>
+            <span>“example.com:443-এ connection চাই”</span>
+            <div class="upper-stack">
+              <div class="upper-layer"><b>OSI 7</b><span><strong>Application:</strong> Browser HTTP request/response বোঝে</span></div>
+              <div class="upper-layer"><b>OSI 6</b><span><strong>Presentation:</strong> TLS encrypt/decrypt, JSON/UTF-8 decode, gzip decompress</span></div>
+              <div class="upper-layer"><b>OSI 5</b><span><strong>Session:</strong> TLS session/resumption ও HTTP connection/session coordination</span></div>
+            </div>
+            <span class="upper-note">বাস্তবে L5–L7 browser ও তার libraries-এর মধ্যে মিশে কাজ করে</span>
+          </div>
+          <div class="tcp-door">Socket API · দরজা</div>
+          <div class="tcp-layer sock">
+            <span class="tcp-layer-top"><b>Socket · OS object</b><span class="step-tag">STEP 2</span></span>
+            <span><code>198.51.100.7:52100</code> · connection-এর পরিচয় ও buffer</span>
+            <span class="osi-tags"><span>OSI layer নয় · API boundary</span></span>
+          </div>
+          <div class="tcp-layer stack">
+            <span class="tcp-layer-top"><b>Client OS networking stack</b><span class="step-tag">STEP 3</span></span>
+            <span>TCP reliability ও IP addressing/routing kernel-এ সামলায়</span>
+            <span class="osi-tags"><span>OSI 4 · TCP</span><span>OSI 3 · IP</span></span>
+          </div>
+          <div class="tcp-layer nic">
+            <span class="tcp-layer-top"><b>Wi-Fi / Ethernet + NIC</b><span class="step-tag">STEP 4</span></span>
+            <span>Client থেকে data <b>পাঠায় এবং গ্রহণ করে</b></span>
+            <span class="osi-tags"><span>OSI 2 · Frame</span><span>OSI 1 · Signal</span></span>
+          </div>
+        </article>
+
+        <div class="tcp-wire" aria-label="TCP three-way handshake">
+          <h3>TCP connection setup</h3>
+          <div class="tcp-logical">দুই OS-এর TCP layer-এর logical conversation</div>
+          <div class="tcp-packet"><span class="from">Client</span><i></i><b>SYN</b></div>
+          <div class="tcp-packet back"><span class="to">Server</span><i></i><b>SYN-ACK</b></div>
+          <div class="tcp-packet"><span class="from">Client</span><i></i><b>ACK</b></div>
+          <div class="tcp-ready">✓ TCP connection ready</div>
+          <div class="tcp-logical">এরপর দুই দিকেই application data ও ACK চলতে থাকে</div>
+        </div>
+
+        <article class="tcp-device server">
+          <h3>Server computer</h3>
+          <p class="machine">Request path · Step 5 ↑ 8</p>
+          <div class="tcp-layer app">
+            <span class="tcp-layer-top"><b>Nginx · application</b><span class="step-tag">STEP 8</span></span>
+            <span>Connection accept করে; তারপর TLS ও HTTP request পড়ে</span>
+            <div class="upper-stack">
+              <div class="upper-layer"><b>OSI 7</b><span><strong>Application:</strong> Nginx HTTP parse, route ও response করে</span></div>
+              <div class="upper-layer"><b>OSI 6</b><span><strong>Presentation:</strong> OpenSSL/TLS encrypt-decrypt, gzip ও data encoding</span></div>
+              <div class="upper-layer"><b>OSI 5</b><span><strong>Session:</strong> TLS session/resumption ও HTTP keep-alive coordination</span></div>
+            </div>
+            <span class="upper-note">বাস্তবে L5–L7 Nginx, TLS library ও app-এর মধ্যে মিশে কাজ করে</span>
+          </div>
+          <div class="tcp-door">Socket API · দরজা</div>
+          <div class="tcp-layer sock">
+            <span class="tcp-layer-top"><b>Listening / connected socket</b><span class="step-tag">STEP 7</span></span>
+            <span>Port <code>443</code> · established connection accept queue-তে থাকে</span>
+            <span class="osi-tags"><span>OSI layer নয় · API boundary</span></span>
+          </div>
+          <div class="tcp-layer stack">
+            <span class="tcp-layer-top"><b>Server OS networking stack</b><span class="step-tag">STEP 6</span></span>
+            <span>IP packet process করে; TCP handshake, reliability ও ordering সামলায়</span>
+            <span class="osi-tags"><span>OSI 4 · TCP</span><span>OSI 3 · IP</span></span>
+          </div>
+          <div class="tcp-layer nic">
+            <span class="tcp-layer-top"><b>Ethernet / Wi-Fi + NIC</b><span class="step-tag">STEP 5</span></span>
+            <span>Server থেকে data <b>পাঠায় এবং গ্রহণ করে</b></span>
+            <span class="osi-tags"><span>OSI 2 · Frame</span><span>OSI 1 · Signal</span></span>
+          </div>
+        </article>
+      </div>
+
+      <div class="osi-guide">
+        <div class="osi-guide-head">
+          <div><h3>OSI layer কোথায় থাকে?</h3><p>OSI কোনো computer-এর ভিতরে রাখা সাতটি আলাদা box নয়—এটি networking কাজ বোঝার একটি <b>conceptual model</b>। Client ও server দুই পাশেই সাত layer-এর দায়িত্ব থাকে, কিন্তু বাস্তবে কাজগুলো application, OS kernel, driver এবং network card-এর মধ্যে ভাগ হয়।</p></div>
+        </div>
+        <div class="osi-stack">
+          <div class="osi-layer"><b>L7</b><strong>Application</strong><span>Browser, HTTP<br>Nginx</span></div>
+          <div class="osi-layer"><b>L6</b><strong>Presentation</strong><span>TLS encryption<br>encoding</span></div>
+          <div class="osi-layer"><b>L5</b><strong>Session</strong><span>Session ও কথোপকথন চালু রাখা</span></div>
+          <div class="osi-layer"><b>L4</b><strong>Transport</strong><span>TCP segment<br>port ও reliability</span></div>
+          <div class="osi-layer"><b>L3</b><strong>Network</strong><span>IP packet<br>address ও routing</span></div>
+          <div class="osi-layer"><b>L2</b><strong>Data Link</strong><span>Ethernet/Wi-Fi frame ও MAC</span></div>
+          <div class="osi-layer"><b>L1</b><strong>Physical</strong><span>Cable/radio<br>electrical signal</span></div>
+        </div>
+        <div class="osi-location">
+          <div><b>Application process:</b> মূলত L7; TLS/formatting-এর কারণে L5–L6-এর কাজও application/library-তে দেখা যায়।</div>
+          <div><b>OS kernel + driver:</b> মূলত L4 TCP, L3 IP এবং L2-এর বড় অংশ বাস্তবায়ন করে।</div>
+          <div><b>Network card / medium:</b> L2 frame transmit/receive-এ সাহায্য করে এবং L1 signal cable বা radio-তে পাঠায়/আনে।</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tcp-defs">
+      <article class="tcp-def"><span class="num">01</span><h3>TCP stack</h3><p>Operating system-এর ভেতরের networking software। সাধারণ Linux, Windows বা macOS-এ এটি মূলত <b>kernel-এর মধ্যে</b> থাকে—CPU-তে code হিসেবে চলে, RAM-এ connection-এর state রাখে।</p></article>
+      <article class="tcp-def"><span class="num">02</span><h3>Socket</h3><p>Application আর OS networking-এর মাঝের দরজা। Application-এর কাছে একটি handle/file descriptor থাকে; kernel-এর কাছে থাকে IP, port, buffer ও connection state-সহ socket object।</p></article>
+      <article class="tcp-def"><span class="num">03</span><h3>Client বনাম server</h3><p>Technology একই TCP। যে side connection শুরু করে সে <b>client</b>; যে side port-এ অপেক্ষা করে সে <b>server</b>। একই computer প্রয়োজনে দুই ভূমিকাতেই থাকতে পারে।</p></article>
+    </div>
+
+    <div class="tcp-lessons">
+      <article class="tcp-lesson">
+        <div class="tcp-lesson-head">
+          <span class="ico">TCP</span>
+          <div><h3>TCP stack: OS-এর networking manager</h3><p>এটি hardware বা আলাদা application নয়</p></div>
+        </div>
+        <div class="tcp-lesson-grid">
+          <div class="tcp-mini">
+            <h4>কোথায় থাকে?</h4>
+            <p>সাধারণত operating system-এর <b>kernel-এর মধ্যে</b> থাকে। এটি CPU-তে software code হিসেবে চলে এবং RAM-এ প্রতিটি connection-এর বর্তমান অবস্থা মনে রাখে।</p>
+            <div class="os-chips"><span>Windows kernel</span><span>Linux kernel</span><span>macOS / iOS kernel</span><span>Android · Linux kernel</span></div>
+          </div>
+          <div class="tcp-mini">
+            <h4>এর প্রধান কাজ</h4>
+            <ul class="tcp-list">
+              <li><span><code>SYN</code>, <code>SYN-ACK</code> ও <code>ACK</code> segment তৈরি ও process করা</span></li>
+              <li><span>Application data-কে ছোট TCP segment-এ ভাগ করা এবং receive side-এ আবার জোড়া লাগানো</span></li>
+              <li><span>Sequence number, acknowledgment number ও checksum ব্যবহার করে data track করা</span></li>
+              <li><span>হারানো data আবার পাঠানো (retransmission)</span></li>
+              <li><span>এলোমেলোভাবে আসা data সঠিক ক্রমে সাজানো</span></li>
+              <li><span>Port দেখে data সঠিক application-এর socket-এ দেওয়া</span></li>
+              <li><span>Receiver কত data নিতে পারবে তা মেনে flow control করা</span></li>
+              <li><span>Network-এর চাপ বুঝে congestion control করা</span></li>
+              <li><span>Connection handshake দিয়ে খোলা, সচল রাখা এবং FIN/ACK দিয়ে বন্ধ করা</span></li>
+            </ul>
+          </div>
+        </div>
+        <p class="tcp-call"><b>Browser-এর ভূমিকা:</b> Browser নিজে TCP header বা ACK বানায় না। সে OS-কে অনুরোধ করে—“এই server-এর IP address এবং port <code>443</code>-এর সঙ্গে একটি connection খুলে দাও।” তারপর TCP stack handshake করে।</p>
+      </article>
+
+      <article class="tcp-lesson">
+        <div class="tcp-lesson-head">
+          <span class="ico">SOCK</span>
+          <div><h3>Socket: application আর TCP stack-এর দরজা</h3><p>Packet নয়—একটি connection-কে represent করা OS object</p></div>
+        </div>
+        <div class="tcp-lesson-grid">
+          <div class="tcp-mini">
+            <h4>Socket-এর দুইটি দিক</h4>
+            <ol class="tcp-steps">
+              <li><span>Application-এর কাছে socket-এর একটি <b>handle/file descriptor</b> থাকে। Browser বা Nginx এটি দিয়ে connect, read ও write করতে বলে।</span></li>
+              <li><span>Kernel-এর মধ্যে একটি <b>socket data structure</b> থাকে। সেখানে address, port, buffer এবং TCP connection-এর state রাখা হয়।</span></li>
+            </ol>
+            <div class="tcp-path">Browser ── socket ── Client TCP stack<br>Nginx&nbsp;&nbsp; ── socket ── Server TCP stack</div>
+          </div>
+          <div class="tcp-mini">
+            <h4>Kernel socket-এ কী মনে রাখে?</h4>
+            <pre class="tcp-code">Client IP:    192.168.1.5
+Client port:  52100  (temporary)
+Server IP:    203.0.113.10
+Server port:  443
+State:        ESTABLISHED
+Next seq:     ...
+Next ACK:     ...</pre>
+            <p class="tcp-call"><b>চারটি মানের পরিচয়:</b> client IP + client port + server IP + server port মিলে একটি TCP connection-কে অন্য connection থেকে আলাদা করে।</p>
+          </div>
+        </div>
+      </article>
+
+      <article class="tcp-lesson">
+        <div class="tcp-lesson-head">
+          <span class="ico">↔</span>
+          <div><h3>Client ও server side-এ ঘটনাটি যেভাবে ঘটে</h3><p>একই TCP technology—শুধু দুই side-এর ভূমিকা আলাদা</p></div>
+        </div>
+        <div class="tcp-lesson-grid">
+          <div class="tcp-mini">
+            <h4>Client side · Browser</h4>
+            <ol class="tcp-steps">
+              <li><span>Browser <code>https://example.com</code> খুলে server-এর <code>203.0.113.10:443</code>-এ connect করতে বলে।</span></li>
+              <li><span>OS একটি socket ও temporary client port তৈরি করে—যেমন <code>52100</code>।</span></li>
+              <li><span>Client kernel-এর TCP stack <code>SYN</code> তৈরি করে network card-কে দেয়; card data পাঠায় এবং ফেরত data গ্রহণও করে।</span></li>
+              <li><span><code>SYN-ACK</code> এলে TCP stack final <code>ACK</code> পাঠিয়ে connection established করে।</span></li>
+            </ol>
+            <div class="tcp-path">Browser ↓ Socket ↓ Client TCP stack<br>↓ Wi-Fi / Ethernet card ↓ Internet</div>
+          </div>
+          <div class="tcp-mini">
+            <h4>Server side · Nginx</h4>
+            <ol class="tcp-steps">
+              <li><span>Nginx আগেই একটি listening socket খুলে kernel-কে বলে—“TCP port <code>443</code>-এর connection আমি নেব।”</span></li>
+              <li><span>Server network card <code>SYN</code> গ্রহণ করে kernel-কে দেয়; kernel-এর TCP stack <code>SYN-ACK</code> তৈরি করলে card সেটিও client-এর দিকে পাঠায়।</span></li>
+              <li><span>Client-এর final <code>ACK</code> পেলে kernel connection-টি established queue-তে রাখে।</span></li>
+              <li><span>Nginx <code>accept()</code> করে ready connection নেয়; তারপর TLS ও HTTP data processing শুরু হয়।</span></li>
+            </ol>
+            <div class="tcp-path">Internet ⇄ Server network card ⇄ TCP/IP stack<br>⇄ Socket ⇄ Nginx</div>
+          </div>
+        </div>
+        <p class="tcp-call"><b>সবচেয়ে গুরুত্বপূর্ণ:</b> প্রথম SYN আসার সময় Nginx packet ধরে SYN-ACK লেখে না। Server kernel-এর TCP stack এই কাজটি করে। Handshake সম্পূর্ণ হওয়ার পর Nginx connection গ্রহণ করে।</p>
+      </article>
+    </div>
+
+    <div class="tcp-answer">
+      <span class="tick">✓</span>
+      <p><strong>তাহলে ACK আসলে কে পাঠায়?</strong>Browser connection চায়, কিন্তু তার হয়ে <b>client OS-এর TCP stack</b> final ACK তৈরি করে। অন্য পাশে <b>server OS-এর TCP stack</b> সেটি গ্রহণ করে। Handshake শেষ হলে server kernel Nginx-কে ready connection দেয়—app server তখনো এই কাজে যুক্ত নয়। TCP-এর কাজ এখানেই শেষ নয়: connection চলাকালে data ভাগ/জোড়া, ACK, ordering, retransmission, flow control ও congestion control-ও TCP সামলায়।</p>
+    </div>
+  </section>
+
+  <section class="tls-guide" aria-labelledby="tls-guide-title">
+    <div>
+      <h2 class="sect-h" id="tls-guide-title">TCP ready—এবার TLS connection কীভাবে হয়?</h2>
+      <p class="sect-p">TLS 1.3 handshake TCP connection-এর ভেতর দিয়েই চলে। এর লক্ষ্য server-এর পরিচয় যাচাই করা, দুপাশে একই secret key তৈরি করা এবং পরের HTTP data encrypt করা।</p>
+    </div>
+
+    <div class="tls-stage">
+      <div class="tls-prereq"><span>✓</span>আগের ধাপ: TCP connection <code>ESTABLISHED</code></div>
+
+      <div class="tls-head">
+        <div class="tls-peer"><b>Client · Browser</b><span>TLS library</span></div>
+        <div class="tls-center">TLS 1.3 HANDSHAKE · TCP-এর ভেতর</div>
+        <div class="tls-peer server"><b>Server · Nginx</b><span>TLS certificate + private key</span></div>
+      </div>
+
+      <div class="tls-row">
+        <div class="tls-side"><b>Browser প্রস্তাব দেয়</b>TLS version, cipher suites, random, domain (SNI) এবং key share পাঠায়।</div>
+        <div class="tls-msg"><span class="step"><em>1</em></span><span class="arrow"></span><span class="label">ClientHello</span></div>
+        <div class="tls-side"><b>Nginx গ্রহণ করে</b>Client-এর options দেখে compatible security settings বেছে নেয়।</div>
+      </div>
+
+      <div class="tls-row">
+        <div class="tls-side"><b>Browser choice পায়</b>দুই পাশের key share থেকে একই shared secret হিসাব করা সম্ভব হয়।</div>
+        <div class="tls-msg reverse"><span class="step"><em>2</em></span><span class="arrow"></span><span class="label">ServerHello</span></div>
+        <div class="tls-side"><b>Nginx নির্বাচন করে</b>TLS 1.3, cipher suite এবং server key share ফেরত দেয়।</div>
+      </div>
+
+      <div class="tls-row">
+        <div class="tls-side"><b>Browser প্রমাণ পায়</b>Certificate-এর domain, validity, trusted CA chain এবং signature যাচাই করবে।</div>
+        <div class="tls-msg reverse"><span class="step"><em>3</em></span><span class="arrow"></span><span class="label">Certificate<br>+ Finished</span></div>
+        <div class="tls-side"><b>Server পরিচয় প্রমাণ করে</b>EncryptedExtensions, Certificate, CertificateVerify এবং Finished পাঠায়।</div>
+      </div>
+
+      <div class="tls-row">
+        <div class="tls-side"><b>Browser-এর local check</b>সব যাচাই ঠিক না হলে এখানেই security warning বা handshake failure হয়।</div>
+        <div class="tls-local"><span>4</span> Certificate verify + session key derive</div>
+        <div class="tls-side empty" aria-hidden="true">খালি</div>
+      </div>
+
+      <div class="tls-row">
+        <div class="tls-side"><b>Browser সম্মতি দেয়</b>নিজের Finished message দিয়ে জানায় যে handshake keys ও messages ঠিক আছে।</div>
+        <div class="tls-msg"><span class="step"><em>5</em></span><span class="arrow"></span><span class="label">Finished</span></div>
+        <div class="tls-side"><b>Nginx verify করে</b>Client Finished ঠিক হলে TLS handshake সম্পূর্ণ হয়।</div>
+      </div>
+
+      <div class="tls-row">
+        <div class="tls-side"><b>Browser</b>এখন encrypted HTTP request পাঠাতে পারে।</div>
+        <div class="tls-secure"><span>Browser</span><i></i><span>🔒 Nginx</span></div>
+        <div class="tls-side"><b>Nginx</b>Request decrypt করে এবং encrypted response ফেরত দেয়।</div>
+      </div>
+    </div>
+
+    <div class="tls-after">
+      <article class="tls-fact"><h3>TCP কী দিচ্ছে?</h3><p>দুই application-এর মধ্যে reliable, ordered byte stream। TLS message হারালে TCP retransmission ও ordering সামলায়।</p></article>
+      <article class="tls-fact"><h3>TLS কী যোগ করছে?</h3><p><b>Identity</b>—সঠিক server কি না, <b>confidentiality</b>—data গোপন, এবং <b>integrity</b>—data বদলেছে কি না।</p></article>
+      <article class="tls-fact"><h3>তারপর HTTP</h3><p><code>GET /...</code>, headers ও response TLS records-এর মধ্যে encrypted থাকে; TLS records আবার TCP data হিসেবে যায়।</p></article>
+    </div>
+
+    <div class="tls-note"><p><b>কোথায় চলে?</b> সাধারণ setup-এ client-side TLS browser-এর TLS library-তে এবং server-side TLS Nginx/OpenSSL-এর মতো user-space software-এ চলে। নিচে OS kernel-এর TCP/IP stack একই সময়ে ACK, retransmission, ordering, flow control ও congestion control চালিয়ে যায়। Diagram-টি TLS 1.3-এর একটি সহজ full-handshake view; resumed connection আরও ছোট হতে পারে।</p></div>
   </section>
 
   <footer><span>WellDev · 06-networking / web-server · GSAP দিয়ে অ্যানিমেশন</span><a href="../../index.html">← সব গাইড</a></footer>
