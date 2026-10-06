@@ -16,7 +16,7 @@ _শীঘ্রই আসছে।_
 
 ## 03 · DBMS & SQL
 
-- [LeetCode SQL 50 — Visual Guide](03-dbms-sql/leetcode-sql-50-visual-guide.html) — ৫০টি problem, PostgreSQL solution আর প্রতিটি ধাপের intermediate table
+- [LeetCode SQL 50 — Visual Guide](03-dbms-sql/top-50-sql/index.html) — ৫০টি problem, PostgreSQL solution আর প্রতিটি ধাপের intermediate table
 
 ## 04 · Resume Projects
 
