@@ -1,0 +1,675 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Optimistic vs Pessimistic Locking</title>
+<meta name="description">Lost update সমস্যা আর তার দুই সমাধান — SELECT … FOR UPDATE (pessimistic) আর version column (optimistic), PostgreSQL কোড, আসল output আর A/B transaction-এর animation সহ।
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<style>
+/* Layout: problem → interactive A/B simulation → pessimistic → optimistic → comparison.
+   Static timelines and the simulator log share the same two-lane row markup. */
+:root{
+  --bg:#f5f7fc; --surface:#ffffff; --surface-2:#f1f4fa; --fg:#0f172a; --muted:#5b6478; --faint:#94a0b8; --line:#e4e8f1;
+  --accent:#6366f1; --sa:#4f46e5; --sb:#db2777;
+  --pa:#e11d48; --pc:#d97706; --pi:#0284c7; --pd:#059669;
+  --ok:#059669; --bad:#e11d48; --warn:#d97706;
+  --hero:linear-gradient(135deg,#4f46e5 0%,#7c3aed 45%,#db2777 100%);
+  --shadow:0 1px 2px rgba(15,23,42,.04),0 10px 30px -12px rgba(15,23,42,.14);
+  --code-bg:#ffffff; --code-line:#e6e9f1;
+  --t-kw:#0000ff; --t-str:#a31515; --t-num:#098658; --t-com:#008000; --t-type:#267f99;
+  --sans:"Inter","Hind Siliguri",system-ui,sans-serif; --bn:"Hind Siliguri","Inter",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0b0f1a; --surface:#121827; --surface-2:#182033; --fg:#e7ecf6; --muted:#9aa6bf; --faint:#66728c; --line:#232c42;
+  --accent:#818cf8; --sa:#818cf8; --sb:#f472b6; --pa:#fb7185; --pc:#fbbf24; --pi:#38bdf8; --pd:#34d399;
+  --ok:#34d399; --bad:#fb7185; --warn:#fbbf24;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6);
+  --code-bg:#1e1e1e; --code-line:#2d2d30; --t-kw:#569cd6; --t-str:#ce9178; --t-num:#b5cea8; --t-com:#6a9955; --t-type:#4ec9b0;
+}}
+:root[data-theme="dark"]{
+  --bg:#0b0f1a; --surface:#121827; --surface-2:#182033; --fg:#e7ecf6; --muted:#9aa6bf; --faint:#66728c; --line:#232c42;
+  --accent:#818cf8; --sa:#818cf8; --sb:#f472b6; --pa:#fb7185; --pc:#fbbf24; --pi:#38bdf8; --pd:#34d399;
+  --ok:#34d399; --bad:#fb7185; --warn:#fbbf24;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6);
+  --code-bg:#1e1e1e; --code-line:#2d2d30; --t-kw:#569cd6; --t-str:#ce9178; --t-num:#b5cea8; --t-com:#6a9955; --t-type:#4ec9b0;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 var(--bn);-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto 0;height:420px;z-index:-1;pointer-events:none;
+  background:radial-gradient(620px 260px at 20% -40px,color-mix(in srgb,#6366f1 14%,transparent),transparent 70%),
+             radial-gradient(540px 240px at 90% -60px,color-mix(in srgb,#ec4899 11%,transparent),transparent 70%)}
+a{color:var(--accent)}
+button{font:inherit;color:inherit}
+code{font-family:var(--mono);font-size:.86em;font-weight:500;background:color-mix(in srgb,var(--accent) 10%,var(--surface));color:color-mix(in srgb,var(--accent) 72%,var(--fg));padding:.1em .4em;border-radius:6px}
+.wrap{max-width:1040px;margin:0 auto;padding:20px 18px 70px}
+section{margin-top:56px;scroll-margin-top:16px}
+
+.topnav{display:flex;align-items:center;gap:10px}
+.brand{display:flex;align-items:center;gap:10px;color:var(--fg);text-decoration:none;font:800 16px var(--sans);letter-spacing:-.02em}
+.logo{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:#fff;font:800 13px var(--mono);background:var(--hero)}
+.topnav .sp{flex:1}
+.pill{border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:6px 14px;font:600 13px var(--sans);cursor:pointer;text-decoration:none}
+.pill:hover{color:var(--fg)}
+
+.hero{margin-top:22px;border-radius:22px;padding:30px 32px;color:#fff;background:var(--hero);position:relative;overflow:hidden}
+.hero::after{content:"";position:absolute;right:-70px;top:-90px;width:320px;height:320px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.2),transparent 65%);pointer-events:none}
+.eyebrow{font:600 12px var(--sans);letter-spacing:.1em;text-transform:uppercase;opacity:.85}
+.hero h1{margin:8px 0 10px;font:800 clamp(28px,4.4vw,42px)/1.12 var(--sans);letter-spacing:-.03em}
+.hero p{margin:0;max-width:720px;font-size:16.5px;opacity:.94}
+
+/* the four letters */
+.letters{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:22px}
+@media (max-width:860px){.letters{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:480px){.letters{grid-template-columns:minmax(0,1fr)}}
+.letter{display:block;text-decoration:none;color:inherit;padding:16px 18px;border-top:3px solid var(--c)}
+.letter .big{font:800 34px/1 var(--sans);color:var(--c)}
+.letter b{display:block;margin-top:8px;font:700 15.5px var(--sans)}
+.letter p{margin:4px 0 0;font-size:14.5px;color:var(--muted);line-height:1.55}
+.letter small{display:block;margin-top:10px;font:500 11.5px var(--mono);color:var(--faint)}
+.letter:hover{border-color:var(--c)}
+
+h2{display:flex;align-items:center;gap:12px;margin:0 0 6px;font:800 clamp(21px,2.8vw,26px)/1.25 var(--sans);letter-spacing:-.025em}
+.num{flex:none;width:38px;height:38px;border-radius:11px;display:grid;place-items:center;color:#fff;font:800 17px var(--sans);background:var(--c,var(--accent))}
+.motto{display:inline-block;margin:2px 0 14px;font:600 13.5px var(--sans);color:var(--c);background:color-mix(in srgb,var(--c) 10%,transparent);padding:4px 12px;border-radius:999px}
+.lead{margin:0 0 18px;color:var(--muted);max-width:820px}
+.lead b{color:var(--fg)}
+h3{margin:26px 0 10px;font:700 17px var(--sans);letter-spacing:-.015em}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow)}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:start}
+@media (max-width:760px){.grid2{grid-template-columns:minmax(0,1fr)}}
+
+.story{padding:14px 16px;font-size:15px;border-left:4px solid var(--c)}
+.story b{color:var(--fg)}
+.story p{margin:0;color:var(--muted)}
+
+pre.code{margin:0;padding:12px 14px;border-radius:12px;background:var(--code-bg);border:1px solid var(--code-line);font:13px/1.65 var(--mono);white-space:pre-wrap;word-break:break-word;font-variant-ligatures:none;overflow-x:auto}
+.k{color:var(--t-kw);font-weight:600}.s{color:var(--t-str)}.d{color:var(--t-num)}.c{color:var(--t-com);font-style:italic}.t{color:var(--t-type)}
+pre.code .o{color:var(--muted);font-style:normal}
+pre.code .e{color:var(--bad);font-style:normal}
+pre.code .g{color:var(--ok);font-style:normal;font-weight:600}
+.file{display:flex;align-items:center;gap:8px;margin:0 0 6px;font:600 12px var(--mono);color:var(--muted)}
+.file i{width:8px;height:8px;border-radius:50%;background:var(--dot,var(--accent))}
+.file .r{margin-left:auto;font:600 11px var(--sans);padding:1px 8px;border-radius:6px;color:var(--tc);background:color-mix(in srgb,var(--tc) 12%,transparent)}
+
+.how{margin-top:14px;padding:14px 16px;border-radius:12px;background:color-mix(in srgb,var(--c) 7%,var(--surface));border:1px solid color-mix(in srgb,var(--c) 22%,var(--line));font-size:15px}
+.how b{color:var(--fg)}
+.how ul{margin:6px 0 0;padding-left:20px;color:var(--muted)}
+.how li{margin:3px 0}
+
+/* timeline (isolation + durability) */
+.tl{overflow:hidden}
+.tl-head,.row{display:grid;grid-template-columns:40px minmax(0,1fr) minmax(0,1fr)}
+.tl-head{background:var(--surface-2);border-bottom:1px solid var(--line);font:700 12.5px var(--sans)}
+.tl-head span{padding:10px 14px}
+.tl-head .a{color:var(--sa)} .tl-head .b{color:var(--sb);border-left:1px solid var(--line)}
+.row{border-bottom:1px solid var(--line)}
+.row:last-child{border-bottom:0}
+.row .n{display:grid;place-items:start center;padding-top:13px;font:600 11.5px var(--mono);color:var(--faint)}
+.cell{padding:10px 14px;min-width:0}
+.cell + .cell{border-left:1px solid var(--line)}
+.cell.on{background:color-mix(in srgb,var(--who) 4%,transparent)}
+.cell.a{--who:var(--sa)} .cell.b{--who:var(--sb)}
+.cell pre{margin:0;font:12.8px/1.6 var(--mono);white-space:pre-wrap;word-break:break-word;font-variant-ligatures:none}
+.out{margin-top:6px;font:12.5px/1.55 var(--mono);color:var(--muted)}
+.out b{color:var(--fg)}
+.tag{display:inline-block;margin-top:6px;font:600 12px var(--sans);padding:2px 9px;border-radius:7px;background:color-mix(in srgb,var(--tc) 12%,transparent);color:var(--tc)}
+.tag.ok{--tc:var(--ok)} .tag.bad{--tc:var(--bad)} .tag.info{--tc:var(--muted)}
+@media (max-width:700px){
+  .tl-head{display:none}
+  .row{grid-template-columns:30px minmax(0,1fr)}
+  .cell:not(.on){display:none}
+  .cell + .cell{border-left:0}
+  .cell.on::before{content:attr(data-who);display:inline-block;margin-bottom:4px;font:700 11px var(--sans);color:#fff;background:var(--who);padding:1px 8px;border-radius:6px}
+}
+
+.tscroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:640px;font-size:14.5px}
+th,td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font:600 12px var(--sans);text-transform:uppercase;letter-spacing:.05em;color:var(--muted);background:var(--surface-2)}
+tr:last-child td{border-bottom:0}
+td.p{font:700 14px var(--sans);white-space:nowrap}
+td.p span{display:inline-grid;place-items:center;width:24px;height:24px;margin-right:8px;border-radius:7px;color:#fff;font-size:12px;background:var(--c)}
+.foot{margin:10px 2px 0;font-size:13.5px;color:var(--muted)}
+
+details{border-bottom:1px solid var(--line);padding:12px 2px}
+details:last-child{border-bottom:0}
+summary{cursor:pointer;font:600 15.5px var(--bn);list-style:none;display:flex;gap:10px}
+summary::before{content:"+";font:700 15px var(--mono);color:var(--accent);width:14px}
+details[open] summary::before{content:"−"}
+details p{margin:8px 0 0 24px;color:var(--muted);font-size:15px}
+
+footer{margin-top:56px;padding-top:16px;border-top:1px solid var(--line);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;font-size:13px;color:var(--faint)}
+@media (max-width:640px){.hero{padding:24px 20px;border-radius:18px}}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+/* simulator */
+.sim{padding:14px;display:grid;gap:12px}
+.modes{display:flex;flex-wrap:wrap;gap:6px}
+.modes button{border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:6px 13px;font:600 13px var(--sans);cursor:pointer}
+.modes button.on{color:#fff;border-color:transparent;background:var(--mc)}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.bar .sp{flex:1}
+.btn{border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:10px;padding:7px 12px;font:600 13px var(--sans);cursor:pointer}
+.btn:hover:not(:disabled){border-color:var(--accent)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.primary{border-color:transparent;color:#fff;background:linear-gradient(135deg,#6366f1,#8b5cf6 55%,#ec4899);min-width:104px}
+.prog{font:600 12.5px var(--mono);color:var(--muted)}
+.stage{border-radius:14px;background:var(--surface-2);overflow-x:auto;-webkit-overflow-scrolling:touch}
+.stage svg{display:block;width:100%;height:auto;min-width:720px}
+.stage text{font-family:var(--sans)}
+.sbox{fill:var(--surface);stroke:color-mix(in srgb,var(--who) 35%,var(--line));stroke-width:1.5}
+.sbox.busy{stroke:var(--who);stroke-width:2.5}
+.sbox.wait{stroke:var(--warn);stroke-width:2.5;stroke-dasharray:7 5}
+.sbox.err{stroke:var(--bad);stroke-width:2.5}
+.s-title{font:800 16px var(--sans);fill:var(--who)}
+.s-sub{font:600 10.5px var(--mono);fill:var(--muted)}
+.s-line{font:600 12.5px var(--bn);fill:var(--fg)}
+.s-mem{font:500 12px var(--mono);fill:var(--fg)}
+.s-lbl{font:600 10.5px var(--bn);fill:var(--faint)}
+.s-res{font:700 13.5px var(--mono);fill:var(--fg)} .s-res.err{fill:var(--bad)} .s-res.wait{fill:var(--warn)} .s-res.zero{fill:var(--warn)}
+.db{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+.db.locked{stroke:var(--lk);stroke-width:2.5}
+.db-t{font:800 14px var(--mono);fill:var(--fg)}
+.db-k{font:600 11px var(--sans);fill:var(--faint);text-transform:uppercase;letter-spacing:.05em}
+.db-v{font:800 34px var(--mono);fill:var(--fg)}
+.db-ver{font:700 18px var(--mono);fill:var(--fg)}
+.db-ver.off{fill:var(--faint);opacity:.45}
+.db-pend{font:600 12px var(--mono)}
+.db-lock{font:700 12.5px var(--sans)}
+.db-goal{font:600 11.5px var(--bn);fill:var(--muted)}
+.pkt rect{fill:var(--muted)} .pkt.a rect{fill:var(--sa)} .pkt.b rect{fill:var(--sb)}
+.pkt.ok rect{fill:var(--ok)} .pkt.err rect{fill:var(--bad)} .pkt.wait rect,.pkt.zero rect{fill:var(--warn)}
+.pkt text{fill:#fff;font:700 11px var(--mono);text-anchor:middle;dominant-baseline:central}
+.waitline{fill:none;stroke:var(--warn);stroke-width:2;stroke-dasharray:6 5;animation:dash 1s linear infinite}
+@keyframes dash{to{stroke-dashoffset:-22}}
+.explain{display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border-radius:12px;background:var(--surface-2);font-size:15px;min-height:52px}
+.explain b{flex:none;width:24px;height:24px;border-radius:7px;display:grid;place-items:center;color:#fff;font:700 12px var(--sans)}
+.verdict{padding:12px 14px;border-radius:12px;font-size:15px;border-left:4px solid var(--vc,var(--line));background:color-mix(in srgb,var(--vc,var(--line)) 8%,var(--surface))}
+.verdict:empty{display:none}
+.log{max-height:420px;overflow-y:auto;border:1px solid var(--line);border-radius:12px}
+.log .empty{margin:0;padding:14px;color:var(--faint);font-size:14px}
+.out .err{color:var(--bad)}
+.tag.wait{--tc:var(--warn)}
+.cmp td b{color:var(--fg)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="topnav">
+    <a class="brand" href="../../index.html"><span class="logo">W</span>WellDev</a>
+    <span class="sp"></span>
+    <a class="pill" href="../transactions/index.html">Isolation →</a>
+    <button class="pill" id="theme" type="button">Theme</button>
+  </nav>
+
+  <header class="hero">
+    <div class="eyebrow">DBMS · PostgreSQL · Concurrency</div>
+    <h1>Optimistic বনাম Pessimistic Locking</h1>
+    <p>দুজন customer একই মুহূর্তে শেষ কয়েকটা Laptop কিনছে। দুজনেই stock পড়ল 10, দুজনেই নিজের হিসাবে লিখল — একজনের বিক্রি হারিয়ে গেল। এই <b style="color:#fde68a">lost update</b> ঠেকানোর দুই দর্শন: আগেই তালা দাও (pessimistic), নাকি লেখার সময় যাচাই করো (optimistic)। প্রতিটা output PostgreSQL 18-এ চালিয়ে নেওয়া।</p>
+  </header>
+
+  <div class="letters">
+    <a class="card letter" href="#problem" style="--c:var(--pa)"><span class="big">!</span><b>সমস্যা</b><p>Read → হিসাব → Write-এর মাঝে অন্য কেউ লিখে ফেলে।</p><small>lost update</small></a>
+    <a class="card letter" href="#pessimistic" style="--c:var(--pi)"><span class="big">🔒</span><b>Pessimistic</b><p>পড়ার সময়ই row lock — বাকিরা লাইনে দাঁড়ায়।</p><small>SELECT … FOR UPDATE</small></a>
+    <a class="card letter" href="#optimistic" style="--c:var(--pd)"><span class="big">v</span><b>Optimistic</b><p>Lock নেই — লেখার সময় version মিলিয়ে দেখো।</p><small>WHERE version = n</small></a>
+    <a class="card letter" href="#sim" style="--c:var(--pc)"><span class="big">▶</span><b>Simulation</b><p>A আর B চালিয়ে নিজে দেখো কে জেতে।</p><small>D3 animation</small></a>
+  </div>
+
+  <!-- setup -->
+  <section id="setup">
+    <h2><span class="num">0</span>Setup</h2>
+    <p class="lead">একটা product, stock <b>10</b>। A কিনবে <b>3টা</b>, B কিনবে <b>2টা</b> — ঠিক থাকলে শেষে stock হওয়া উচিত <b>5</b>। <code>version</code> column শুধু optimistic পদ্ধতিতে লাগবে।</p>
+<pre class="code" data-lang="sql">CREATE TABLE products (
+  id      int  PRIMARY KEY,
+  name    text NOT NULL,
+  stock   int  NOT NULL CHECK (stock >= 0),
+  version int  NOT NULL DEFAULT 1
+);
+INSERT INTO products VALUES (1, 'Laptop', 10, 1);</pre>
+  </section>
+
+  <!-- problem -->
+  <section id="problem" style="--c:var(--pa)">
+    <h2><span class="num">!</span>সমস্যা — Lost Update</h2>
+    <span class="motto">Read → app-এ হিসাব → Write</span>
+    <p class="lead">App প্রথমে stock পড়ে, নিজের memory-তে <code>10 − 3 = 7</code> হিসাব করে, তারপর <code>SET stock = 7</code> লেখে। মাঝখানে B-ও 10 পড়ে <code>8</code> লেখে। দুটো transaction-ই সফল, কোনো error নেই — কিন্তু A-র বিক্রি <b>হারিয়ে গেল</b>।</p>
+    <div class="card tl" data-tl="lost"></div>
+    <div class="how"><b>কেন হলো:</b> PostgreSQL row lock নেয় শুধু <b>লেখার</b> সময়, পড়ার সময় না। B অপেক্ষা ঠিকই করল (<code>t6</code>), কিন্তু A commit করার পর B তার <b>আগে হিসাব করা</b> 8-ই লিখে দিল — কারণ মানটা app ঠিক করেছে, database না। Default <code>READ COMMITTED</code> এটা ধরে না। ৩টা ভুল জিনিস একসাথে: (১) read-এর পর lock নেই, (২) লেখার সময় যাচাই নেই, (৩) মান app-এ হিসাব করা।</div>
+  </section>
+
+  <!-- simulator -->
+  <section id="sim">
+    <h2><span class="num" style="--c:var(--pc)">▶</span>Simulation — A আর B একসাথে</h2>
+    <p class="lead">পদ্ধতি বেছে নাও, তারপর <b>▶ চালাও</b> বা <b>⏭ এক ধাপ</b>। মাঝখানে database-এর row, দুই পাশে দুই app server — কার memory-তে কী আছে, কে lock ধরে আছে, কে অপেক্ষা করছে, সব দেখা যাবে।</p>
+    <div class="card sim">
+      <div class="modes" id="modes"></div>
+      <div class="bar">
+        <button type="button" class="btn primary" id="play">▶ চালাও</button>
+        <button type="button" class="btn" id="step">⏭ এক ধাপ</button>
+        <button type="button" class="btn" id="reset">↺ Reset</button>
+        <span class="sp"></span>
+        <span class="prog" id="prog"></span>
+      </div>
+      <div class="stage"><svg id="svg" viewBox="0 0 1000 300" role="img" aria-label="App A, App B আর products table-এর row"></svg></div>
+      <div class="explain" id="explain"></div>
+      <div class="verdict" id="verdict"></div>
+      <div class="tl log" id="log"></div>
+    </div>
+  </section>
+
+  <!-- pessimistic -->
+  <section id="pessimistic" style="--c:var(--pi)">
+    <h2><span class="num">🔒</span>সমাধান ১ — Pessimistic Locking</h2>
+    <span class="motto">"কেউ না কেউ বদলাবেই" — তাই আগেই তালা</span>
+    <p class="lead"><code>SELECT … FOR UPDATE</code> পড়ার সাথে সাথে row-টা lock করে, transaction শেষ (COMMIT/ROLLBACK) না হওয়া পর্যন্ত। অন্য কেউ একই row <code>FOR UPDATE</code> বা UPDATE করতে চাইলে <b>লাইনে দাঁড়ায়</b>। সাধারণ <code>SELECT</code> (lock ছাড়া) কিন্তু আটকায় না — MVCC-তে পুরনো committed মান পড়তে পারে।</p>
+    <div class="card tl" data-tl="pess"></div>
+
+    <h3>অপেক্ষা করতে না চাইলে — NOWAIT, SKIP LOCKED, lock_timeout</h3>
+    <div class="grid2">
+      <div>
+        <div class="file" style="--dot:var(--pi)"><i></i>NOWAIT — সাথে সাথে error<span class="r" style="--tc:var(--bad)">fail fast</span></div>
+<pre class="code" data-lang="sql">-- A আগে থেকেই FOR UPDATE ধরে আছে
+SELECT stock FROM products WHERE id = 1 FOR UPDATE NOWAIT;
+<span class="e">ERROR:  could not obtain lock on row in relation "products"</span>
+<span class="c">-- app: "এখন ব্যস্ত, একটু পরে চেষ্টা করুন"</span></pre>
+      </div>
+      <div>
+        <div class="file" style="--dot:var(--pi)"><i></i>lock_timeout — নির্দিষ্ট সময় পর্যন্ত<span class="r" style="--tc:var(--warn)">bounded wait</span></div>
+<pre class="code" data-lang="sql">BEGIN;
+SET LOCAL lock_timeout = '2s';
+SELECT stock FROM products WHERE id = 1 FOR UPDATE;
+<span class="c">-- ২ সেকেন্ড অপেক্ষা…</span>
+<span class="e">ERROR:  canceling statement due to lock timeout</span></pre>
+      </div>
+    </div>
+    <div style="margin-top:14px">
+      <div class="file" style="--dot:var(--pi)"><i></i>SKIP LOCKED — job queue-এর জন্য<span class="r" style="--tc:var(--ok)">কেউ কাউকে আটকায় না</span></div>
+<pre class="code" data-lang="sql">-- ১০টা worker একসাথে চালালেও প্রত্যেকে আলাদা job পায়
+SELECT id FROM jobs
+WHERE status = 'pending'
+ORDER BY id
+LIMIT 1
+FOR UPDATE SKIP LOCKED;     <span class="c">-- অন্য worker যেটা ধরে আছে সেটা বাদ</span>
+
+-- A যখন product row ধরে আছে, B চালালে:
+SELECT * FROM products FOR UPDATE SKIP LOCKED;
+<span class="o">(0 rows)</span></pre>
+    </div>
+    <div class="how"><b>মনে রাখো:</b>
+      <ul>
+        <li>Lock ধরে রেখে কখনো user-এর input, payment gateway বা HTTP call-এর জন্য অপেক্ষা করবে না — transaction যত ছোট, তত ভালো।</li>
+        <li>একাধিক row lock করলে সবসময় একই ক্রমে (যেমন <code>ORDER BY id</code>) — নাহলে <a href="../transactions/index.html#play">deadlock</a>।</li>
+        <li>Lock-এর ধরন: <code>FOR UPDATE</code> (সবচেয়ে কড়া), <code>FOR NO KEY UPDATE</code> (key না বদলালে, UPDATE নিজে এটাই নেয়), <code>FOR SHARE</code> (পড়তে দেয়, বদলাতে দেয় না), <code>FOR KEY SHARE</code> (foreign key check)।</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- optimistic -->
+  <section id="optimistic" style="--c:var(--pd)">
+    <h2><span class="num">v</span>সমাধান ২ — Optimistic Locking</h2>
+    <span class="motto">"সংঘর্ষ কদাচিৎ হয়" — তাই lock নয়, যাচাই</span>
+    <p class="lead">প্রতিটা row-এ একটা <code>version</code>। পড়ার সময় version মনে রাখো; লেখার সময় <code>WHERE version = সেই_মান</code> দিয়ে লেখো আর version বাড়াও। মাঝে কেউ বদলে থাকলে version মিলবে না — <b>UPDATE 0</b>। App তখন আবার পড়ে, আবার হিসাব করে, আবার চেষ্টা করে।</p>
+    <div class="card tl" data-tl="opt"></div>
+
+    <h3>দুজনেই transaction-এর ভেতরে থাকলে?</h3>
+    <div class="card tl" data-tl="optx"></div>
+    <div class="how"><b>কী হলো:</b> A-র UPDATE row lock নিয়েছে, তাই B-এর UPDATE অপেক্ষা করল। A commit করার পর READ COMMITTED নতুন version-এর উপর <code>WHERE</code> আবার যাচাই করে — version এখন 2, শর্ত মেলে না, তাই <b>0 rows</b>। Optimistic locking-এও database-এর row lock কাজ করে, শুধু app কোনো lock <b>ধরে রাখে না</b> পড়া থেকে লেখা পর্যন্ত।</div>
+
+    <h3>Application code — retry loop (C#, Npgsql)</h3>
+<pre class="code" data-lang="cs">async Task BuyAsync(NpgsqlDataSource db, int productId, int qty)
+{
+    for (var attempt = 1; attempt <= 5; attempt++)
+    {
+        await using var read = db.CreateCommand("SELECT stock, version FROM products WHERE id = $1");
+        read.Parameters.AddWithValue(productId);
+        await using var r = await read.ExecuteReaderAsync();
+        await r.ReadAsync();
+        var (stock, version) = (r.GetInt32(0), r.GetInt32(1));
+        await r.DisposeAsync();
+
+        if (stock < qty) throw new InvalidOperationException("Out of stock");
+
+        await using var write = db.CreateCommand(
+            "UPDATE products SET stock = $1, version = version + 1 WHERE id = $2 AND version = $3");
+        write.Parameters.AddWithValue(stock - qty);
+        write.Parameters.AddWithValue(productId);
+        write.Parameters.AddWithValue(version);
+
+        if (await write.ExecuteNonQueryAsync() == 1) return;   // সফল
+        // 0 rows → কেউ মাঝে বদলেছে, আবার পড়ো
+    }
+    throw new Exception("Too much contention, try later");
+}</pre>
+    <p class="foot">ORM-এ এটা built-in: EF Core-এ property-তে <code>[ConcurrencyCheck]</code> দিলে UPDATE-এর WHERE-এ সেটা যোগ হয়, 0 row হলে <code>DbUpdateConcurrencyException</code>; JPA/Hibernate-এ <code>@Version</code>। PostgreSQL-এ চাইলে আলাদা column ছাড়াই system column <code>xmin</code>-কে version হিসেবে ব্যবহার করা যায় (Npgsql EF Core provider এটা সমর্থন করে)।</p>
+  </section>
+
+  <!-- third way -->
+  <section id="atomic">
+    <h2><span class="num" style="--c:var(--accent)">=</span>সবচেয়ে সহজ — হিসাবটা database-কেই করতে দাও</h2>
+    <p class="lead">মান যদি app-এ হিসাব না করে SQL-এর ভেতরেই করো, read আর write একটাই statement — মাঝে কেউ ঢুকতে পারে না। শর্ত দিয়ে overselling-ও আটকানো যায়।</p>
+    <div class="grid2">
+<pre class="code" data-lang="sql">UPDATE products SET stock = stock - 3
+WHERE id = 1 AND stock >= 3
+RETURNING stock;
+<span class="o"> stock
+-------
+     7</span>     <span class="c">-- B একসাথে চালালে অপেক্ষা করে, তারপর 7 − 2 = 5</span></pre>
+<pre class="code" data-lang="sql">UPDATE products SET stock = stock - 30
+WHERE id = 1 AND stock >= 30
+RETURNING stock;
+<span class="o"> stock
+-------
+(0 rows)</span>  <span class="c">-- যথেষ্ট stock নেই, কিছুই বদলায়নি</span></pre>
+    </div>
+    <p class="foot">যখন নিয়ম একটা row-এর ভেতরেই — এটাই প্রথম পছন্দ। নিয়ম যখন জটিল (একাধিক row, বাইরের API, user-এর হাতে form), তখন pessimistic বা optimistic লাগে। আরেক উপায়: <code>REPEATABLE READ</code> — একই row অন্য কেউ বদলালে <a href="../transactions/index.html#rr">"could not serialize access"</a> error, তারপর retry।</p>
+  </section>
+
+  <!-- many tx -->
+  <section id="many">
+    <h2><span class="num" style="--c:var(--accent)">N</span>অনেকগুলো transaction একসাথে হলে</h2>
+    <div class="grid2">
+      <div class="card story" style="--c:var(--pi)"><p><b>Pessimistic:</b> ১০০ জন একই row-এ <code>FOR UPDATE</code> করলে একজন lock পায়, বাকি ৯৯ জন <b>লাইনে</b> (lock queue)। একে একে সবাই ঠিক মানই পায় — কেউ ব্যর্থ হয় না, কিন্তু সবাই সিরিয়ালি চলে। Throughput = ১ / (transaction-এর সময়)। Transaction লম্বা হলে connection pool ভরে যায়, timeout শুরু হয়।</p></div>
+      <div class="card story" style="--c:var(--pd)"><p><b>Optimistic:</b> ১০০ জন একসাথে পড়ে version 7; লেখার সময় <b>একজন জেতে</b> (version 8), বাকি ৯৯ জন UPDATE 0 পেয়ে আবার পড়ে — পরের রাউন্ডে আবার একজন জেতে। Conflict কম হলে কেউ অপেক্ষাই করে না (দ্রুত); conflict বেশি হলে retry-র ঝড়ে CPU আর DB round-trip নষ্ট হয়।</p></div>
+    </div>
+    <h3>কখন কোনটা</h3>
+    <div class="card tscroll">
+      <table class="cmp">
+        <thead><tr><th></th><th>Pessimistic (FOR UPDATE)</th><th>Optimistic (version)</th></tr></thead>
+        <tbody>
+          <tr><td><b>ধারণা</b></td><td>Conflict হবেই, আগে আটকাও</td><td>Conflict কম, পরে ধরো</td></tr>
+          <tr><td><b>Lock কখন</b></td><td>Read থেকে commit পর্যন্ত</td><td>App কোনো lock ধরে না (শুধু UPDATE-এর মুহূর্তে)</td></tr>
+          <tr><td><b>Conflict হলে</b></td><td>অপেক্ষা (বা NOWAIT-এ error)</td><td>UPDATE 0 → retry / user-কে জানাও</td></tr>
+          <tr><td><b>ভালো যেখানে</b></td><td>বেশি contention, ছোট transaction — flash sale stock, seat booking, bank balance</td><td>কম contention, লম্বা "think time" — web form edit, profile, CMS, REST API (ETag / If-Match)</td></tr>
+          <tr><td><b>ঝুঁকি</b></td><td>Deadlock, লম্বা অপেক্ষা, pool শেষ</td><td>বেশি conflict-এ retry storm, starvation</td></tr>
+          <tr><td><b>Schema</b></td><td>কিছু লাগে না</td><td><code>version</code> column (বা <code>xmin</code>)</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- interview -->
+  <section id="qa">
+    <h2><span class="num" style="--c:var(--accent)">Q</span>Interview-এ যা আসে</h2>
+    <div class="card" style="padding:4px 18px">
+      <details><summary>Lost update কী, আর READ COMMITTED কেন এটা ধরে না?</summary><p>দুজন একই মান পড়ে নিজের হিসাবে লিখলে প্রথমজনের লেখা দ্বিতীয়জন মুছে দেয়। READ COMMITTED শুধু uncommitted data দেখা আটকায়; app-এ হিসাব করা মান লেখার আগে যাচাই করে না। REPEATABLE READ বা উপরে PostgreSQL error দেয়।</p></details>
+      <details><summary>Optimistic locking-এ কি আসলে কোনো lock নেই?</summary><p>App-এর দিক থেকে নেই — পড়া থেকে লেখা পর্যন্ত কিছু ধরে রাখে না। কিন্তু UPDATE statement নিজে মুহূর্তের জন্য row lock নেয়, তাই দুটো UPDATE একসাথে এলে একটা অল্প সময় অপেক্ষা করে, তারপর version না মেলায় 0 rows পায়।</p></details>
+      <details><summary>FOR UPDATE আর সাধারণ SELECT-এর পার্থক্য?</summary><p>সাধারণ SELECT কোনো lock নেয় না, MVCC snapshot থেকে পড়ে — কাউকে আটকায় না, কারো জন্য আটকায় না। FOR UPDATE row-টা transaction শেষ পর্যন্ত lock করে; অন্য FOR UPDATE / UPDATE / DELETE অপেক্ষা করে।</p></details>
+      <details><summary>SKIP LOCKED কোথায় কাজে লাগে?</summary><p>Database-কে job queue হিসেবে ব্যবহার করলে — অনেক worker একসাথে "পরের pending job" চায়; SKIP LOCKED অন্যের ধরা row বাদ দিয়ে পরেরটা দেয়, ফলে কেউ কাউকে আটকায় না আর একই job দুজন পায় না।</p></details>
+      <details><summary>Flash sale-এ ১০,০০০ জন একসাথে কিনলে কোনটা?</summary><p>একটা hot row-এ optimistic দিলে প্রায় সবাই UPDATE 0 পেয়ে retry করবে। সবচেয়ে ভালো single-statement conditional update (<code>stock = stock - 1 WHERE stock >= 1</code>); জটিল হলে pessimistic, ছোট transaction, বা queue দিয়ে সিরিয়ালি।</p></details>
+      <details><summary>REST API-তে optimistic locking কীভাবে?</summary><p>GET-এর response-এ <code>ETag</code> (version) পাঠাও; client PUT/PATCH-এর সাথে <code>If-Match: "7"</code> পাঠায়; version না মিললে server <code>412 Precondition Failed</code> দেয়।</p></details>
+    </div>
+  </section>
+
+  <footer><span>WellDev · DBMS & SQL</span><a href="../transactions/index.html">Transaction Isolation গাইড →</a></footer>
+</div>
+
+<script>
+// ---------- static timelines: [who, sql, output, tag] ----------
+const STEPS = {
+  lost: [
+    ["A", "BEGIN;"], ["B", "BEGIN;"],
+    ["A", "SELECT stock FROM products WHERE id = 1;", "stock → <b>10</b>", ["info", "app: 10 − 3 = 7"]],
+    ["B", "SELECT stock FROM products WHERE id = 1;", "stock → <b>10</b>", ["info", "app: 10 − 2 = 8"]],
+    ["A", "UPDATE products SET stock = 7 WHERE id = 1;", "UPDATE 1", ["info", "row lock নিল"]],
+    ["B", "UPDATE products SET stock = 8 WHERE id = 1;", "", ["wait", "⏳ A-র lock-এ আটকে আছে"]],
+    ["A", "COMMIT;", "", ["info", "lock ছাড়ল → B-এর UPDATE শেষ"]],
+    ["B", "COMMIT;"],
+    ["A", "SELECT stock FROM products WHERE id = 1;", "stock → <b>8</b>", ["bad", "৫টা বিক্রি, কিন্তু stock 8 — A-র 3টা হারাল"]],
+  ],
+  pess: [
+    ["A", "BEGIN;"],
+    ["A", "SELECT stock FROM products\nWHERE id = 1 FOR UPDATE;", "stock → <b>10</b>", ["info", "🔒 row lock A-র"]],
+    ["B", "BEGIN;"],
+    ["B", "SELECT stock FROM products\nWHERE id = 1 FOR UPDATE;", "", ["wait", "⏳ পড়ার আগেই অপেক্ষা"]],
+    ["A", "UPDATE products SET stock = 7 WHERE id = 1;", "UPDATE 1"],
+    ["A", "COMMIT;", "", ["info", "lock ছাড়ল"]],
+    ["B", "-- আটকে থাকা SELECT এখন ফেরে", "stock → <b>7</b>", ["ok", "নতুন মান পেল · app: 7 − 2 = 5"]],
+    ["B", "UPDATE products SET stock = 5 WHERE id = 1;", "UPDATE 1"],
+    ["B", "COMMIT;"],
+    ["A", "SELECT stock FROM products WHERE id = 1;", "stock → <b>5</b>", ["ok", "ঠিক"]],
+  ],
+  opt: [
+    ["A", "SELECT stock, version FROM products WHERE id = 1;", "<b>10</b> | version <b>1</b>"],
+    ["B", "SELECT stock, version FROM products WHERE id = 1;", "<b>10</b> | version <b>1</b>"],
+    ["A", "UPDATE products SET stock = 7, version = version + 1\nWHERE id = 1 AND version = 1;", "UPDATE 1", ["ok", "version এখন 2"]],
+    ["B", "UPDATE products SET stock = 8, version = version + 1\nWHERE id = 1 AND version = 1;", "UPDATE 0", ["wait", "conflict — version মেলেনি"]],
+    ["B", "SELECT stock, version FROM products WHERE id = 1;", "<b>7</b> | version <b>2</b>", ["info", "retry: আবার পড়ল · 7 − 2 = 5"]],
+    ["B", "UPDATE products SET stock = 5, version = version + 1\nWHERE id = 1 AND version = 2;", "UPDATE 1", ["ok", "stock 5 · version 3"]],
+  ],
+  optx: [
+    ["A", "BEGIN;"], ["B", "BEGIN;"],
+    ["A", "UPDATE products SET stock = 7, version = version + 1\nWHERE id = 1 AND version = 1\nRETURNING stock, version;", "7 | 2"],
+    ["B", "UPDATE products SET stock = 8, version = version + 1\nWHERE id = 1 AND version = 1\nRETURNING stock, version;", "", ["wait", "⏳ A-র row lock"]],
+    ["A", "COMMIT;"],
+    ["B", "-- আটকে থাকা UPDATE এখন ফেরে", "(0 rows)", ["ok", "version 2 ≠ 1 → কিছুই লিখল না"]],
+  ],
+};
+
+const esc = s => s.replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+const KW = {
+  sql: "BEGIN|COMMIT|ROLLBACK|SELECT|FROM|WHERE|UPDATE|SET|INSERT|INTO|VALUES|CREATE|TABLE|PRIMARY|KEY|NOT|NULL|CHECK|DEFAULT|AND|FOR|NOWAIT|SKIP|LOCKED|LOCAL|ORDER|BY|LIMIT|RETURNING|int|text",
+  cs: "async|await|using|var|for|if|throw|return|new|int",
+};
+function highlight(src, lang) {
+  const com = lang === "cs" ? "\\/\\/[^\\n]*" : "--[^\\n]*";
+  const str = lang === "cs" ? '"(?:[^"\\\\]|\\\\.)*"' : "'(?:[^']|'')*'";
+  const re = new RegExp(`(${com})|(${str})|\\b(\\d+)\\b|\\b(${KW[lang]})\\b|\\b([A-Z][a-z]+[A-Z]\\w*)\\b`, "g");
+  return esc(src).replace(re, (m, c, s, d, k, t) =>
+    c ? `<span class="c">${c}</span>` : s ? `<span class="s">${s}</span>` : d ? `<span class="d">${d}</span>` :
+    k ? `<span class="k">${k}</span>` : lang === "cs" ? `<span class="t">${t}</span>` : t);
+}
+document.querySelectorAll("pre.code").forEach(pre => {
+  const lang = pre.dataset.lang;
+  if (!KW[lang]) return;
+  [...pre.childNodes].forEach(node => {
+    if (node.nodeType !== 3) return;
+    const span = document.createElement("span");
+    span.innerHTML = highlight(node.textContent, lang);
+    node.replaceWith(...span.childNodes);
+  });
+});
+const cellHTML = (who, step, extra = "") => {
+  if (step[0] !== who) return `<div class="cell ${who.toLowerCase()}"></div>`;
+  const [, sql, out, tag] = step;
+  return `<div class="cell ${who.toLowerCase()} on" data-who="${who}"><pre>${highlight(sql, "sql")}</pre>
+    ${out ? `<div class="out">${out.replace(/\n/g, "<br>")}</div>` : ""}${tag ? `<span class="tag ${tag[0]}">${tag[1]}</span>` : ""}${extra}</div>`;
+};
+const HEAD = `<div class="tl-head"><span></span><span class="a">Transaction A · কিনবে 3</span><span class="b">Transaction B · কিনবে 2</span></div>`;
+document.querySelectorAll("[data-tl]").forEach(box => {
+  box.innerHTML = HEAD + STEPS[box.dataset.tl].map((s, i) => `<div class="row"><span class="n">t${i + 1}</span>${cellHTML("A", s)}${cellHTML("B", s)}</div>`).join("");
+});
+
+// ---------- simulator ----------
+// Each mode is a script of steps. A step names who runs which SQL, what comes back, and how the
+// shared state (the row, each app's memory, the lock) changes. "chain" steps run right after the
+// previous one — they are the statement that was blocked and finishes when the lock is released.
+(() => {
+  const C = { lost: "var(--pa)", pess: "var(--pi)", nowait: "var(--pc)", opt: "var(--pd)", atomic: "var(--accent)" };
+  const MODES = {
+    lost: { name: "সমস্যা: কোনো lock নেই", version: false, steps: [
+      { who: "A", sql: "BEGIN;", out: "BEGIN", fx: s => s.A.tx = true, msg: "A transaction শুরু করল।" },
+      { who: "B", sql: "BEGIN;", out: "BEGIN", fx: s => s.B.tx = true, msg: "B-ও শুরু করল — দুজন একসাথে চলছে।" },
+      { who: "A", sql: "SELECT stock FROM products WHERE id = 1;", out: "stock → 10", back: "10", fx: s => { s.A.mem = "stock = 10"; s.A.plan = "লিখবে 10 − 3 = 7"; }, msg: "A stock পড়ল 10, app-এর memory-তে হিসাব: 10 − 3 = 7। সাধারণ SELECT কোনো lock নেয় না।" },
+      { who: "B", sql: "SELECT stock FROM products WHERE id = 1;", out: "stock → 10", back: "10", fx: s => { s.B.mem = "stock = 10"; s.B.plan = "লিখবে 10 − 2 = 8"; }, msg: "B-ও পড়ল 10 — A এখনো কিছু লেখেনি। B-এর হিসাব: 10 − 2 = 8। এখানেই বিপদের বীজ।" },
+      { who: "A", sql: "UPDATE products SET stock = 7 WHERE id = 1;", out: "UPDATE 1", fx: s => { s.row.pend = { v: 7, by: "A" }; s.row.lock = "A"; }, msg: "A লিখল 7 (এখনো uncommitted)। UPDATE row lock নেয় — এখন row-টা A-র।" },
+      { who: "B", sql: "UPDATE products SET stock = 8 WHERE id = 1;", status: "wait", fx: s => s.B.wait = true, tag: ["wait", "⏳ A-র lock"], msg: "B-ও লিখতে চাইল, কিন্তু row lock A-র হাতে — B অপেক্ষা করছে। মনে রেখো B-এর মান 8 আগেই ঠিক করা।" },
+      { who: "A", sql: "COMMIT;", out: "COMMIT", fx: s => { s.row.stock = 7; s.row.pend = null; s.row.lock = null; s.A.tx = false; s.A.plan = "✓ 3টা বিক্রি"; }, msg: "A commit করল — stock এখন 7, lock ছাড়ল।" },
+      { who: "B", chain: true, sql: "UPDATE products SET stock = 8 WHERE id = 1;", out: "UPDATE 1", resumed: true, fx: s => { s.B.wait = false; s.row.pend = { v: 8, by: "B" }; s.row.lock = "B"; }, tag: ["bad", "7-এর উপর 8 লিখল"], msg: "Lock পেয়েই B তার আগে হিসাব করা 8 লিখে দিল — A-র 7 মুছে গেল। SQL-এর দিক থেকে কোনো ভুল নেই, তাই কোনো error-ও নেই।" },
+      { who: "B", sql: "COMMIT;", out: "COMMIT", fx: s => { s.row.stock = 8; s.row.pend = null; s.row.lock = null; s.B.tx = false; s.B.plan = "✓ 2টা বিক্রি"; }, msg: "B commit করল। মোট 5টা বিক্রি হলো, কিন্তু stock দেখাচ্ছে 8।" },
+    ]},
+    pess: { name: "Pessimistic: FOR UPDATE", version: false, steps: [
+      { who: "A", sql: "BEGIN;", out: "BEGIN", fx: s => s.A.tx = true, msg: "A transaction শুরু করল।" },
+      { who: "A", sql: "SELECT stock FROM products WHERE id = 1 FOR UPDATE;", out: "stock → 10", back: "10", fx: s => { s.row.lock = "A"; s.A.mem = "stock = 10"; s.A.plan = "লিখবে 10 − 3 = 7"; }, msg: "পড়ার সাথে সাথেই row lock — A commit না করা পর্যন্ত কেউ এই row FOR UPDATE বা UPDATE করতে পারবে না।" },
+      { who: "B", sql: "BEGIN;", out: "BEGIN", fx: s => s.B.tx = true, msg: "B শুরু করল।" },
+      { who: "B", sql: "SELECT stock FROM products WHERE id = 1 FOR UPDATE;", status: "wait", fx: s => s.B.wait = true, tag: ["wait", "⏳ পড়ার আগেই অপেক্ষা"], msg: "B-ও FOR UPDATE চাইল — lock A-র হাতে, তাই B পুরনো 10 পড়তেই পারল না, লাইনে দাঁড়াল।" },
+      { who: "A", sql: "UPDATE products SET stock = 7 WHERE id = 1;", out: "UPDATE 1", fx: s => s.row.pend = { v: 7, by: "A" }, msg: "A লিখল 7।" },
+      { who: "A", sql: "COMMIT;", out: "COMMIT", fx: s => { s.row.stock = 7; s.row.pend = null; s.row.lock = null; s.A.tx = false; s.A.plan = "✓ 3টা বিক্রি"; }, msg: "A commit — stock 7, lock ছাড়ল।" },
+      { who: "B", chain: true, sql: "SELECT stock FROM products WHERE id = 1 FOR UPDATE;", out: "stock → 7", back: "7", resumed: true, fx: s => { s.B.wait = false; s.row.lock = "B"; s.B.mem = "stock = 7"; s.B.plan = "লিখবে 7 − 2 = 5"; }, tag: ["ok", "নতুন মান 7 পেল"], msg: "এখন B lock পেল আর পড়ল নতুন committed মান 7। হিসাব: 7 − 2 = 5।" },
+      { who: "B", sql: "UPDATE products SET stock = 5 WHERE id = 1;", out: "UPDATE 1", fx: s => s.row.pend = { v: 5, by: "B" }, msg: "B লিখল 5।" },
+      { who: "B", sql: "COMMIT;", out: "COMMIT", fx: s => { s.row.stock = 5; s.row.pend = null; s.row.lock = null; s.B.tx = false; s.B.plan = "✓ 2টা বিক্রি"; }, msg: "B commit। দুটো বিক্রিই ঠিকঠাক হিসাবে আছে।" },
+    ]},
+    nowait: { name: "Pessimistic: NOWAIT", version: false, expect: 7, steps: [
+      { who: "A", sql: "BEGIN;", out: "BEGIN", fx: s => s.A.tx = true, msg: "A transaction শুরু করল।" },
+      { who: "A", sql: "SELECT stock FROM products WHERE id = 1 FOR UPDATE;", out: "stock → 10", back: "10", fx: s => { s.row.lock = "A"; s.A.mem = "stock = 10"; s.A.plan = "লিখবে 7"; }, msg: "A row lock নিল।" },
+      { who: "B", sql: "BEGIN;", out: "BEGIN", fx: s => s.B.tx = true, msg: "B শুরু করল।" },
+      { who: "B", sql: "SELECT stock FROM products WHERE id = 1 FOR UPDATE NOWAIT;", status: "err", out: 'ERROR:  could not obtain lock on row in relation "products"', fx: s => { s.B.err = true; s.B.plan = "app: \"পরে চেষ্টা করুন\""; }, tag: ["ok", "অপেক্ষা না করে ফিরল"], msg: "NOWAIT মানে অপেক্ষা করব না — lock না পেলে সাথে সাথে error। User-কে দ্রুত জানানো যায়, connection আটকে থাকে না।" },
+      { who: "B", sql: "ROLLBACK;", out: "ROLLBACK", fx: s => { s.B.tx = false; s.B.err = false; }, msg: "Error-এর পর B-এর transaction aborted — ROLLBACK। App চাইলে কিছুক্ষণ পর retry করবে।" },
+      { who: "A", sql: "UPDATE products SET stock = 7 WHERE id = 1;", out: "UPDATE 1", fx: s => s.row.pend = { v: 7, by: "A" }, msg: "A নিশ্চিন্তে লিখল।" },
+      { who: "A", sql: "COMMIT;", out: "COMMIT", fx: s => { s.row.stock = 7; s.row.pend = null; s.row.lock = null; s.A.tx = false; s.A.plan = "✓ 3টা বিক্রি"; }, msg: "A commit। B-এর কেনা হয়নি — তবে ভুল data-ও তৈরি হয়নি; B পরে আবার চেষ্টা করবে।" },
+    ]},
+    opt: { name: "Optimistic: version", version: true, steps: [
+      { who: "A", sql: "SELECT stock, version FROM products WHERE id = 1;", out: "10 | version 1", back: "10, v1", fx: s => { s.A.mem = "stock = 10, version = 1"; s.A.plan = "লিখবে 7 যদি v = 1"; }, msg: "A পড়ল stock 10 আর version 1 — দুটোই মনে রাখল। কোনো lock নেই, কোনো transaction খোলা রাখারও দরকার নেই।" },
+      { who: "B", sql: "SELECT stock, version FROM products WHERE id = 1;", out: "10 | version 1", back: "10, v1", fx: s => { s.B.mem = "stock = 10, version = 1"; s.B.plan = "লিখবে 8 যদি v = 1"; }, msg: "B-ও পড়ল 10, version 1।" },
+      { who: "A", sql: "UPDATE products SET stock = 7, version = version + 1 WHERE id = 1 AND version = 1;", out: "UPDATE 1", fx: s => { s.row.stock = 7; s.row.version = 2; s.A.plan = "✓ 3টা বিক্রি"; }, tag: ["ok", "version 1 মিলেছে"], msg: "A-র শর্ত version = 1 মিলল — stock 7, version 2 (autocommit, সাথে সাথে স্থায়ী)।" },
+      { who: "B", sql: "UPDATE products SET stock = 8, version = version + 1 WHERE id = 1 AND version = 1;", out: "UPDATE 0", status: "zero", back: "0 rows", fx: s => { s.B.plan = "conflict! আবার পড়বে"; }, tag: ["wait", "conflict — 0 rows"], msg: "B-এর শর্ত version = 1, কিন্তু row-এ এখন version 2 — কিছুই লেখা হলো না। App বুঝল মাঝে কেউ বদলেছে।" },
+      { who: "B", sql: "SELECT stock, version FROM products WHERE id = 1;", out: "7 | version 2", back: "7, v2", fx: s => { s.B.mem = "stock = 7, version = 2"; s.B.plan = "লিখবে 5 যদি v = 2"; }, tag: ["info", "retry"], msg: "B আবার পড়ল: 7, version 2। নতুন হিসাব: 7 − 2 = 5।" },
+      { who: "B", sql: "UPDATE products SET stock = 5, version = version + 1 WHERE id = 1 AND version = 2;", out: "UPDATE 1", fx: s => { s.row.stock = 5; s.row.version = 3; s.B.plan = "✓ 2টা বিক্রি"; }, tag: ["ok", "এবার মিলেছে"], msg: "এবার version মিলল — stock 5, version 3। কেউ কখনো অপেক্ষা করেনি।" },
+    ]},
+    atomic: { name: "Atomic UPDATE", version: false, steps: [
+      { who: "A", sql: "UPDATE products SET stock = stock - 3 WHERE id = 1 AND stock >= 3 RETURNING stock;", out: "stock → 7", back: "7", fx: s => { s.row.stock = 7; s.A.plan = "✓ 3টা বিক্রি"; }, msg: "পড়া, হিসাব আর লেখা — একটাই statement-এ, database-এর ভেতরে। মাঝে ঢোকার কোনো ফাঁক নেই।" },
+      { who: "B", sql: "UPDATE products SET stock = stock - 2 WHERE id = 1 AND stock >= 2 RETURNING stock;", out: "stock → 5", back: "5", fx: s => { s.row.stock = 5; s.B.plan = "✓ 2টা বিক্রি"; }, msg: "B-ও তাই — 7 − 2 = 5। একসাথে এলে দ্বিতীয়টা row lock-এ মুহূর্তের জন্য অপেক্ষা করে, তারপর নতুন মানের উপর হিসাব করে।" },
+    ]},
+  };
+
+  const svg = d3.select("#svg");
+  const SA = 16, SB = 744, SW = 240, SH = 236, DX = 330, DW = 340, DY = 22, DH = 236, MIDY = DY + 118;
+  const gWait = svg.append("g"), gDb = svg.append("g"), gS = svg.append("g"), gP = svg.append("g");
+  const boxes = {};
+  for (const [n, x] of [["A", SA], ["B", SB]]) {
+    const g = gS.append("g").attr("transform", `translate(${x},${DY})`).style("--who", `var(--s${n.toLowerCase()})`);
+    boxes[n] = { rect: g.append("rect").attr("class", "sbox").attr("width", SW).attr("height", SH).attr("rx", 14) };
+    g.append("text").attr("class", "s-title").attr("x", 16).attr("y", 30).text(`App ${n}`);
+    g.append("text").attr("class", "s-sub").attr("x", 16).attr("y", 48).text(n === "A" ? "কিনবে 3টা" : "কিনবে 2টা");
+    boxes[n].st = g.append("text").attr("class", "s-line").attr("x", 16).attr("y", 78);
+    g.append("text").attr("class", "s-lbl").attr("x", 16).attr("y", 106).text("app memory");
+    boxes[n].mem = g.append("text").attr("class", "s-mem").attr("x", 16).attr("y", 126);
+    boxes[n].plan = g.append("text").attr("class", "s-mem").attr("x", 16).attr("y", 146);
+    g.append("text").attr("class", "s-lbl").attr("x", 16).attr("y", 180).text("শেষ ফল");
+    boxes[n].res = g.append("text").attr("class", "s-res").attr("x", 16).attr("y", 204);
+  }
+  const db = gDb.append("g").attr("transform", `translate(${DX},${DY})`);
+  const dbRect = db.append("rect").attr("class", "db").attr("width", DW).attr("height", DH).attr("rx", 16);
+  db.append("text").attr("class", "db-t").attr("x", 18).attr("y", 32).text("products · id 1 · Laptop");
+  db.append("text").attr("class", "db-k").attr("x", 18).attr("y", 70).text("stock (committed)");
+  const vStock = db.append("text").attr("class", "db-v").attr("x", 18).attr("y", 112);
+  db.append("text").attr("class", "db-k").attr("x", 210).attr("y", 70).text("version");
+  const vVer = db.append("text").attr("class", "db-ver").attr("x", 210).attr("y", 106);
+  const vPend = db.append("text").attr("class", "db-pend").attr("x", 18).attr("y", 146);
+  const vLock = db.append("text").attr("class", "db-lock").attr("x", 18).attr("y", 180);
+  const vGoal = db.append("text").attr("class", "db-goal").attr("x", 18).attr("y", 216);
+
+  let mode = "lost", st, cursor = 0, busy = false, playing = false, n = 0;
+  const logBox = document.getElementById("log"), explain = document.getElementById("explain"), verdict = document.getElementById("verdict");
+  const fresh = () => ({ row: { stock: 10, version: 1, pend: null, lock: null }, A: { tx: false, wait: false, err: false, mem: "—", plan: "", res: "", rs: "" }, B: { tx: false, wait: false, err: false, mem: "—", plan: "", res: "", rs: "" } });
+
+  function draw() {
+    const M = MODES[mode];
+    for (const k of ["A", "B"]) {
+      const s = st[k], b = boxes[k];
+      b.rect.attr("class", "sbox" + (s.wait ? " wait" : s.err ? " err" : s.tx ? " busy" : ""));
+      b.st.text(s.wait ? "⏳ lock-এর অপেক্ষা" : s.err ? "✗ error — ROLLBACK দাও" : s.tx ? "transaction চলছে" : "idle · autocommit");
+      b.mem.text(s.mem);
+      b.plan.text(s.plan);
+      b.res.attr("class", "s-res " + s.rs).text(s.res.length > 26 ? s.res.slice(0, 25) + "…" : s.res);
+    }
+    vStock.text(st.row.stock);
+    vVer.attr("class", "db-ver" + (M.version ? "" : " off")).text(M.version ? st.row.version : "—");
+    vPend.text(st.row.pend ? `uncommitted: ${st.row.pend.v} (${st.row.pend.by}-র লেখা)` : "").style("fill", st.row.pend ? `var(--s${st.row.pend.by.toLowerCase()})` : null);
+    vLock.text(st.row.lock ? `🔒 row lock: ${st.row.lock}` : "🔓 কোনো lock নেই").style("fill", st.row.lock ? `var(--s${st.row.lock.toLowerCase()})` : "var(--muted)");
+    dbRect.attr("class", "db" + (st.row.lock ? " locked" : "")).style("--lk", st.row.lock ? `var(--s${st.row.lock.toLowerCase()})` : null);
+    vGoal.text(`লক্ষ্য: 10 − 3 − 2 = ${MODES[mode].expect ?? 5}`);
+    const waits = ["A", "B"].filter(k => st[k].wait).map(k => {
+      const x0 = k === "A" ? SA + SW : SB, x1 = k === "A" ? DX : DX + DW;
+      return { k, d: `M${x0},${MIDY + 40} C${(x0 + x1) / 2},${MIDY + 40} ${(x0 + x1) / 2},${DY + 176} ${x1},${DY + 176}` };
+    });
+    const wp = gWait.selectAll("path").data(waits, d => d.k);
+    wp.enter().append("path").attr("class", "waitline").merge(wp).attr("d", d => d.d);
+    wp.exit().remove();
+    document.getElementById("prog").textContent = `ধাপ ${cursor} / ${M.steps.length}`;
+    document.getElementById("step").disabled = busy || playing || cursor >= M.steps.length;
+    document.getElementById("play").textContent = playing ? "⏸ থামাও" : "▶ চালাও";
+  }
+
+  function fly(who, label, cls, back) {
+    const x0 = who === "A" ? SA + SW : SB, x1 = who === "A" ? DX : DX + DW;
+    const [fx, tx] = back ? [x1, x0] : [x0, x1];
+    const w = Math.max(64, label.length * 7.4 + 18);
+    const g = gP.append("g").attr("class", "pkt " + cls).attr("transform", `translate(${fx - w / 2},${MIDY - 12})`);
+    g.append("rect").attr("width", w).attr("height", 24).attr("rx", 12);
+    g.append("text").attr("x", w / 2).attr("y", 12).text(label);
+    return g.transition().duration(520).ease(d3.easeCubicInOut).attr("transform", `translate(${tx - w / 2},${MIDY - 12})`).end().catch(() => {}).then(() => g.remove());
+  }
+  const word = sql => sql.split(/\s/)[0].replace(";", "");
+
+  async function runStep() {
+    const M = MODES[mode], step = M.steps[cursor++];
+    busy = true; draw();
+    const status = step.status || "ok";
+    if (!step.resumed) await fly(step.who, word(step.sql), step.who.toLowerCase());
+    step.fx(st);
+    const s = st[step.who];
+    s.res = status === "wait" ? "⏳ অপেক্ষা" : step.out || "";
+    s.rs = status;
+    draw();
+    await new Promise(r => setTimeout(r, 200));
+    await fly(step.who, status === "wait" ? "⏳ WAIT" : status === "err" ? "ERROR" : step.back || step.out, status, true);
+    n++;
+    if (n === 1) logBox.innerHTML = HEAD;
+    const row = [step.who, (step.resumed ? "-- (আটকে থাকা statement শেষ হলো)\n" : "") + step.sql,
+      status === "err" ? `<span class="err">${esc(step.out)}</span>` : step.out ? esc(step.out) : "", step.tag];
+    logBox.insertAdjacentHTML("beforeend", `<div class="row"><span class="n">${n}</span>${cellHTML("A", row)}${cellHTML("B", row)}</div>`);
+    logBox.scrollTop = logBox.scrollHeight;
+    explain.innerHTML = `<b style="background:var(--s${step.who.toLowerCase()})">${step.who}</b><span>${step.msg}</span>`;
+    busy = false;
+    if (cursor === M.steps.length) finish();
+    draw();
+    if (M.steps[cursor]?.chain) { await new Promise(r => setTimeout(r, 450)); await runStep(); }
+  }
+  function finish() {
+    const exp = MODES[mode].expect ?? 5, got = st.row.stock;
+    const ok = got === exp;
+    verdict.style.setProperty("--vc", ok ? "var(--ok)" : "var(--bad)");
+    verdict.innerHTML = mode === "nowait"
+      ? `<b>ফল: stock ${got}.</b> A-র 3টা বিক্রি হয়েছে, B "পরে চেষ্টা করুন" পেয়েছে — data ঠিক আছে, B retry করলে stock 5 হবে।`
+      : ok ? `<b>✓ ফল: stock ${got}.</b> দুটো বিক্রিই হিসাবে আছে।` : `<b>✗ ফল: stock ${got}, হওয়ার কথা ${exp}.</b> ৫টা Laptop বিক্রি হলো কিন্তু system বলছে ${got}টা আছে — ${got - exp}টা "ভূতুড়ে" stock, পরে কেউ এমন জিনিস কিনবে যা নেই।`;
+  }
+  function reset() {
+    st = fresh(); cursor = 0; n = 0; playing = false;
+    gP.selectAll("*").remove();
+    logBox.innerHTML = `<p class="empty">▶ চালাও বা ⏭ এক ধাপ চাপো।</p>`;
+    explain.innerHTML = `<b style="background:${C[mode]}">i</b><span>${({ lost: "কোনো সুরক্ষা ছাড়া — দুজনেই পড়ে, নিজের হিসাবে লেখে।", pess: "পড়ার সময়ই FOR UPDATE দিয়ে row lock।", nowait: "Lock না পেলে অপেক্ষা না করে সাথে সাথে error।", opt: "Lock নেই — version মিলিয়ে লেখা, না মিললে আবার।", atomic: "হিসাবটা database-এর ভেতরেই — একটাই statement।" })[mode]}</span>`;
+    verdict.innerHTML = "";
+    draw();
+  }
+  const modesEl = document.getElementById("modes");
+  modesEl.innerHTML = Object.entries(MODES).map(([k, m]) => `<button type="button" data-m="${k}" style="--mc:${C[k]}">${m.name}</button>`).join("");
+  const syncModes = () => modesEl.querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.m === mode));
+  modesEl.addEventListener("click", e => { const b = e.target.closest("button"); if (!b || busy) return; mode = b.dataset.m; syncModes(); reset(); });
+  document.getElementById("step").addEventListener("click", () => { if (!busy && cursor < MODES[mode].steps.length) runStep(); });
+  document.getElementById("reset").addEventListener("click", () => { if (!busy) reset(); });
+  document.getElementById("play").addEventListener("click", async () => {
+    if (playing) { playing = false; draw(); return; }
+    if (busy) return;
+    reset(); playing = true; draw();
+    while (playing && cursor < MODES[mode].steps.length) { await runStep(); await new Promise(r => setTimeout(r, 700)); }
+    playing = false; draw();
+  });
+  syncModes(); reset();
+})();
+
+const root = document.documentElement;
+try { const t = localStorage.getItem("welldev-theme"); if (t) root.dataset.theme = t; } catch (e) {}
+document.getElementById("theme").addEventListener("click", () => {
+  const dark = root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  root.dataset.theme = dark ? "light" : "dark";
+  try { localStorage.setItem("welldev-theme", root.dataset.theme); } catch (e) {}
+});
+</script>
+</body>
+</html>

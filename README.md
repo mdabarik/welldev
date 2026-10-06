@@ -22,12 +22,13 @@ _শীঘ্রই আসছে।_
 
 - [LeetCode SQL 50 — Visual Guide](03-dbms-sql/top-50-sql/index.html) — ৫০টি problem, PostgreSQL solution আর প্রতিটি ধাপের intermediate table
 - [ACID Properties](03-dbms-sql/acid/index.html) — bank transfer দিয়ে A, C, I, D; PostgreSQL output, crash test আর C# কোড
-- [Transaction Isolation Levels](03-dbms-sql/transactions/index.html) — ৪টি level, দুইটা psql session পাশাপাশি ([transaction-A.sql](03-dbms-sql/transaction-A.sql) · [transaction-B.sql](03-dbms-sql/transaction-B.sql))
+- [Transaction Isolation Levels](03-dbms-sql/transactions/index.html) — ৪টি level, D3 playground-এ A/B session চালিয়ে দেখা, দুইটা psql session পাশাপাশি ([transaction-A.sql](03-dbms-sql/transaction-A.sql) · [transaction-B.sql](03-dbms-sql/transaction-B.sql))
+- [Optimistic vs Pessimistic Locking](03-dbms-sql/optimistic-pessimistic/index.html) — lost update, FOR UPDATE / NOWAIT / SKIP LOCKED আর version column, A/B animation সহ
 
 ## 04 · Resume Projects
 
-- [XSS, CSRF, JWT, Access ও Refresh Token](04-resume-projects/01-xss-csrf-jwt-refresh-token-access-token/01-xss-csrf-jwt-refresh-token-access-token.html)
-- [Encoding, Encryption ও Hashing](04-resume-projects/02-encoding-encryption-hashing/02-encoding-encryption-hashing.html)
+- [XSS, CSRF, JWT, Access ও Refresh Token](04-resume-projects/01-xss-csrf-jwt-refresh-token-access-token/index.html)
+- [Encoding, Encryption ও Hashing](04-resume-projects/02-encoding-encryption-hashing/index.html)
 
 ## 05 · Operating System
 

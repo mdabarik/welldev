@@ -148,6 +148,72 @@ summary::before{content:"+";font:700 15px var(--mono);color:var(--accent);width:
 details[open] summary::before{content:"−"}
 details p{margin:8px 0 0 24px;color:var(--muted);font-size:15px}
 
+/* playground */
+.pg{padding:14px;display:grid;gap:12px}
+.pg-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.pg-bar .sp{flex:1}
+.btn{border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:10px;padding:7px 12px;font:600 13px var(--sans);cursor:pointer}
+.btn:hover:not(:disabled){border-color:var(--accent)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.primary{border-color:transparent;color:#fff;background:linear-gradient(135deg,#6366f1,#8b5cf6 55%,#ec4899);min-width:104px}
+select.btn{font-weight:500;max-width:100%}
+.seg{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface)}
+.seg span{padding:0 10px;font:600 12px var(--bn);color:var(--muted)}
+.seg button{border:0;border-left:1px solid var(--line);background:none;padding:7px 10px;font:700 12px var(--mono);color:var(--muted);cursor:pointer}
+.seg button.on{background:var(--accent);color:#fff}
+.pg-stage{border-radius:14px;background:var(--surface-2);overflow-x:auto;-webkit-overflow-scrolling:touch}
+.pg-stage svg{display:block;width:100%;height:auto;min-width:760px}
+.pg-stage text{font-family:var(--sans)}
+.t-frame{fill:var(--surface);stroke:var(--line)}
+.t-title{font:800 15px var(--mono);fill:var(--fg)}
+.t-col{font:600 10.5px var(--sans);fill:var(--faint);letter-spacing:.05em;text-transform:uppercase}
+.rule{font:600 11.5px var(--sans);fill:var(--ok)} .rule.bad{fill:var(--bad)}
+.sbox{fill:var(--surface);stroke:color-mix(in srgb,var(--who) 35%,var(--line));stroke-width:1.5;transition:stroke .3s}
+.sbox.busy{stroke:var(--who);stroke-width:2.5}
+.sbox.wait{stroke:var(--warn);stroke-width:2.5;stroke-dasharray:7 5}
+.sbox.abort{stroke:var(--bad);stroke-width:2.5}
+.s-title{font:800 16px var(--sans);fill:var(--who)}
+.s-lv{font:600 10.5px var(--mono);fill:var(--muted)}
+.s-line{font:600 12.5px var(--bn);fill:var(--fg)}
+.s-snap{font:500 10.5px var(--mono);fill:var(--muted)}
+.s-lbl{font:600 10.5px var(--bn);fill:var(--faint)}
+.s-res{font:700 13.5px var(--mono);fill:var(--fg)} .s-res.err{fill:var(--bad)} .s-res.wait,.s-res.warn{fill:var(--warn)}
+.ver rect{fill:var(--surface-2);stroke:var(--line);stroke-width:1.2;transition:fill .3s,stroke .3s}
+.ver text{font:500 12.5px var(--mono);fill:var(--fg)}
+.ver .st{font:600 10.5px var(--bn);fill:var(--muted);text-anchor:end}
+.ver.new rect{fill:color-mix(in srgb,var(--own) 11%,var(--surface));stroke:var(--own);stroke-width:1.6;stroke-dasharray:5 3}
+.ver.new .st{fill:var(--own)}
+.ver.dead text,.ver.aborted text{fill:var(--faint)}
+.ver.aborted rect{stroke:var(--bad);stroke-dasharray:2 3}
+.ver .strike{stroke:var(--faint);stroke-width:1.3;opacity:0}
+.ver.dead .strike,.ver.aborted .strike{opacity:1}
+.dot{fill:none;stroke:var(--line);stroke-width:1.5}
+.dot.da.on{fill:var(--sa);stroke:var(--sa)} .dot.db.on{fill:var(--sb);stroke:var(--sb)}
+.pkt rect{fill:var(--muted)} .pkt.go.a rect{fill:var(--sa)} .pkt.go.b rect{fill:var(--sb)}
+.pkt.ok rect{fill:var(--ok)} .pkt.err rect{fill:var(--bad)} .pkt.wait rect,.pkt.warn rect{fill:var(--warn)}
+.pkt text{fill:#fff;font:700 11px var(--mono);text-anchor:middle;dominant-baseline:central}
+.waitline{fill:none;stroke-width:2;stroke-dasharray:6 5;animation:pgdash 1s linear infinite}
+@keyframes pgdash{to{stroke-dashoffset:-22}}
+.pg-explain{display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border-radius:12px;background:var(--surface-2);font-size:15px;min-height:52px}
+.pg-explain b{flex:none;width:24px;height:24px;border-radius:7px;display:grid;place-items:center;color:#fff;font:700 12px var(--sans)}
+.pg-ops{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media (max-width:640px){.pg-ops{grid-template-columns:minmax(0,1fr)}}
+.ops{--who:var(--accent);border:1px solid var(--line);border-top:3px solid var(--who);border-radius:12px;padding:10px 12px;display:grid;gap:8px;transition:opacity .2s}
+.ops[data-s="A"]{--who:var(--sa)} .ops[data-s="B"]{--who:var(--sb)}
+.ops.waiting{background:color-mix(in srgb,var(--warn) 6%,transparent)}
+.ops-h{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font:800 14px var(--sans);color:var(--who)}
+.ops-h select{margin-left:auto;padding:5px 8px;font-size:12px}
+.ops-row{display:flex;flex-wrap:wrap;gap:6px}
+.op{font:600 12px var(--mono);padding:6px 9px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--fg);cursor:pointer}
+.op.tx{color:var(--who)} .op.wr{border-style:dashed}
+.op:hover:not(:disabled){border-color:var(--who);background:color-mix(in srgb,var(--who) 8%,var(--surface))}
+.op:disabled{opacity:.35;cursor:not-allowed}
+.pg-log{max-height:440px;overflow-y:auto;border:1px solid var(--line);border-radius:12px}
+.pg-log .empty{margin:0;padding:14px;color:var(--faint);font-size:14px}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:13px;color:var(--muted)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:-1px}
+.legend .box{width:18px;height:10px;border-radius:3px}
+
 footer{margin-top:56px;padding-top:16px;border-top:1px solid var(--line);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;font-size:13px;color:var(--faint)}
 @media (max-width:640px){.hero{padding:24px 20px;border-radius:18px}}
 @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
@@ -167,7 +233,7 @@ footer{margin-top:56px;padding-top:16px;border-top:1px solid var(--line);display
     <h1>Transaction Isolation — ৪টি level</h1>
     <p>দুইটা terminal, দুইটা psql session (<code style="color:#fff;background:rgba(255,255,255,.18)">transaction-A.sql</code> আর <code style="color:#fff;background:rgba(255,255,255,.18)">transaction-B.sql</code>)। একই সময়ে একই row ছুঁলে কে কী দেখে — প্রতিটা level-এ ধাপে ধাপে। সব output PostgreSQL 18-এ চালিয়ে নেওয়া।</p>
     <div class="jump">
-      <a href="#setup">Setup</a><a href="#problems">৪টি সমস্যা</a><a href="#ru">Read Uncommitted</a><a href="#rc">Read Committed</a><a href="#rr">Repeatable Read</a><a href="#sz">Serializable</a><a href="#when">কোনটা কখন</a>
+      <a href="#setup">Setup</a><a href="#problems">৪টি সমস্যা</a><a href="#play">▶ Playground</a><a href="#ru">Read Uncommitted</a><a href="#rc">Read Committed</a><a href="#rr">Repeatable Read</a><a href="#sz">Serializable</a><a href="#when">কোনটা কখন</a>
     </div>
   </header>
 
@@ -222,6 +288,29 @@ INSERT INTO accounts VALUES (1, 'Rahim', 1000), (2, 'Karim', 500);</pre>
       </table>
     </div>
     <p class="foot">* SQL standard এখানে সমস্যাটা হতে দেয়, কিন্তু PostgreSQL আরও কড়া: Read Uncommitted আসলে Read Committed-এর মতোই চলে, আর Repeatable Read-এ phantom-ও হয় না। Default level: <code>READ COMMITTED</code>।</p>
+  </section>
+
+  <!-- playground -->
+  <section id="play">
+    <h2><span class="num">▶</span>Playground — নিজে চালিয়ে দেখো</h2>
+    <p class="lead">দুইটা session, প্রত্যেকের আলাদা isolation level। বাটনে click করলে statement চলে — মাঝখানে table-এর প্রতিটা <b>row version</b> (MVCC), কোনটা কে দেখতে পাচ্ছে (বাম পাশে A, ডান পাশে B-এর বিন্দু), কোন row-এ lock, কে কার জন্য অপেক্ষা করছে — সব animation-এ। ফলাফল আসল PostgreSQL-এর মতোই (এই page-এর সব scenario PostgreSQL 18-এ মিলিয়ে নেওয়া)।</p>
+    <div class="card pg">
+      <div class="pg-bar">
+        <div class="seg" id="pgLevel"></div>
+        <span class="sp"></span>
+        <select class="btn" id="pgScenario" aria-label="Scenario" autocomplete="off"></select>
+        <button type="button" class="btn primary" id="pgPlay">▶ চালাও</button>
+        <button type="button" class="btn" id="pgStep">⏭ এক ধাপ</button>
+        <button type="button" class="btn" id="pgReset">↺ Reset</button>
+        <button type="button" class="btn" id="pgVacuum" title="dead version সরাও">VACUUM</button>
+      </div>
+      <div class="pg-stage"><svg id="pgSvg" viewBox="0 0 1000 260" role="img" aria-label="Session A, Session B আর accounts table-এর row version"></svg></div>
+      <div class="legend"><span><i style="background:var(--sa)"></i>A এই version দেখে</span><span><i style="background:var(--sb)"></i>B এই version দেখে</span><span><i class="box" style="border:1.5px dashed var(--muted)"></i>uncommitted</span><span><i class="box" style="background:var(--line)"></i>dead / aborted</span><span>🔒 row lock</span></div>
+      <div class="pg-explain" id="pgExplain"></div>
+      <div class="pg-ops"><div class="ops" data-s="A"></div><div class="ops" data-s="B"></div></div>
+      <div class="tl pg-log" id="pgLog"></div>
+    </div>
+    <p class="foot">সহজ করার জন্য xid BEGIN-এই দেখানো হচ্ছে — আসল PostgreSQL প্রথম write-এ xid দেয়। BEGIN ছাড়া চালানো statement নিজেই একটা transaction (autocommit)।</p>
   </section>
 
   <!-- 1 -->
@@ -345,6 +434,7 @@ SHOW transaction_isolation;                            -- এখন কোনট
   <footer><span>WellDev · DBMS & SQL</span><a href="../acid/index.html">পরের গাইড: ACID Properties →</a></footer>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
 <script>
 // Each step: [who, sql, output, tag]. who = "A" | "B"; tag = [kind, text] with kind ok | bad | wait | info.
 const STEPS = {
@@ -452,6 +542,612 @@ document.getElementById("theme").addEventListener("click", () => {
   root.dataset.theme = dark ? "light" : "dark";
   try { localStorage.setItem("welldev-theme", root.dataset.theme); } catch (e) {}
 });
+</script>
+<script>
+// ---- MVCC engine: a small model of how PostgreSQL runs two concurrent sessions ----
+// Row versions carry xmin/xmax, snapshots decide visibility, row locks make writers wait,
+// REPEATABLE READ raises "concurrent update", SERIALIZABLE tracks rw-conflicts (SSI).
+const LEVELS = { ru: "READ UNCOMMITTED", rc: "READ COMMITTED", rr: "REPEATABLE READ", sz: "SERIALIZABLE" };
+const OPS = {
+  begin:    { label: "BEGIN", sql: l => `BEGIN ISOLATION LEVEL ${LEVELS[l]};` },
+  commit:   { label: "COMMIT", sql: () => "COMMIT;" },
+  rollback: { label: "ROLLBACK", sql: () => "ROLLBACK;" },
+  selR:     { label: "SELECT Rahim", read: "one", key: 1, sql: () => "SELECT balance FROM accounts WHERE id = 1;" },
+  selCnt:   { label: "SELECT count", read: "count", sql: () => "SELECT count(*) FROM accounts WHERE balance >= 500;" },
+  selSum:   { label: "SELECT sum", read: "sum", sql: () => "SELECT sum(balance) FROM accounts;" },
+  selAll:   { label: "SELECT *", read: "all", sql: () => "SELECT * FROM accounts ORDER BY id;" },
+  updR:     { label: "Rahim −500", key: 1, delta: -500, sql: () => "UPDATE accounts SET balance = balance - 500 WHERE id = 1;" },
+  updR2:    { label: "Rahim +100", key: 1, delta: 100, sql: () => "UPDATE accounts SET balance = balance + 100 WHERE id = 1;" },
+  updK:     { label: "Karim −500", key: 2, delta: -500, sql: () => "UPDATE accounts SET balance = balance - 500 WHERE id = 2;" },
+  ins:      { label: "INSERT Jamal", key: 3, insert: true, sql: () => "INSERT INTO accounts VALUES (3, 'Jamal', 800);" },
+};
+
+function createEngine() {
+  const levels = { A: "rc", B: "rc" };
+  let db;
+
+  function reset() {
+    db = { next: 101, clock: 0, clog: { 1: "c" }, owner: {}, vid: 0, rows: [], ssi: {}, sess: {} };
+    [[1, "Rahim", 1000], [2, "Karim", 500]].forEach(([id, name, balance]) =>
+      db.rows.push({ vid: ++db.vid, id, name, balance, xmin: 1, xmax: null }));
+    for (const n of ["A", "B"]) db.sess[n] = blank(n);
+  }
+  const blank = name => ({ name, xid: null, explicit: false, txLevel: null, snap: null, aborted: false, seen: {}, wait: null, waitOn: null });
+  const pending = x => db.clog[x] === "p";
+  const other = S => db.sess[S.name === "A" ? "B" : "A"];
+
+  // ---------- snapshots & visibility ----------
+  const activeXids = S => new Set(Object.keys(db.clog).map(Number).filter(x => pending(x) && x !== S.xid));
+  const peekSnap = S => ({ xmax: db.next, active: activeXids(S) });
+  function takeSnap(S) { return { ...peekSnap(S), seq: ++db.clock }; }
+  const levelOf = S => (S.explicit ? S.txLevel : "rc");
+  function stmtSnap(S, r) {
+    const lv = levelOf(S);
+    if (S.explicit && (lv === "rr" || lv === "sz")) {
+      if (!S.snap) {
+        S.snap = takeSnap(S);
+        if (db.ssi[S.xid]) db.ssi[S.xid].start = S.snap.seq;
+        r.snapTaken = true;
+      }
+      return S.snap;
+    }
+    return takeSnap(S);
+  }
+  const committedIn = (x, S, snap) => x === S.xid || (db.clog[x] === "c" && x < snap.xmax && !snap.active.has(x));
+  function visible(v, S, snap) {
+    if (db.clog[v.xmin] === "a" || !committedIn(v.xmin, S, snap)) return false;
+    if (v.xmax == null || db.clog[v.xmax] === "a") return true;
+    if (v.xmax === S.xid) return false;
+    return !committedIn(v.xmax, S, snap);
+  }
+  const visibleRows = (S, snap) => {
+    const m = {};
+    db.rows.forEach(v => { if (visible(v, S, snap)) m[v.id] = v; });
+    return Object.values(m).sort((a, b) => a.id - b.id);
+  };
+
+  // ---------- serializable (SSI) bookkeeping ----------
+  function concurrent(a, b) {
+    const A = db.ssi[a], B = db.ssi[b];
+    if (db.clog[a] === "a" || db.clog[b] === "a") return false;
+    if (A.commit != null && B.start != null && A.commit < B.start) return false;
+    if (B.commit != null && A.start != null && B.commit < A.start) return false;
+    return true;
+  }
+  const rwEdge = (r, w) => { db.ssi[r].out.add(w); db.ssi[w].inn.add(r); };
+  function ssiRead(S, keys) {
+    const me = db.ssi[S.xid];
+    if (!me) return;
+    keys.forEach(k => me.reads.add(k));
+    for (const x of Object.keys(db.ssi).map(Number)) {
+      if (x === S.xid || !concurrent(S.xid, x)) continue;
+      const w = db.ssi[x].writes;
+      if (keys.includes("ALL") ? w.size : keys.some(k => w.has(k))) rwEdge(S.xid, x);
+    }
+  }
+  function ssiWrite(S, k) {
+    const me = db.ssi[S.xid];
+    if (!me) return;
+    me.writes.add(k);
+    for (const x of Object.keys(db.ssi).map(Number)) {
+      if (x === S.xid || !concurrent(S.xid, x)) continue;
+      const rd = db.ssi[x].reads;
+      if (rd.has("ALL") || rd.has(k)) rwEdge(x, S.xid);
+    }
+  }
+  // Pivot rule: an rw-edge in, an rw-edge out, and the "out" side already committed.
+  function dangerous(x) {
+    const e = db.ssi[x];
+    if (!e) return false;
+    const live = s => [...s].filter(t => db.clog[t] !== "a");
+    return live(e.inn).length > 0 && live(e.out).some(t => db.clog[t] === "c");
+  }
+
+  // ---------- transaction lifecycle ----------
+  function newXid(S) {
+    S.xid = db.next++;
+    db.clog[S.xid] = "p";
+    db.owner[S.xid] = S.name;
+  }
+  function endTx(S) { Object.assign(S, blank(S.name)); }
+  function finishWaiters(x, out) {
+    for (const T of Object.values(db.sess)) {
+      if (T.waitOn !== x) continue;
+      out[out.length - 1].view ??= view();
+      const k = T.wait;
+      T.wait = T.waitOn = null;
+      run(T, k, out, true);
+    }
+  }
+  function commitTx(S, out) {
+    const x = S.xid;
+    db.clog[x] = "c";
+    if (db.ssi[x]) db.ssi[x].commit = ++db.clock;
+    endTx(S);
+    finishWaiters(x, out);
+  }
+  function abortTx(S, out) {
+    const x = S.xid;
+    db.clog[x] = "a";
+    db.rows.forEach(v => { if (v.xmax === x) v.xmax = null; });
+    if (S.explicit) { S.aborted = true; S.snap = null; S.wait = S.waitOn = null; } else endTx(S);
+    finishWaiters(x, out);
+  }
+
+  // ---------- run one statement ----------
+  function exec(name, key) {
+    const out = [];
+    run(db.sess[name], key, out, false);
+    return out;
+  }
+
+  function run(S, key, out, resumed) {
+    const op = OPS[key];
+    const r = { who: S.name, op: key, sql: op.sql(levels[S.name]), resumed, status: "ok", out: "", tag: null, msg: "", target: op.key ?? (op.read ? "all" : null) };
+    out.push(r);
+    const who = S.name, them = other(S).name;
+
+    if (key === "begin") {
+      if (S.explicit) return warn(r, "WARNING:  there is already a transaction in progress", `${who} আগেই একটা transaction-এর ভেতরে আছে।`);
+      newXid(S);
+      S.explicit = true;
+      S.txLevel = levels[who];
+      if (S.txLevel === "sz") db.ssi[S.xid] = { reads: new Set(), writes: new Set(), inn: new Set(), out: new Set(), start: null, commit: null };
+      r.out = "BEGIN";
+      r.msg = `${who} transaction শুরু করল (xid ${S.xid}, ${LEVELS[S.txLevel]}). ` +
+        (S.txLevel === "rr" || S.txLevel === "sz" ? "Snapshot BEGIN-এ না, প্রথম query-তে নেওয়া হবে।" : "প্রতিটা statement নিজের নতুন snapshot নেবে।") +
+        (S.txLevel === "ru" ? " PostgreSQL-এ READ UNCOMMITTED আসলে READ COMMITTED-এর মতোই চলে।" : "");
+      return;
+    }
+
+    if (key === "commit" || key === "rollback") {
+      if (!S.explicit) return warn(r, "WARNING:  there is no transaction in progress", "BEGIN ছাড়া প্রতিটা statement নিজেই commit হয়ে গেছে (autocommit) — শেষ করার মতো কিছু নেই।");
+      const x = S.xid;
+      if (S.aborted) {
+        r.status = "warn"; r.out = "ROLLBACK";
+        r.msg = key === "commit" ? "Transaction আগেই error-এ aborted — COMMIT চাইলেও PostgreSQL ROLLBACK করে।" : `${who}-এর aborted transaction শেষ হলো।`;
+        endTx(S);
+        return;
+      }
+      if (key === "rollback") {
+        r.out = "ROLLBACK";
+        r.msg = `${who}-এর সব uncommitted version (xid ${x}) বাতিল — কেউ কখনো এগুলো দেখবে না। Lock ছেড়ে দিল।`;
+        r.ended = x;
+        S.explicit = false;
+        abortTx(S, out);
+        return;
+      }
+      if (S.txLevel === "sz" && dangerous(x)) {
+        r.status = "err";
+        r.out = "ERROR:  could not serialize access due to read/write dependencies among transactions\nDETAIL:  Reason code: Canceled on identification as a pivot, during commit attempt.\nHINT:  The transaction might succeed if retried.";
+        r.tag = ["ok", "write skew ঠেকাল"];
+        r.msg = `${who} এমন data পড়ে সিদ্ধান্ত নিয়েছিল যা ${them} বদলে commit করেছে, আর ${them}-ও ${who}-এর পড়া data-র উপর লিখেছে — এই চক্র মেনে নিলে ফল কোনো ক্রমিক order-এর সাথে মিলত না। তাই ${who} বাতিল; retry করলে নতুন data দেখবে।`;
+        r.ended = x;
+        S.explicit = false;
+        abortTx(S, out);
+        return;
+      }
+      r.out = "COMMIT";
+      r.ended = x;
+      const made = db.rows.filter(v => v.xmin === x).length;
+      r.msg = `${who}-এর পরিবর্তন (xid ${x}) এখন স্থায়ী। ` + (made ? "এর পরে যারা snapshot নেবে তারা নতুন version দেখবে; আগের snapshot-ওয়ালারা পুরনোটাই দেখবে।" : "কোনো write ছিল না।");
+      commitTx(S, out);
+      return;
+    }
+
+    // ----- statements -----
+    if (S.explicit && S.aborted) {
+      r.status = "err";
+      r.out = "ERROR:  current transaction is aborted, commands ignored until end of transaction block";
+      r.msg = "আগের error-এর পর ROLLBACK (বা COMMIT) না দেওয়া পর্যন্ত সব command বাতিল।";
+      return;
+    }
+    const implicit = !S.explicit;
+    if (implicit && !S.xid) newXid(S);
+    const snap = stmtSnap(S, r);
+    const lv = levelOf(S);
+    const snapNote = r.snapTaken ? `${who}-এর snapshot এই মুহূর্তে নেওয়া হলো — transaction শেষ পর্যন্ত এটাই থাকবে। ` : "";
+    const auto = implicit ? " (autocommit — সাথে সাথে commit)" : "";
+
+    if (op.read) {
+      const rows = visibleRows(S, snap);
+      const keys = op.read === "one" ? [op.key] : ["ALL"];
+      ssiRead(S, keys);
+      const val = readValue(op.read, rows);
+      r.out = val.text;
+      r.value = val.key;
+      const hiddenNew = db.rows.some(v => pending(v.xmin) && v.xmin !== S.xid && (op.read !== "one" || v.id === op.key));
+      let note = "";
+      if (S.explicit) {
+        const prev = S.seen[key];
+        if (prev === undefined) S.seen[key] = val.key;
+        else if (prev !== val.key) {
+          const phantom = (op.read === "count" || op.read === "all") && val.rows !== S.seen[key + "#"];
+          r.tag = ["bad", phantom ? "phantom read" : "non-repeatable read"];
+          note = phantom ? `একই query আগে যত row দিয়েছিল এখন তার চেয়ে আলাদা — মাঝে ${them} INSERT করে commit করেছে।` : `একই query আগে অন্য মান দিয়েছিল — মাঝে ${them} বদলে commit করেছে, আর ${LEVELS[lv]} প্রতিটা statement-এ নতুন snapshot নেয়।`;
+        } else if (lv === "rr" || lv === "sz") {
+          const fresh = readValue(op.read, visibleRows(S, peekSnap(S))).key;
+          if (fresh !== val.key) { r.tag = ["ok", "snapshot ধরে রেখেছে"]; note = `${them}-এর commit হওয়া পরিবর্তন আছে, কিন্তু ${who}-এর snapshot তার আগের — তাই একই ফল।`; }
+        }
+        if (S.seen[key + "#"] === undefined) S.seen[key + "#"] = val.rows;
+      }
+      if (!r.tag && hiddenNew) {
+        r.tag = ["ok", lv === "ru" ? "dirty read হলো না" : "uncommitted দেখা যায়নি"];
+        note = `${them}-এর uncommitted version আছে, কিন্তু snapshot শুধু commit হওয়া version দেখে।` + (lv === "ru" ? " READ UNCOMMITTED হলেও PostgreSQL dirty read হতে দেয় না।" : "");
+      }
+      r.msg = snapNote + (note || `${who} তার snapshot অনুযায়ী দৃশ্যমান version গুলো পড়ল।`) + auto;
+      if (implicit) commitTx(S, out);
+      return;
+    }
+
+    // ----- writes -----
+    const fail = (text, msg, tag) => {
+      r.status = "err"; r.out = text; r.msg = msg; if (tag) r.tag = tag;
+      r.ended = S.xid;
+      abortTx(S, out);
+    };
+    const waitFor = x => {
+      const blocker = Object.values(db.sess).find(T => T.xid === x);
+      if (blocker && blocker.waitOn === S.xid) {
+        return fail(`ERROR:  deadlock detected\nDETAIL:  Process ${who} waits for ShareLock on transaction ${x}; blocked by process ${blocker.name}.\nProcess ${blocker.name} waits for ShareLock on transaction ${S.xid}; blocked by process ${who}.`, `${who} অপেক্ষা করছে ${blocker.name}-এর জন্য, আর ${blocker.name} অপেক্ষা করছে ${who}-এর জন্য — কেউ কোনোদিন এগোতে পারত না। PostgreSQL একটাকে (${who}) বাতিল করে lock ছেড়ে দেয়, ফলে ${blocker.name} এগোয়।`, ["bad", "deadlock"]);
+      }
+      S.wait = key; S.waitOn = x;
+      r.status = "wait";
+      r.tag = ["wait", `⏳ xid ${x}-এর lock-এর জন্য অপেক্ষা`];
+      r.msg = `এই row-টা ${db.owner[x]} (xid ${x}) আগেই বদলেছে কিন্তু এখনো commit/rollback করেনি — row lock তার হাতে। ${who} আটকে থাকবে যতক্ষণ না ${db.owner[x]} শেষ করে।`;
+    };
+
+    if (op.insert) {
+      const vs = db.rows.filter(v => v.id === op.key && db.clog[v.xmin] !== "a");
+      if (vs.some(v => db.clog[v.xmin] === "c" || v.xmin === S.xid))
+        return fail(`ERROR:  duplicate key value violates unique constraint "accounts_pkey"\nDETAIL:  Key (id)=(${op.key}) already exists.`, "id 3 আগে থেকেই আছে — PRIMARY KEY একই id দুবার হতে দেয় না।");
+      const p = vs.find(v => pending(v.xmin));
+      if (p) return waitFor(p.xmin);
+      db.rows.push({ vid: ++db.vid, id: op.key, name: "Jamal", balance: 800, xmin: S.xid, xmax: null });
+      S.seen = {};
+      ssiWrite(S, op.key);
+      if (db.ssi[S.xid] && dangerous(S.xid)) return ssiWriteFail();
+      r.out = "INSERT 0 1";
+      r.msg = `নতুন row-এর একটা version তৈরি হলো, xmin = ${S.xid}।` + (implicit ? auto : " Commit না হওয়া পর্যন্ত শুধু " + who + " এটা দেখবে।");
+      if (implicit) commitTx(S, out);
+      return;
+    }
+
+    let V = visibleRows(S, snap).find(v => v.id === op.key);
+    let followed = false;
+    while (V && V.xmax != null && V.xmax !== S.xid) {
+      const st = db.clog[V.xmax];
+      if (st === "a") { V.xmax = null; break; }
+      if (st === "p") return waitFor(V.xmax);
+      if (lv === "rr" || lv === "sz")
+        return fail("ERROR:  could not serialize access due to concurrent update",
+          `${who}-এর snapshot-এ যে version দেখা যাচ্ছে, সেটা ${db.owner[V.xmax]} এর মধ্যে বদলে commit করে ফেলেছে। ${LEVELS[lv]} পুরনো মানের উপর লিখতে দেয় না (lost update ঠেকায়) — পুরো transaction retry করতে হবে।`,
+          ["ok", "lost update ঠেকাল"]);
+      const nx = db.rows.find(n => n.id === V.id && n.xmin === V.xmax);
+      V = nx && db.clog[nx.xmin] === "c" ? nx : null;
+      followed = true;
+    }
+    if (!V) { r.out = "UPDATE 0"; r.msg = "কোনো row মেলেনি।" + auto; if (implicit) commitTx(S, out); return; }
+    const nb = V.balance + op.delta;
+    if (nb < 0) {
+      V.xmax = null;
+      return fail(`ERROR:  new row for relation "accounts" violates check constraint "accounts_balance_check"\nDETAIL:  Failing row contains (${V.id}, ${V.name}, ${nb}).`,
+        `balance negative হয়ে যেত — CHECK (balance >= 0) মানা হয়নি, তাই statement fail` + (S.explicit ? " আর পুরো transaction aborted।" : "।"));
+    }
+    V.xmax = S.xid;
+    db.rows.push({ vid: ++db.vid, id: V.id, name: V.name, balance: nb, xmin: S.xid, xmax: null, from: V.vid });
+    S.seen = {};
+    ssiWrite(S, V.id);
+    if (db.ssi[S.xid] && dangerous(S.xid)) return ssiWriteFail();
+    r.out = "UPDATE 1";
+    r.msg = (resumed ? `Lock ছাড়া পেয়ে ${who}-এর UPDATE শেষ হলো` + (followed ? ` — READ COMMITTED সবচেয়ে নতুন committed version (${V.balance}) নিয়ে তার উপর হিসাব করল, তাই কারো update হারায়নি।` : "।") + " " : snapNote) +
+      `পুরনো version-এ xmax = ${S.xid} (row lock), নতুন version ${nb}, xmin = ${S.xid}।` + auto;
+    if (resumed) r.tag = ["info", "lock পেয়ে শেষ হলো"];
+    if (implicit) commitTx(S, out);
+
+    function ssiWriteFail() {
+      return fail("ERROR:  could not serialize access due to read/write dependencies among transactions\nDETAIL:  Reason code: Canceled on identification as a pivot, during write.\nHINT:  The transaction might succeed if retried.",
+        `${who}-এর এই লেখা আর আগের পড়া মিলে committed transaction-এর সাথে বিপজ্জনক চক্র তৈরি করছে — SERIALIZABLE তাই এখনই বাতিল করল।`, ["ok", "write skew ঠেকাল"]);
+    }
+  }
+
+  function warn(r, text, msg) { r.status = "warn"; r.out = text; r.msg = msg; }
+
+  function readValue(kind, rows) {
+    if (kind === "one") { const v = rows.find(x => x.id === 1); return { text: v ? `balance → ${v.balance}` : "(0 rows)", key: v ? String(v.balance) : "-" , rows: v ? 1 : 0 }; }
+    if (kind === "count") { const n = rows.filter(x => x.balance >= 500).length; return { text: `count → ${n}`, key: String(n), rows: n }; }
+    if (kind === "sum") { const s = rows.reduce((a, x) => a + x.balance, 0); return { text: `sum → ${s}`, key: String(s), rows: rows.length }; }
+    const t = rows.map(x => `${x.id} | ${x.name} | ${x.balance}`).join("\n");
+    return { text: t, key: t, rows: rows.length };
+  }
+
+  // What each session would see right now (for the visibility dots in the diagram).
+  function seenBy(name) {
+    const S = db.sess[name];
+    if (S.aborted) return new Set();
+    const snap = S.explicit && S.snap ? S.snap : peekSnap(S);
+    return new Set(db.rows.filter(v => visible(v, S, snap)).map(v => v.vid));
+  }
+
+  const stateOf = v => (db.clog[v.xmin] === "a" ? "aborted" : pending(v.xmin) ? "new" : v.xmax != null && db.clog[v.xmax] === "c" ? "dead" : "live");
+  // A plain copy of everything the diagram needs, frozen at this moment.
+  function view() {
+    const rows = db.rows.map(v => ({ ...v, state: stateOf(v), lock: v.xmax != null && pending(v.xmax) ? db.owner[v.xmax] : null, own: db.owner[v.xmin] || null, xmaxShown: v.xmax != null && db.clog[v.xmax] !== "a" ? v.xmax : null }));
+    const latest = db.rows.filter(v => db.clog[v.xmin] === "c" && !(v.xmax != null && db.clog[v.xmax] === "c"));
+    const sess = {};
+    for (const n of ["A", "B"]) {
+      const S = db.sess[n];
+      sess[n] = { xid: S.xid, inTx: S.explicit, aborted: S.aborted, waitOn: S.waitOn, waitKey: S.wait ? OPS[S.wait].key : null,
+        level: S.explicit ? S.txLevel : levels[n], snap: S.snap ? { xmax: S.snap.xmax, active: [...S.snap.active] } : null };
+    }
+    return { rows, sess, seen: { A: seenBy("A"), B: seenBy("B") }, rule: latest.filter(v => v.id <= 2).reduce((a, v) => a + v.balance, 0) };
+  }
+
+  reset();
+  return {
+    view,
+    LEVELS, OPS, levels, reset, exec, seenBy,
+    get db() { return db; },
+    state: v => (db.clog[v.xmin] === "a" ? "aborted" : pending(v.xmin) ? "new" : v.xmax != null && db.clog[v.xmax] === "c" ? "dead" : "live"),
+    lockOf: v => (v.xmax != null && pending(v.xmax) ? db.owner[v.xmax] : null),
+    ownerOf: x => db.owner[x],
+    vacuum() {
+      const busy = Object.values(db.sess).some(S => S.xid && pending(S.xid));
+      const before = db.rows.length;
+      db.rows = db.rows.filter(v => db.clog[v.xmin] !== "a" && !(v.xmax != null && db.clog[v.xmax] === "c" && !busy));
+      return before - db.rows.length;
+    },
+  };
+}
+
+// ---- Playground UI: D3 diagram (sessions ⇄ row versions), op buttons, scenarios, log ----
+(() => {
+  const E = createEngine();
+  const W = 1000, TX = 270, TW = 460, SA = 14, SB = 776, SW = 210, SH = 214, ROW = 30, GAP = 6, GROUP = 14, TOP = 92;
+  const svg = d3.select("#pgSvg");
+  const gTable = svg.append("g"), gWait = svg.append("g"), gVer = svg.append("g"), gSess = svg.append("g"), gPkt = svg.append("g");
+  const logBox = document.getElementById("pgLog"), explain = document.getElementById("pgExplain");
+  const SCEN = {
+    dirty:   { name: "Dirty read হয়?", hint: "B commit না করেই বদলায় — A কি সেটা দেখে? READ UNCOMMITTED-এ চালিয়ে দেখো।", steps: ["A:begin", "A:selR", "B:begin", "B:updR", "A:selR", "B:rollback", "A:selR", "A:commit"] },
+    nonrep:  { name: "Non-repeatable read", hint: "READ COMMITTED আর REPEATABLE READ-এ চালিয়ে তুলনা করো।", steps: ["A:begin", "A:selR", "B:updR", "A:selR", "A:commit"] },
+    phantom: { name: "Phantom read", hint: "B নতুন row INSERT করে — A-র count বদলায়? RC বনাম RR।", steps: ["A:begin", "A:selCnt", "B:ins", "A:selCnt", "A:commit"] },
+    same:    { name: "দুজনেই একই row UPDATE", hint: "RC-তে B অপেক্ষা করে নতুন মানের উপর লেখে; RR/SERIALIZABLE-এ error দেয়।", steps: ["A:begin", "B:begin", "A:selR", "B:updR", "A:updR2", "B:commit", "A:commit", "A:selR"] },
+    skew:    { name: "Write skew (Rahim + Karim ≥ 1000)", hint: "REPEATABLE READ-এ দুটোই commit হয়ে নিয়ম ভাঙে; SERIALIZABLE-এ একটা বাতিল হয়।", steps: ["A:begin", "B:begin", "A:selSum", "B:selSum", "A:updR", "B:updK", "A:commit", "B:commit", "A:selSum"] },
+    deadlock:{ name: "Deadlock", hint: "A আর B একে অপরের lock-এর জন্য অপেক্ষা করে — PostgreSQL একটাকে বাতিল করে।", steps: ["A:begin", "B:begin", "A:updR2", "B:updK", "A:updK", "B:updR2", "B:rollback", "A:commit"] },
+    aborted: { name: "Error-এর পর aborted transaction", hint: "CHECK fail করার পর transaction-এর আর কোনো command চলে না।", steps: ["A:begin", "A:updK", "A:updK", "A:selR", "A:commit", "A:selAll"] },
+  };
+  const scenSel = document.getElementById("pgScenario");
+  scenSel.innerHTML = Object.entries(SCEN).map(([k, s]) => `<option value="${k}">${s.name}</option>`).join("");
+  let busy = false, playing = false, stepNo = 0, cursor = 0, layoutY = {}, lastView = E.view();
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const short = { ru: "RU", rc: "RC", rr: "RR", sz: "SER" };
+
+  // ---------- static table frame ----------
+  gTable.append("rect").attr("class", "t-frame").attr("x", TX - 22).attr("y", 18).attr("width", TW + 44).attr("rx", 14);
+  gTable.append("text").attr("class", "t-title").attr("x", TX).attr("y", 44).text("accounts");
+  const ruleT = gTable.append("text").attr("class", "rule").attr("x", TX + TW).attr("y", 44).attr("text-anchor", "end");
+  [["id", 12], ["name", 44], ["balance", 128], ["xmin", 222], ["xmax", 282]].forEach(([t, x]) =>
+    gTable.append("text").attr("class", "t-col").attr("x", TX + x).attr("y", 76).text(t));
+  gTable.append("text").attr("class", "t-col").attr("x", TX - 12).attr("y", 76).attr("text-anchor", "middle").text("A");
+  gTable.append("text").attr("class", "t-col").attr("x", TX + TW + 12).attr("y", 76).attr("text-anchor", "middle").text("B");
+
+  // ---------- session boxes ----------
+  const boxes = {};
+  for (const [n, x] of [["A", SA], ["B", SB]]) {
+    const g = gSess.append("g").attr("class", "sess").attr("transform", `translate(${x},18)`).style("--who", `var(--s${n.toLowerCase()})`);
+    boxes[n] = {
+      g, rect: g.append("rect").attr("class", "sbox").attr("width", SW).attr("height", SH).attr("rx", 14),
+      title: g.append("text").attr("class", "s-title").attr("x", 16).attr("y", 30).text(`Session ${n}`),
+      lv: g.append("text").attr("class", "s-lv").attr("x", 16).attr("y", 50),
+      st: g.append("text").attr("class", "s-line").attr("x", 16).attr("y", 80),
+      snap: g.append("text").attr("class", "s-snap").attr("x", 16).attr("y", 102),
+      lbl: g.append("text").attr("class", "s-lbl").attr("x", 16).attr("y", 140).text("শেষ ফল"),
+      res: g.append("text").attr("class", "s-res").attr("x", 16).attr("y", 166),
+      res2: g.append("text").attr("class", "s-snap").attr("x", 16).attr("y", 190),
+    };
+  }
+
+  function layout(rows) {
+    const Y = {}, ids = [...new Set(rows.map(r => r.id))].sort((a, b) => a - b);
+    let y = TOP;
+    for (const id of ids) {
+      rows.filter(r => r.id === id).sort((a, b) => a.vid - b.vid).forEach(r => { Y[r.vid] = y; y += ROW + GAP; });
+      y += GROUP - GAP;
+    }
+    return { Y, bottom: y };
+  }
+  const sessY = 18 + 100;
+  function targetY(t) {
+    if (t == null) return 60;
+    const rows = lastView.rows.filter(r => (t === "all" ? true : r.id === t));
+    if (!rows.length) return layoutY.bottom ?? TOP;
+    const ys = rows.map(r => layoutY.Y[r.vid]);
+    return (Math.min(...ys) + Math.max(...ys) + ROW) / 2;
+  }
+
+  function render(v) {
+    lastView = v;
+    const L = layout(v.rows);
+    layoutY = L;
+    const H = Math.max(SH + 40, L.bottom + 24);
+    svg.attr("viewBox", `0 0 ${W} ${H}`);
+    gTable.select(".t-frame").attr("height", H - 30);
+    ruleT.text(`নিয়ম: Rahim + Karim ≥ 1000  →  ${v.rule} ${v.rule >= 1000 ? "✓" : "✗"}`).classed("bad", v.rule < 1000);
+
+    const sel = gVer.selectAll("g.ver").data(v.rows, d => d.vid);
+    const en = sel.enter().append("g").attr("class", "ver")
+      .attr("transform", d => `translate(${TX},${L.Y[d.from] ?? L.Y[d.vid]})`).style("opacity", 0);
+    en.append("rect").attr("width", TW).attr("height", ROW).attr("rx", 8);
+    en.append("line").attr("class", "strike").attr("x1", 8).attr("x2", 330).attr("y1", ROW / 2).attr("y2", ROW / 2);
+    ["c-id", "c-name", "c-bal", "c-xmin", "c-xmax"].forEach((c, i) => en.append("text").attr("class", c).attr("x", [12, 44, 128, 222, 282][i]).attr("y", ROW / 2 + 4.5));
+    en.append("text").attr("class", "st").attr("x", TW - 12).attr("y", ROW / 2 + 4);
+    en.append("circle").attr("class", "dot da").attr("cx", -12).attr("cy", ROW / 2).attr("r", 5.5);
+    en.append("circle").attr("class", "dot db").attr("cx", TW + 12).attr("cy", ROW / 2).attr("r", 5.5);
+    const all = en.merge(sel);
+    all.attr("class", d => `ver ${d.state}`).style("--own", d => (d.own ? `var(--s${d.own.toLowerCase()})` : "var(--muted)"));
+    all.select(".c-id").text(d => d.id);
+    all.select(".c-name").text(d => d.name);
+    all.select(".c-bal").text(d => d.balance);
+    all.select(".c-xmin").text(d => d.xmin);
+    all.select(".c-xmax").text(d => d.xmaxShown ?? "—");
+    all.select(".st").text(d => (d.lock ? `🔒 ${d.lock} · ` : "") + ({ live: "live", new: `uncommitted · ${d.own}`, dead: "dead (পুরনো)", aborted: "aborted" })[d.state]);
+    all.select(".da").classed("on", d => v.seen.A.has(d.vid));
+    all.select(".db").classed("on", d => v.seen.B.has(d.vid));
+    all.transition().duration(550).attr("transform", d => `translate(${TX},${L.Y[d.vid]})`).style("opacity", d => (d.state === "dead" ? 0.55 : d.state === "aborted" ? 0.4 : 1));
+    sel.exit().transition().duration(400).style("opacity", 0).remove();
+
+    // sessions
+    for (const n of ["A", "B"]) {
+      const s = v.sess[n], b = boxes[n];
+      b.rect.attr("class", "sbox" + (s.waitOn ? " wait" : s.aborted ? " abort" : s.inTx ? " busy" : ""));
+      b.lv.text(E.LEVELS[s.level] + (s.inTx ? "" : " · পরের BEGIN"));
+      b.st.text(s.waitOn ? `⏳ অপেক্ষা: xid ${s.waitOn}-এর lock` : s.aborted ? "✗ aborted — ROLLBACK দাও" : s.inTx ? `transaction চলছে · xid ${s.xid}` : "idle · autocommit");
+      b.snap.text(!s.inTx ? "প্রতিটা statement = আলাদা tx" : s.snap ? `snapshot: xid < ${s.snap.xmax}` + (s.snap.active.length ? ` · বাদ ${s.snap.active.join(",")}` : "")
+        : s.level === "rr" || s.level === "sz" ? "snapshot: প্রথম query-তে নেবে" : "snapshot: প্রতি statement-এ নতুন");
+    }
+    // wait arrows
+    const waits = ["A", "B"].filter(n => v.sess[n].waitOn).map(n => {
+      const s = v.sess[n];
+      const row = v.rows.find(r => r.id === s.waitKey && (r.lock || r.state === "new") && r.own !== n);
+      const y = row ? L.Y[row.vid] + ROW / 2 : TOP;
+      const x0 = n === "A" ? SA + SW : SB, x1 = n === "A" ? TX - 22 : TX + TW + 22;
+      return { n, d: `M${x0},${sessY} C${(x0 + x1) / 2},${sessY} ${(x0 + x1) / 2},${y} ${x1},${y}` };
+    });
+    const wp = gWait.selectAll("path").data(waits, d => d.n);
+    wp.enter().append("path").attr("class", "waitline").merge(wp).attr("d", d => d.d).style("stroke", "var(--warn)");
+    wp.exit().remove();
+  }
+
+  function setResult(r) {
+    const b = boxes[r.who];
+    const first = (r.out || "").split("\n")[0];
+    const txt = r.status === "wait" ? "⏳ lock-এর অপেক্ষা" : r.status === "err" ? first.replace(/^ERROR:\s+/, "ERROR: ") : first;
+    b.res.attr("class", "s-res " + r.status).text(txt.length > 24 ? txt.slice(0, 23) + "…" : txt);
+    b.res2.text(r.tag ? r.tag[1] : "");
+  }
+
+  function fly(who, y, label, cls, back) {
+    const x0 = who === "A" ? SA + SW : SB, x1 = who === "A" ? TX - 22 : TX + TW + 22;
+    const [fx, fy, tx, ty] = back ? [x1, y, x0, sessY] : [x0, sessY, x1, y];
+    const w = Math.max(64, label.length * 7.4 + 18);
+    const g = gPkt.append("g").attr("class", "pkt " + cls).attr("transform", `translate(${fx - w / 2},${fy - 12})`);
+    g.append("rect").attr("width", w).attr("height", 24).attr("rx", 12);
+    g.append("text").attr("x", w / 2).attr("y", 12).text(label);
+    return g.transition().duration(520).ease(d3.easeCubicInOut).attr("transform", `translate(${tx - w / 2},${ty - 12})`)
+      .end().catch(() => {}).then(() => g.remove());
+  }
+  const opWord = r => (r.op === "begin" ? "BEGIN" : r.op === "commit" ? "COMMIT" : r.op === "rollback" ? "ROLLBACK" : E.OPS[r.op].read ? "SELECT" : E.OPS[r.op].insert ? "INSERT" : "UPDATE");
+  const backWord = r => {
+    if (r.status === "wait") return "⏳ WAIT";
+    if (r.status === "err") return "ERROR";
+    if (r.value != null) return r.op === "selAll" ? `${r.out.split("\n").length} rows` : r.value;
+    return (r.out || "").split("\n")[0].replace(/^WARNING:.*/, "WARNING");
+  };
+
+  const esc = s => s.replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+  function logRow(r) {
+    stepNo++;
+    const cell = n => {
+      if (r.who !== n) return `<div class="cell ${n.toLowerCase()}"></div>`;
+      const out = r.out ? `<div class="out">${r.status === "err" ? `<span class="err">${esc(r.out)}</span>` : esc(r.out)}</div>` : "";
+      const tag = r.tag ? `<span class="tag ${r.tag[0]}">${r.tag[1]}</span>` : r.status === "warn" ? `<span class="tag wait">warning</span>` : "";
+      return `<div class="cell ${n.toLowerCase()} on" data-who="${n}"><pre>${r.resumed ? '<span class="c">-- (আগের statement শেষ হলো)</span>\n' : ""}${highlight(r.sql, "sql")}</pre>${out}${tag}</div>`;
+    };
+    if (stepNo === 1) logBox.innerHTML = `<div class="tl-head"><span></span><span class="a">Session A</span><span class="b">Session B</span></div>`;
+    logBox.insertAdjacentHTML("beforeend", `<div class="row"><span class="n">${stepNo}</span>${cell("A")}${cell("B")}</div>`);
+    logBox.scrollTop = logBox.scrollHeight;
+    explain.innerHTML = `<b style="background:var(--s${r.who.toLowerCase()})">${r.who}</b><span>${r.msg}</span>`;
+  }
+
+  async function doOp(who, op) {
+    busy = true; sync();
+    const results = E.exec(who, op);
+    for (const r of results) {
+      await fly(r.who, targetY(r.target), opWord(r), "go " + r.who.toLowerCase());
+      render(r.view || E.view());
+      await sleep(250);
+      await fly(r.who, targetY(r.target), backWord(r), r.status, true);
+      setResult(r);
+      logRow(r);
+      if (results.length > 1) await sleep(350);
+    }
+    render(E.view());
+    busy = false; sync();
+  }
+
+  // ---------- controls ----------
+  const OPROWS = [["begin", "commit", "rollback"], ["selR", "selCnt", "selSum", "selAll"], ["updR", "updR2", "updK", "ins"]];
+  for (const n of ["A", "B"]) {
+    const box = document.querySelector(`.ops[data-s="${n}"]`);
+    box.innerHTML = `<div class="ops-h">Session ${n}<select class="btn lvsel" autocomplete="off" aria-label="Session ${n} isolation level">${Object.entries(E.LEVELS).map(([k, l]) => `<option value="${k}">${l}</option>`).join("")}</select></div>` +
+      OPROWS.map((row, i) => `<div class="ops-row">${row.map(k => `<button type="button" class="op ${["tx", "rd", "wr"][i]}" data-op="${k}" title="${E.OPS[k].sql("rc")}">${E.OPS[k].label}</button>`).join("")}</div>`).join("");
+    box.querySelector(".lvsel").value = "rc";
+    box.querySelector(".lvsel").addEventListener("change", e => { E.levels[n] = e.target.value; render(E.view()); syncSeg(); });
+    box.addEventListener("click", e => { const b = e.target.closest("button[data-op]"); if (b && !b.disabled) doOp(n, b.dataset.op); });
+  }
+  const seg = document.getElementById("pgLevel");
+  seg.innerHTML = `<span>দুটোতেই</span>` + Object.keys(E.LEVELS).map(k => `<button type="button" data-lv="${k}" title="${E.LEVELS[k]}">${short[k]}</button>`).join("");
+  seg.addEventListener("click", e => {
+    const b = e.target.closest("button[data-lv]");
+    if (!b) return;
+    for (const n of ["A", "B"]) if (!E.db.sess[n].explicit) { E.levels[n] = b.dataset.lv; document.querySelector(`.ops[data-s="${n}"] .lvsel`).value = b.dataset.lv; }
+    render(E.view()); syncSeg();
+  });
+  function syncSeg() {
+    seg.querySelectorAll("button").forEach(b => b.classList.toggle("on", E.levels.A === b.dataset.lv && E.levels.B === b.dataset.lv));
+  }
+  function sync() {
+    for (const n of ["A", "B"]) {
+      const S = E.db.sess[n], box = document.querySelector(`.ops[data-s="${n}"]`);
+      box.classList.toggle("waiting", !!S.waitOn);
+      box.querySelector(".lvsel").disabled = S.explicit || playing;
+      box.querySelectorAll("button[data-op]").forEach(b => {
+        const k = b.dataset.op;
+        b.disabled = busy || playing || !!S.waitOn || (k === "begin" && S.explicit) || ((k === "commit" || k === "rollback") && !S.explicit);
+      });
+    }
+    document.getElementById("pgStep").disabled = busy || playing;
+    document.getElementById("pgPlay").textContent = playing ? "⏸ থামাও" : "▶ চালাও";
+    document.getElementById("pgVacuum").disabled = busy || playing;
+  }
+  function resetAll(keepCursor) {
+    E.reset();
+    stepNo = 0;
+    if (!keepCursor) cursor = 0;
+    logBox.innerHTML = `<p class="empty">এখনো কিছু চালানো হয়নি — নিচের বাটন বা উপরের সিনারিও থেকে শুরু করো।</p>`;
+    explain.innerHTML = `<b style="background:var(--accent)">i</b><span>${SCEN[scenSel.value].hint}</span>`;
+    for (const n of ["A", "B"]) { boxes[n].res.text("—").attr("class", "s-res"); boxes[n].res2.text(""); }
+    gPkt.selectAll("*").remove();
+    render(E.view());
+    sync();
+  }
+  async function step() {
+    const s = SCEN[scenSel.value].steps;
+    if (cursor >= s.length) resetAll();
+    const [who, op] = s[cursor++].split(":");
+    const S = E.db.sess[who];
+    if (S.waitOn) return;  // a manual click put things in an odd state; skip
+    await doOp(who, op);
+  }
+  document.getElementById("pgStep").addEventListener("click", step);
+  document.getElementById("pgPlay").addEventListener("click", async () => {
+    if (playing) { playing = false; sync(); return; }
+    resetAll();
+    playing = true; sync();
+    const n = SCEN[scenSel.value].steps.length;
+    while (playing && cursor < n) { await step(); await sleep(650); }
+    playing = false; sync();
+  });
+  document.getElementById("pgReset").addEventListener("click", () => { playing = false; resetAll(); });
+  document.getElementById("pgVacuum").addEventListener("click", () => {
+    const gone = E.vacuum();
+    render(E.view());
+    explain.innerHTML = `<b style="background:var(--accent)">V</b><span>${gone ? `VACUUM ${gone}টা পুরনো (dead/aborted) version সরাল — কোনো চলমান transaction-এর আর এগুলো দরকার নেই।` : "সরানোর মতো কিছু নেই — কোনো চলমান transaction এখনো পুরনো version দেখতে পারে, অথবা dead version নেই।"}</span>`;
+  });
+  scenSel.addEventListener("change", () => { playing = false; resetAll(); });
+  resetAll();
+  syncSeg();
+})();
 </script>
 </body>
 </html>
