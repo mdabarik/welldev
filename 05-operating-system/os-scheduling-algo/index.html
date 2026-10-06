@@ -1,0 +1,966 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CPU Scheduling</title>
+<meta name="description" content="CPU scheduling algorithm — FCFS, SJF/SRTF, Priority আর Round Robin; preemptive বনাম non-preemptive, convoy effect, starvation ও aging, time quantum — Gantt chart, worked example আর animated simulator দিয়ে।">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Every worked example, Gantt chart and average on this page is computed at load time by the same
+   schedule() engine that drives the simulator, so the numbers can never drift apart. */
+:root{
+  --bg:#f5f7fc; --surface:#ffffff; --surface-2:#f1f4fa; --fg:#0f172a; --muted:#5b6478; --faint:#94a0b8; --line:#e4e8f1;
+  --accent:#6366f1; --sa:#4f46e5; --sb:#db2777;
+  --l1:#e11d48; --l2:#d97706; --l3:#0284c7; --l4:#059669;
+  --ok:#059669; --bad:#e11d48; --warn:#d97706;
+  --hero:linear-gradient(135deg,#4f46e5 0%,#7c3aed 45%,#db2777 100%);
+  --shadow:0 1px 2px rgba(15,23,42,.04),0 10px 30px -12px rgba(15,23,42,.14);
+  --code-bg:#ffffff; --code-line:#e6e9f1;
+  --t-kw:#0000ff; --t-str:#a31515; --t-num:#098658; --t-com:#008000; --t-type:#267f99;
+  --sans:"Inter","Hind Siliguri",system-ui,sans-serif; --bn:"Hind Siliguri","Inter",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0b0f1a; --surface:#121827; --surface-2:#182033; --fg:#e7ecf6; --muted:#9aa6bf; --faint:#66728c; --line:#232c42;
+  --accent:#818cf8; --sa:#818cf8; --sb:#f472b6; --l1:#fb7185; --l2:#fbbf24; --l3:#38bdf8; --l4:#34d399;
+  --ok:#34d399; --bad:#fb7185; --warn:#fbbf24;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6);
+  --code-bg:#1e1e1e; --code-line:#2d2d30; --t-kw:#569cd6; --t-str:#ce9178; --t-num:#b5cea8; --t-com:#6a9955; --t-type:#4ec9b0;
+}}
+:root[data-theme="dark"]{
+  --bg:#0b0f1a; --surface:#121827; --surface-2:#182033; --fg:#e7ecf6; --muted:#9aa6bf; --faint:#66728c; --line:#232c42;
+  --accent:#818cf8; --sa:#818cf8; --sb:#f472b6; --l1:#fb7185; --l2:#fbbf24; --l3:#38bdf8; --l4:#34d399;
+  --ok:#34d399; --bad:#fb7185; --warn:#fbbf24;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6);
+  --code-bg:#1e1e1e; --code-line:#2d2d30; --t-kw:#569cd6; --t-str:#ce9178; --t-num:#b5cea8; --t-com:#6a9955; --t-type:#4ec9b0;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 var(--bn);-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto 0;height:420px;z-index:-1;pointer-events:none;
+  background:radial-gradient(620px 260px at 20% -40px,color-mix(in srgb,#6366f1 14%,transparent),transparent 70%),
+             radial-gradient(540px 240px at 90% -60px,color-mix(in srgb,#ec4899 11%,transparent),transparent 70%)}
+a{color:var(--accent)}
+button{font:inherit;color:inherit}
+code{font-family:var(--mono);font-size:.86em;font-weight:500;background:color-mix(in srgb,var(--accent) 10%,var(--surface));color:color-mix(in srgb,var(--accent) 72%,var(--fg));padding:.1em .4em;border-radius:6px}
+.wrap{max-width:1040px;margin:0 auto;padding:20px 18px 70px}
+section{margin-top:52px;scroll-margin-top:16px}
+
+.topnav{display:flex;align-items:center;gap:10px}
+.brand{display:flex;align-items:center;gap:10px;color:var(--fg);text-decoration:none;font:800 16px var(--sans);letter-spacing:-.02em}
+.logo{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:#fff;font:800 13px var(--mono);background:var(--hero)}
+.topnav .sp{flex:1}
+.pill{border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:6px 14px;font:600 13px var(--sans);cursor:pointer;text-decoration:none;white-space:nowrap}
+.pill:hover{color:var(--fg)}
+
+.hero{margin-top:22px;border-radius:22px;padding:30px 32px;color:#fff;background:var(--hero);position:relative;overflow:hidden}
+.hero::after{content:"";position:absolute;right:-70px;top:-90px;width:320px;height:320px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.2),transparent 65%);pointer-events:none}
+.eyebrow{font:600 12px var(--sans);letter-spacing:.1em;text-transform:uppercase;opacity:.85}
+.hero h1{margin:8px 0 10px;font:800 clamp(28px,4.4vw,42px)/1.12 var(--sans);letter-spacing:-.03em}
+.hero p{margin:0;max-width:720px;font-size:16.5px;opacity:.94}
+.jump{display:flex;flex-wrap:wrap;gap:8px;margin-top:20px;position:relative;z-index:1}
+.jump a{color:#fff;text-decoration:none;font:600 13px var(--sans);padding:5px 12px;border-radius:999px;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.28)}
+.jump a:hover{background:rgba(255,255,255,.26)}
+
+h2{display:flex;align-items:center;gap:12px;margin:0 0 6px;font:800 clamp(21px,2.8vw,26px)/1.25 var(--sans);letter-spacing:-.025em}
+.num{flex:none;width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:#fff;font:800 14px var(--mono);background:var(--c,var(--accent))}
+.lead{margin:0 0 18px;color:var(--muted);max-width:820px}
+h3{margin:26px 0 10px;font:700 17px var(--sans);letter-spacing:-.015em}
+p{margin:0 0 12px}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow)}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+@media (max-width:860px){.grid3{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:640px){.grid2{grid-template-columns:minmax(0,1fr)}}
+
+pre.code{margin:0;padding:12px 14px;border-radius:12px;background:var(--code-bg);border:1px solid var(--code-line);font:13px/1.65 var(--mono);white-space:pre-wrap;word-break:break-word;font-variant-ligatures:none;overflow-x:auto}
+.k{color:var(--t-kw);font-weight:600}.s{color:var(--t-str)}.d{color:var(--t-num)}.c{color:var(--t-com);font-style:italic}.t{color:var(--t-type)}
+
+.tscroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:620px;font-size:14.5px}
+th,td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:middle}
+th{font:600 12px var(--sans);text-transform:uppercase;letter-spacing:.05em;color:var(--muted);background:var(--surface-2)}
+th small{display:block;text-transform:none;letter-spacing:0;font:500 10.5px var(--mono);color:var(--faint)}
+tr:last-child td{border-bottom:0}
+.yes,.no,.mid{font:600 13px var(--sans);white-space:nowrap}
+.yes{color:var(--bad)} .no{color:var(--ok)} .mid{color:var(--warn)}
+.foot{margin:10px 2px 0;font-size:13.5px;color:var(--muted)}
+table.res{min-width:480px;font:13.5px var(--mono)}
+table.res th,table.res td{padding:8px 12px;text-align:right}
+table.res th:first-child,table.res td:first-child{text-align:left}
+table.res tr.avg td{font-weight:700;background:var(--surface-2);border-top:2px solid var(--line)}
+table.res td.hl{color:var(--accent);font-weight:700}
+
+.verdict{margin-top:14px;padding:14px 16px;border-left:4px solid var(--c,var(--accent));border-radius:0 12px 12px 0;background:color-mix(in srgb,var(--c,var(--accent)) 7%,var(--surface));font-size:15px}
+.verdict b{color:var(--fg)}
+.note{padding:16px 18px;font-size:15px}
+.note h4{margin:0 0 6px;font:700 15px var(--sans)}
+.note p{margin:0 0 10px;color:var(--muted)} .note p:last-child{margin:0}
+.note ul{margin:0;padding-left:20px;color:var(--muted)} .note li{margin:3px 0}
+.badge{display:inline-block;font:700 11.5px var(--sans);padding:2px 10px;border-radius:999px;color:var(--bc);background:color-mix(in srgb,var(--bc) 13%,transparent);vertical-align:middle}
+.badge.np{--bc:var(--l3)} .badge.p{--bc:var(--sb)} .badge.both{--bc:var(--l2)}
+.typerow{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px}
+
+/* formulas */
+.terms{padding:4px 0}
+.term{display:grid;grid-template-columns:200px minmax(0,1fr);gap:14px;padding:11px 18px;border-bottom:1px solid var(--line)}
+.term:last-child{border-bottom:0}
+.term b{font:700 14px var(--sans)}
+.term b small{display:block;font:600 12px var(--mono);color:var(--accent);margin-top:2px}
+.term p{margin:0;color:var(--muted);font-size:15px}
+@media (max-width:640px){.term{grid-template-columns:minmax(0,1fr);gap:4px}}
+
+/* static Gantt chart */
+.gwrap{overflow-x:auto;-webkit-overflow-scrolling:touch;padding:4px 2px 2px}
+.gantt{position:relative;width:100%;padding:0 12px}
+.gbar{position:relative;height:40px;border-radius:8px;background:var(--surface-2)}
+.gb{position:absolute;top:0;bottom:0;display:grid;place-items:center;color:#fff;font:700 12px var(--mono);background:var(--pc);border-right:2px solid var(--surface);overflow:hidden;white-space:nowrap}
+.gb:first-child{border-radius:8px 0 0 8px}
+.gb.last{border-radius:0 8px 8px 0;border-right:0}
+.gb.idle{color:var(--muted);background:repeating-linear-gradient(45deg,var(--surface-2) 0 5px,var(--line) 5px 10px)}
+.gaxis{position:relative;height:20px}
+.gaxis span{position:absolute;top:3px;transform:translateX(-50%);font:600 11px var(--mono);color:var(--muted)}
+.ex{padding:16px;display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+.ex>*,.pg>*{min-width:0}
+.ex-h{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:baseline;font:700 14px var(--sans)}
+.ex-h .stats{font:600 12.5px var(--mono);color:var(--muted)}
+.ex-h .stats b{color:var(--accent)}
+.ex details{border:0;padding:0}
+.ex summary{font:600 13.5px var(--sans);color:var(--accent)}
+table.trace{min-width:520px;font-size:13.5px}
+table.trace td,table.trace th{padding:7px 10px}
+table.trace td:first-child{font:700 12.5px var(--mono);white-space:nowrap}
+table.trace td.q,table.trace td.cpu{font:600 12.5px var(--mono);white-space:nowrap}
+.chip{display:inline-block;padding:0 7px;border-radius:6px;color:#fff;font:700 11.5px/1.7 var(--mono);background:var(--pc)}
+
+/* diagrams */
+.diag{overflow-x:auto;-webkit-overflow-scrolling:touch;padding:14px}
+.diag svg{display:block;width:100%;height:auto;min-width:620px}
+.diag text{font-family:var(--sans)}
+.d-box{fill:var(--surface-2);stroke:var(--line);stroke-width:1.5}
+.d-box.on{fill:color-mix(in srgb,var(--accent) 12%,var(--surface));stroke:var(--accent)}
+.d-t{font:700 14px var(--sans);fill:var(--fg);text-anchor:middle}
+.d-s{font:500 11px var(--bn);fill:var(--muted);text-anchor:middle}
+.d-a{fill:none;stroke:var(--faint);stroke-width:1.6}
+.d-a.pre{stroke:var(--sb);stroke-dasharray:6 4}
+.d-l{font:600 11px var(--bn);fill:var(--muted)}
+.d-l.pre{fill:var(--sb)}
+
+/* quantum chart */
+table.qc{min-width:640px;font-size:13.5px}
+table.qc td{padding:9px 12px}
+table.qc td:first-child{font:700 13px var(--mono);white-space:nowrap}
+.bar{display:flex;align-items:center;gap:8px;font:600 12.5px var(--mono)}
+.bar i{display:block;height:10px;border-radius:5px;background:var(--bc,var(--accent));min-width:2px}
+
+/* simulator */
+.pg{padding:14px;display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+.pg-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.pg-bar .sp{flex:1}
+.btn{border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:10px;padding:7px 12px;font:600 13px var(--sans);cursor:pointer}
+.btn:hover:not(:disabled){border-color:var(--accent)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.primary{border-color:transparent;color:#fff;background:linear-gradient(135deg,#6366f1,#8b5cf6 55%,#ec4899);min-width:96px}
+select.btn{font-weight:500;max-width:100%}
+.fld{display:inline-flex;align-items:center;gap:6px;font:600 12.5px var(--bn);color:var(--muted)}
+.fld input{width:58px;border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:10px;padding:6px 8px;font:600 13px var(--mono)}
+.fld input:focus,.ptab input:focus{outline:2px solid color-mix(in srgb,var(--accent) 45%,transparent);border-color:var(--accent)}
+.pg-top{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:12px;align-items:start}
+@media (max-width:820px){.pg-top{grid-template-columns:minmax(0,1fr)}}
+.ptab{border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.ptab table{min-width:0;font-size:13px}
+.ptab th,.ptab td{padding:6px 8px}
+.ptab td input{width:100%;min-width:0;max-width:72px;border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:8px;padding:5px 7px;font:600 13px var(--mono)}
+.ptab td.x{width:34px;text-align:center}
+.ptab .rm{border:0;background:none;color:var(--faint);font:700 16px var(--sans);cursor:pointer;padding:0 6px}
+.ptab .rm:hover{color:var(--bad)}
+.ptab .dim input{opacity:.45}
+.ptab-foot{display:flex;gap:8px;align-items:center;padding:8px;border-top:1px solid var(--line);background:var(--surface-2);font-size:12.5px;color:var(--muted)}
+.rules{padding:12px 14px;border-radius:12px;background:var(--surface-2);font-size:13.5px}
+.rules b{font:700 13px var(--sans)}
+.rules ol{margin:6px 0 0;padding-left:20px;color:var(--muted)} .rules li{margin:2px 0}
+.pg-stage{border-radius:14px;background:var(--surface-2);overflow-x:auto;-webkit-overflow-scrolling:touch}
+.pg-stage svg{display:block;width:100%;height:auto;min-width:760px}
+.pg-stage text{font-family:var(--sans)}
+.s-frame{fill:var(--surface);stroke:var(--line);stroke-width:1.2}
+.s-frame.cpu{stroke:var(--accent);stroke-width:2}
+.s-lbl{font:700 11px var(--sans);fill:var(--faint);letter-spacing:.06em;text-transform:uppercase}
+.s-big{font:800 13px var(--mono);fill:var(--fg)}
+.s-dim{font:600 11px var(--mono);fill:var(--muted)}
+.chipg text{fill:#fff;text-anchor:middle;pointer-events:none}
+.chipg .c1{font:800 13px var(--mono)} .chipg .c2{font:600 10px var(--mono);opacity:.92}
+.g-idle{fill:url(#hatch)}
+.g-lbl{font:700 11px var(--mono);fill:#fff;text-anchor:middle;pointer-events:none}
+.axis-t{font:600 10px var(--mono);fill:var(--muted);text-anchor:middle}
+.axis-l{stroke:var(--line)}
+.cursor{stroke:var(--fg);stroke-width:1.5}
+.hatch-a{stroke:var(--line);stroke-width:3}
+.pg-stats{display:flex;flex-wrap:wrap;gap:8px}
+.stat{padding:6px 12px;border-radius:10px;background:var(--surface-2);font:600 12.5px var(--sans);color:var(--muted)}
+.stat b{font:700 13.5px var(--mono);color:var(--fg);margin-left:4px}
+.pg-explain{padding:10px 14px;border-radius:12px;background:var(--surface-2);font-size:14.5px;min-height:46px}
+.pg-log{max-height:220px;overflow-y:auto;border:1px solid var(--line);border-radius:12px;font-size:13.5px}
+.pg-log div{padding:6px 12px;border-bottom:1px solid var(--line)}
+.pg-log div:last-child{border-bottom:0}
+.pg-log b{font:700 12px var(--mono);color:var(--accent);margin-right:8px}
+.pg-log .empty{color:var(--faint)}
+.hint{font-size:13.5px;color:var(--muted)}
+
+details{border-bottom:1px solid var(--line);padding:12px 2px}
+details:last-child{border-bottom:0}
+summary{cursor:pointer;font:600 15.5px var(--bn);list-style:none;display:flex;gap:10px}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"+";font:700 15px var(--mono);color:var(--accent);width:14px;flex:none}
+details[open] summary::before{content:"−"}
+details p{margin:8px 0 0 24px;color:var(--muted);font-size:15px}
+
+footer{margin-top:56px;padding-top:16px;border-top:1px solid var(--line);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;font-size:13px;color:var(--faint)}
+@media (max-width:640px){.hero{padding:24px 20px;border-radius:18px}}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="topnav">
+    <a class="brand" href="../../index.html"><span class="logo">W</span>WellDev</a>
+    <span class="sp"></span>
+    <a class="pill" href="../01-os-kernel-process-thread.html" title="OS, Kernel, Process ও Thread">← OS গাইড</a>
+    <button class="pill" id="theme" type="button">Theme</button>
+  </nav>
+
+  <header class="hero">
+    <div class="eyebrow">Operating System</div>
+    <h1>CPU Scheduling — ৪টি algorithm</h1>
+    <p>Ready queue-তে অনেক process অপেক্ষা করছে, CPU একটা। পরের জন কে? FCFS, SJF/SRTF, Priority আর Round Robin — প্রতিটার Gantt chart, waiting time-এর হিসাব, কোথায় কোনটা ভালো আর কোথায় ফেঁসে যায় (convoy effect, starvation)। শেষে নিজের input দিয়ে animated simulator।</p>
+    <div class="jump">
+      <a href="#basics">Basics</a><a href="#preempt">Preemptive?</a><a href="#fcfs">FCFS</a><a href="#sjf">SJF / SRTF</a><a href="#prio">Priority</a><a href="#rr">Round Robin</a><a href="#sim">▶ Simulator</a><a href="#compare">তুলনা</a><a href="#qa">Interview Q&amp;A</a>
+    </div>
+  </header>
+
+  <!-- 0 basics -->
+  <section id="basics">
+    <h2><span class="num">0</span>Basics — scheduler, ready queue, dispatcher</h2>
+    <p class="lead">Process কীভাবে তৈরি হয় আর ready queue-তে ঢোকে, সেটা <a href="../01-os-kernel-process-thread.html">OS, Kernel, Process ও Thread</a> গাইডে আছে। এখানে প্রশ্ন একটাই: <b>ready queue থেকে পরের process কে CPU পাবে, আর কতক্ষণের জন্য?</b></p>
+
+    <div class="card diag">
+      <svg viewBox="0 0 860 210" role="img" aria-label="Process state: New থেকে Ready, Ready থেকে dispatcher হয়ে Running, Running থেকে Terminated, I/O-তে Waiting, preempt হলে আবার Ready">
+        <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--faint)"/></marker>
+        <marker id="arp" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--sb)"/></marker></defs>
+        <rect class="d-box" x="10" y="60" width="100" height="56" rx="12"/><text class="d-t" x="60" y="86">New</text><text class="d-s" x="60" y="104">তৈরি হচ্ছে</text>
+        <rect class="d-box on" x="170" y="60" width="190" height="56" rx="12"/><text class="d-t" x="265" y="86">Ready Queue</text><text class="d-s" x="265" y="104">CPU-র অপেক্ষায় · P3 P5 P2</text>
+        <rect class="d-box" x="420" y="60" width="120" height="56" rx="12"/><text class="d-t" x="480" y="86">Dispatcher</text><text class="d-s" x="480" y="104">context switch</text>
+        <rect class="d-box on" x="600" y="60" width="110" height="56" rx="12"/><text class="d-t" x="655" y="86">CPU</text><text class="d-s" x="655" y="104">Running</text>
+        <rect class="d-box" x="760" y="60" width="90" height="56" rx="12"/><text class="d-t" x="805" y="86">Done</text><text class="d-s" x="805" y="104">Terminated</text>
+        <rect class="d-box" x="440" y="160" width="190" height="44" rx="12"/><text class="d-t" x="535" y="180">Waiting</text><text class="d-s" x="535" y="196">I/O, disk, network</text>
+        <path class="d-a" d="M110 88H166" marker-end="url(#ar)"/>
+        <path class="d-a" d="M360 88H416" marker-end="url(#ar)"/>
+        <path class="d-a" d="M540 88H596" marker-end="url(#ar)"/>
+        <path class="d-a" d="M710 88H756" marker-end="url(#ar)"/>
+        <path class="d-a pre" d="M655 60V26H265V56" marker-end="url(#arp)"/>
+        <text class="d-l pre" x="460" y="20" text-anchor="middle">preempt (timer interrupt / বেশি জরুরি process এল)</text>
+        <path class="d-a" d="M680 116V182H634" marker-end="url(#ar)"/>
+        <text class="d-l" x="690" y="160">I/O চাইল</text>
+        <path class="d-a" d="M440 182H265V120" marker-end="url(#ar)"/>
+        <text class="d-l" x="275" y="160">I/O শেষ</text>
+        <text class="d-l" x="300" y="140" text-anchor="middle" style="fill:var(--accent)">CPU scheduler এখানে বাছাই করে</text>
+      </svg>
+    </div>
+
+    <div class="grid3" style="margin-top:14px">
+      <div class="card note"><h4>CPU scheduler (short-term)</h4><p>Ready queue-এর process গুলোর মধ্যে থেকে একজনকে বেছে নেয়। এটাই "scheduling algorithm"। খুব ঘন ঘন চলে (প্রতি কয়েক millisecond), তাই নিজে দ্রুত হতে হয়।</p></div>
+      <div class="card note"><h4>Ready queue</h4><p>যারা চলার জন্য পুরো প্রস্তুত, শুধু CPU পাচ্ছে না। নামে queue, কিন্তু সবসময় FIFO না — algorithm অনুযায়ী এটা priority queue, sorted list বা red-black tree-ও হতে পারে।</p></div>
+      <div class="card note"><h4>Dispatcher</h4><p>Scheduler যাকে বাছল, তাকে আসলে CPU-তে বসায়: আগেরজনের register/PC সেভ করে (PCB-তে), নতুনজনেরটা load করে, user mode-এ ফিরে তার PC-তে jump। এই সময়টুকু <b>dispatch latency</b>।</p></div>
+    </div>
+
+    <h3>যে শব্দ আর formula গুলো সবখানে লাগবে</h3>
+    <div class="card terms">
+      <div class="term"><b>Arrival Time (AT)</b><p>Process কখন ready queue-তে এল।</p></div>
+      <div class="term"><b>Burst Time (BT)</b><p>একটানা কতক্ষণ CPU লাগবে (CPU burst)। বাস্তবে process CPU burst আর I/O burst পালা করে চালায়; এখানে প্রতিটা process-এর একটাই CPU burst ধরে হিসাব।</p></div>
+      <div class="term"><b>Completion Time (CT)</b><p>Process কখন পুরো শেষ হলো (Gantt chart-এ তার শেষ block-এর ডান দিক)।</p></div>
+      <div class="term"><b>Turnaround Time<small>TAT = CT − AT</small></b><p>আসা থেকে শেষ হওয়া পর্যন্ত মোট সময় — অপেক্ষা + চলা।</p></div>
+      <div class="term"><b>Waiting Time<small>WT = TAT − BT</small></b><p>Ready queue-তে বসে থাকার মোট সময় (মাঝে মাঝে কয়েকবার অপেক্ষা করলে সব যোগ)। Algorithm তুলনায় সবচেয়ে বেশি ব্যবহৃত মাপকাঠি: <b>average WT</b>।</p></div>
+      <div class="term"><b>Response Time<small>RT = প্রথমবার CPU পাওয়া − AT</small></b><p>প্রথম সাড়া পেতে কত দেরি। Interactive system-এ (UI, terminal) এটাই আসল। Non-preemptive algorithm-এ process একবারেই শেষ করে, তাই সেখানে RT = WT।</p></div>
+      <div class="term"><b>Throughput</b><p>প্রতি একক সময়ে কয়টা process শেষ হয়। যেমন 16 unit-এ 4টা process শেষ → 4/16 = 0.25 process/unit।</p></div>
+      <div class="term"><b>CPU utilisation<small>busy time ÷ মোট সময়</small></b><p>CPU কত শতাংশ সময় কাজে ছিল। ready queue ফাঁকা থাকলে CPU idle — Gantt chart-এ ডোরাকাটা ঘর।</p></div>
+      <div class="term"><b>Context switch cost</b><p>এক process থেকে আরেক process-এ যাওয়ার খরচ — register save/restore, kernel-এ ঢোকা-বের হওয়া, আর পরে cache/TLB আবার গরম হওয়া। সরাসরি খরচ কয়েক microsecond, কিন্তু এই সময় কোনো "কাজের কাজ" হয় না। এই পেজের হিসাবে context switch-এর সময় 0 ধরা হয়েছে, শুধু কয়বার হলো সেটা গোনা হয়েছে।</p></div>
+    </div>
+
+    <div class="verdict" style="--c:var(--l4)"><b>লক্ষ্য:</b> CPU utilisation আর throughput বাড়ানো; turnaround, waiting আর response time কমানো। সবগুলো একসাথে সেরা করা যায় না — প্রতিটা algorithm কোনো একটা দিকে ছাড় দেয়। উদাহরণ: <b>P1</b> AT=0, BT=5, প্রথম CPU পেল 2-তে, শেষ হলো 9-এ → TAT = 9 − 0 = 9, WT = 9 − 5 = 4, RT = 2 − 0 = 2।</div>
+  </section>
+
+  <!-- 1 preemptive -->
+  <section id="preempt">
+    <h2><span class="num">1</span>Preemptive বনাম Non-preemptive</h2>
+    <p class="lead">সব algorithm-কে প্রথমে এই এক প্রশ্নে ভাগ করা যায়: <b>একবার CPU পেলে process-কে কি মাঝপথে সরিয়ে দেওয়া যায়?</b></p>
+    <div class="grid2">
+      <div class="card note" style="border-top:3px solid var(--l3)">
+        <h4>Non-preemptive (cooperative)</h4>
+        <p>একবার CPU পেলে process নিজে না ছাড়া পর্যন্ত চলবে — হয় burst শেষ করবে (terminate), নয়তো I/O-র জন্য block হবে। OS জোর করে কেড়ে নেয় না।</p>
+        <p><b>Analogy:</b> ডাক্তারের চেম্বার — একজন রোগী ভেতরে ঢুকলে তার দেখা শেষ না হওয়া পর্যন্ত পরের জন ঢুকতে পারে না, বাইরে যত জরুরি রোগীই আসুক।</p>
+      </div>
+      <div class="card note" style="border-top:3px solid var(--sb)">
+        <h4>Preemptive</h4>
+        <p>চলমান process-কে OS মাঝপথে থামিয়ে ready queue-তে ফেরত পাঠাতে পারে, তারপর অন্যকে CPU দেয়। পরে সে যেখানে থেমেছিল সেখান থেকে চলবে।</p>
+        <p><b>Analogy:</b> হাসপাতালের emergency — সাধারণ রোগী দেখা চলাকালীন গুরুতর রোগী এলে ডাক্তার তাকে আগে দেখেন; অথবা দাবা খেলার clock — নির্দিষ্ট সময় শেষ হলেই চাল দিতে হবে।</p>
+      </div>
+    </div>
+
+    <h3>Scheduler কখন সিদ্ধান্ত নেয়?</h3>
+    <div class="card tscroll">
+      <table>
+        <thead><tr><th>ঘটনা</th><th>উদাহরণ</th><th>Non-preemptive</th><th>Preemptive</th></tr></thead>
+        <tbody>
+          <tr><td>Running process শেষ হলো</td><td><code>exit()</code></td><td class="no">✓ নতুন process বাছে</td><td class="no">✓</td></tr>
+          <tr><td>Running process block হলো</td><td>disk read, <code>sleep()</code>, lock-এর অপেক্ষা</td><td class="no">✓ নতুন process বাছে</td><td class="no">✓</td></tr>
+          <tr><td>Timer interrupt (quantum শেষ)</td><td>Round Robin-এর time slice</td><td class="yes">✗ চলতেই থাকে</td><td class="no">✓ কেড়ে নিতে পারে</td></tr>
+          <tr><td>নতুন / বেশি জরুরি process ready হলো</td><td>ছোট job এল (SRTF), উঁচু priority এল, I/O শেষে কেউ ফিরল</td><td class="yes">✗ শুধু queue-তে বসে</td><td class="no">✓ কেড়ে নিতে পারে</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="foot">Preemption সম্ভব হয় hardware timer-এর জন্য — নির্দিষ্ট সময় পর পর timer interrupt আসে, CPU kernel-এ ঢোকে, আর scheduler চাইলে অন্য process বেছে নেয়। Windows 3.1 আর পুরনো Mac OS ছিল cooperative (non-preemptive); একটা app আটকে গেলে পুরো system আটকে যেত।</p>
+
+    <h3>পাশাপাশি তুলনা</h3>
+    <div class="card tscroll">
+      <table>
+        <thead><tr><th></th><th>Non-preemptive</th><th>Preemptive</th></tr></thead>
+        <tbody>
+          <tr><td><b>CPU ছাড়ে কখন</b></td><td>শেষ হলে বা block হলে — স্বেচ্ছায়</td><td>এছাড়াও OS জোর করে (timer / জরুরি arrival)</td></tr>
+          <tr><td><b>Response time</b></td><td class="yes">খারাপ হতে পারে — লম্বা job আগে থাকলে সবাই আটকে</td><td class="no">ভালো — ছোট/জরুরি কাজ দ্রুত CPU পায়</td></tr>
+          <tr><td><b>Context switch overhead</b></td><td class="no">কম</td><td class="mid">বেশি (প্রতিটা preemption একটা switch)</td></tr>
+          <tr><td><b>Starvation</b></td><td>SJF / Priority-তে সম্ভব</td><td>SRTF / Priority-তে সম্ভব, RR-এ না</td></tr>
+          <tr><td><b>Implementation</b></td><td>সহজ; shared data-তে race কম</td><td>কঠিন — মাঝপথে থামলে shared data অসম্পূর্ণ থাকতে পারে, তাই lock/synchronisation লাগে</td></tr>
+          <tr><td><b>উদাহরণ</b></td><td>FCFS, SJF, Priority (non-preemptive)</td><td>SRTF, Priority (preemptive), Round Robin, Linux CFS/EEVDF</td></tr>
+          <tr><td><b>কোথায় মানায়</b></td><td>Batch job, ছোট embedded loop</td><td>Desktop, server, phone — সব আধুনিক general-purpose OS</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- sample -->
+  <section id="sample">
+    <h2><span class="num">◎</span>একটাই sample input — সব algorithm-এ</h2>
+    <p class="lead">তুলনা যেন ন্যায্য হয়, তাই FCFS, SJF, SRTF, Priority আর RR — সবগুলো নিচের একই ৪টা process-এ চালানো হয়েছে। Time-এর একক "unit" (বাস্তবে ms ভাবতে পারো)। Priority: <b>ছোট সংখ্যা = বেশি priority</b>।</p>
+    <div class="card tscroll" id="sampleTable"></div>
+  </section>
+
+  <!-- 2 FCFS -->
+  <section id="fcfs" style="--c:var(--l3)">
+    <h2><span class="num">2</span>FCFS — First Come First Served</h2>
+    <div class="typerow"><span class="badge np">Non-preemptive</span><span class="badge both" style="--bc:var(--muted)">Ready queue = সাধারণ FIFO</span></div>
+    <p class="lead">যে আগে আসে, সে আগে পায় — দোকানের লাইনের মতো। Process এলে queue-এর শেষে দাঁড়ায়; CPU ফাঁকা হলে queue-এর সামনের জন চলে, আর burst শেষ (বা block) না হওয়া পর্যন্ত চলতেই থাকে।</p>
+    <div class="card ex" data-ex="sample" data-algo="fcfs" data-title="FCFS · sample input"></div>
+    <div class="verdict"><b>হিসাব কীভাবে:</b> P1 আগে এসেছে, 0–7 চলে। তারপর arrival order-এ P2 (7–11), P3 (11–12), P4 (12–16)। P3-এর burst মাত্র 1, তবু সে 7 unit বসে ছিল — কারণ তার সামনে লম্বা P1 আর P2। Average WT = (0 + 5 + 7 + 7) / 4 = <b>4.75</b>।</div>
+
+    <div class="grid2" style="margin-top:14px">
+      <div class="card note"><h4>সুবিধা</h4><ul><li>বোঝা আর implement করা সবচেয়ে সহজ (একটা linked-list queue)।</li><li>কোনো starvation নেই — আগে বা পরে সবাই CPU পাবে।</li><li>Context switch সর্বনিম্ন।</li></ul></div>
+      <div class="card note"><h4>অসুবিধা</h4><ul><li>Average WT প্রায়ই অনেক বেশি, আর arrival order-এর উপর পুরো নির্ভর।</li><li>Convoy effect (নিচে)।</li><li>Non-preemptive, তাই interactive / time-sharing system-এ অচল।</li></ul></div>
+    </div>
+
+    <h3>Convoy effect — একটা লম্বা job, পেছনে সবাই আটকে</h3>
+    <p>হাইওয়েতে একটা ধীর ট্রাকের পেছনে যেমন গাড়ির সারি (convoy) জমে যায়। FCFS-এ একটা লম্বা <b>CPU-bound</b> process আগে CPU পেলে পেছনের সব ছোট process (প্রায়ই <b>I/O-bound</b> — যাদের CPU লাগে অল্প, তারপর আবার I/O-তে চলে যায়) লম্বা সময় বসে থাকে। ফল: average WT আকাশছোঁয়া, আর সেই সময় I/O device গুলোও অলস — কারণ I/O-bound process গুলো CPU না পেয়ে নতুন I/O request-ই দিতে পারছে না। তারপর লম্বা job I/O-তে গেলে CPU-ই অলস পড়ে থাকে।</p>
+    <p>একই তিনটা job (একটা 24 unit, দুইটা 3 unit), সবাই time 0-তে এসেছে — শুধু queue-তে দাঁড়ানোর order আলাদা:</p>
+    <div class="grid2">
+      <div class="card ex" data-ex="convoyA" data-algo="fcfs" data-title="Order: P1(24) → P2(3) → P3(3)" data-notrace="1"></div>
+      <div class="card ex" data-ex="convoyB" data-algo="fcfs" data-title="Order: P2(3) → P3(3) → P1(24)" data-notrace="1"></div>
+    </div>
+    <div class="verdict" style="--c:var(--bad)"><b>একই কাজ, average WT 17 বনাম 3</b> — প্রায় ৬ গুণ পার্থক্য, শুধু order বদলে। মোট কাজ (30 unit) আর throughput দুই ক্ষেত্রেই সমান, কিন্তু লম্বা job আগে থাকলে ছোট দুইটা job-কে 24 আর 27 unit বসে থাকতে হয়। "ছোট job আগে" — এই ধারণা থেকেই SJF।</div>
+  </section>
+
+  <!-- 3 SJF -->
+  <section id="sjf" style="--c:var(--l4)">
+    <h2><span class="num">3</span>SJF ও SRTF — Shortest Job First</h2>
+    <div class="typerow"><span class="badge np">SJF: Non-preemptive</span><span class="badge p">SRTF: Preemptive</span></div>
+    <p class="lead">CPU ফাঁকা হলে ready queue-তে যার burst সবচেয়ে ছোট, তাকে দাও। Preemptive version-এর নাম <b>SRTF (Shortest Remaining Time First)</b> — নতুন process এলে তার burst যদি চলমান process-এর <b>বাকি</b> সময়ের চেয়ে ছোট হয়, চলমানটাকে সরিয়ে নতুনটা চলে।</p>
+
+    <h3>Non-preemptive SJF</h3>
+    <div class="card ex" data-ex="sample" data-algo="sjf" data-title="SJF · sample input"></div>
+    <div class="verdict"><b>ধাপ:</b> time 0-তে শুধু P1 আছে, তাই সে চলে — non-preemptive বলে 7 পর্যন্ত কেউ থামাতে পারে না (মাঝে P2, P3, P4 এসে গেলেও)। 7-এ queue-তে P2(4), P3(1), P4(4) → সবচেয়ে ছোট P3। তারপর P2 আর P4 দুজনেরই burst 4 — tie, তাই আগে আসা P2। Average WT = (0 + 6 + 3 + 7) / 4 = <b>4</b> (FCFS-এ ছিল 4.75)।</div>
+
+    <h3>Preemptive — SRTF</h3>
+    <div class="card ex" data-ex="sample" data-algo="srtf" data-title="SRTF · sample input"></div>
+    <div class="verdict"><b>ধাপ:</b> 2-তে P2 (burst 4) এল, P1-এর বাকি 5 → 4 &lt; 5, P1 preempted। 4-এ P3 (1) এল, P2-এর বাকি 2 → P2 preempted। 5-এ P3 শেষ; বাকি P2(2), P4(4), P1(5) → P2। তারপর P4, শেষে P1। Average WT = (9 + 1 + 0 + 2) / 4 = <b>3</b> — সবার মধ্যে সর্বনিম্ন, কিন্তু context switch বেশি, আর লম্বা P1 একাই 9 unit বসে ছিল।</div>
+
+    <div class="grid2" style="margin-top:14px">
+      <div class="card note">
+        <h4>কেন optimal?</h4>
+        <p>যেকোনো order-এ একটা লম্বা job যদি একটা ছোট job-এর আগে থাকে, দুটোর জায়গা বদলালে ছোটটার waiting যতটা কমে, লম্বাটার ততটা বাড়ে না (ছোট job আগে গেলে বেশি সংখ্যক process কম অপেক্ষা করে)। তাই সবাই একসাথে ready থাকলে <b>SJF provably minimum average waiting time</b> দেয়; arrival আলাদা হলে preemptive SRTF সেটা দেয়।</p>
+      </div>
+      <div class="card note">
+        <h4>সমস্যা ১ — burst time আগে জানা যায় না</h4>
+        <p>OS জানে না পরের CPU burst কত লম্বা হবে। তাই আগের burst গুলো থেকে <b>অনুমান</b> করা হয় — exponential averaging:</p>
+        <p style="font:600 14px var(--mono);color:var(--fg)">τ(n+1) = α · t(n) + (1 − α) · τ(n)</p>
+        <p>t(n) = সর্বশেষ আসল burst, τ(n) = আগের অনুমান, 0 ≤ α ≤ 1 (সাধারণত 0.5)। α বড় হলে সাম্প্রতিক burst-এ বেশি গুরুত্ব।</p>
+      </div>
+    </div>
+    <div class="card tscroll" style="margin-top:14px">
+      <table>
+        <thead><tr><th>α = 0.5, শুরুর অনুমান τ₀ = 10</th><th>n = 0</th><th>1</th><th>2</th><th>3</th><th>4</th></tr></thead>
+        <tbody>
+          <tr><td>আসল burst t(n)</td><td>6</td><td>4</td><td>6</td><td>4</td><td>—</td></tr>
+          <tr><td>অনুমান τ(n)</td><td>10</td><td>0.5·6 + 0.5·10 = <b>8</b></td><td>0.5·4 + 0.5·8 = <b>6</b></td><td>0.5·6 + 0.5·6 = <b>6</b></td><td>0.5·4 + 0.5·6 = <b>5</b></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="verdict" style="--c:var(--bad)"><b>সমস্যা ২ — starvation:</b> ছোট job একটার পর একটা আসতে থাকলে লম্বা job কখনো CPU পায় না। উপরের SRTF-এ P1 প্রথম এসেও সবার শেষে শেষ হয়েছে। বাস্তবে pure SJF তাই প্রায় ব্যবহার হয় না; তবে ধারণাটা (ছোট/interactive কাজ আগে) অনেক scheduler-এ ঢুকে আছে।</div>
+  </section>
+
+  <!-- 4 Priority -->
+  <section id="prio" style="--c:var(--l2)">
+    <h2><span class="num">4</span>Priority Scheduling</h2>
+    <div class="typerow"><span class="badge both">Preemptive অথবা Non-preemptive — দুটোই হয়</span></div>
+    <p class="lead">প্রতিটা process-এর একটা priority সংখ্যা। CPU যায় সবচেয়ে বেশি priority-র process-এ। <b>এই পেজে (আর বেশিরভাগ textbook-এ) ছোট সংখ্যা = বেশি priority</b> — priority 1, priority 4-এর আগে চলবে। (কিছু system উল্টো convention ব্যবহার করে, তাই interview-এ আগে জিজ্ঞেস করে নাও।) SJF আসলে priority scheduling-এরই একটা বিশেষ রূপ, যেখানে priority = burst time।</p>
+    <div class="grid2">
+      <div class="card note"><h4>Non-preemptive priority</h4><p>নতুন বেশি-priority process এলে শুধু queue-এর সামনে বসে; চলমান process শেষ (বা block) হলে তবেই সে পাবে।</p></div>
+      <div class="card note"><h4>Preemptive priority</h4><p>নতুন process-এর priority চলমানটার চেয়ে <b>বেশি</b> হলে সাথে সাথে চলমানটাকে সরিয়ে দেয়। Real-time system-এ এটাই নিয়ম।</p></div>
+    </div>
+    <h3>Non-preemptive</h3>
+    <div class="card ex" data-ex="sample" data-algo="prio" data-title="Priority (non-preemptive) · sample input" data-showpr="1"></div>
+    <h3>Preemptive</h3>
+    <div class="card ex" data-ex="sample" data-algo="prioP" data-title="Priority (preemptive) · sample input" data-showpr="1"></div>
+    <div class="verdict"><b>পার্থক্য:</b> Non-preemptive-এ P2 (priority 1, সবচেয়ে জরুরি) 2-তে এসেও 7 পর্যন্ত বসে থাকে। Preemptive-এ সে এসেই P1-কে (priority 3) সরিয়ে দেয় — P2-এর WT 5 থেকে 0। দুই ক্ষেত্রেই P3 (priority 4, সবচেয়ে কম) সবার শেষে, WT = 11।</div>
+
+    <h3>Starvation — কম priority-র process অনন্তকাল অপেক্ষা</h3>
+    <p>বেশি priority-র process একটানা আসতে থাকলে কম priority-র process কখনো CPU পায় না — <b>indefinite blocking / starvation</b>। (গল্প আছে, 1973-এ MIT-র IBM 7094 বন্ধ করার সময় একটা কম priority-র job পাওয়া গিয়েছিল যেটা 1967 থেকে অপেক্ষা করছিল।) নিচে P2 (priority 4) এসেছে 1-এ, কিন্তু priority 1-এর job একটার পর একটা আসছে:</p>
+    <div class="card ex" data-ex="starve" data-algo="prio" data-title="Starvation · Priority (non-preemptive), aging ছাড়া" data-showpr="1" data-notrace="1"></div>
+
+    <h3>Aging — অপেক্ষা যত লম্বা, priority তত বেশি</h3>
+    <p>সমাধান: ready queue-তে যত বেশি অপেক্ষা, তত priority বাড়াও। এখানে নিয়ম — <b>প্রতি 2 unit অপেক্ষায় priority সংখ্যা 1 কমে</b> (0 পর্যন্ত)। P2-এর effective priority:</p>
+    <div class="card tscroll">
+      <table>
+        <thead><tr><th>Time</th><th>1 (এল)</th><th>3</th><th>5</th><th>7</th><th>9</th></tr></thead>
+        <tbody>
+          <tr><td>কত unit অপেক্ষা করেছে</td><td>0</td><td>2</td><td>4</td><td>6</td><td>8</td></tr>
+          <tr><td>P2-এর effective priority</td><td>4</td><td>3</td><td>2</td><td>1</td><td><b>0</b> → 9-এ P5 (priority 1)-কে হারিয়ে CPU পেল</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="card ex" data-ex="starve" data-algo="prio" data-aging="2" data-title="একই input · aging চালু (প্রতি 2 unit-এ −1)" data-showpr="1" data-notrace="1" style="margin-top:14px"></div>
+    <div class="verdict" style="--c:var(--ok)"><b>ফল:</b> aging ছাড়া P2 বসে ছিল <b>17</b> unit (সব high-priority শেষ হওয়ার পর)। Aging দিয়ে <b>8</b> unit — নিশ্চিত সীমার মধ্যে। বাকিরা একটু বেশি অপেক্ষা করল, কিন্তু কেউ অনন্তকাল না। Simulator-এ "Starvation" preset নিয়ে aging চালু/বন্ধ করে দেখতে পারো।</div>
+  </section>
+
+  <!-- 5 RR -->
+  <section id="rr" style="--c:var(--sb)">
+    <h2><span class="num">5</span>Round Robin (RR)</h2>
+    <div class="typerow"><span class="badge p">Preemptive</span><span class="badge both" style="--bc:var(--muted)">FIFO queue + timer</span></div>
+    <p class="lead">FCFS-এর মতোই FIFO queue, কিন্তু প্রত্যেকে একবারে সর্বোচ্চ একটা <b>time quantum</b> (time slice, q) পায়। Quantum শেষ হলে timer interrupt → process queue-এর শেষে চলে যায়, সামনের জন CPU পায়। Burst quantum-এর আগেই শেষ হলে সে নিজেই CPU ছেড়ে দেয়। Time-sharing system-এর জন্যই এটা বানানো।</p>
+    <div class="card ex" data-ex="sample" data-algo="rr" data-q="2" data-title="Round Robin, q = 2 · sample input" data-open="1"></div>
+    <div class="verdict"><b>খেয়াল করো:</b> 2-তে P2 এল <i>আর</i> একই মুহূর্তে P1-এর quantum শেষ — নিয়ম অনুযায়ী নতুন P2 আগে queue-তে, তারপর P1। প্রতি process সর্বোচ্চ (n − 1) × q সময়ের মধ্যে আবার CPU পায়, তাই <b>starvation নেই</b> আর response time ভালো (average RT = 1.5, FCFS-এ 4.75)। দাম: 8টা context switch, আর average WT (5) SJF-এর চেয়ে বেশি।</div>
+
+    <h3>Time quantum কত বড় হবে?</h3>
+    <div class="grid2">
+      <div class="card note" style="border-top:3px solid var(--l3)"><h4>q খুব বড় (→ ∞)</h4><p>কেউই quantum শেষ করতে পারে না, সবাই নিজের burst একবারে শেষ করে — RR হুবহু <b>FCFS</b> হয়ে যায়। Response time খারাপ, convoy effect ফিরে আসে।</p></div>
+      <div class="card note" style="border-top:3px solid var(--bad)"><h4>q খুব ছোট (→ 0)</h4><p>মনে হয় প্রত্যেকের নিজের ধীর CPU আছে (processor sharing), কিন্তু প্রতি quantum-এ context switch — CPU-র বড় অংশ কাজের বদলে switch-এই খরচ হয়। 10 unit-এর একটা process: q = 12 → 0টা switch, q = 6 → 1টা, q = 1 → 9টা।</p></div>
+    </div>
+    <p style="margin-top:14px">নিচে একই ৫টা process (P1–P5, burst 5, 3, 8, 6, 2; arrival 0–4) আলাদা আলাদা quantum-এ। প্রতিটা সারি ওই engine দিয়ে হিসাব করা। ধরো প্রতিটা context switch-এ 0.1 unit নষ্ট হয় — শেষ কলাম সেই overhead:</p>
+    <div class="card tscroll" id="qchart"></div>
+    <div class="verdict"><b>Pattern:</b> q বাড়লে context switch আর overhead কমে, কিন্তু response time বাড়ে; q = 100 (≈ ∞)-এ ফল FCFS-এর সাথে হুবহু এক। Average WT সবসময় একদিকে যায় না — এটা input-এর উপর নির্ভর করে। <b>Rule of thumb:</b> quantum context-switch সময়ের চেয়ে অনেক বড়, আর সাধারণ CPU burst-এর চেয়ে একটু বড় রাখো — মোটামুটি <b>80% CPU burst যেন quantum-এর চেয়ে ছোট হয়</b>, যাতে বেশিরভাগ process এক quantum-এই শেষ (বা I/O-তে) চলে যায়। বাস্তব OS-এ quantum সাধারণত <b>10–100 ms</b>, আর context switch লাগে ১০ µs-এরও কম।</div>
+  </section>
+
+  <!-- 6 Simulator -->
+  <section id="sim">
+    <h2><span class="num">▶</span>Simulator — নিজের input দিয়ে চালাও</h2>
+    <p class="lead">Process যোগ/বাদ দাও, arrival-burst-priority বদলাও, algorithm বেছে ▶ চাপো। উপরের সারিতে যারা এখনো আসেনি, মাঝে ready queue, ডানে CPU আর শেষ হওয়া process; নিচে Gantt chart ধাপে ধাপে বাড়ে। শেষে প্রতিটা process-এর CT, TAT, WT, RT।</p>
+    <div class="card pg">
+      <div class="pg-bar">
+        <select class="btn" id="simPreset" aria-label="Preset"></select>
+        <select class="btn" id="simAlgo" aria-label="Algorithm">
+          <option value="fcfs">FCFS</option><option value="sjf">SJF (non-preemptive)</option><option value="srtf">SRTF (preemptive SJF)</option>
+          <option value="prio">Priority (non-preemptive)</option><option value="prioP">Priority (preemptive)</option><option value="rr">Round Robin</option>
+        </select>
+        <label class="fld" id="fldQ">quantum <input type="number" id="simQ" min="1" max="50" value="2"></label>
+        <label class="fld" id="fldAge" title="0 = aging বন্ধ">aging প্রতি <input type="number" id="simAge" min="0" max="20" value="0"> unit</label>
+      </div>
+      <div class="pg-top">
+        <div class="ptab">
+          <table>
+            <thead><tr><th>PID</th><th>Arrival</th><th>Burst</th><th>Priority</th><th></th></tr></thead>
+            <tbody id="ptBody"></tbody>
+          </table>
+          <div class="ptab-foot"><button type="button" class="btn" id="ptAdd">+ Process</button><span id="ptMsg">সর্বোচ্চ ১০টা · burst 1–30 · arrival 0–60</span></div>
+        </div>
+        <div class="rules">
+          <b>Tie-breaking নিয়ম (সব জায়গায় এক)</b>
+          <ol>
+            <li>একই সময়ে একাধিক process এলে: table-এ যে row উপরে, সে queue-তে আগে (textbook-এর "P1, P2, P3 এই order-এ 0-তে এল")।</li>
+            <li>SJF / SRTF / Priority-তে key (burst, remaining বা priority) সমান হলে: আগে আসা জন, তাও সমান হলে উপরের row।</li>
+            <li>SRTF আর preemptive Priority শুধু <b>strictly</b> ভালো হলেই preempt করে; সমান হলে চলমান process চলতেই থাকে।</li>
+            <li>RR: একই মুহূর্তে নতুন process আসা আর quantum শেষ হওয়া → <b>নতুন process আগে queue-তে, তারপর preempted process</b> (common textbook/GATE convention)। Queue ফাঁকা থাকলে quantum শেষেও একই process নতুন quantum নিয়ে চলে।</li>
+            <li>Context switch-এর সময় 0 ধরা। Gantt chart-এ এক process থেকে অন্য process-এ বদল = ১টা switch (প্রথম dispatch গোনা হয় না; মাঝে idle থাকলেও P→Q একটা switch)।</li>
+            <li>Aging (শুধু Priority): ready queue-তে প্রতি N unit অপেক্ষায় priority সংখ্যা 1 কমে, 0 পর্যন্ত। N = 0 মানে বন্ধ।</li>
+          </ol>
+        </div>
+      </div>
+      <div class="pg-bar">
+        <button type="button" class="btn primary" id="simPlay">▶ চালাও</button>
+        <button type="button" class="btn" id="simStep">⏭ এক ধাপ</button>
+        <button type="button" class="btn" id="simReset">↺ Reset</button>
+        <select class="btn" id="simSpeed" aria-label="Speed"><option value="1400">ধীর</option><option value="850" selected>স্বাভাবিক</option><option value="380">দ্রুত</option></select>
+        <span class="sp"></span>
+        <div class="pg-stats" id="simStats"></div>
+      </div>
+      <div class="pg-stage"><svg id="simSvg" viewBox="0 0 1000 300" role="img" aria-label="Ready queue, CPU আর Gantt chart-এর animation"></svg></div>
+      <div class="pg-explain" id="simExplain"></div>
+      <div class="pg-log" id="simLog"></div>
+      <div id="simResult"></div>
+    </div>
+  </section>
+
+  <!-- 7 compare -->
+  <section id="compare">
+    <h2><span class="num">7</span>সব algorithm পাশাপাশি</h2>
+    <p class="lead">শেষ দুই কলাম উপরের sample input (P1–P4) থেকে, একই engine দিয়ে হিসাব করা।</p>
+    <div class="card tscroll">
+      <table id="cmpTable">
+        <thead><tr><th>Algorithm</th><th>Preemptive?</th><th>Starvation?</th><th>Overhead</th><th>কোথায় ভালো</th><th>Avg WT</th><th>Avg RT</th></tr></thead>
+        <tbody>
+          <tr data-a="fcfs"><td><b>FCFS</b></td><td class="no">না</td><td class="no">না</td><td>সবচেয়ে কম</td><td>Batch job, সহজ queue; convoy effect-এ ভোগে</td><td></td><td></td></tr>
+          <tr data-a="sjf"><td><b>SJF</b></td><td class="no">না</td><td class="yes">হ্যাঁ (লম্বা job)</td><td>কম (sort/heap লাগে)</td><td>Burst আগে জানা batch system; avg WT-তে সেরা non-preemptive</td><td></td><td></td></tr>
+          <tr data-a="srtf"><td><b>SRTF</b></td><td class="yes">হ্যাঁ</td><td class="yes">হ্যাঁ (লম্বা job)</td><td>মাঝারি (ঘন preemption)</td><td>Theory-তে minimum avg WT; burst অনুমান করতে হয়</td><td></td><td></td></tr>
+          <tr data-a="prio"><td><b>Priority (NP)</b></td><td class="no">না</td><td class="yes">হ্যাঁ → aging</td><td>কম</td><td>কাজের গুরুত্ব আলাদা, কিন্তু মাঝপথে থামানো যাবে না</td><td></td><td></td></tr>
+          <tr data-a="prioP"><td><b>Priority (P)</b></td><td class="yes">হ্যাঁ</td><td class="yes">হ্যাঁ → aging</td><td>মাঝারি</td><td>Real-time / জরুরি কাজ (SCHED_FIFO, interrupt handling)</td><td></td><td></td></tr>
+          <tr data-a="rr" data-q="2"><td><b>Round Robin</b> <small>(q=2)</small></td><td class="yes">হ্যাঁ</td><td class="no">না</td><td>বেশি (q ছোট হলে আরও)</td><td>Time-sharing, interactive; fair, ভালো response time</td><td></td><td></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="foot">বাস্তব OS এগুলো মিশিয়ে ব্যবহার করে: <b>Multilevel Feedback Queue</b> (একাধিক queue, উপরের queue ছোট quantum-এর RR, CPU বেশি খেলে নিচের queue-তে নামে, বেশি অপেক্ষা করলে উপরে ওঠে — aging) — Windows আর পুরনো Unix-এর scheduler এই ধারণার উপর।</p>
+  </section>
+
+  <!-- 8 QA -->
+  <section id="qa">
+    <h2><span class="num">Q</span>Interview-এ যা আসে</h2>
+    <div class="card" style="padding:4px 18px">
+      <details><summary>Average waiting time-এর জন্য optimal algorithm কোনটা?</summary><p>সব process একসাথে ready থাকলে <b>SJF</b> provably minimum average WT দেয় (ছোট job আগে গেলে বেশি সংখ্যক process কম অপেক্ষা করে)। Arrival আলাদা হলে preemptive version <b>SRTF</b> optimal। সমস্যা হলো burst time আগে জানা যায় না — exponential averaging দিয়ে অনুমান করতে হয় — আর লম্বা job starve করতে পারে।</p></details>
+      <details><summary>Convoy effect কী? কোন algorithm-এ হয়?</summary><p>FCFS-এ একটা লম্বা CPU-bound process আগে CPU পেলে পেছনের সব ছোট (প্রায়ই I/O-bound) process তার পেছনে আটকে থাকে — average WT অনেক বেড়ে যায়, আর CPU ও I/O device পালা করে অলস পড়ে থাকে। উদাহরণ: 24, 3, 3 burst — লম্বাটা আগে থাকলে avg WT 17, পরে থাকলে 3।</p></details>
+      <details><summary>Starvation কী, আর aging কীভাবে সমাধান করে?</summary><p>কম priority-র (বা SJF/SRTF-এ লম্বা) process অনির্দিষ্টকাল CPU না পাওয়া, কারণ বেশি priority-র কাজ আসতেই থাকে। Aging: ready queue-তে যত বেশি অপেক্ষা, তত priority বাড়ানো (যেমন প্রতি 2 unit-এ priority সংখ্যা 1 কমানো)। একসময় তার priority সবার চেয়ে বেশি হয়ে যায়, তাই অপেক্ষার একটা ঊর্ধ্বসীমা থাকে।</p></details>
+      <details><summary>Round Robin-এ quantum → ∞ বা → 0 হলে কী হয়?</summary><p>→ ∞: কোনো process quantum শেষ করতে পারে না, সবাই একবারে শেষ করে — RR = FCFS। → 0: তাত্ত্বিকভাবে processor sharing (সবাই সমান গতিতে এগোয়), কিন্তু বাস্তবে প্রায় পুরো CPU time context switch-এ খরচ হয়, কাজ প্রায় হয় না। তাই quantum switch-cost-এর চেয়ে অনেক বড়, আর ~80% CPU burst-এর চেয়ে বড় রাখা হয় (বাস্তবে 10–100 ms)।</p></details>
+      <details><summary>Preemptive আর non-preemptive-এর উদাহরণ দাও।</summary><p>Non-preemptive: FCFS, SJF, non-preemptive Priority — process শেষ বা block না হলে CPU ছাড়ে না। Preemptive: SRTF, preemptive Priority, Round Robin, Linux-এর CFS/EEVDF — timer interrupt বা বেশি জরুরি process এলে OS কেড়ে নিতে পারে। Priority scheduling দুই রকমই হয়।</p></details>
+      <details><summary>Non-preemptive algorithm-এ response time আর waiting time সমান কেন?</summary><p>Non-preemptive-এ process একবার CPU পেলে শেষ পর্যন্ত চলে, তাই তার সব অপেক্ষা প্রথমবার CPU পাওয়ার আগেই। WT = প্রথম CPU পাওয়া − AT = RT। Preemptive-এ preempt হলে আবার অপেক্ষা করে, তাই সেখানে WT ≥ RT।</p></details>
+      <details><summary>Linux আসলে কোন scheduler ব্যবহার করে?</summary><p>সাধারণ process-এর জন্য Linux 2.6.23 (2007) থেকে <b>CFS (Completely Fair Scheduler)</b> — প্রতিটা task-এর <code>vruntime</code> (nice value দিয়ে weight করা চলার সময়) রাখে, red-black tree-তে সবচেয়ে কম vruntime-ওয়ালা task পরের বার চলে; কোনো fixed quantum নেই। <b>Linux 6.6 (2023)</b> থেকে CFS-এর জায়গায় <b>EEVDF (Earliest Eligible Virtual Deadline First)</b> — যে task তার ন্যায্য ভাগের চেয়ে কম পেয়েছে (eligible), তাদের মধ্যে যার virtual deadline সবচেয়ে আগে, সে চলে; latency-sensitive task ভালো সাড়া পায়। এর পাশাপাশি real-time class <code>SCHED_FIFO</code> আর <code>SCHED_RR</code> (fixed priority, preemptive) আছে, যারা সাধারণ task-এর আগে চলে।</p></details>
+      <details><summary>Throughput আর turnaround time কি একই জিনিস মাপে?</summary><p>না। Throughput = প্রতি একক সময়ে কয়টা process শেষ হলো (system-এর দৃষ্টিতে)। Turnaround = একটা নির্দিষ্ট process আসা থেকে শেষ হতে কত সময় নিল (user-এর দৃষ্টিতে)। Convoy উদাহরণে দুই order-এ throughput সমান (30 unit-এ 3টা), কিন্তু average TAT 27 বনাম 13।</p></details>
+    </div>
+  </section>
+
+  <footer><span>WellDev · Operating System</span><a href="../01-os-kernel-process-thread.html">← আগের গাইড: OS, Kernel, Process ও Thread</a></footer>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script>
+// ===================== scheduling engine =====================
+// Discrete-time simulation in integer units. One loop serves every algorithm; tie-breaking rules
+// are listed on the page (Simulator → "Tie-breaking নিয়ম") and implemented here:
+//   arrivals at t join the queue (by arrival, then table row) BEFORE a process preempted at t;
+//   key ties → earlier arrival → earlier row; SRTF / preemptive priority preempt only when strictly better.
+function schedule(input, algo, opts = {}) {
+  const q = Math.max(1, (opts.quantum | 0) || 2);
+  const ageEvery = opts.aging ? Math.max(1, opts.aging | 0) : 0;
+  const P = input.map((p, i) => ({ pid: p.pid, at: p.at, bt: p.bt, pr: p.pr ?? 0, row: i,
+    rem: p.bt, first: null, ct: null, waited: 0 }));
+  const n = P.length, ticks = [], ready = [];
+  let t = 0, run = null, used = 0, done = 0, switches = 0, lastPid = null;
+  const effPr = p => ageEvery ? Math.max(0, p.pr - Math.floor(p.waited / ageEvery)) : p.pr;
+  const byArrival = (a, b) => a.at - b.at || a.row - b.row;
+  const key = { fcfs: null, rr: null, sjf: p => p.bt, srtf: p => p.rem, prio: effPr, prioP: effPr }[algo];
+  const pick = () => {
+    let best = 0;
+    if (key) for (let i = 1; i < ready.length; i++) {
+      const a = ready[i], b = ready[best];
+      if (key(a) < key(b) || (key(a) === key(b) && byArrival(a, b) < 0)) best = i;
+    }
+    return ready.splice(best, 1)[0];
+  };
+  while (done < n && t < 2000) {
+    const ev = [];
+    // 1) the process that used the last unit of its burst finishes at t
+    if (run && run.rem === 0) { run.ct = t; done++; ev.push({ k: "done", pid: run.pid }); run = null; }
+    // 2) arrivals at t join the ready queue (before any process preempted at t)
+    P.filter(p => p.at === t).sort(byArrival).forEach(p => { ready.push(p); ev.push({ k: "arrive", pid: p.pid }); });
+    if (done === n) { ticks.push({ t, run: null, ready: [], ev, switches, final: true }); break; }
+    // 3) preemption
+    if (run) {
+      let why = null;
+      if (algo === "rr" && used >= q) {
+        if (ready.length) why = { quantum: true };
+        else used = 0;                         // nobody waiting → same process, fresh quantum
+      } else if (algo === "srtf") {
+        const c = ready.find(p => p.rem < run.rem);
+        if (c) why = { by: c.pid };
+      } else if (algo === "prioP") {
+        const c = ready.find(p => effPr(p) < effPr(run));
+        if (c) why = { by: c.pid };
+      }
+      if (why) { ev.push({ k: "preempt", pid: run.pid, why }); ready.push(run); run = null; }
+    }
+    // 4) dispatch
+    if (!run && ready.length) {
+      run = pick(); used = 0;
+      if (run.first === null) run.first = t;
+      if (lastPid !== null && lastPid !== run.pid) switches++;
+      ev.push({ k: "dispatch", pid: run.pid });
+      lastPid = run.pid;
+    }
+    ticks.push({ t, run: run ? run.pid : null, ready: ready.map(p => p.pid), used,
+      rem: Object.fromEntries(P.map(p => [p.pid, p.rem])), pr: Object.fromEntries(P.map(p => [p.pid, effPr(p)])), ev, switches });
+    // 5) execute one unit
+    ready.forEach(p => p.waited++);
+    if (run) { run.rem--; used++; }
+    t++;
+  }
+  const slices = [];
+  ticks.forEach(k => {
+    if (k.final) return;
+    const last = slices[slices.length - 1];
+    if (last && last.pid === k.run) last.end = k.t + 1;
+    else slices.push({ pid: k.run, start: k.t, end: k.t + 1 });
+  });
+  const rows = P.map(p => ({ pid: p.pid, at: p.at, bt: p.bt, pr: p.pr, ct: p.ct,
+    tat: p.ct - p.at, wt: p.ct - p.at - p.bt, rt: p.first - p.at }));
+  const avg = f => rows.reduce((s, r) => s + r[f], 0) / n;
+  const busy = slices.filter(s => s.pid !== null).reduce((s, x) => s + x.end - x.start, 0);
+  return { slices, ticks, rows, switches, end: t, busy, quantum: q,
+    avg: { tat: avg("tat"), wt: avg("wt"), rt: avg("rt") } };
+}
+
+// ===================== shared data & helpers =====================
+const DATA = {
+  sample:  [["P1", 0, 7, 3], ["P2", 2, 4, 1], ["P3", 4, 1, 4], ["P4", 5, 4, 2]],
+  convoyA: [["P1", 0, 24, 0], ["P2", 0, 3, 0], ["P3", 0, 3, 0]],
+  convoyB: [["P2", 0, 3, 0], ["P3", 0, 3, 0], ["P1", 0, 24, 0]],
+  starve:  [["P1", 0, 3, 1], ["P2", 1, 3, 4], ["P3", 2, 3, 1], ["P4", 5, 3, 1], ["P5", 8, 3, 1], ["P6", 11, 3, 1], ["P7", 14, 3, 1]],
+  rrcmp:   [["P1", 0, 5, 0], ["P2", 1, 3, 0], ["P3", 2, 8, 0], ["P4", 3, 6, 0], ["P5", 4, 2, 0]],
+  idle:    [["P1", 0, 3, 2], ["P2", 5, 2, 1], ["P3", 6, 4, 3]],
+};
+const mk = rows => rows.map(([pid, at, bt, pr]) => ({ pid, at, bt, pr }));
+const COLORS = ["#6366f1", "#db2777", "#059669", "#d97706", "#0284c7", "#7c3aed", "#dc2626", "#0d9488", "#a16207", "#64748b"];
+const colorOf = pid => COLORS[(parseInt(String(pid).replace(/\D/g, ""), 10) - 1 + COLORS.length * 10) % COLORS.length] || COLORS[0];
+const fmt = x => (Math.round(x * 100) / 100).toString();
+const ALGO_NAME = { fcfs: "FCFS", sjf: "SJF", srtf: "SRTF", prio: "Priority (NP)", prioP: "Priority (P)", rr: "Round Robin" };
+const isPrio = a => a === "prio" || a === "prioP";
+const chip = pid => `<span class="chip" style="--pc:${colorOf(pid)}">${pid}</span>`;
+
+if (typeof document !== "undefined") {
+
+function ganttHTML(res) {
+  const T = res.end;
+  const marks = new Set([0]);
+  const blocks = res.slices.map((s, i) => {
+    marks.add(s.start); marks.add(s.end);
+    const last = i === res.slices.length - 1 ? " last" : "";
+    return s.pid === null
+      ? `<div class="gb idle${last}" style="left:${s.start / T * 100}%;width:${(s.end - s.start) / T * 100}%" title="CPU idle">idle</div>`
+      : `<div class="gb${last}" style="left:${s.start / T * 100}%;width:${(s.end - s.start) / T * 100}%;--pc:${colorOf(s.pid)}">${s.pid}</div>`;
+  }).join("");
+  const axis = [...marks].sort((a, b) => a - b).map(m => `<span style="left:${m / T * 100}%">${m}</span>`).join("");
+  return `<div class="gwrap"><div class="gantt" style="min-width:${Math.max(300, T * 26)}px"><div class="gbar">${blocks}</div><div class="gaxis">${axis}</div></div></div>`;
+}
+function resultHTML(res, showPr) {
+  const h = `<tr><th>PID</th><th>AT</th><th>BT</th>${showPr ? "<th>Pr</th>" : ""}<th>CT</th><th>TAT<small>CT−AT</small></th><th>WT<small>TAT−BT</small></th><th>RT<small>first−AT</small></th></tr>`;
+  const body = res.rows.map(r => `<tr><td>${chip(r.pid)}</td><td>${r.at}</td><td>${r.bt}</td>${showPr ? `<td>${r.pr}</td>` : ""}<td>${r.ct}</td><td>${r.tat}</td><td class="hl">${r.wt}</td><td>${r.rt}</td></tr>`).join("");
+  const a = res.avg;
+  const avg = `<tr class="avg"><td>Average</td><td></td><td></td>${showPr ? "<td></td>" : ""}<td></td><td>${fmt(a.tat)}</td><td class="hl">${fmt(a.wt)}</td><td>${fmt(a.rt)}</td></tr>`;
+  return `<div class="tscroll"><table class="res"><thead>${h}</thead><tbody>${body}${avg}</tbody></table></div>`;
+}
+function evText(e, k, algo, q) {
+  const p = e.pid;
+  if (e.k === "arrive") return `${p} এল`;
+  if (e.k === "done") return `${p} শেষ`;
+  if (e.k === "dispatch") return `${p} CPU পেল`;
+  if (e.why.quantum) return `${p}-এর quantum (${q}) শেষ → queue-এর পেছনে`;
+  if (algo === "srtf") return `${e.why.by}-এর burst ${k.rem[e.why.by]} &lt; ${p}-এর বাকি ${k.rem[p]} → ${p} preempted`;
+  return `${e.why.by} (pr ${k.pr[e.why.by]}) বেশি জরুরি ${p} (pr ${k.pr[p]})-এর চেয়ে → ${p} preempted`;
+}
+function traceHTML(res, algo) {
+  const rows = res.ticks.filter(k => k.ev.length).map(k => {
+    const txt = k.ev.map(e => evText(e, k, algo, res.quantum)).join(" · ");
+    const queue = k.ready.length ? k.ready.map(chip).join(" ") : "<span style='color:var(--faint)'>ফাঁকা</span>";
+    const cpu = k.final ? "—" : k.run ? chip(k.run) : "<span style='color:var(--faint)'>idle</span>";
+    return `<tr><td>t=${k.t}</td><td>${txt}</td><td class="q">${queue}</td><td class="cpu">${cpu}</td></tr>`;
+  }).join("");
+  return `<details><summary>ধাপে ধাপে trace (প্রতিটা সিদ্ধান্তের মুহূর্ত)</summary><div class="tscroll" style="margin-top:8px"><table class="trace"><thead><tr><th>Time</th><th>কী ঘটল</th><th>Ready queue (পরে)</th><th>CPU</th></tr></thead><tbody>${rows}</tbody></table></div></details>`;
+}
+
+// worked examples
+document.querySelectorAll("[data-ex]").forEach(box => {
+  const d = box.dataset, algo = d.algo;
+  const res = schedule(mk(DATA[d.ex]), algo, { quantum: +d.q || 2, aging: +d.aging || 0 });
+  const showPr = !!d.showpr;
+  box.innerHTML = `<div class="ex-h">${d.title}<span class="stats">avg WT <b>${fmt(res.avg.wt)}</b> · avg TAT ${fmt(res.avg.tat)} · avg RT ${fmt(res.avg.rt)} · context switch ${res.switches}</span></div>
+    ${ganttHTML(res)}${resultHTML(res, showPr)}${d.notrace ? "" : traceHTML(res, algo)}`;
+  if (d.open) box.querySelector("details").open = true;
+});
+
+// sample table
+document.getElementById("sampleTable").innerHTML = `<table class="res" style="min-width:360px"><thead><tr><th>Process</th><th>Arrival Time</th><th>Burst Time</th><th>Priority</th></tr></thead><tbody>${
+  DATA.sample.map(([p, a, b, r]) => `<tr><td>${chip(p)}</td><td>${a}</td><td>${b}</td><td>${r}</td></tr>`).join("")}</tbody></table>`;
+
+// RR quantum comparison
+(() => {
+  const qs = [1, 2, 3, 4, 6, 100];
+  const rs = qs.map(q => ({ q, r: schedule(mk(DATA.rrcmp), "rr", { quantum: q }) }));
+  const fc = schedule(mk(DATA.rrcmp), "fcfs");
+  const over = r => r.switches * 0.1 / (r.busy + r.switches * 0.1) * 100;
+  const mx = { cs: Math.max(...rs.map(x => x.r.switches)), rt: Math.max(...rs.map(x => x.r.avg.rt)), wt: Math.max(...rs.map(x => x.r.avg.wt)) };
+  const bar = (v, m, c, label) => `<div class="bar" style="--bc:${c}"><i style="width:${Math.max(2, v / m * 110)}px"></i>${label}</div>`;
+  document.getElementById("qchart").innerHTML = `<table class="qc"><thead><tr><th>Quantum</th><th>Context switch</th><th>Avg response</th><th>Avg waiting</th><th>Switch overhead</th></tr></thead><tbody>${
+    rs.map(({ q, r }) => `<tr><td>q = ${q}${q === 100 ? " (≈∞)" : ""}</td><td>${bar(r.switches, mx.cs, "var(--bad)", r.switches)}</td><td>${bar(r.avg.rt, mx.rt, "var(--l3)", fmt(r.avg.rt))}</td><td>${bar(r.avg.wt, mx.wt, "var(--l2)", fmt(r.avg.wt))}</td><td>${fmt(over(r))}%</td></tr>`).join("")
+  }<tr class="avg"><td>FCFS</td><td>${fc.switches}</td><td>${fmt(fc.avg.rt)}</td><td>${fmt(fc.avg.wt)}</td><td>${fmt(over(fc))}%</td></tr></tbody></table>`;
+})();
+
+// comparison table numbers
+document.querySelectorAll("#cmpTable tbody tr").forEach(tr => {
+  const r = schedule(mk(DATA.sample), tr.dataset.a, { quantum: +tr.dataset.q || 2 });
+  const td = tr.querySelectorAll("td");
+  td[5].innerHTML = `<b>${fmt(r.avg.wt)}</b>`; td[6].textContent = fmt(r.avg.rt);
+  td[5].style.fontFamily = td[6].style.fontFamily = "var(--mono)";
+});
+
+// theme
+const root = document.documentElement;
+try { const t = localStorage.getItem("welldev-theme"); if (t) root.dataset.theme = t; } catch (e) {}
+document.getElementById("theme").addEventListener("click", () => {
+  const dark = root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  root.dataset.theme = dark ? "light" : "dark";
+  try { localStorage.setItem("welldev-theme", root.dataset.theme); } catch (e) {}
+});
+
+// ===================== simulator =====================
+const PRESETS = {
+  sample: { label: "Sample input (P1–P4)", data: "sample", algo: "fcfs", hint: "একই input-এ algorithm বদলে average WT তুলনা করো।" },
+  convoyA: { label: "Convoy effect — লম্বা job আগে", data: "convoyA", algo: "fcfs", hint: "P1 (24) সামনে থাকায় P2, P3 আটকে। পরের preset-এ order উল্টে দেখো।" },
+  convoyB: { label: "Convoy — ছোট job আগে", data: "convoyB", algo: "fcfs", hint: "একই তিনটা job, শুধু order আলাদা — avg WT 17 থেকে 3।" },
+  starve: { label: "Starvation (Priority)", data: "starve", algo: "prio", aging: 0, hint: "P2 (priority 4) অপেক্ষা করতেই থাকে। aging 2 দিয়ে আবার চালাও।" },
+  rrcmp: { label: "RR quantum comparison", data: "rrcmp", algo: "rr", q: 2, hint: "quantum 1, 3, 6, 100 করে context switch আর response time মিলাও।" },
+  idle: { label: "CPU idle gap", data: "idle", algo: "fcfs", hint: "3 থেকে 5 পর্যন্ত কেউ ready নেই — CPU idle (ডোরাকাটা)।" },
+};
+const $ = id => document.getElementById(id);
+const el = { preset: $("simPreset"), algo: $("simAlgo"), q: $("simQ"), age: $("simAge"), fq: $("fldQ"), fa: $("fldAge"),
+  body: $("ptBody"), add: $("ptAdd"), msg: $("ptMsg"), play: $("simPlay"), step: $("simStep"), reset: $("simReset"), speed: $("simSpeed"),
+  stats: $("simStats"), explain: $("simExplain"), log: $("simLog"), result: $("simResult") };
+el.preset.innerHTML = Object.entries(PRESETS).map(([k, p]) => `<option value="${k}">Preset: ${p.label}</option>`).join("");
+
+let procs = [], res = null, cur = -1, timer = null, hint = "";
+const clampInt = (v, lo, hi, dflt) => { const n = parseInt(v, 10); return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : dflt; };
+
+function loadPreset(key) {
+  const p = PRESETS[key];
+  procs = DATA[p.data].map(([pid, at, bt, pr]) => ({ pid, at, bt, pr }));
+  el.algo.value = p.algo;
+  if (p.q) el.q.value = p.q;
+  el.age.value = p.aging ?? 0;
+  hint = p.hint;
+  renderTable(); recompute();
+}
+function renderTable() {
+  const pr = isPrio(el.algo.value);
+  el.body.innerHTML = procs.map((p, i) => `<tr data-i="${i}">
+    <td>${chip(p.pid)}</td>
+    <td><input type="number" min="0" max="60" data-f="at" value="${p.at}" aria-label="${p.pid} arrival"></td>
+    <td><input type="number" min="1" max="30" data-f="bt" value="${p.bt}" aria-label="${p.pid} burst"></td>
+    <td class="${pr ? "" : "dim"}"><input type="number" min="0" max="20" data-f="pr" value="${p.pr}" aria-label="${p.pid} priority"></td>
+    <td class="x"><button type="button" class="rm" data-rm="${i}" aria-label="${p.pid} বাদ দাও" ${procs.length <= 1 ? "disabled" : ""}>×</button></td></tr>`).join("");
+  el.add.disabled = procs.length >= 10;
+  el.fq.style.display = el.algo.value === "rr" ? "" : "none";
+  el.fa.style.display = pr ? "" : "none";
+}
+el.body.addEventListener("input", e => {
+  const f = e.target.dataset.f; if (!f) return;
+  const p = procs[+e.target.closest("tr").dataset.i];
+  p[f] = f === "at" ? clampInt(e.target.value, 0, 60, 0) : f === "bt" ? clampInt(e.target.value, 1, 30, 1) : clampInt(e.target.value, 0, 20, 0);
+  hint = ""; recompute();
+});
+el.body.addEventListener("change", e => { if (e.target.dataset.f) renderTable(); });   // show clamped values
+el.body.addEventListener("click", e => {
+  const i = e.target.dataset.rm; if (i === undefined || procs.length <= 1) return;
+  procs.splice(+i, 1); hint = ""; renderTable(); recompute();
+});
+el.add.addEventListener("click", () => {
+  if (procs.length >= 10) return;
+  const used = new Set(procs.map(p => p.pid));
+  let n = 1; while (used.has("P" + n)) n++;
+  const lastAt = procs.length ? Math.max(...procs.map(p => p.at)) : 0;
+  procs.push({ pid: "P" + n, at: lastAt + 1, bt: 3, pr: 2 });
+  hint = ""; renderTable(); recompute();
+});
+el.preset.addEventListener("change", () => loadPreset(el.preset.value));
+el.algo.addEventListener("change", () => { renderTable(); recompute(); });
+el.q.addEventListener("input", recompute);
+el.age.addEventListener("input", recompute);
+el.q.addEventListener("change", () => { el.q.value = clampInt(el.q.value, 1, 50, 2); recompute(); });
+el.age.addEventListener("change", () => { el.age.value = clampInt(el.age.value, 0, 20, 0); recompute(); });
+
+function recompute() {
+  stop();
+  const algo = el.algo.value;
+  res = schedule(procs.map(p => ({ ...p })), algo, { quantum: clampInt(el.q.value, 1, 50, 2), aging: isPrio(algo) ? clampInt(el.age.value, 0, 20, 0) : 0 });
+  cur = -1;
+  setupStage();
+  draw(false);
+}
+
+// ---- D3 stage ----
+const svg = d3.select("#simSvg");
+const W = 1000, GX0 = 30, GX1 = 975, GY = 232, GH = 30;
+svg.append("defs").append("pattern").attr("id", "hatch").attr("width", 8).attr("height", 8).attr("patternUnits", "userSpaceOnUse").attr("patternTransform", "rotate(45)")
+  .append("line").attr("class", "hatch-a").attr("x1", 0).attr("y1", 0).attr("x2", 0).attr("y2", 8);
+const gStatic = svg.append("g"), gGantt = svg.append("g"), gAxis = svg.append("g"), gCursor = svg.append("g"), gChips = svg.append("g");
+// lanes
+gStatic.append("rect").attr("class", "s-frame").attr("x", 10).attr("y", 28).attr("width", 640).attr("height", 48).attr("rx", 10);
+gStatic.append("text").attr("class", "s-lbl").attr("x", 14).attr("y", 20).text("এখনো আসেনি (arrival time)");
+gStatic.append("rect").attr("class", "s-frame").attr("x", 10).attr("y", 100).attr("width", 640).attr("height", 72).attr("rx", 10);
+gStatic.append("text").attr("class", "s-lbl").attr("x", 14).attr("y", 93).text("Ready queue  · সামনে ←");
+gStatic.append("rect").attr("class", "s-frame cpu").attr("x", 670).attr("y", 90).attr("width", 150).attr("height", 92).attr("rx", 14);
+gStatic.append("text").attr("class", "s-lbl").attr("x", 674).attr("y", 82).text("CPU");
+const cpuSub = gStatic.append("text").attr("class", "s-dim").attr("x", 745).attr("y", 176).attr("text-anchor", "middle");
+gStatic.append("rect").attr("class", "s-frame").attr("x", 840).attr("y", 28).attr("width", 150).attr("height", 154).attr("rx", 10);
+gStatic.append("text").attr("class", "s-lbl").attr("x", 844).attr("y", 20).text("শেষ (CT)");
+gStatic.append("text").attr("class", "s-lbl").attr("x", 14).attr("y", 222).text("Gantt chart");
+const qArrow = gStatic.append("path").attr("d", "M652 136H666").attr("stroke", "var(--faint)").attr("stroke-width", 1.6).attr("fill", "none");
+const cursorLine = gCursor.append("line").attr("class", "cursor").attr("y1", GY - 8).attr("y2", GY + GH + 8);
+const cursorLbl = gCursor.append("text").attr("class", "s-big").attr("y", GY - 12).attr("text-anchor", "middle");
+
+let X = null, T = 1;
+function setupStage() {
+  T = Math.max(1, res.end);
+  X = t => GX0 + t * (GX1 - GX0) / T;
+  gGantt.selectAll("*").remove();
+  gGantt.append("rect").attr("x", GX0).attr("y", GY).attr("width", GX1 - GX0).attr("height", GH).attr("rx", 6).attr("fill", "var(--surface)").attr("stroke", "var(--line)");
+  const step = T <= 30 ? 1 : T <= 60 ? 2 : 5;
+  const ticks = d3.range(0, T + 1, step); if (ticks[ticks.length - 1] !== T) ticks.push(T);
+  gAxis.selectAll("*").remove();
+  gAxis.selectAll("line").data(ticks).join("line").attr("class", "axis-l").attr("x1", X).attr("x2", X).attr("y1", GY + GH).attr("y2", GY + GH + 5);
+  gAxis.selectAll("text").data(ticks).join("text").attr("class", "axis-t").attr("x", X).attr("y", GY + GH + 17).text(d => d);
+  gChips.selectAll("*").remove();
+  el.log.innerHTML = `<div class="empty">▶ চাপো বা ⏭ দিয়ে এক ধাপ এগোও। প্রতিটা সিদ্ধান্ত এখানে লেখা হবে।</div>`;
+  el.result.innerHTML = "";
+}
+
+function layout(k) {
+  const tick = k >= 0 ? res.ticks[k] : null, t = tick ? tick.t : -1;
+  const ct = Object.fromEntries(res.rows.map(r => [r.pid, r.ct]));
+  const prAlgo = isPrio(el.algo.value);
+  const items = [];
+  const waiting = procs.filter(p => p.at > t || !tick).sort((a, b) => a.at - b.at);
+  waiting.forEach((p, i) => items.push({ pid: p.pid, x: 18 + i * 63, y: 36, w: 58, h: 32, l1: p.pid, l2: `at ${p.at}`, op: 0.55 }));
+  if (tick) {
+    const rq = tick.ready, slot = Math.min(74, 624 / Math.max(rq.length, 1));
+    rq.forEach((pid, i) => items.push({ pid, x: 18 + i * slot, y: 110, w: Math.min(66, slot - 6), h: 52, l1: pid,
+      l2: tick.final ? "" : prAlgo ? `rem ${tick.rem[pid]} · p${tick.pr[pid]}` : `rem ${tick.rem[pid]}`, op: 1 }));
+    if (tick.run) items.push({ pid: tick.run, x: 705, y: 106, w: 80, h: 56, l1: tick.run,
+      l2: prAlgo ? `rem ${tick.rem[tick.run]} · p${tick.pr[tick.run]}` : `rem ${tick.rem[tick.run]}`, op: 1 });
+    const doneList = res.rows.filter(r => r.ct <= t).sort((a, b) => a.ct - b.ct || 0);
+    doneList.forEach((r, i) => items.push({ pid: r.pid, x: 848 + (i % 2) * 70, y: 36 + Math.floor(i / 2) * 29, w: 64, h: 25, l1: `${r.pid} ✓${r.ct}`, l2: "", op: 1 }));
+  }
+  return items;
+}
+
+function draw(animate) {
+  const dur = animate ? +el.speed.value : 0;
+  const tick = cur >= 0 ? res.ticks[cur] : null;
+  const items = layout(cur);
+  const tr = g => (animate ? g.transition().duration(dur * 0.55).ease(d3.easeCubicInOut) : g);
+  const sel = gChips.selectAll("g.chipg").data(items, d => d.pid);
+  sel.exit().remove();
+  const enter = sel.enter().append("g").attr("class", "chipg").attr("transform", d => `translate(${d.x},${d.y})`);
+  enter.append("rect").attr("rx", 8);
+  enter.append("text").attr("class", "c1");
+  enter.append("text").attr("class", "c2");
+  const all = enter.merge(sel);
+  all.select("rect").attr("fill", d => colorOf(d.pid));
+  tr(all).attr("transform", d => `translate(${d.x},${d.y})`).style("opacity", d => d.op);
+  tr(all.select("rect")).attr("width", d => d.w).attr("height", d => d.h);
+  all.select(".c1").text(d => d.l1); all.select(".c2").text(d => d.l2);
+  tr(all.select(".c1")).attr("x", d => d.w / 2).attr("y", d => d.l2 ? d.h / 2 - 2 : d.h / 2 + 4).style("font-size", d => d.h < 30 ? "11px" : "13px");
+  tr(all.select(".c2")).attr("x", d => d.w / 2).attr("y", d => d.h / 2 + 13);
+
+  // CPU caption
+  const algo = el.algo.value;
+  cpuSub.text(!tick ? "" : tick.final ? "সব শেষ" : !tick.run ? "idle" : algo === "rr" ? `quantum ${tick.used + 1}/${res.quantum}` : "running");
+
+  // Gantt: everything before t drawn solid, the current unit grows during this tick
+  const t = tick ? tick.t : 0;
+  const segs = res.slices.filter(s => s.start < t).map(s => ({ ...s, end: Math.min(s.end, t) }));
+  const gs = gGantt.selectAll("g.seg").data(segs, d => d.start);
+  gs.exit().remove();
+  const ge = gs.enter().append("g").attr("class", "seg");
+  ge.append("rect"); ge.append("text").attr("class", "g-lbl");
+  const ga = ge.merge(gs);
+  ga.select("rect").attr("x", d => X(d.start)).attr("y", GY).attr("height", GH).attr("width", d => X(d.end) - X(d.start))
+    .attr("class", d => d.pid === null ? "g-idle" : null).attr("fill", d => d.pid === null ? null : colorOf(d.pid))
+    .attr("stroke", "var(--surface)").attr("stroke-width", 1.5);
+  ga.select("text").attr("x", d => (X(d.start) + X(d.end)) / 2).attr("y", GY + GH / 2 + 4)
+    .text(d => d.pid !== null && X(d.end) - X(d.start) > 20 ? d.pid : "");
+  gGantt.selectAll("rect.grow").remove();
+  if (tick && !tick.final) {
+    const g = gGantt.append("rect").attr("class", "grow" + (tick.run === null ? " g-idle" : "")).attr("x", X(t)).attr("y", GY).attr("height", GH)
+      .attr("fill", tick.run === null ? null : colorOf(tick.run)).attr("opacity", 0.85).attr("width", animate ? 0 : X(t + 1) - X(t));
+    if (animate) g.transition().delay(dur * 0.35).duration(dur * 0.6).ease(d3.easeLinear).attr("width", X(t + 1) - X(t));
+  }
+  const cx = X(t), cx2 = tick && !tick.final ? X(t + 1) : cx;
+  cursorLine.interrupt().attr("x1", cx).attr("x2", cx).style("opacity", tick ? 1 : 0);
+  cursorLbl.interrupt().attr("x", cx).text(tick ? `t = ${t}` : "").style("opacity", tick ? 1 : 0);
+  if (animate && cx2 !== cx) {
+    cursorLine.transition().delay(dur * 0.35).duration(dur * 0.6).ease(d3.easeLinear).attr("x1", cx2).attr("x2", cx2);
+  }
+
+  // stats
+  const doneN = tick ? res.rows.filter(r => r.ct <= t).length : 0;
+  el.stats.innerHTML = `<span class="stat">time<b>${tick ? t : "–"}</b></span><span class="stat">CPU<b>${tick ? (tick.run ?? (tick.final ? "—" : "idle")) : "–"}</b></span><span class="stat">context switch<b>${tick ? tick.switches : 0}</b></span><span class="stat">শেষ<b>${doneN}/${procs.length}</b></span>`;
+  // explanation + log
+  if (!tick) {
+    el.explain.innerHTML = `<b>${ALGO_NAME[algo]}${algo === "rr" ? ` (q = ${res.quantum})` : ""}</b> · মোট ${res.end} unit, ${res.switches}টা context switch হবে। ${hint}`;
+  } else {
+    const txt = tick.ev.length ? tick.ev.map(e => evText(e, tick, algo, res.quantum)).join(" · ") : (tick.run ? `${tick.run} চলছে` : "CPU idle — কেউ ready নেই");
+    el.explain.innerHTML = `<b style="font-family:var(--mono)">t = ${t}</b> &nbsp;${txt}`;
+    if (tick.ev.length) {
+      if (el.log.querySelector(".empty")) el.log.innerHTML = "";
+      el.log.insertAdjacentHTML("beforeend", `<div><b>t=${t}</b>${txt}</div>`);
+      el.log.scrollTop = el.log.scrollHeight;
+    }
+  }
+  if (tick && tick.final) showResult();
+  el.step.disabled = !!(tick && tick.final);
+  el.play.textContent = timer ? "⏸ থামাও" : (tick && tick.final ? "▶ আবার" : "▶ চালাও");
+}
+
+function showResult() {
+  const algo = el.algo.value, opts = { quantum: res.quantum, aging: isPrio(algo) ? clampInt(el.age.value, 0, 20, 0) : 0 };
+  const util = fmt(res.busy / res.end * 100);
+  const others = ["fcfs", "sjf", "srtf", "prio", "prioP", "rr"].map(a => {
+    const r = schedule(procs.map(p => ({ ...p })), a, { ...opts, aging: isPrio(a) ? opts.aging : 0 });
+    return `<tr${a === algo ? ' style="background:color-mix(in srgb,var(--accent) 9%,transparent)"' : ""}><td>${ALGO_NAME[a]}${a === "rr" ? ` (q=${opts.quantum})` : ""}</td><td>${fmt(r.avg.wt)}</td><td>${fmt(r.avg.tat)}</td><td>${fmt(r.avg.rt)}</td><td>${r.switches}</td></tr>`;
+  }).join("");
+  el.result.innerHTML = `<h3 style="margin:6px 0 8px">ফলাফল — ${ALGO_NAME[algo]}</h3>${resultHTML(res, isPrio(algo))}
+    <p class="hint" style="margin:8px 2px 0">মোট সময় ${res.end} · CPU utilisation ${util}% · throughput ${procs.length}/${res.end} = ${fmt(procs.length / res.end)} process/unit · context switch ${res.switches}</p>
+    <h3 style="margin:16px 0 8px">একই input-এ সব algorithm</h3>
+    <div class="tscroll"><table class="res"><thead><tr><th>Algorithm</th><th>Avg WT</th><th>Avg TAT</th><th>Avg RT</th><th>Switch</th></tr></thead><tbody>${others}</tbody></table></div>`;
+}
+
+function stepOnce() {
+  if (cur >= res.ticks.length - 1) { stop(); return false; }
+  cur++; draw(true);
+  if (cur >= res.ticks.length - 1) stop();
+  return true;
+}
+function stop() { if (timer) { clearInterval(timer); timer = null; } el.play.textContent = cur >= 0 && res && cur >= res.ticks.length - 1 ? "▶ আবার" : "▶ চালাও"; }
+el.play.addEventListener("click", () => {
+  if (timer) { stop(); return; }
+  if (cur >= res.ticks.length - 1) { cur = -1; setupStage(); draw(false); }
+  stepOnce();
+  if (cur < res.ticks.length - 1) {
+    timer = setInterval(() => { if (!stepOnce()) stop(); }, +el.speed.value);
+    el.play.textContent = "⏸ থামাও";
+  }
+});
+el.step.addEventListener("click", () => { stop(); stepOnce(); });
+el.reset.addEventListener("click", () => { stop(); cur = -1; setupStage(); draw(false); });
+el.speed.addEventListener("change", () => { if (timer) { stop(); el.play.click(); } });
+
+loadPreset("sample");
+}
+if (typeof module !== "undefined") module.exports = { schedule, DATA, mk };
+</script>
+</body>
+</html>

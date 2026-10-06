@@ -29,10 +29,12 @@ _শীঘ্রই আসছে।_
 
 - [XSS, CSRF, JWT, Access ও Refresh Token](04-resume-projects/01-xss-csrf-jwt-refresh-token-access-token/index.html)
 - [Encoding, Encryption ও Hashing](04-resume-projects/02-encoding-encryption-hashing/index.html)
+- [CORS](04-resume-projects/03-cors/index.html) — Same-Origin Policy, preflight, error ও fix, simulator; CORS বনাম CSRF / XSS / SQL injection
 
 ## 05 · Operating System
 
 - [OS, Kernel, Process ও Thread](05-operating-system/01-os-kernel-process-thread.html) — boot থেকে context switch পর্যন্ত, ২৫টি diagram
+- [CPU Scheduling](05-operating-system/os-scheduling-algo/index.html) — FCFS, SJF/SRTF, Priority, Round Robin; convoy effect, starvation, time quantum, Gantt chart simulator
 
 ## 06 · Networking
 

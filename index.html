@@ -183,11 +183,17 @@ const TRACKS = [
     { href: "04-resume-projects/02-encoding-encryption-hashing/index.html", kicker: "Data Security", title: "Encoding, Encryption ও Hashing",
       desc: "তিনটার পার্থক্য — format বদলানো, গোপন রাখা আর verify করা; password hashing-এ salt ও cost factor।",
       tags: ["Base64", "AES / RSA", "bcrypt"], meta: [["3", "diagrams"]] },
+    { href: "04-resume-projects/03-cors/index.html", kicker: "Web Security · Interactive", title: "CORS — browser কাকে পড়তে দেয়",
+      desc: "Same-Origin Policy, preflight, CORS header আর common error-এর fix; CORS বনাম CSRF, XSS ও SQL injection — কোনটায় victim-এর browser লাগে।",
+      tags: ["CORS", "Preflight", "CSRF", "XSS"], meta: [["1", "simulator"], ["8", "Q&A"]] },
   ]},
   { id: "os", n: "05", title: "Operating System", blurb: "Kernel, process, thread, scheduling", color: "#ec4899", guides: [
     { href: "05-operating-system/01-os-kernel-process-thread.html", kicker: "OS", title: "OS, Kernel, Process ও Thread",
       desc: "Boot থেকে GUI, CPU core-এর ভেতর, process ও thread তৈরি, scheduling আর context switch — ধাপে ধাপে।",
       tags: ["Kernel", "Scheduler", "Context switch"], meta: [["7", "chapters"], ["25", "diagrams"]] },
+    { href: "05-operating-system/os-scheduling-algo/index.html", kicker: "OS · Interactive", title: "CPU Scheduling — ৪টি algorithm",
+      desc: "Preemptive বনাম non-preemptive, FCFS ও convoy effect, SJF/SRTF, priority ও starvation, round robin-এর time quantum — Gantt chart simulator সহ।",
+      tags: ["FCFS", "SJF", "Round Robin", "D3.js"], meta: [["6", "algorithms"], ["6", "presets"]] },
   ]},
   { id: "net", n: "06", title: "Networking", blurb: "OSI model, web server, browser rendering", color: "#14b8a6", guides: [
     { href: "06-networking/OSI/index.html", kicker: "OSI · Interactive", title: "Seq, Checksum ও CRC",
