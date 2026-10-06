@@ -1,0 +1,891 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Browser কীভাবে Page বানায়</title>
+<meta name="description" content="URL থেকে pixel: HTML parsing, CSSOM, render tree, layout, paint — আর <link>, <script>, async, defer, body-এর শেষে script কখন কী করে, timeline animation-এ বাংলায়।">
+<!-- Theme is applied before first paint so the page never flashes the wrong colours.
+     This tiny inline script is a deliberate example of a blocking <head> script (see section 4).
+     It sits above every <link rel="stylesheet"> so it never waits for CSS to download. -->
+<script>try{var t=localStorage.getItem("welldev-theme");if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.15.0/gsap.min.js" defer></script>
+<style>
+/* Two animations: the rendering pipeline (URL → pixels) and a loading timeline that shows exactly
+   when the parser pauses for <link>/<script>, when the DOM is ready and when the page first paints. */
+:root{
+  --bg:#f5f7fc; --surface:#ffffff; --surface-2:#f1f4fa; --fg:#0f172a; --muted:#5b6478; --faint:#94a0b8; --line:#e4e8f1;
+  --accent:#6366f1; --stage:#eef2fb;
+  --blue:#2563eb; --cyan:#0891b2; --violet:#7c3aed; --pink:#db2777; --green:#059669; --amber:#d97706; --red:#e11d48; --slate:#475569;
+  --hero:linear-gradient(135deg,#4f46e5 0%,#7c3aed 45%,#db2777 100%);
+  --shadow:0 1px 2px rgba(15,23,42,.04),0 10px 30px -12px rgba(15,23,42,.14);
+  --shadow-lg:0 2px 4px rgba(15,23,42,.05),0 24px 48px -20px rgba(30,41,99,.3);
+  --code-bg:#ffffff; --code-line:#e6e9f1; --t-kw:#0000ff; --t-str:#a31515; --t-attr:#e50000; --t-tag:#800000; --t-com:#008000; --t-fn:#795e26;
+  --sans:"Inter","Hind Siliguri",system-ui,sans-serif; --bn:"Hind Siliguri","Inter",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0b0f1a; --surface:#121827; --surface-2:#182033; --fg:#e7ecf6; --muted:#9aa6bf; --faint:#66728c; --line:#232c42; --accent:#818cf8; --stage:#0f1524;
+  --blue:#60a5fa; --cyan:#22d3ee; --violet:#a78bfa; --pink:#f472b6; --green:#34d399; --amber:#fbbf24; --red:#fb7185; --slate:#94a3b8;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6); --shadow-lg:0 24px 48px -20px rgba(0,0,0,.75);
+  --code-bg:#1e1e1e; --code-line:#2d2d30; --t-kw:#569cd6; --t-str:#ce9178; --t-attr:#9cdcfe; --t-tag:#569cd6; --t-com:#6a9955; --t-fn:#dcdcaa;
+}}
+:root[data-theme="dark"]{
+  --bg:#0b0f1a; --surface:#121827; --surface-2:#182033; --fg:#e7ecf6; --muted:#9aa6bf; --faint:#66728c; --line:#232c42; --accent:#818cf8; --stage:#0f1524;
+  --blue:#60a5fa; --cyan:#22d3ee; --violet:#a78bfa; --pink:#f472b6; --green:#34d399; --amber:#fbbf24; --red:#fb7185; --slate:#94a3b8;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6); --shadow-lg:0 24px 48px -20px rgba(0,0,0,.75);
+  --code-bg:#1e1e1e; --code-line:#2d2d30; --t-kw:#569cd6; --t-str:#ce9178; --t-attr:#9cdcfe; --t-tag:#569cd6; --t-com:#6a9955; --t-fn:#dcdcaa;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 var(--bn);-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto 0;height:460px;z-index:-1;pointer-events:none;
+  background:radial-gradient(620px 260px at 25% -40px,color-mix(in srgb,#6366f1 15%,transparent),transparent 70%),
+             radial-gradient(540px 240px at 90% -60px,color-mix(in srgb,#ec4899 12%,transparent),transparent 70%)}
+a{color:var(--accent)}
+button,select,input{font:inherit;color:inherit}
+code{font-family:var(--mono);font-size:.85em;font-weight:500;background:color-mix(in srgb,var(--accent) 10%,var(--surface));color:color-mix(in srgb,var(--accent) 72%,var(--fg));padding:.1em .4em;border-radius:6px}
+.wrap{max-width:1300px;margin:0 auto;padding:20px 18px 70px;display:grid;gap:26px}
+
+/* top + hero */
+.topnav{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.topnav .brand{display:flex;align-items:center;gap:10px;color:var(--fg);text-decoration:none;font:800 16px var(--sans);letter-spacing:-.02em}
+.topnav .logo{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:#fff;font:800 13px var(--mono);background:var(--hero);box-shadow:0 6px 16px -6px #8b5cf6}
+.topnav .sp{flex:1}
+.pill{white-space:nowrap;border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:6px 14px;font:600 13px var(--sans);cursor:pointer;text-decoration:none;box-shadow:var(--shadow)}
+.pill:hover{color:var(--fg)}
+.hero{border-radius:24px;padding:34px 38px;color:#fff;background:var(--hero);box-shadow:var(--shadow-lg);position:relative;overflow:hidden}
+.hero::after{content:"";position:absolute;right:-70px;top:-90px;width:340px;height:340px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.22),transparent 65%);pointer-events:none}
+.eyebrow{display:inline-block;font:600 12px var(--sans);letter-spacing:.08em;text-transform:uppercase;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.26);padding:3px 11px;border-radius:999px}
+.hero h1{margin:12px 0 10px;font:800 clamp(28px,4.4vw,46px)/1.12 var(--sans);letter-spacing:-.03em;max-width:880px}
+.hero p{margin:0;max-width:880px;font-size:17px;opacity:.94}
+.hero b{color:#fde68a}
+.jump{display:flex;flex-wrap:wrap;gap:8px;margin-top:20px;position:relative;z-index:1}
+.jump a{display:inline-flex;align-items:center;gap:8px;text-decoration:none;color:#fff;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.28);border-radius:999px;padding:5px 14px 5px 6px;font:600 13.5px var(--bn)}
+.jump a span{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:#fff;color:#6d28d9;font:700 11px var(--mono)}
+
+/* section heads */
+.sect-h{display:flex;align-items:center;gap:10px;margin:0;font:800 clamp(22px,3vw,29px)/1.2 var(--sans);letter-spacing:-.025em}
+.sect-h::before{content:"";flex:none;width:12px;height:28px;border-radius:4px;background:linear-gradient(180deg,#6366f1,#ec4899)}
+.sect-h .n{font:800 13px var(--mono);color:#fff;background:var(--hero);border-radius:8px;padding:3px 8px}
+.sect-p{margin:6px 0 0;color:var(--muted);max-width:940px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);min-width:0}
+
+/* ---------------- pipeline animation ---------------- */
+.bench{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:1050px){.bench{grid-template-columns:minmax(0,1fr)}}
+.stage{padding:12px;display:grid;gap:12px}
+.scene{border-radius:14px;background:var(--stage);overflow:hidden}
+.scene svg{display:block;width:100%;height:auto;font-family:var(--sans)}
+.lane-bg{fill:color-mix(in srgb,var(--surface) 55%,transparent);stroke:var(--line);stroke-width:1;stroke-dasharray:5 5}
+.lane-t{fill:var(--faint);font:700 10px var(--mono);letter-spacing:.12em}
+.lk{fill:none;stroke:color-mix(in srgb,var(--fg) 10%,transparent);stroke-width:1.6;stroke-linejoin:round;transition:stroke .3s,stroke-width .3s}
+.lk.on{stroke:var(--accent);stroke-width:3;stroke-dasharray:9 6;animation:dash 1s linear infinite}
+@keyframes dash{to{stroke-dashoffset:-15}}
+.nd .bx{fill:var(--surface);stroke:color-mix(in srgb,var(--c) 40%,var(--line));stroke-width:1.5;transition:fill .3s,stroke .3s,stroke-width .3s}
+.nd .dot{fill:var(--c)}
+.nd .tt{fill:var(--fg);font:700 14px var(--sans)}
+.nd .st{fill:var(--muted);font:500 11px var(--mono)}
+.nd.on .bx{fill:color-mix(in srgb,var(--c) 12%,var(--surface));stroke:var(--c);stroke-width:2.5}
+.scene.focus .nd:not(.on){opacity:.42}
+.nd{transition:opacity .3s}
+.pkt rect{filter:drop-shadow(0 4px 6px rgba(15,23,42,.2))}
+.pkt text{fill:#fff;font:700 11.5px var(--mono);text-anchor:middle;dominant-baseline:central}
+.controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.controls button,.controls select{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:9px 14px;font:600 14px var(--sans);cursor:pointer;box-shadow:0 1px 2px rgba(15,23,42,.05)}
+.controls button:hover,.controls select:hover{border-color:var(--accent)}
+.controls button.primary{border:0;color:#fff;background:linear-gradient(135deg,#6366f1,#8b5cf6 55%,#ec4899);min-width:104px;box-shadow:0 8px 18px -10px #8b5cf6}
+.controls .sp{flex:1}
+.controls .field{display:inline-flex;align-items:center;gap:8px;max-width:100%}
+.controls label{font-size:14px;color:var(--muted)}
+.controls select{font-weight:500;max-width:100%}
+.scrub{display:flex;align-items:center;gap:10px}
+.scrub input{flex:1;min-width:0;accent-color:#8b5cf6}
+.scrub span{font:500 13px var(--mono);color:var(--muted);white-space:nowrap}
+.info{padding:20px;display:grid;gap:12px;position:sticky;top:14px;border-top:4px solid var(--accent)}
+@media (max-width:1050px){.info{position:static}}
+.badge-row{display:flex;align-items:center;gap:12px}
+.lbadge{flex:none;width:46px;height:46px;border-radius:13px;display:grid;place-items:center;color:#fff;font:800 14px var(--mono);background:var(--accent)}
+.info h2{margin:0;font:800 20px/1.25 var(--sans);letter-spacing:-.02em}
+.info .dir{margin:2px 0 0;font-size:13.5px;color:var(--muted)}
+.info p{margin:0}
+.why{padding:10px 14px;border-left:4px solid var(--amber);border-radius:0 10px 10px 0;background:color-mix(in srgb,var(--amber) 8%,var(--surface));font-size:15px}
+.why b{color:var(--amber)}
+pre.code{margin:0;padding:12px 14px;border-radius:12px;background:var(--code-bg);border:1px solid var(--code-line);font:12.5px/1.65 var(--mono);white-space:pre-wrap;word-break:break-word;font-variant-ligatures:none}
+.mini-screen{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--surface)}
+.mini-bar{height:26px;display:flex;align-items:center;gap:5px;padding:0 10px;background:var(--surface-2);border-bottom:1px solid var(--line);font:600 11px var(--mono);color:var(--muted)}
+.mini-bar i{width:8px;height:8px;border-radius:50%;background:#ff5f57}.mini-bar i:nth-child(2){background:#febc2e}.mini-bar i:nth-child(3){background:#28c840;margin-right:6px}
+.mini-page{height:150px;padding:14px;display:grid;gap:8px;align-content:start;position:relative}
+.mini-page .ph{border-radius:6px;background:transparent;border:1.5px dashed transparent;transition:all .4s}
+.mini-page .ph.h{height:16px;width:55%}.mini-page .ph.i{height:56px}.mini-page .ph.t{height:8px;width:85%}
+.mini-page.lay .ph{border-color:color-mix(in srgb,var(--violet) 45%,transparent)}
+.mini-page.paint .ph{border-color:transparent}
+.mini-page.paint .ph.h{background:var(--fg)}.mini-page.paint .ph.i{background:linear-gradient(135deg,#6366f1,#8b5cf6,#ec4899)}.mini-page.paint .ph.t{background:color-mix(in srgb,var(--fg) 25%,transparent)}
+.mini-page .empty{position:absolute;inset:0;display:grid;place-items:center;color:var(--faint);font-size:13.5px}
+
+/* ---------------- loading timeline ---------------- */
+.tl-card{padding:16px;display:grid;gap:14px}
+.tl-grid{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:16px}
+@media (max-width:1050px){.tl-grid{grid-template-columns:minmax(0,1fr)}}
+.panel-h{margin:0 0 8px;font:800 15px var(--sans);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.chip{font:600 11px var(--mono);padding:2px 9px;border-radius:999px;color:#fff;background:var(--slate)}
+.chip.run{background:var(--violet)} .chip.stop{background:var(--red)} .chip.done{background:var(--green)}
+.src{margin:0;border-radius:12px;background:var(--code-bg);border:1px solid var(--code-line);font:12.5px/1.75 var(--mono);padding:8px 0;overflow-x:auto;font-variant-ligatures:none}
+.src .ln{display:block;padding:0 14px 0 0;white-space:pre;border-left:3px solid transparent;transition:background .2s}
+.src .ln::before{content:attr(data-n);display:inline-block;width:38px;padding-right:12px;text-align:right;color:var(--faint);user-select:none}
+.src .ln.done{opacity:1}.src .ln.todo{opacity:.45}
+.src .ln.cur{background:color-mix(in srgb,var(--violet) 14%,transparent);border-left-color:var(--violet)}
+.src .ln.blk{background:color-mix(in srgb,var(--red) 14%,transparent);border-left-color:var(--red)}
+.src .ln.focus{background:color-mix(in srgb,var(--amber) 16%,transparent);border-left-color:var(--amber)}
+.src .tg{color:var(--t-tag)} .src .at{color:var(--t-attr)} .src .sv{color:var(--t-str)} .src .cm{color:var(--t-com);font-style:italic}
+.side{display:grid;gap:12px;align-content:start}
+.screen2 .mini-page{height:190px}
+.screen2 .el{opacity:0;transform:translateY(4px);transition:opacity .35s,transform .35s}
+.screen2 .el.show{opacity:1;transform:none}
+.screen2 .h1{font:800 16px var(--bn);color:var(--fg)}
+.screen2 .img{height:62px;border-radius:8px;background:repeating-linear-gradient(45deg,var(--surface-2),var(--surface-2) 8px,var(--line) 8px,var(--line) 16px);display:grid;place-items:center;font:600 11px var(--mono);color:var(--muted)}
+.screen2 .img.loaded{background:linear-gradient(135deg,#6366f1,#8b5cf6,#ec4899);color:#fff}
+.screen2 .btn{justify-self:start;padding:5px 14px;border-radius:8px;background:var(--surface-2);border:1px solid var(--line);font:600 13px var(--bn);color:var(--muted)}
+.screen2 .btn.live{background:var(--green);border-color:var(--green);color:#fff}
+.screen2 .txt{height:8px;border-radius:5px;background:color-mix(in srgb,var(--fg) 20%,transparent);width:80%}
+.console{margin:0;min-height:96px;border-radius:12px;background:#1e1e1e;color:#d4d4d4;font:12px/1.7 var(--mono);padding:10px 12px;white-space:pre-wrap;word-break:break-word;font-variant-ligatures:none}
+.console .er{color:#f87171}.console .ok{color:#4ade80}.console .dim{color:#8b949e}
+.chart svg{display:block;width:100%;height:auto}
+.ax{stroke:var(--line);stroke-width:1}
+.ax-t{fill:var(--faint);font:500 10.5px var(--mono);text-anchor:middle}
+.lab{fill:var(--fg);font:600 12.5px var(--bn)}
+.track{fill:var(--surface-2)}
+.seg{rx:5}
+.seg.parse{fill:var(--violet)} .seg.block{fill:url(#hatch)} .seg.css{fill:var(--cyan)} .seg.dl{fill:var(--amber)} .seg.run{fill:var(--red)} .seg.img{fill:var(--green)}
+.mk line{stroke-width:2;stroke-dasharray:5 4}
+.mk text{font:700 11px var(--sans)}
+.mk.fp line{stroke:var(--pink)} .mk.fp text{fill:var(--pink)}
+.mk.dcl line{stroke:var(--blue)} .mk.dcl text{fill:var(--blue)}
+.mk.load line{stroke:var(--slate)} .mk.load text{fill:var(--slate)}
+.now{stroke:var(--fg);stroke-width:1.5}
+.verdict{border-radius:14px;padding:12px 16px;border:1px solid var(--line);background:var(--surface-2);font-size:15.5px}
+.verdict.good{border-color:color-mix(in srgb,var(--green) 40%,var(--line));background:color-mix(in srgb,var(--green) 8%,var(--surface))}
+.verdict.bad{border-color:color-mix(in srgb,var(--red) 40%,var(--line));background:color-mix(in srgb,var(--red) 7%,var(--surface))}
+.verdict.warn{border-color:color-mix(in srgb,var(--amber) 45%,var(--line));background:color-mix(in srgb,var(--amber) 9%,var(--surface))}
+.verdict b.t{display:block;font:800 16px var(--sans);margin-bottom:2px}
+.events{margin:0;padding:0;list-style:none;display:grid;gap:4px;font-size:14px}
+.events li{display:grid;grid-template-columns:62px 1fr;gap:10px;opacity:.28;transition:opacity .3s}
+.events li.seen{opacity:1}
+.events li b{font:700 12px var(--mono);color:var(--muted);text-align:right}
+
+/* ---------------- explanation ---------------- */
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+@media (max-width:900px){.grid2,.grid3{grid-template-columns:minmax(0,1fr)}}
+.box{background:var(--surface);border:1px solid var(--line);border-top:4px solid var(--c,var(--accent));border-radius:16px;padding:16px 18px;box-shadow:var(--shadow)}
+.box h3{margin:0 0 6px;font:800 17px var(--sans);letter-spacing:-.015em}
+.box p{margin:0 0 8px;font-size:15.5px}
+.box p:last-child{margin:0}
+.box ul{margin:4px 0 0;padding-left:20px;font-size:15.5px}
+.box li{margin:3px 0}
+.box li::marker{color:var(--c,var(--accent))}
+.ex{margin:8px 0;padding:10px 12px;border-radius:10px;background:var(--code-bg);border:1px solid var(--code-line);font:12.5px/1.65 var(--mono);white-space:pre-wrap;word-break:break-word;font-variant-ligatures:none}
+.ex .tg{color:var(--t-tag)} .ex .at{color:var(--t-attr)} .ex .sv{color:var(--t-str)} .ex .cm{color:var(--t-com);font-style:italic} .ex .kw{color:var(--t-kw)} .ex .fn{color:var(--t-fn)}
+.tscroll{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow)}
+table{border-collapse:collapse;width:100%;min-width:760px;font-size:14.5px}
+th,td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font:600 12px var(--sans);text-transform:uppercase;letter-spacing:.05em;background:color-mix(in srgb,var(--accent) 8%,var(--surface));color:color-mix(in srgb,var(--accent) 72%,var(--fg));white-space:nowrap}
+tbody tr:nth-child(even) td{background:color-mix(in srgb,var(--accent) 3%,transparent)}
+tr:last-child td{border-bottom:0}
+td .y{color:var(--green);font-weight:700} td .n{color:var(--red);font-weight:700} td .m{color:var(--amber);font-weight:700}
+.decide{display:grid;gap:10px}
+.dq{display:grid;grid-template-columns:minmax(0,1.1fr) auto minmax(0,1fr);gap:12px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 16px;box-shadow:var(--shadow)}
+.dq .q{font-size:15.5px}
+.dq .ar{color:var(--faint);font-weight:800}
+.dq .a{font:600 14px var(--mono);color:var(--fg)}
+.dq .a small{display:block;font:400 13.5px var(--bn);color:var(--muted)}
+@media (max-width:700px){.dq{grid-template-columns:1fr}.dq .ar{display:none}}
+.crp{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px}
+.crp div{padding:12px 8px;border:1px solid var(--line);border-radius:12px;background:var(--surface);text-align:center;box-shadow:var(--shadow)}
+.crp b{display:block;font:800 11px var(--mono);color:var(--accent)}
+.crp strong{display:block;margin:4px 0 2px;font:700 13.5px var(--sans)}
+.crp span{display:block;color:var(--muted);font-size:12px;line-height:1.4}
+@media (max-width:900px){.crp{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media (max-width:560px){.crp{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.oneline{border-radius:18px;padding:20px 22px;color:#fff;background:var(--hero);box-shadow:var(--shadow-lg)}
+.oneline b{color:#fde68a}
+.oneline .f{margin-top:10px;padding:10px 12px;border-radius:10px;background:rgba(255,255,255,.14);font:600 12.5px/1.8 var(--mono)}
+.dep{display:grid;gap:10px}
+.dep .row{display:grid;grid-template-columns:200px minmax(0,1fr);gap:14px;align-items:center;background:var(--surface);border:1px solid var(--line);border-left:5px solid var(--c);border-radius:14px;padding:12px 16px;box-shadow:var(--shadow)}
+.dep .who{font:700 13.5px var(--mono);color:var(--c)}
+.dep .who small{display:block;font:500 12.5px var(--bn);color:var(--muted)}
+.dep .flow{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.dep .k{padding:3px 10px;border-radius:999px;font-size:13.5px;background:color-mix(in srgb,var(--c) 10%,var(--surface));border:1px solid color-mix(in srgb,var(--c) 30%,var(--line))}
+.dep .k.res{background:var(--c);border-color:var(--c);color:#fff;font-weight:700}
+.dep .op{color:var(--faint);font-weight:800}
+@media (max-width:700px){.dep .row{grid-template-columns:1fr}}
+.rule{border-radius:16px;padding:16px 20px;border:1px solid color-mix(in srgb,var(--accent) 35%,var(--line));background:color-mix(in srgb,var(--accent) 7%,var(--surface));font-size:16px}
+.rule b.t{display:block;font:800 17px var(--sans);margin-bottom:4px;color:color-mix(in srgb,var(--accent) 80%,var(--fg))}
+footer{color:var(--faint);font-size:13px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;border-top:1px solid var(--line);padding-top:16px}
+@media (max-width:700px){.scene{overflow-x:auto}.scene svg{min-width:720px}.chart{overflow-x:auto}.chart svg{min-width:640px}}
+@media (max-width:640px){.hero{padding:24px 20px;border-radius:20px}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="topnav">
+    <a class="brand" href="../../index.html"><span class="logo">W</span>WellDev</a>
+    <span class="sp"></span>
+    <a class="pill" href="../web-server/index.html">Web Server ডেমো</a>
+    <a class="pill" href="../../index.html">⌂ সব গাইড</a>
+    <button class="pill" id="themeToggle" type="button">Theme</button>
+  </nav>
+
+  <header class="hero">
+    <span class="eyebrow">Browser internals · Rendering · GSAP demo</span>
+    <h1>URL থেকে Pixel: Browser কীভাবে একটা Page বানায়</h1>
+    <p>Server থেকে আসে শুধু লেখা — <b>HTML</b>, <b>CSS</b>, <b>JavaScript</b>। Browser সেগুলো পড়ে DOM আর CSSOM বানায়, হিসাব করে কোথায় কী বসবে, তারপর আঁকে। এই পথে <code style="color:#fff;background:rgba(255,255,255,.18)">&lt;link&gt;</code> আর <code style="color:#fff;background:rgba(255,255,255,.18)">&lt;script&gt;</code> কোথায় আর কীভাবে রাখলেন, তার উপর নির্ভর করে page কত তাড়াতাড়ি দেখা যাবে — আর আপনার JavaScript element খুঁজে পাবে কি না।</p>
+    <div class="jump">
+      <a href="#pipeline"><span>১</span>URL → Pixel</a>
+      <a href="#loading"><span>২</span>Script/CSS timeline</a>
+      <a href="#link"><span>৩</span>&lt;link&gt; কীভাবে কাজ করে</a>
+      <a href="#script"><span>৪</span>async · defer · body</a>
+      <a href="#choose"><span>৫</span>কখন কোনটা</a>
+      <a href="#note"><span>৬</span>নোট: কে কখন চলে</a>
+    </div>
+  </header>
+
+  <!-- ============ 1. pipeline ============ -->
+  <section id="pipeline" style="display:grid;gap:14px">
+    <div><h2 class="sect-h"><span class="n">১</span>URL থেকে Pixel — ধাপে ধাপে</h2>
+      <p class="sect-p">প্রতিটা ধাপে packet এক বক্স থেকে আরেক বক্সে যায়। পরে / Play চাপুন, অথবা slider টানুন। চলতি পথটা রঙিন হয়, বাকিগুলো হালকা থাকে।</p></div>
+    <div class="bench">
+      <section class="card stage" aria-label="Rendering pipeline animation">
+        <div class="scene" id="pScene"><svg id="pSvg" viewBox="0 0 1000 480" role="img" aria-label="URL থেকে screen পর্যন্ত browser-এর rendering pipeline"></svg></div>
+        <div class="scrub"><input type="range" id="pRange" min="0" max="10" value="0" aria-label="ধাপ"><span id="pNo">ধাপ 0 / 10</span></div>
+        <div class="controls">
+          <button type="button" id="pPrev">◀ আগে</button>
+          <button type="button" id="pPlay" class="primary">▶ Play</button>
+          <button type="button" id="pNext">পরে ▶</button>
+          <button type="button" id="pReplay">↻ আবার দেখুন</button>
+          <button type="button" id="pReset">↺ শুরু</button>
+        </div>
+      </section>
+      <aside class="card info" aria-live="polite">
+        <div class="badge-row"><div class="lbadge" id="pBadge">0</div><div><h2 id="pTitle"></h2><p class="dir" id="pPhase"></p></div></div>
+        <p id="pText"></p>
+        <div class="why" id="pWhy"></div>
+        <pre class="code" id="pCode"></pre>
+        <div class="mini-screen"><div class="mini-bar"><i></i><i></i><i></i>screen</div>
+          <div class="mini-page" id="pScreen"><div class="ph h"></div><div class="ph i"></div><div class="ph t"></div><div class="ph t" style="width:70%"></div><div class="empty" id="pEmpty">এখনো screen-এ কিছু আঁকা হয়নি</div></div></div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ============ 2. loading timeline ============ -->
+  <section id="loading" style="display:grid;gap:14px">
+    <div><h2 class="sect-h"><span class="n">২</span>Script আর CSS কোথায় রাখলে কী হয় — timeline</h2>
+      <p class="sect-p">একই page, শুধু <code>&lt;script&gt;</code>-এর জায়গা আর attribute বদলে। দেখুন parser কখন থামে (লাল দাগ), screen কখন প্রথম আঁকে, <code>DOMContentLoaded</code> কখন হয় — আর <code>app.js</code> যখন <code>#buyBtn</code> খোঁজে, তখন সেটা DOM-এ আছে কি না। সময়গুলো বোঝানোর জন্য বানানো উদাহরণ (ms), ধীর করে দেখানো।</p></div>
+    <section class="card tl-card">
+      <div class="controls">
+        <span class="field"><label for="mode">Script কোথায়?</label>
+        <select id="mode">
+          <option value="normal">১. head · সাধারণ &lt;script&gt;</option>
+          <option value="asyncFast">২. head · async (file আগেই cache-এ, দ্রুত)</option>
+          <option value="asyncSlow">৩. head · async (ধীর network)</option>
+          <option value="defer" selected>৪. head · defer ✓</option>
+          <option value="body">৫. &lt;body&gt;-এর শেষে</option>
+        </select></span>
+        <span class="sp"></span>
+        <button type="button" id="tPlay" class="primary">▶ চালান</button>
+        <button type="button" id="tReset">↺ শুরু</button>
+      </div>
+      <div class="scrub"><input type="range" id="tRange" min="0" max="1000" value="0" aria-label="সময়"><span id="tNow">0 ms</span></div>
+      <div class="chart"><svg id="tSvg" viewBox="0 0 900 300" role="img" aria-label="HTML parsing, download আর execute-এর timeline"></svg></div>
+      <div class="verdict" id="verdict"></div>
+      <div class="tl-grid">
+        <div>
+          <h3 class="panel-h">HTML — parser এখন কোথায়? <span class="chip" id="parserChip">শুরু হয়নি</span></h3>
+          <pre class="src" id="src"></pre>
+          <h3 class="panel-h" style="margin-top:12px">app.js-এর ভেতরে</h3>
+          <pre class="ex" style="margin:0"><span class="kw">const</span> btn = document.<span class="fn">querySelector</span>(<span class="sv">"#buyBtn"</span>);
+btn.<span class="fn">addEventListener</span>(<span class="sv">"click"</span>, buy);   <span class="cm">// button-এ click কাজ করাবে</span></pre>
+        </div>
+        <div class="side">
+          <div class="mini-screen screen2"><div class="mini-bar"><i></i><i></i><i></i>shop.com</div>
+            <div class="mini-page" id="tScreen">
+              <div class="el h1" data-l="7">আমার দোকান</div>
+              <div class="el img" data-l="8" id="tImg">photo.webp</div>
+              <div class="el btn" data-l="9" id="tBtn">কিনুন</div>
+              <div class="el txt" data-l="10"></div>
+              <div class="empty" id="tEmpty">সাদা screen — এখনো কিছু আঁকা হয়নি</div>
+            </div></div>
+          <div><h3 class="panel-h">Console</h3><pre class="console" id="tConsole"></pre></div>
+          <div><h3 class="panel-h">কী কখন হলো</h3><ul class="events" id="tEvents"></ul></div>
+        </div>
+      </div>
+    </section>
+  </section>
+
+  <!-- ============ 3. link ============ -->
+  <section id="link" style="display:grid;gap:14px">
+    <div><h2 class="sect-h"><span class="n">৩</span><code style="font-size:.8em">&lt;head&gt;</code>-এর <code style="font-size:.8em">&lt;link&gt;</code> কীভাবে কাজ করে</h2>
+      <p class="sect-p">Browser HTML উপর থেকে নিচে পড়ে আর পড়তে পড়তে DOM নামের গাছ বানায় (একে বলে <b>parsing</b>)। <code>&lt;link rel="stylesheet"&gt;</code> পেলে কী হয়, আর CSS কেন head-এ রাখা হয়:</p></div>
+    <div class="grid2">
+      <div class="box" style="--c:var(--cyan)"><h3>১. Download শুরু, কিন্তু parsing থামে না</h3>
+        <pre class="ex"><span class="tg">&lt;link</span> <span class="at">rel</span>=<span class="sv">"stylesheet"</span> <span class="at">href</span>=<span class="sv">"style.css"</span><span class="tg">&gt;</span></pre>
+        <p>Browser সাথে সাথে <code>style.css</code> চেয়ে পাঠায় আর HTML পড়া চালিয়ে যায়। DOM তৈরি হতে থাকে।</p></div>
+      <div class="box" style="--c:var(--pink)"><h3>২. কিন্তু CSS না আসা পর্যন্ত কিছু আঁকে না</h3>
+        <p>CSS ছাড়া আঁকলে প্রথমে style-ছাড়া এলোমেলো page দেখা যেত, তারপর হঠাৎ বদলে যেত (একে বলে <b>FOUC</b> — flash of unstyled content)। তাই browser CSSOM তৈরি না হওয়া পর্যন্ত screen আঁকে না। একে বলে <b>render-blocking</b>।</p></div>
+      <div class="box" style="--c:var(--amber)"><h3>৩. পরের সাধারণ script-কেও আটকায়</h3>
+        <pre class="ex"><span class="tg">&lt;link</span> <span class="at">rel</span>=<span class="sv">"stylesheet"</span> <span class="at">href</span>=<span class="sv">"style.css"</span><span class="tg">&gt;</span>
+<span class="tg">&lt;script&gt;</span>getComputedStyle(el).color<span class="tg">&lt;/script&gt;</span></pre>
+        <p>Script element-এর রং বা মাপ জানতে চাইতে পারে, তাই CSS শেষ না হলে তার পরের সাধারণ (বা inline) script চলে না। <code>async</code> script এই অপেক্ষা করে না।</p></div>
+      <div class="box" style="--c:var(--green)"><h3>৪. তাই CSS থাকে <code>&lt;head&gt;</code>-এ</h3>
+        <p>যত আগে browser CSS-এর খোঁজ পায়, তত আগে download শুরু, তত আগে প্রথম paint। Body-র মাঝখানে <code>&lt;link&gt;</code> রাখলে দেরিতে খোঁজ পায়, আর তার উপরের অংশ style ছাড়া দেখা যেতে পারে।</p></div>
+    </div>
+    <div class="box" style="--c:var(--violet)"><h3>&lt;head&gt;-এ আরও যেসব <code>&lt;link&gt;</code> কাজে লাগে</h3>
+      <pre class="ex"><span class="tg">&lt;link</span> <span class="at">rel</span>=<span class="sv">"preconnect"</span> <span class="at">href</span>=<span class="sv">"https://fonts.gstatic.com"</span> <span class="at">crossorigin</span><span class="tg">&gt;</span>   <span class="cm">&lt;!-- আগেভাগে DNS + TCP + TLS সেরে রাখো --&gt;</span>
+<span class="tg">&lt;link</span> <span class="at">rel</span>=<span class="sv">"preload"</span> <span class="at">as</span>=<span class="sv">"image"</span> <span class="at">href</span>=<span class="sv">"hero.webp"</span><span class="tg">&gt;</span>                 <span class="cm">&lt;!-- এই ফাইলটা জরুরি, এখনই নামাও --&gt;</span>
+<span class="tg">&lt;link</span> <span class="at">rel</span>=<span class="sv">"stylesheet"</span> <span class="at">href</span>=<span class="sv">"print.css"</span> <span class="at">media</span>=<span class="sv">"print"</span><span class="tg">&gt;</span>       <span class="cm">&lt;!-- শুধু print-এ লাগে → render আটকায় না --&gt;</span>
+<span class="tg">&lt;link</span> <span class="at">rel</span>=<span class="sv">"icon"</span> <span class="at">href</span>=<span class="sv">"favicon.png"</span><span class="tg">&gt;</span>                         <span class="cm">&lt;!-- tab-এর ছোট আইকন --&gt;</span></pre>
+      <p>এই page-এর head-এও Google Fonts-এর জন্য <code>preconnect</code> আছে।</p></div>
+    <div class="grid2">
+      <div class="box" style="--c:var(--green)"><h3>ছবি (<code>&lt;img&gt;</code>) parsing থামায় না</h3>
+        <ul><li>Download শুরু হয়, parser পরের লাইনে চলে যায়; ছবি নামলে নিজের জায়গায় বসে।</li>
+          <li><code>width</code> আর <code>height</code> দিন — না দিলে ছবি আসার পর নিচের লেখা লাফিয়ে সরে (<b>layout shift</b>)।</li>
+          <li>স্ক্রিনের নিচের ছবিতে <code>loading="lazy"</code>; কিন্তু প্রথম স্ক্রিনের বড় ছবিতে না।</li>
+          <li>ছবি <code>&lt;head&gt;</code>-এ থাকে না — head-এ শুধু <code>preload</code> বা favicon-এর <code>&lt;link&gt;</code>।</li></ul></div>
+      <div class="box" style="--c:var(--blue)"><h3>Preload scanner — লুকানো সাহায্যকারী</h3>
+        <p>Parser কোনো script-এর জন্য থেমে থাকলেও browser-এর একটা ছোট অংশ সামনের HTML-এ চোখ বুলিয়ে <code>&lt;img&gt;</code>, <code>&lt;link&gt;</code>, <code>&lt;script src&gt;</code> খুঁজে আগেভাগে download শুরু করে দেয়।</p>
+        <p>তাই blocking script থাকলেও ছবি সাধারণত দেরিতে <b>নামে</b> না — দেরি হয় <b>দেখানোয়</b>। উপরের timeline-এর ১ নম্বর mode-এ দেখুন, parser থেমে থাকার সময়েই photo.webp নামা শুরু হয়েছে।</p></div>
+    </div>
+  </section>
+
+  <!-- ============ 4. script ============ -->
+  <section id="script" style="display:grid;gap:14px">
+    <div><h2 class="sect-h"><span class="n">৪</span><code style="font-size:.8em">&lt;script&gt;</code>: সাধারণ, async, defer আর body-এর শেষে</h2>
+      <p class="sect-p">সাধারণ <code>&lt;script&gt;</code> পেলে parser পুরো থেমে যায় — কারণ script <code>document.write()</code> দিয়ে HTML-এই কিছু লিখে দিতে পারে, তাই browser আগে দেখে নেয় script কী করে।</p></div>
+    <div class="tscroll"><table>
+      <thead><tr><th>লেখা</th><th>Download-এর সময় parsing থামে?</th><th>কখন চলে</th><th>ক্রম ঠিক থাকে?</th><th>পুরো DOM পায়?</th><th>DOMContentLoaded আটকায়?</th></tr></thead>
+      <tbody>
+        <tr><td><code>&lt;script src&gt;</code> (head)</td><td><span class="n">হ্যাঁ</span></td><td>সাথে সাথে (আগের CSS শেষ হলে)</td><td><span class="y">হ্যাঁ</span></td><td><span class="n">না</span> — নিচের element নেই</td><td><span class="n">হ্যাঁ</span></td></tr>
+        <tr><td><code>async</code></td><td><span class="y">না</span></td><td>download শেষ হলেই — parsing-এর মাঝখানেও</td><td><span class="n">না</span> — যেটা আগে নামে</td><td><span class="m">কখনো হ্যাঁ, কখনো না</span></td><td><span class="y">না</span></td></tr>
+        <tr><td><code>defer</code></td><td><span class="y">না</span></td><td>পুরো HTML পড়া শেষে, DOMContentLoaded-এর ঠিক আগে</td><td><span class="y">হ্যাঁ</span>, লেখার ক্রমে</td><td><span class="y">হ্যাঁ</span></td><td>অপেক্ষা করায়, কিন্তু parsing থামায় না</td></tr>
+        <tr><td><code>type="module"</code></td><td><span class="y">না</span></td><td>defer-এর মতোই</td><td><span class="y">হ্যাঁ</span></td><td><span class="y">হ্যাঁ</span></td><td>defer-এর মতো</td></tr>
+        <tr><td><code>&lt;script src&gt;</code> (body-এর শেষে)</td><td><span class="n">হ্যাঁ</span>, কিন্তু একদম শেষে</td><td>parser ওখানে পৌঁছালে</td><td><span class="y">হ্যাঁ</span></td><td><span class="y">হ্যাঁ</span> (উপরের সব)</td><td><span class="n">হ্যাঁ</span></td></tr>
+        <tr><td>inline <code>&lt;script&gt;…&lt;/script&gt;</code></td><td>download নেই, সাথে সাথে চলে</td><td>parser যেখানে পায় সেখানেই</td><td><span class="y">হ্যাঁ</span></td><td>শুধু উপরেরগুলো</td><td>খুব অল্প</td></tr>
+      </tbody>
+    </table></div>
+
+    <div class="grid2">
+      <div class="box" style="--c:var(--red)"><h3>async দিলে DOM-এর কাজ ভাঙতে পারে — হ্যাঁ</h3>
+        <p><code>async</code> script কখন চলবে সেটা ঠিক করে <b>download কখন শেষ হলো</b> — HTML কতটুকু পড়া হয়েছে তা না।</p>
+        <ul><li><b>File দ্রুত এলে</b> (cache থেকে): button তখনো parse হয়নি → <code>querySelector</code> দেয় <code>null</code> → error। (timeline-এর mode ২)</li>
+          <li><b>File ধীরে এলে</b>: ততক্ষণে সব পড়া শেষ → কাজ করে। (mode ৩)</li>
+          <li>সবচেয়ে বিপদের দিক — <b>কখনো চলে, কখনো চলে না</b>। আপনার দ্রুত internet-এ bug দেখাই যায় না, অন্যের কাছে ভাঙে।</li>
+          <li>দুটো async-এ ক্রম নেই: ছোট <code>app.js</code> আগে নামলে <code>gsap is not defined</code>।</li></ul></div>
+      <div class="box" style="--c:var(--green)"><h3>সমাধান</h3>
+        <p><b>১. সবচেয়ে সহজ:</b> async-এর বদলে <code>defer</code>।</p>
+        <p><b>২. async রাখতেই হলে</b> script-এর ভেতরে DOM-এর জন্য অপেক্ষা করুন:</p>
+        <pre class="ex"><span class="kw">function</span> <span class="fn">start</span>() {
+  document.<span class="fn">querySelector</span>(<span class="sv">"#buyBtn"</span>).<span class="fn">addEventListener</span>(<span class="sv">"click"</span>, buy);
+}
+<span class="kw">if</span> (document.readyState === <span class="sv">"loading"</span>) {
+  document.<span class="fn">addEventListener</span>(<span class="sv">"DOMContentLoaded"</span>, start); <span class="cm">// এখনো পড়ছে → শেষ হলে চালাও</span>
+} <span class="kw">else</span> {
+  <span class="fn">start</span>();                                             <span class="cm">// আগেই শেষ → এখনই চালাও</span>
+}</pre>
+        <p>শুধু <code>DOMContentLoaded</code> listener যথেষ্ট না — async script ওই event-এর <b>পরেও</b> চলতে পারে (mode ৩), তখন listener আর কখনো চলবে না।</p></div>
+      <div class="box" style="--c:var(--amber)"><h3><code>&lt;body&gt;</code>-এর শেষে script রাখলে কী সমস্যা</h3>
+        <ul><li><b>দেরিতে খোঁজ পায়:</b> parser পুরো body পড়ার পর script দেখে, তখনই download শুরু। head-এ <code>defer</code> থাকলে HTML পড়ার শুরুতেই নামা শুরু হয়। (mode ৪ আর ৫ তুলনা করুন)</li>
+          <li><b>এখনো parser-blocking:</b> একদম শেষে হলেও parser থামে, তাই <code>DOMContentLoaded</code> দেরি হয়।</li>
+          <li><b>দেখা যায়, কিন্তু কাজ করে না:</b> screen-এ button চলে আসে, কিন্তু script না আসা পর্যন্ত click করলে কিছু হয় না।</li>
+          <li><b>একাধিক script</b> একটার পর একটা নামে-চলে, প্রতিটায় আবার থামে।</li></ul>
+        <p>সুবিধাও আছে: উপরের সব DOM তৈরি, আর page আগে দেখা যায়। <code>defer</code> আসার আগে এটাই চলত; এখন head-এ <code>defer</code> প্রায় সবসময় ভালো।</p></div>
+      <div class="box" style="--c:var(--blue)"><h3>দুটো আলাদা "শেষ"</h3>
+        <ul><li><code>DOMContentLoaded</code> — HTML পড়া শেষ, <code>defer</code> script-ও চলা শেষ। <b>ছবির জন্য অপেক্ষা করে না।</b> DOM-এর কাজ শুরু করার সঠিক সময়।</li>
+          <li><code>load</code> — সব শেষ: ছবি, CSS, iframe সব নামা। শুধু তখন দরকার, যখন ছবির আসল মাপ লাগে।</li></ul>
+        <p>নিজে দেখতে: Chrome-এ <code>F12</code> → <b>Network</b> → reload। নিচে নীল দাগ <code>DOMContentLoaded</code>, লাল দাগ <code>load</code>।</p></div>
+    </div>
+  </section>
+
+  <!-- ============ 5. choose ============ -->
+  <section id="choose" style="display:grid;gap:14px">
+    <div><h2 class="sect-h"><span class="n">৫</span>কখন কোনটা ব্যবহার করবেন</h2>
+      <p class="sect-p">নিজেকে প্রশ্নগুলো করুন — বাঁ দিকে প্রশ্ন, ডান দিকে কী লিখবেন।</p></div>
+    <div class="decide">
+      <div class="dq"><div class="q">নিজের app-এর JavaScript, DOM ছোঁয় (button, form, menu)</div><div class="ar">→</div><div class="a">&lt;script defer src&gt; head-এ<small>parallel download, পুরো DOM পায়, ক্রম ঠিক থাকে</small></div></div>
+      <div class="dq"><div class="q">একাধিক file, একটা আরেকটার উপর নির্ভর করে (gsap → app.js)</div><div class="ar">→</div><div class="a">সবগুলো defer, ঠিক ক্রমে<small>async দিলে ক্রম ভেঙে যায়</small></div></div>
+      <div class="dq"><div class="q">আধুনিক <code>import</code> / <code>export</code> code</div><div class="ar">→</div><div class="a">&lt;script type="module"&gt;<small>নিজে থেকেই defer-এর মতো</small></div></div>
+      <div class="dq"><div class="q">একদম স্বাধীন third-party — analytics, বিজ্ঞাপন, error tracking</div><div class="ar">→</div><div class="a">&lt;script async&gt;<small>DOM ছোঁয় না, কারো উপর নির্ভর করে না, যত আগে চলে তত ভালো</small></div></div>
+      <div class="dq"><div class="q">খুব ছোট code, যা প্রথম paint-এর আগেই চলা দরকার (যেমন dark theme বসানো)</div><div class="ar">→</div><div class="a">inline &lt;script&gt; head-এ<small>download নেই; এই page-এর theme এভাবেই বসে, তাই রং ঝলকায় না</small></div></div>
+      <div class="dq"><div class="q">পুরোনো CMS / template, head-এ কিছু বদলানো যায় না</div><div class="ar">→</div><div class="a">&lt;body&gt;-এর শেষে<small>কাজ করে, তবে দেরিতে download শুরু হয়</small></div></div>
+      <div class="dq"><div class="q">CSS</div><div class="ar">→</div><div class="a">&lt;link rel="stylesheet"&gt; head-এ<small>শুধু print-এর CSS হলে media="print"</small></div></div>
+      <div class="dq"><div class="q">প্রথম স্ক্রিনের বড় ছবি</div><div class="ar">→</div><div class="a">&lt;img width height&gt; + preload<small>নিচের ছবিতে loading="lazy"</small></div></div>
+    </div>
+    <div class="oneline"><b>এক লাইনে:</b> DOM ছোঁয় বা অন্য script-এর উপর নির্ভর করে → <b>defer</b>। একদম স্বাধীন, DOM ছোঁয় না → <b>async</b>। CSS → <b>head-এ link</b>। ছবি → <b>width/height দিয়ে body-তে</b>।
+      <div class="f">URL → Network → HTML stream → DOM + CSSOM (+ JS) → Render tree → Layout → Paint → Composite → Pixels</div></div>
+  </section>
+
+  <section style="display:grid;gap:14px">
+    <div><h2 class="sect-h">Critical Rendering Path আর browser-এর ভেতরের অংশ</h2>
+      <p class="sect-p">প্রথম frame আঁকতে browser-কে ন্যূনতম এই কাজগুলো করতে হয়। পরে কিছু বদলালে সব ধাপ আবার চলে না — কী বদলালেন তার উপর নির্ভর করে।</p></div>
+    <div class="crp">
+      <div><b>01</b><strong>HTML bytes</strong><span>network থেকে টুকরো টুকরো</span></div>
+      <div><b>02</b><strong>DOM</strong><span>tag → node</span></div>
+      <div><b>03</b><strong>CSSOM</strong><span>rule → style</span></div>
+      <div><b>04</b><strong>Render tree</strong><span>দৃশ্যমান node + style</span></div>
+      <div><b>05</b><strong>Layout</strong><span>কোথায়, কত বড়</span></div>
+      <div><b>06</b><strong>Paint</strong><span>কী কী আঁকতে হবে</span></div>
+      <div><b>07</b><strong>Composite</strong><span>layer জুড়ে pixel</span></div>
+    </div>
+    <div class="tscroll"><table>
+      <thead><tr><th>কী বদলালেন</th><th>আবার কোন ধাপ চলে</th><th>উদাহরণ</th></tr></thead>
+      <tbody>
+        <tr><td>মাপ বা অবস্থান</td><td>Layout → Paint → Composite</td><td><code>width</code>, <code>font-size</code>, নতুন element যোগ</td></tr>
+        <tr><td>শুধু দেখতে কেমন</td><td>Paint → Composite</td><td><code>color</code>, <code>background</code>, <code>box-shadow</code></td></tr>
+        <tr><td>শুধু transform / opacity</td><td>Composite (সবচেয়ে সস্তা)</td><td><code>transform: translate()</code>, <code>opacity</code> — তাই animation-এ এগুলো ব্যবহার করুন</td></tr>
+        <tr><td>লিখে সাথে সাথে পড়া</td><td>জোর করে layout (forced reflow)</td><td>style বদলে সাথে সাথে <code>offsetHeight</code> পড়া</td></tr>
+      </tbody>
+    </table></div>
+    <div class="grid3">
+      <div class="box" style="--c:var(--blue)"><h3>Browser process</h3><p>Address bar, tab, back/forward, permission। কোন tab কোন renderer পাবে ঠিক করে।</p></div>
+      <div class="box" style="--c:var(--violet)"><h3>Renderer process</h3><p>HTML/CSS parse, DOM, CSSOM, layout, paint। Chrome-এ Blink engine; প্রতিটা site আলাদা sandbox-এ।</p></div>
+      <div class="box" style="--c:var(--amber)"><h3>JavaScript engine</h3><p>Renderer-এর ভেতরে JS চালায় — Chrome-এ V8, Firefox-এ SpiderMonkey, Safari-তে JavaScriptCore। একই main thread-এ parsing আর JS, তাই JS চললে parsing থামে।</p></div>
+      <div class="box" style="--c:var(--cyan)"><h3>Network process</h3><p>DNS, cache, HTTP, TLS, cookie। Download করা ডেটা renderer-কে stream করে দেয়।</p></div>
+      <div class="box" style="--c:var(--green)"><h3>GPU process</h3><p>আঁকা layer-গুলো জুড়ে শেষ frame screen-এ দেয়; scroll আর animation মসৃণ রাখে।</p></div>
+      <div class="box" style="--c:var(--pink)"><h3>আরও থাকে</h3><p>Cache, cookie, localStorage, IndexedDB, Service Worker, extension আর security sandbox।</p></div>
+    </div>
+  </section>
+
+  <!-- ============ 6. note ============ -->
+  <section id="note" style="display:grid;gap:14px">
+    <div><h2 class="sect-h"><span class="n">৬</span>নোট: কোন script কখন চলে, কীসের অপেক্ষা করে</h2>
+      <p class="sect-p">Confusion দূর করার জন্য সব এক জায়গায়। প্রতিটা script চলার আগে কিছু জিনিস শেষ হওয়ার অপেক্ষা করে — কোনটা কীসের উপর নির্ভর করে, নিচে দেখুন।</p></div>
+
+    <div class="rule"><b class="t">একটাই নিয়ম মনে রাখুন</b>
+      Script চলার মুহূর্তে browser যত CSS-এর কথা জানে আর যেগুলো তখনো নামছে, সেগুলো শেষ হওয়া পর্যন্ত অপেক্ষা করে — <b>শুধু <code>async</code> বাদে</b>। সাধারণ script আগে চলে, তাই শুধু উপরের CSS চেনে। <code>defer</code>/<code>module</code> HTML পড়া শেষে চলে, তাই নিচের CSS-সহ সব চেনে।</div>
+
+    <div class="dep">
+      <div class="row" style="--c:var(--red)"><div class="who">&lt;script src&gt;<small>কিছু না দিলে</small></div>
+        <div class="flow"><span class="k">parser tag-এ পৌঁছায় (থামে)</span><span class="op">+</span><span class="k">download শেষ</span><span class="op">+</span><span class="k">উপরের CSS শেষ</span><span class="op">+</span><span class="k">আগের script শেষ</span><span class="op">→</span><span class="k res">চলে</span><span class="op">→</span><span class="k">parser আবার পড়ে</span></div></div>
+      <div class="row" style="--c:var(--amber)"><div class="who">&lt;script&gt;…&lt;/script&gt;<small>inline</small></div>
+        <div class="flow"><span class="k">parser tag-এ পৌঁছায় (থামে)</span><span class="op">+</span><span class="k">উপরের CSS শেষ</span><span class="op">→</span><span class="k res">চলে</span><span class="op">→</span><span class="k">parser আবার পড়ে</span></div></div>
+      <div class="row" style="--c:var(--green)"><div class="who">defer<small>আর type="module"</small></div>
+        <div class="flow"><span class="k">download শেষ</span><span class="op">+</span><span class="k">পুরো HTML পড়া শেষ</span><span class="op">+</span><span class="k">সব CSS শেষ (নিচেরটাও)</span><span class="op">+</span><span class="k">আগের defer শেষ</span><span class="op">→</span><span class="k res">চলে</span><span class="op">→</span><span class="k">DOMContentLoaded</span></div></div>
+      <div class="row" style="--c:var(--violet)"><div class="who">async<small>আর module async, JS দিয়ে বানানো script</small></div>
+        <div class="flow"><span class="k">শুধু download শেষ</span><span class="op">→</span><span class="k res">চলে</span><span class="op">·</span><span class="k">CSS, HTML পড়া, ক্রম — কিছুর অপেক্ষা নেই</span></div></div>
+    </div>
+
+    <div class="tscroll"><table>
+      <thead><tr><th>Script</th><th>Download-এর সময় parser</th><th>Download</th><th>CSS</th><th>HTML পড়া শেষ</th><th>ক্রম</th><th>চলার সময় DOM-এ</th></tr></thead>
+      <tbody>
+        <tr><td><code>&lt;script src&gt;</code></td><td><span class="n">থামে</span></td><td><span class="y">অপেক্ষা করে</span></td><td><span class="y">শুধু উপরের</span></td><td><span class="n">না</span></td><td><span class="y">ঠিক থাকে</span></td><td>শুধু উপরের অংশ</td></tr>
+        <tr><td>inline <code>&lt;script&gt;</code></td><td>download নেই, থামে</td><td>—</td><td><span class="y">শুধু উপরের</span></td><td><span class="n">না</span></td><td><span class="y">ঠিক থাকে</span></td><td>শুধু উপরের অংশ</td></tr>
+        <tr><td><code>defer</code></td><td><span class="y">থামে না</span></td><td><span class="y">অপেক্ষা করে</span></td><td><span class="y">সব</span></td><td><span class="y">অপেক্ষা করে</span></td><td><span class="y">লেখার ক্রমে</span></td><td><span class="y">পুরো DOM</span></td></tr>
+        <tr><td><code>type="module"</code></td><td><span class="y">থামে না</span></td><td><span class="y">অপেক্ষা করে</span></td><td><span class="y">সব</span></td><td><span class="y">অপেক্ষা করে</span></td><td><span class="y">লেখার ক্রমে</span></td><td><span class="y">পুরো DOM</span></td></tr>
+        <tr><td><code>async</code> / <code>module async</code></td><td><span class="y">থামে না</span> (চলার সময় থামে)</td><td><span class="y">অপেক্ষা করে</span></td><td><span class="n">না</span></td><td><span class="n">না</span></td><td><span class="n">যেটা আগে নামে</span></td><td><span class="m">ভাগ্যের উপর</span></td></tr>
+      </tbody>
+    </table></div>
+
+    <div class="grid2">
+      <div class="box" style="--c:var(--blue)"><h3>উদাহরণ: কে কোন CSS-এর জন্য অপেক্ষা করে</h3>
+        <pre class="ex"><span class="tg">&lt;head&gt;</span>
+  <span class="tg">&lt;link</span> <span class="at">rel</span>=<span class="sv">"stylesheet"</span> <span class="at">href</span>=<span class="sv">"a.css"</span><span class="tg">&gt;</span>
+  <span class="tg">&lt;script</span> <span class="at">defer</span> <span class="at">src</span>=<span class="sv">"app.js"</span><span class="tg">&gt;&lt;/script&gt;</span>  <span class="cm">&lt;!-- a.css আর b.css দুটোর জন্যই --&gt;</span>
+  <span class="tg">&lt;script</span> <span class="at">src</span>=<span class="sv">"old.js"</span><span class="tg">&gt;&lt;/script&gt;</span>        <span class="cm">&lt;!-- শুধু a.css-এর জন্য --&gt;</span>
+  <span class="tg">&lt;script</span> <span class="at">async</span> <span class="at">src</span>=<span class="sv">"ga.js"</span><span class="tg">&gt;&lt;/script&gt;</span>   <span class="cm">&lt;!-- কোনোটার জন্যই না --&gt;</span>
+  <span class="tg">&lt;link</span> <span class="at">rel</span>=<span class="sv">"stylesheet"</span> <span class="at">href</span>=<span class="sv">"b.css"</span><span class="tg">&gt;</span>
+<span class="tg">&lt;/head&gt;</span></pre>
+        <p><code>old.js</code>-এ parser যখন থামে, তখনো <code>b.css</code> পড়াই হয়নি — browser জানেই না ওটা আছে। <code>app.js</code> চলে HTML পড়া শেষে, ততক্ষণে <code>b.css</code>-ও চেনা হয়ে গেছে।</p></div>
+      <div class="box" style="--c:var(--pink)"><h3>যেগুলো গুলিয়ে যায়</h3>
+        <ul>
+          <li>কিছু না দিলে = <b>download শেষ এবং উপরের CSS শেষ</b> — দুটোর মধ্যে যেটা পরে হয়, তখন চলে। পুরো সময় parser বন্ধ।</li>
+          <li>File আগে থেকে cache-এ থাকলেও সাধারণ script parser ওই লাইনে পৌঁছানোর আগে কখনো চলে না।</li>
+          <li><code>defer</code> শুধু <code>src</code> থাকলে কাজ করে; inline <code>&lt;script defer&gt;</code>-এ কোনো প্রভাব নেই। কিন্তু inline <code>type="module"</code> defer-এর মতোই চলে।</li>
+          <li><code>type="module"</code>-এ defer লেখা লাগে না; <code>async</code> দিলে async-এর নিয়মে চলে।</li>
+          <li><code>media="print"</code>-এর মতো না-মেলা CSS কোনো script আটকায় না।</li>
+          <li><code>document.createElement("script")</code> দিয়ে বানানো script নিজে থেকেই async।</li>
+          <li><code>async</code> CSS-এর অপেক্ষা করে না, তাই <code>offsetWidth</code> বা <code>getComputedStyle()</code> পড়লে CSS আসার আগের ভুল মাপ পেতে পারে।</li>
+        </ul></div>
+    </div>
+  </section>
+
+  <footer><span>WellDev · 06-networking / browser · GSAP দিয়ে অ্যানিমেশন</span><a href="../../index.html">← সব গাইড</a></footer>
+</div>
+
+<!-- Page code waits for DOMContentLoaded: by then the whole DOM exists and the deferred gsap script has already run. -->
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  "use strict";
+  const $ = id => document.getElementById(id);
+  const NS = "http://www.w3.org/2000/svg";
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const md = s => esc(s).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/`([^`]+)`/g, "<code>$1</code>");
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const el = (tag, attrs, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.append(e); return e; };
+
+  /* =====================================================================
+     1. Rendering pipeline
+     ===================================================================== */
+  const W = 180, H = 56;
+  const N = {
+    address: { x: 30, y: 40, t: "Address bar", s: "example.com", c: "var(--blue)" },
+    network: { x: 270, y: 40, t: "Network", s: "DNS · TLS · HTTP", c: "var(--cyan)" },
+    server: { x: 510, y: 40, t: "Web server", s: "HTML · CSS · JS", c: "var(--green)" },
+    html: { x: 30, y: 170, t: "HTML bytes", s: "stream · chunk", c: "var(--pink)" },
+    parser: { x: 270, y: 170, t: "HTML parser", s: "tokens → nodes", c: "var(--violet)" },
+    dom: { x: 510, y: 170, t: "DOM", s: "node tree", c: "var(--blue)" },
+    js: { x: 270, y: 300, t: "JS engine", s: "V8 · execute", c: "var(--amber)" },
+    cssom: { x: 510, y: 300, t: "CSSOM", s: "computed style", c: "var(--cyan)" },
+    render: { x: 770, y: 40, t: "Render tree", s: "দৃশ্যমান node", c: "var(--violet)" },
+    layout: { x: 770, y: 130, t: "Layout", s: "size · position", c: "var(--amber)" },
+    paint: { x: 770, y: 220, t: "Paint", s: "draw list", c: "var(--pink)" },
+    composite: { x: 770, y: 310, t: "Composite", s: "GPU layers", c: "var(--green)" },
+    screen: { x: 770, y: 400, t: "Screen", s: "pixels", c: "var(--green)" },
+  };
+  // elbow routes between box edges (no curves → nothing crosses in a confusing way)
+  const L = {
+    "address-network": [[210, 68], [270, 68]],
+    "network-server": [[450, 60], [510, 60]],
+    "server-network": [[510, 80], [450, 80]],
+    "network-html": [[330, 96], [330, 132], [120, 132], [120, 170]],
+    "html-parser": [[210, 198], [270, 198]],
+    "parser-dom": [[450, 198], [510, 198]],
+    "parser-network": [[390, 170], [390, 96]],
+    "network-cssom": [[450, 88], [490, 88], [490, 328], [510, 328]],
+    "network-js": [[450, 92], [466, 92], [466, 328], [450, 328]],
+    "js-dom": [[420, 300], [420, 262], [600, 262], [600, 226]],
+    "dom-render": [[690, 190], [730, 190], [730, 62], [770, 62]],
+    "cssom-render": [[690, 328], [748, 328], [748, 82], [770, 82]],
+    "render-layout": [[860, 96], [860, 130]],
+    "layout-paint": [[860, 186], [860, 220]],
+    "paint-composite": [[860, 276], [860, 310]],
+    "composite-screen": [[860, 366], [860, 400]],
+  };
+  const pSvg = $("pSvg");
+  const defs = el("defs", {}, pSvg);
+  const mk = el("marker", { id: "arr", viewBox: "0 0 10 10", refX: 9, refY: 5, markerWidth: 6, markerHeight: 6, orient: "auto-start-reverse" }, defs);
+  el("path", { d: "M0 0L10 5L0 10z", fill: "#94a3b8" }, mk);
+  [[16, 22, 708, 100, "NETWORK"], [16, 152, 708, 222, "PARSE & BUILD"], [752, 22, 232, 450, "RENDER"]].forEach(([x, y, w, h, t]) => {
+    el("rect", { class: "lane-bg", x, y, width: w, height: h, rx: 14 }, pSvg);
+    const tx = el("text", { class: "lane-t", x: x + 12, y: y + 14 }, pSvg); tx.textContent = t;
+  });
+  const linkG = el("g", {}, pSvg), nodeG = el("g", {}, pSvg), pkG = el("g", {}, pSvg);
+  const linkEl = {};
+  for (const id in L) linkEl[id] = el("path", { class: "lk", d: "M" + L[id].map(p => p.join(" ")).join(" L"), "marker-end": "url(#arr)" }, linkG);
+  const nodeEl = {};
+  for (const id in N) {
+    const n = N[id], g = el("g", { class: "nd", style: `--c:${n.c}` }, nodeG);
+    el("rect", { class: "bx", x: n.x, y: n.y, width: W, height: H, rx: 12 }, g);
+    el("circle", { class: "dot", cx: n.x + 16, cy: n.y + 20, r: 5 }, g);
+    const a = el("text", { class: "tt", x: n.x + 28, y: n.y + 25 }, g); a.textContent = n.t;
+    const b = el("text", { class: "st", x: n.x + 16, y: n.y + 44 }, g); b.textContent = n.s;
+    nodeEl[id] = g;
+  }
+  const mkPkt = () => { const g = el("g", { class: "pkt", opacity: 0 }, pkG); el("rect", { rx: 8, height: 26, y: -13 }, g); el("text", {}, g); return g; };
+  const PK = [mkPkt(), mkPkt()];
+  function label(g, text, color) {
+    const r = g.querySelector("rect"), t = g.querySelector("text"), w = Math.max(48, text.length * 7.4 + 20);
+    t.textContent = text; r.setAttribute("width", w); r.setAttribute("x", -w / 2); r.setAttribute("fill", color);
+  }
+  const SPEED = 150, MIN_SEG = 0.45;           // px per second — slow and easy to follow
+  function routePts(ids) { const pts = []; ids.forEach(id => L[id].forEach(p => { const q = { x: p[0], y: p[1] }; const last = pts[pts.length - 1]; if (!last || last.x !== q.x || last.y !== q.y) pts.push(q); })); return pts; }
+  function fly(tl, g, ids, at) {
+    const pts = routePts(ids), kf = [];
+    for (let i = 1; i < pts.length; i++) kf.push({ x: pts[i].x, y: pts[i].y, duration: Math.max(MIN_SEG, Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y) / SPEED), ease: "none" });
+    tl.set(g, { x: pts[0].x, y: pts[0].y, opacity: 1 }, at).to(g, { keyframes: kf }, ">").to(g, { opacity: 0, duration: 0.35 }, "+=0.5");
+  }
+
+  const PIPE = [
+    { title: "শুরু: URL লেখা", phase: "Navigation", nodes: ["address"], route: [], pk: ["URL", "#2563eb"],
+      text: "Address bar-এ URL লিখে Enter। Browser URL ভাঙে: **https** মানে port 443 আর encrypted, **example.com** কোন server, **/products** কী চাই।",
+      why: "আগে নিজের cache আর service worker দেখে — উত্তর হাতে থাকলে network-এই যায় না।",
+      code: "https://example.com/products\nscheme https · port 443\nhost   example.com · path /products" },
+    { title: "Request server-এর দিকে", phase: "Network", nodes: ["address", "network", "server"], route: ["address-network", "network-server"], pk: ["GET", "#2563eb"],
+      text: "Network process DNS দিয়ে IP বের করে, TCP আর TLS connection খোলে, তারপর HTTP request পাঠায়।",
+      why: "HTTPS-এ পুরো request encrypted — পথে কেউ পড়তে পারে না।",
+      code: "GET /products HTTP/1.1\nHost: example.com\nAccept: text/html\nAccept-Encoding: gzip, br" },
+    { title: "HTML টুকরো টুকরো ফেরে", phase: "Response streaming", nodes: ["server", "network", "html"], route: ["server-network", "network-html"], pk: ["HTML", "#db2777"],
+      text: "Server আগে header, তারপর HTML body পাঠায়। পুরো file আসার অপেক্ষা না করে প্রথম টুকরো (chunk) এলেই browser পড়া শুরু করে।",
+      why: "Streaming-এর জন্য বড় page-ও দ্রুত দেখা শুরু হয়।",
+      code: "HTTP/1.1 200 OK\nContent-Type: text/html; charset=utf-8\n\n<!doctype html><html><head>…" },
+    { title: "HTML → DOM", phase: "Parse", nodes: ["html", "parser", "dom"], route: ["html-parser", "parser-dom"], pk: ["<tag>", "#7c3aed"],
+      text: "Bytes থেকে অক্ষর, অক্ষর থেকে token (`<h1>`, `</h1>`…), token থেকে DOM node। HTML ভুল থাকলেও browser নিয়ম মেনে ঠিক করে নেয়।",
+      why: "DOM লেখার copy না — এটা জীবন্ত object-এর গাছ, JavaScript একে বদলাতে পারে।",
+      code: "html\n ├─ head\n └─ body\n     ├─ h1\n     └─ button#buyBtn" },
+    { title: "<link> পেল: CSS → CSSOM", phase: "Style", nodes: ["parser", "network", "server", "cssom"], route: ["parser-network", "network-server", "server-network", "network-cssom"], pk: ["CSS", "#0891b2"],
+      text: "Parser `<link rel=\"stylesheet\">` পেয়ে network-কে style.css আনতে বলে, আর নিজে পড়া চালিয়ে যায়। CSS এলে selector আর rule থেকে CSSOM হয়।",
+      why: "CSSOM ছাড়া কোন node কেমন দেখাবে জানা নেই — তাই CSS আসা পর্যন্ত browser কিছু আঁকে না (render-blocking)।",
+      code: "<link rel=\"stylesheet\" href=\"style.css\">\n\nh1 { font-size: 32px; color: #111 }\nbutton { background: green }" },
+    { title: "<script> পেল: JavaScript", phase: "Script", nodes: ["parser", "network", "server", "js", "dom"], route: ["parser-network", "network-server", "server-network", "network-js", "js-dom"], pk: ["JS", "#d97706"],
+      text: "Script নামে, JS engine চালায়, আর script DOM বদলাতে পারে। সাধারণ script-এ এই পুরো সময় parser থেমে থাকে; `defer` বা `async` দিলে আচরণ বদলায়।",
+      why: "ঠিক কখন থামে আর কখন চলে — নিচের ২ নম্বর অংশের timeline-এ ৫ রকম অবস্থায় দেখুন।",
+      code: "<script defer src=\"app.js\"><\/script>\n\n// app.js\ndocument.querySelector(\"#buyBtn\")\n  .addEventListener(\"click\", buy);" },
+    { title: "DOM + CSSOM → Render tree", phase: "Style calculation", nodes: ["dom", "cssom", "render"], route: ["dom-render"], route2: ["cssom-render"], pk: ["DOM", "#2563eb"], pk2: ["CSS", "#0891b2"],
+      text: "দৃশ্যমান node আর তাদের style মিলে render tree। `<head>`, `<script>`, `display:none` বাদ যায়।",
+      why: "Render tree বলে কী আঁকতে হবে — কিন্তু কোথায়, কত বড়, সেটা এখনো জানা নেই।",
+      code: "DOM nodes + computed styles\n        ↓\nদৃশ্যমান render objects\n(display:none বাদ)" },
+    { title: "Layout: কোথায়, কত বড়", phase: "Geometry", nodes: ["render", "layout"], route: ["render-layout"], pk: ["BOX", "#d97706"], screen: "lay",
+      text: "Screen-এর মাপ, font, flex/grid নিয়ম দিয়ে প্রতিটা box-এর x, y, width, height হিসাব হয়। একে reflow-ও বলে।",
+      why: "ছবির মাপ আগে না দিলে ছবি আসার পর আবার layout হয় — লেখা লাফিয়ে সরে।",
+      code: "viewport 1280 × 720\nh1     x=24 y=24  w=600 h=40\nbutton x=24 y=340 w=96  h=36" },
+    { title: "Paint: কী কী আঁকতে হবে", phase: "Paint", nodes: ["layout", "paint"], route: ["layout-paint"], pk: ["DRAW", "#db2777"], screen: "lay",
+      text: "Background, border, লেখা, ছবি, shadow — কোনটা কোন ক্রমে আঁকবে তার তালিকা (paint record)।",
+      why: "শুধু রং বদলালে layout লাগে না, কিন্তু আবার paint লাগে।",
+      code: "1. background\n2. border\n3. text\n4. image\n5. shadow" },
+    { title: "Composite → screen-এ pixel", phase: "Raster & composite", nodes: ["paint", "composite", "screen"], route: ["paint-composite", "composite-screen"], pk: ["FRAME", "#059669"], screen: "paint",
+      text: "আঁকা অংশগুলো layer-এ pixel হয়, GPU সেগুলো ঠিক ক্রমে জুড়ে শেষ frame screen-এ দেখায়। এই প্রথম user কিছু দেখল।",
+      why: "`transform` আর `opacity` animation শুধু এই ধাপে চলে — তাই সবচেয়ে মসৃণ।",
+      code: "paint → raster tiles → GPU composite\n      → screen pixels ✓" },
+    { title: "Page চালু — দরকার হলে আবার", phase: "Event loop", nodes: ["js", "dom", "render", "layout", "paint", "composite", "screen"], route: ["js-dom", "dom-render", "render-layout", "layout-paint", "paint-composite", "composite-screen"], pk: ["CLICK", "#6366f1"], screen: "paint",
+      text: "Click, timer বা JavaScript কিছু বদলালে browser দরকারমতো style → layout → paint → composite আবার চালায়, প্রতি সেকেন্ডে প্রায় ৬০ বার পর্যন্ত।",
+      why: "সব বদলে পুরো পথ চলে না: width বদলালে layout থেকে, রং বদলালে paint থেকে, transform হলে শুধু composite।",
+      code: "click → JavaScript → DOM/style বদল\n  → style → layout? → paint? → composite\n  → পরের frame" },
+  ];
+  let pStep = 0, pTl = null, pPlaying = false, pTimer = 0;
+  function pRender(animate) {
+    const s = PIPE[pStep];
+    $("pRange").value = pStep; $("pNo").textContent = `ধাপ ${pStep} / ${PIPE.length - 1}`;
+    $("pBadge").textContent = String(pStep).padStart(2, "0");
+    $("pTitle").textContent = s.title; $("pPhase").textContent = s.phase;
+    $("pText").innerHTML = md(s.text); $("pWhy").innerHTML = "<b>কেন জরুরি?</b> " + md(s.why); $("pCode").textContent = s.code;
+    $("pScene").classList.toggle("focus", s.nodes.length > 0);
+    for (const id in nodeEl) nodeEl[id].classList.toggle("on", s.nodes.includes(id));
+    const on = new Set([...s.route, ...(s.route2 || [])]);
+    for (const id in linkEl) linkEl[id].classList.toggle("on", on.has(id));
+    const sc = $("pScreen"); sc.className = "mini-page" + (s.screen === "lay" ? " lay" : s.screen === "paint" ? " paint" : "");
+    $("pEmpty").style.display = s.screen ? "none" : "";
+    if (pTl) pTl.kill();
+    PK.forEach(g => gsap.set(g, { opacity: 0 }));
+    pTl = gsap.timeline({ onComplete: pSchedule });
+    if (s.route.length) { label(PK[0], s.pk[0], s.pk[1]); fly(pTl, PK[0], s.route, 0); }
+    else { label(PK[0], s.pk[0], s.pk[1]); pTl.set(PK[0], { x: 120, y: 112, opacity: 1 }).fromTo(PK[0], { scale: .6 }, { scale: 1, duration: .6, ease: "back.out(2)" }).to(PK[0], { opacity: 0, duration: .4 }, "+=1"); }
+    if (s.route2) { label(PK[1], s.pk2[0], s.pk2[1]); fly(pTl, PK[1], s.route2, 0); }
+    if (!animate || reduce) pTl.progress(1);
+  }
+  function pSchedule() { clearTimeout(pTimer); if (pPlaying) pTimer = setTimeout(() => { if (pStep >= PIPE.length - 1) return pSetPlaying(false); pStep++; pRender(true); }, 2200); }
+  function pSetPlaying(on) { pPlaying = on; $("pPlay").textContent = on ? "❚❚ Pause" : "▶ Play"; clearTimeout(pTimer); if (on) { if (pStep >= PIPE.length - 1) { pStep = 0; pRender(true); } else pSchedule(); } }
+  const pGo = (i, animate) => { pSetPlaying(false); pStep = Math.max(0, Math.min(PIPE.length - 1, i)); pRender(animate); };
+  $("pPrev").onclick = () => pGo(pStep - 1, true);
+  $("pNext").onclick = () => pGo(pStep + 1, true);
+  $("pReset").onclick = () => pGo(0, false);
+  $("pReplay").onclick = () => pGo(pStep, true);
+  $("pPlay").onclick = () => pSetPlaying(!pPlaying);
+  $("pRange").oninput = e => pGo(+e.target.value, true);
+
+  /* =====================================================================
+     2. Loading timeline — one simple model, five placements of <script>
+     ===================================================================== */
+  const LINES = mode => [
+    ["tg", "<!doctype html>"], ["tg", "<html>"], ["tg", "<head>"],
+    ["link", '  <link rel="stylesheet" href="style.css">'],
+    mode === "normal" ? ["scr", '  <script src="app.js"><\/script>'] :
+      mode === "defer" ? ["scr", '  <script defer src="app.js"><\/script>'] :
+      mode === "asyncFast" || mode === "asyncSlow" ? ["scr", '  <script async src="app.js"><\/script>'] : ["cm", "  <!-- head-এ কোনো script নেই -->"],
+    ["tg", "</head>"], ["tg", "<body>"],
+    ["el", "  <h1>আমার দোকান</h1>"],
+    ["el", '  <img src="photo.webp" width="600" height="400">'],
+    ["el", '  <button id="buyBtn">কিনুন</button>'],
+    ["el", "  <p>… অনেক লেখা …</p>"],
+    mode === "body" ? ["scr", '  <script src="app.js"><\/script>'] : ["cm", "  <!-- body-এর শেষ -->"],
+    ["tg", "</body></html>"],
+  ];
+  const lineDur = l => (l === 10 ? 120 : 20);
+  // Build the schedule: when each line is parsed, when the parser is blocked, downloads and runs.
+  function plan(mode) {
+    const P = [], blocks = [], ev = [];
+    let t = 0;
+    const parse = (from, to) => { for (let l = from; l <= to; l++) { P.push({ l, s: t, e: t + lineDur(l) }); t += lineDur(l); } };
+    parse(0, 3);                                   // up to <link> → t = 80
+    const css = { s: 80, e: 230 };
+    ev.push([80, "Parser <link> পেল → style.css download শুরু (parsing থামেনি)"]);
+    let js = null, run = null, img = null, found = false, fp, dcl, scanner = false;
+    if (mode === "normal") {
+      P.push({ l: 4, s: 80, e: 90 }); t = 90;
+      js = { s: 90, e: 390 }; ev.push([90, "সাধারণ <script> → parser থামল, app.js download শুরু"]);
+      img = { s: 100, e: 500 }; scanner = true; ev.push([100, "Preload scanner সামনে <img> দেখে photo.webp নামানো শুরু করল"]);
+      run = { s: 390, e: 440 }; blocks.push({ s: 90, e: 440 }); ev.push([390, "app.js এল (CSS-ও শেষ) → চালানো শুরু"]);
+      t = 440; parse(5, 12); found = false;
+    } else if (mode === "defer") {
+      P.push({ l: 4, s: 80, e: 100 }); t = 100;
+      js = { s: 100, e: 400 }; ev.push([100, "defer → app.js পাশাপাশি নামছে, parsing চলছে"]);
+      parse(5, 12); img = { s: 180, e: 580 };
+      run = { s: 400, e: 450 }; found = true; ev.push([400, "HTML পড়া শেষ + app.js এসেছে → এখন চালানো"]);
+    } else if (mode === "asyncFast") {
+      P.push({ l: 4, s: 80, e: 100 }); t = 100;
+      js = { s: 100, e: 160 }; ev.push([100, "async → app.js নামছে (cache-এ ছিল, খুব দ্রুত)"]);
+      parse(5, 7);                                  // t = 160
+      run = { s: 160, e: 210 }; blocks.push({ s: 160, e: 210 }); found = false;
+      ev.push([160, "app.js নামা শেষ → parsing মাঝপথে থামিয়ে চালানো"]);
+      t = 210; parse(8, 12); img = { s: 210, e: 610 };
+    } else if (mode === "asyncSlow") {
+      P.push({ l: 4, s: 80, e: 100 }); t = 100;
+      js = { s: 100, e: 500 }; ev.push([100, "async → app.js নামছে (ধীর network)"]);
+      parse(5, 12); img = { s: 180, e: 580 };
+      run = { s: 500, e: 550 }; found = true; ev.push([500, "অনেক পরে app.js এল → চালানো (DOMContentLoaded আগেই হয়ে গেছে)"]);
+    } else {                                        // body end
+      P.push({ l: 4, s: 80, e: 100 }); t = 100;
+      parse(5, 10); img = { s: 180, e: 580 };      // t = 320
+      P.push({ l: 11, s: 320, e: 340 }); t = 340;
+      js = { s: 340, e: 640 }; blocks.push({ s: 340, e: 690 }); ev.push([340, "body-এর শেষে <script> → এতক্ষণে app.js download শুরু, parser থামল"]);
+      run = { s: 640, e: 690 }; found = true; ev.push([640, "app.js এল → চালানো"]);
+      t = 690; parse(12, 12);
+    }
+    if (!scanner) ev.push([img.s, "Parser <img> পেল → photo.webp download শুরু (parsing থামেনি)"]);
+    ev.push([css.e, "style.css এল → CSSOM তৈরি"]);
+    const parseEnd = Math.max(...P.map(p => p.e));
+    const lineEnd = l => P.find(p => p.l === l).e;
+    // first paint: CSS ready and the first visible content (h1) parsed, and the parser is not stuck in a head script
+    fp = Math.max(css.e, lineEnd(7)) + 5;
+    if (mode === "normal") fp = lineEnd(9) + 5;
+    dcl = mode === "defer" ? run.e : parseEnd;
+    const load = Math.max(dcl, img.e, run.e) + 5;
+    ev.push([fp, "First paint — screen-এ প্রথম কিছু দেখা গেল"]);
+    ev.push([run.s, found ? "app.js: #buyBtn পাওয়া গেছে ✓" : "app.js: #buyBtn এখনো DOM-এ নেই → null ✗"]);
+    ev.push([dcl, "DOMContentLoaded"]);
+    ev.push([img.e, "photo.webp নামা শেষ"]);
+    ev.push([load, "load — সব শেষ"]);
+    ev.sort((a, b) => a[0] - b[0]);
+    return { P, blocks, css, js, run, img, fp, dcl, load, found, ev, end: load + 10 };
+  }
+  const VERDICT = {
+    normal: ["bad", "সমস্যা: element পাওয়া যায় না, আর page দেরিতে দেখা যায়", "Parser 350 ms থেমে থাকে। app.js চলার সময় body এখনো parse হয়নি, তাই #buyBtn = null আর error। পুরো সময় screen সাদা।"],
+    asyncFast: ["bad", "সমস্যা: file দ্রুত এলে parsing-এর মাঝখানে চলে, button নেই", "app.js cache থেকে 60 ms-এ চলে এলো, parser তখন সবে <h1>-এ। #buyBtn = null। ধীর network-এ এই একই code কাজ করত — তাই এই bug ধরা কঠিন।"],
+    asyncSlow: ["warn", "এবার কাজ করল — কিন্তু ভাগ্যের জোরে", "app.js দেরিতে আসায় DOM তৈরি ছিল। কিন্তু DOMContentLoaded আগেই হয়ে গেছে, তাই script-এর ভেতরে শুধু DOMContentLoaded listener দিলে সেটা কখনো চলত না। ততক্ষণ button দেখা গেলেও click কাজ করে না।"],
+    defer: ["good", "সবচেয়ে ভালো: parsing থামে না, পুরো DOM পাওয়া যায়", "app.js শুরু থেকেই পাশাপাশি নামছে, parser কোথাও থামেনি, page দ্রুত দেখা গেছে, আর HTML পড়া শেষ হলে script চলেছে — #buyBtn পাওয়া গেছে।"],
+    body: ["warn", "কাজ করে, কিন্তু download দেরিতে শুরু", "Page আগেই দেখা যায় আর DOM তৈরি থাকে। কিন্তু parser body-এর শেষে না পৌঁছানো পর্যন্ত browser app.js-এর খোঁজই পায় না, তাই download 340 ms-এ শুরু। ততক্ষণ button দেখা যায় কিন্তু click কাজ করে না, আর DOMContentLoaded সবচেয়ে দেরিতে।"],
+  };
+
+  const tSvg = $("tSvg");
+  const X0 = 170, X1 = 880, TMAX = 740, xs = t => X0 + (Math.min(t, TMAX) / TMAX) * (X1 - X0);
+  const LANES = [["HTML parsing", "parse"], ["style.css ⬇", "css"], ["app.js ⬇", "dl"], ["app.js ▶ চলছে", "run"], ["photo.webp ⬇", "img"]];
+  const laneY = i => 34 + i * 40;
+  let tPlan = null, segEls = [], mkEls = {}, nowLine = null;
+  function buildChart() {
+    tSvg.replaceChildren();
+    const d = el("defs", {}, tSvg);
+    const pat = el("pattern", { id: "hatch", width: 8, height: 8, patternUnits: "userSpaceOnUse", patternTransform: "rotate(45)" }, d);
+    el("rect", { width: 8, height: 8, style: "fill:color-mix(in srgb,var(--red) 25%,transparent)" }, pat);
+    el("rect", { width: 3, height: 8, style: "fill:var(--red)" }, pat);
+    for (let t = 0; t <= 700; t += 100) {
+      el("line", { class: "ax", x1: xs(t), x2: xs(t), y1: 22, y2: 236 }, tSvg);
+      el("text", { class: "ax-t", x: xs(t), y: 252 }, tSvg).textContent = t + " ms";
+    }
+    LANES.forEach(([lab, key], i) => {
+      el("text", { class: "lab", x: 10, y: laneY(i) + 15 }, tSvg).textContent = lab;
+      el("rect", { class: "track", x: X0, y: laneY(i), width: X1 - X0, height: 22, rx: 6 }, tSvg);
+    });
+    segEls = [];
+    const addSeg = (lane, s, e, cls, txt) => {
+      const r = el("rect", { class: "seg " + cls, x: xs(s), y: laneY(lane), width: 0, height: 22, rx: 5 }, tSvg);
+      let label = null;
+      if (txt) { label = el("text", { x: xs(s) + 6, y: laneY(lane) + 15, fill: "#fff", stroke: "#be123c", "stroke-width": 3, "paint-order": "stroke", style: "font:700 11px var(--bn);opacity:0" }, tSvg); label.textContent = txt; }
+      segEls.push({ r, s, e, label });
+    };
+    // contiguous lines → one continuous "parsing" bar
+    const runs = [];
+    [...tPlan.P].sort((a, b) => a.s - b.s).forEach(p => { const r = runs[runs.length - 1]; if (r && p.s <= r.e) r.e = Math.max(r.e, p.e); else runs.push({ s: p.s, e: p.e }); });
+    runs.forEach(r => addSeg(0, r.s, r.e, "parse"));
+    tPlan.blocks.forEach(b => addSeg(0, b.s, b.e, "block", "থেমে আছে"));
+    addSeg(1, tPlan.css.s, tPlan.css.e, "css");
+    addSeg(2, tPlan.js.s, tPlan.js.e, "dl");
+    addSeg(3, tPlan.run.s, tPlan.run.e, "run");
+    addSeg(4, tPlan.img.s, tPlan.img.e, "img");
+    mkEls = {};
+    [["fp", tPlan.fp, "First paint"], ["dcl", tPlan.dcl, "DOMContentLoaded"], ["load", tPlan.load, "load"]].forEach(([k, t, txt], i) => {
+      const g = el("g", { class: "mk " + k, opacity: 0 }, tSvg);
+      el("line", { x1: xs(t), x2: xs(t), y1: 20, y2: 236 }, g);
+      const right = xs(t) > 720;
+      const tx = el("text", { x: right ? xs(t) - 4 : xs(t) + 4, y: 270 + i * 13, "text-anchor": right ? "end" : "start" }, g); tx.textContent = `${txt} · ${t} ms`;
+      mkEls[k] = { g, t };
+    });
+    nowLine = el("line", { class: "now", x1: X0, x2: X0, y1: 18, y2: 240 }, tSvg);
+  }
+  function hlLine(raw, kind) {
+    let h = esc(raw);
+    if (kind === "cm") return `<span class="cm">${h}</span>`;
+    return h.replace(/(&lt;\/?[a-z0-9!]+)/g, '<span class="tg">$1</span>').replace(/(&gt;)/g, '<span class="tg">$1</span>')
+      .replace(/ ([a-z-]+)=(&quot;[^&]*&quot;)/g, ' <span class="at">$1</span>=<span class="sv">$2</span>').replace(/ (defer|async)(?= |<)/g, ' <span class="at">$1</span>');
+  }
+  function buildSource(mode) {
+    $("src").innerHTML = LINES(mode).map(([k, txt], i) => `<span class="ln" data-n="${i + 1}" data-i="${i}">${hlLine(txt, k)}</span>`).join("");
+    $("tEvents").innerHTML = tPlan.ev.map(([t, txt]) => `<li data-t="${t}"><b>${t} ms</b><span>${esc(txt)}</span></li>`).join("");
+    const [cls, title, body] = VERDICT[mode];
+    $("verdict").className = "verdict " + cls; $("verdict").innerHTML = `<b class="t">${esc(title)}</b>${esc(body)}`;
+  }
+  function draw(t) {
+    const p = tPlan;
+    $("tNow").textContent = Math.round(Math.min(t, p.end)) + " ms";
+    nowLine.setAttribute("x1", xs(t)); nowLine.setAttribute("x2", xs(t));
+    segEls.forEach(({ r, s, e, label }) => {
+      const w = Math.max(0, Math.min(t, e) - s) / TMAX * (X1 - X0);
+      r.setAttribute("width", w);
+      if (label) label.style.opacity = t > s + 40 ? 1 : 0;
+    });
+    for (const k in mkEls) mkEls[k].g.setAttribute("opacity", t >= mkEls[k].t ? 1 : 0);
+    // parser position
+    const blocked = p.blocks.find(b => t >= b.s && t < b.e);
+    const cur = p.P.find(x => t >= x.s && t < x.e);
+    const parsed = l => { const x = p.P.find(q => q.l === l); return x && t >= x.e; };
+    const scriptLine = LINES(S.mode).findIndex(([k]) => k === "scr");
+    document.querySelectorAll("#src .ln").forEach(ln => {
+      const i = +ln.dataset.i;
+      ln.className = "ln " + (parsed(i) ? "done" : "todo");
+      if (blocked && i === scriptLine) ln.classList.add("blk");
+      else if (blocked && S.mode === "asyncFast" && i === 4) ln.classList.add("focus");
+      else if (!blocked && cur && cur.l === i) ln.classList.add("cur");
+    });
+    const chip = $("parserChip");
+    if (t <= 0) { chip.className = "chip"; chip.textContent = "শুরু হয়নি"; }
+    else if (blocked) { chip.className = "chip stop"; chip.textContent = "থেমে আছে — script-এর জন্য"; }
+    else if (t >= Math.max(...p.P.map(x => x.e))) { chip.className = "chip done"; chip.textContent = "পড়া শেষ ✓"; }
+    else { chip.className = "chip run"; chip.textContent = "পড়ছে…"; }
+    // screen
+    const painted = t >= p.fp;
+    $("tEmpty").style.display = painted ? "none" : "";
+    document.querySelectorAll("#tScreen .el").forEach(e => e.classList.toggle("show", painted && parsed(+e.dataset.l)));
+    $("tImg").classList.toggle("loaded", t >= p.img.e); $("tImg").textContent = t >= p.img.e ? "photo.webp ✓" : "photo.webp নামছে…";
+    $("tBtn").classList.toggle("live", p.found && t >= p.run.e);
+    // console
+    let c = '<span class="dim">// app.js এখনো চলেনি</span>';
+    if (t >= p.run.s) c = p.found
+      ? '<span class="dim">&gt; querySelector("#buyBtn")</span>\n&lt;button id="buyBtn"&gt;\n<span class="ok">✓ click listener বসানো হলো — button কাজ করবে</span>'
+      : '<span class="dim">&gt; querySelector("#buyBtn")</span>\nnull\n<span class="er">✗ Uncaught TypeError: Cannot read properties of null\n   (reading \'addEventListener\')</span>\n<span class="dim">// button পরে দেখা গেলেও click-এ কিছুই হবে না</span>';
+    $("tConsole").innerHTML = c;
+    document.querySelectorAll("#tEvents li").forEach(li => li.classList.toggle("seen", t >= +li.dataset.t));
+    $("tRange").value = Math.round(Math.min(t, p.end) / p.end * 1000);
+  }
+  const S = { mode: "defer" };
+  const SLOW = 0.011;                                    // real seconds per simulated ms → ~8 s per run
+  let clock = { t: 0 }, tTween = null;
+  function tSetup() {
+    tPlan = plan(S.mode); buildChart(); buildSource(S.mode);
+    if (tTween) tTween.kill();
+    clock.t = 0;
+    tTween = gsap.to(clock, { t: tPlan.end, duration: tPlan.end * SLOW, ease: "none", paused: true, onUpdate: () => draw(clock.t), onComplete: () => { $("tPlay").textContent = "▶ আবার চালান"; } });
+    draw(0); $("tPlay").textContent = "▶ চালান";
+  }
+  $("mode").onchange = e => { S.mode = e.target.value; tSetup(); };
+  $("tPlay").onclick = () => {
+    if (tTween.progress() >= 1) { tTween.progress(0).pause(); }
+    if (tTween.paused() || !tTween.isActive()) { tTween.play(); $("tPlay").textContent = "❚❚ থামান"; }
+    else { tTween.pause(); $("tPlay").textContent = "▶ চালান"; }
+  };
+  $("tReset").onclick = () => tSetup();
+  $("tRange").oninput = e => { tTween.pause(); tTween.progress(+e.target.value / 1000); $("tPlay").textContent = "▶ চালান"; };
+
+  /* ---------------- theme ---------------- */
+  const root = document.documentElement;
+  $("themeToggle").onclick = () => {
+    const dark = root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+    root.dataset.theme = dark ? "light" : "dark";
+    try { localStorage.setItem("welldev-theme", root.dataset.theme); } catch (e) {}
+  };
+
+  pRender(false);
+  tSetup();
+});
+</script>
+</body>
+</html>

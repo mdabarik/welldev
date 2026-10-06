@@ -105,6 +105,8 @@ code{font-family:var(--mono);font-size:.86em;font-weight:500;background:color-mi
 .controls button:hover,.controls select:hover{border-color:var(--accent)}
 .controls button.primary{border:0;color:#fff;background:linear-gradient(135deg,#6366f1,#8b5cf6 55%,#ec4899);min-width:100px;box-shadow:0 8px 18px -10px #8b5cf6}
 .controls .sp{flex:1}
+.controls .field{display:inline-flex;align-items:center;gap:8px;flex-wrap:nowrap;max-width:100%}
+.controls .field select{max-width:100%}
 .controls label{font-size:14px;color:var(--muted)}
 .controls select{font-weight:500}
 
@@ -290,6 +292,7 @@ tr:last-child td{border-bottom:0}
 footer{color:var(--faint);font-size:13px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;border-top:1px solid var(--line);padding-top:16px}
 @media (max-width:1050px){.osi-stack{grid-template-columns:repeat(4,minmax(0,1fr))}}
 @media (max-width:900px){.tcp-map{grid-template-columns:1fr}.tcp-wire{padding:4px 12%;}.tcp-defs,.tcp-lesson-grid,.tls-after{grid-template-columns:1fr}.tcp-packet{grid-template-columns:54px 1fr 54px}.osi-location{grid-template-columns:1fr}.tls-head,.tls-row{grid-template-columns:minmax(135px,.75fr) minmax(230px,1.25fr) minmax(135px,.75fr)}}
+@media (max-width:700px){.scene{overflow-x:auto;-webkit-overflow-scrolling:touch}.scene svg{min-width:720px}}
 @media (max-width:640px){.hero{padding:24px 20px;border-radius:20px}.wf-row{grid-template-columns:110px minmax(0,1fr) 52px}.stats{grid-template-columns:1fr}.tcp-stage{padding:13px}.tcp-wire{padding:4px 0}.tcp-answer{grid-template-columns:1fr}.tcp-answer .tick{width:30px;height:30px}}
 @media (max-width:640px){.tls-stage{padding:13px}.tls-head{grid-template-columns:1fr 1fr}.tls-head .tls-center{display:none}.tls-row{grid-template-columns:1fr}.tls-side{order:2}.tls-side.empty{display:none}.tls-msg,.tls-local,.tls-secure{order:1}.tls-peer.server{text-align:left}.tls-row .tls-side:last-child:not(.empty){order:3}}
 @media (max-width:560px){.osi-stack{grid-template-columns:1fr 1fr}.osi-guide{padding:13px}.osi-guide-head{display:block}}
@@ -414,14 +417,14 @@ footer{color:var(--faint);font-size:13px;display:flex;justify-content:space-betw
         <button type="button" id="replayBtn">↻ এই ধাপ আবার</button>
         <button type="button" id="resetBtn">↺ শুরু</button>
         <span class="sp"></span>
-        <label for="scenario">ঘটনা</label>
+        <span class="field"><label for="scenario">ঘটনা</label>
         <select id="scenario">
           <option value="api">API request (cache miss → database)</option>
           <option value="cache">API request (Redis cache hit)</option>
           <option value="static">Static file (ছবি)</option>
           <option value="notfound">404 Not Found</option>
           <option value="badgw">502 Bad Gateway (app বন্ধ)</option>
-        </select>
+        </select></span>
       </div>
     </section>
 
