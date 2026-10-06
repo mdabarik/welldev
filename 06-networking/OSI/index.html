@@ -1,0 +1,896 @@
+<!doctype html>
+<html lang="bn">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OSI D3: Seq, Checksum, CRC</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&family=Baloo+Da+2:wght@600;700&family=Hind+Siliguri:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<style>
+/* Layout: SVG bench (two 7-layer stacks + wire) with a packet inspector under it; step explanation docked on the right. */
+:root {
+  --bg: #eef1f6; --surface: #ffffff; --fg: #141a24; --muted: #586274; --line: #d4dbe6;
+  --accent: #2b62d9; --code-bg: #f4f6fa; --on-layer: #ffffff;
+  --stage: #e7ecf3; --slab: #d9dfe8; --ground: #dde3ec; --data: #f7f8fb;
+  --ok: #1f8a4c; --bad: #d12f3b; --warn: #b86e00;
+  --l7: #d63c74; --l6: #a650c4; --l5: #5b5fd6; --l4: #2482cc; --l3: #138f7b; --l2: #5a9420; --l1: #c97a12;
+  --f-display: "Baloo Da 2", "Hind Siliguri", system-ui, sans-serif;
+  --f-body: "Hind Siliguri", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e131b; --surface: #161d28; --fg: #e6ebf2; --muted: #95a0b2; --line: #29333f;
+    --accent: #6f9bff; --code-bg: #10161f; --on-layer: #0e131b;
+    --stage: #121822; --slab: #2a3341; --ground: #18202b; --data: #dfe4ec;
+    --ok: #4cc27f; --bad: #ff6670; --warn: #f0a640;
+    --l7: #f0709d; --l6: #c98ae0; --l5: #8f93f2; --l4: #5cb0f0; --l3: #3fc3a8; --l2: #92c955; --l1: #eaa747;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e131b; --surface: #161d28; --fg: #e6ebf2; --muted: #95a0b2; --line: #29333f;
+  --accent: #6f9bff; --code-bg: #10161f; --on-layer: #0e131b;
+  --stage: #121822; --slab: #2a3341; --ground: #18202b; --data: #dfe4ec;
+  --ok: #4cc27f; --bad: #ff6670; --warn: #f0a640;
+  --l7: #f0709d; --l6: #c98ae0; --l5: #8f93f2; --l4: #5cb0f0; --l3: #3fc3a8; --l2: #92c955; --l1: #eaa747;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { background: var(--bg); color: var(--fg); font-family: var(--f-body); font-size: 16px; line-height: 1.6; }
+.wrap { max-width: 1280px; margin: 0 auto; padding: 28px 16px 56px; display: grid; gap: 24px; }
+
+header.top { display: grid; gap: 8px; max-width: 800px; }
+.eyebrow { margin: 0; font-family: var(--f-mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+h1 { margin: 0; font-family: var(--f-display); font-weight: 700; font-size: clamp(28px, 4.2vw, 42px); line-height: 1.15; text-wrap: balance; }
+.lede { margin: 0; color: var(--muted); font-size: 17px; }
+.lede b { color: var(--fg); }
+
+.bench { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); grid-template-areas: "stage info" "insp info"; gap: 20px; align-items: start; }
+.stage { grid-area: stage; }
+.info { grid-area: info; }
+.insp { grid-area: insp; }
+@media (max-width: 1000px) { .bench { grid-template-columns: minmax(0, 1fr); grid-template-areas: "stage" "info" "insp"; } }
+
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; min-width: 0; }
+.stage { padding: 12px; display: grid; gap: 12px; }
+#scene { border-radius: 10px; overflow: hidden; background: var(--stage); }
+#scene svg { display: block; max-width: 100%; font-family: var(--f-body); }
+.ttl { fill: var(--fg); font-weight: 700; text-anchor: middle; }
+.sub { fill: var(--muted); text-anchor: middle; }
+.row { cursor: pointer; outline: none; transition: opacity .35s; }
+.row.dim { opacity: .5; }
+.row .bg { fill: var(--surface); stroke: var(--line); stroke-width: 1; transition: fill .4s, stroke .4s; }
+.row:hover .bg { stroke: var(--c); }
+.row.active .bg { fill: color-mix(in srgb, var(--c) 22%, var(--surface)); stroke: var(--c); stroke-width: 2; }
+.row:focus-visible .bg { stroke: var(--accent); stroke-width: 3; }
+.row .sq { fill: var(--c); }
+.row .num { fill: var(--on-layer); font: 700 14px var(--f-mono); text-anchor: middle; }
+.row .en { fill: var(--fg); font-weight: 700; }
+.row .bn { fill: var(--muted); }
+.wire-line { fill: none; stroke: var(--line); stroke-width: 2.5; stroke-linejoin: round; transition: stroke .4s; }
+.wire.active .wire-line { stroke: var(--l1); }
+.wire-lbl { fill: var(--muted); font-size: 11px; text-anchor: middle; }
+.router rect { fill: color-mix(in srgb, var(--l3) 14%, var(--stage)); stroke: var(--l3); stroke-width: 1.5; }
+.router text { fill: var(--l3); font: 700 11px var(--f-mono); text-anchor: middle; }
+.sl rect, .sl-exit rect { fill: var(--c); transition: fill .35s; }
+.sl.payload rect, .sl-exit.payload rect { fill: var(--data); stroke: var(--muted); stroke-width: .75; }
+.ent.bits .sl rect { fill: var(--l1); stroke: none; }
+.ent.bad .sl rect { fill: var(--bad); stroke: none; }
+.sl text, .sl-exit text { fill: var(--on-layer); font-family: var(--f-mono); font-weight: 700; text-anchor: middle; }
+.sl.payload text { fill: #141a24; }
+.ent.bits .sl text, .ent.bad .sl text { fill: var(--on-layer); }
+.etag { font: 11px var(--f-mono); paint-order: stroke; stroke: var(--stage); stroke-width: 3px; stroke-linejoin: round; }
+.etag .tl { fill: var(--fg); font-weight: 700; }
+.etag .tb { font-weight: 700; }
+.etag .tb.ok { fill: var(--ok); } .etag .tb.bad { fill: var(--bad); } .etag .tb.warn { fill: var(--warn); } .etag .tb.info { fill: var(--muted); }
+.spark.noise { fill: var(--l1); } .spark.bad { fill: var(--bad); }
+.b { border-radius: 4px; padding: 0 5px; font-weight: 700; }
+.b.ok { color: var(--ok); background: color-mix(in srgb, var(--ok) 14%, transparent); }
+.b.bad { color: var(--bad); background: color-mix(in srgb, var(--bad) 14%, transparent); }
+.b.warn { color: var(--warn); background: color-mix(in srgb, var(--warn) 16%, transparent); }
+.b.info { color: var(--muted); background: var(--code-bg); }
+@media (max-width: 600px) { .etag { font-size: 9.5px; } }
+
+.controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.controls button, .controls select {
+  font: 600 15px/1 var(--f-body); color: var(--fg); background: var(--code-bg);
+  border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; cursor: pointer;
+}
+.controls select { padding: 9px 10px; font-weight: 500; }
+.controls button:hover, .controls select:hover { border-color: var(--accent); }
+.controls button.primary { background: var(--accent); border-color: var(--accent); color: var(--surface); min-width: 96px; }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.field { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.field label { font-size: 14px; color: var(--muted); }
+.field input { font: 500 15px var(--f-mono); color: var(--fg); background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; width: 160px; max-width: 100%; }
+.field input[aria-invalid="true"] { border-color: var(--bad); }
+.scrub { display: flex; align-items: center; gap: 10px; }
+.scrub input { flex: 1; min-width: 0; accent-color: var(--accent); }
+.scrub span { font: 500 13px var(--f-mono); color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.spacer { flex: 1; }
+
+.info { padding: 20px; display: grid; gap: 14px; position: sticky; top: calc(env(safe-area-inset-top, 0px) + 16px); }
+@media (max-width: 1000px) { .info { position: static; } }
+.badge-row { display: flex; align-items: center; gap: 12px; }
+.lbadge { width: 46px; height: 46px; border-radius: 10px; display: grid; place-items: center; font: 700 22px var(--f-display); color: var(--surface); background: var(--muted); flex: none; }
+.info h2 { margin: 0; font-family: var(--f-display); font-size: 23px; line-height: 1.2; text-wrap: balance; }
+.info .dir { margin: 2px 0 0; font-size: 14px; color: var(--muted); }
+.info p.text { margin: 0; font-size: 16.5px; }
+pre.code { margin: 0; padding: 12px 14px; border-radius: 10px; background: var(--code-bg); border: 1px solid var(--line); font: 12.5px/1.6 var(--f-mono); white-space: pre-wrap; word-break: break-word; overflow-x: auto; }
+
+.insp { padding: 16px 18px; display: grid; gap: 14px; }
+.insp h3 { margin: 0; font-family: var(--f-display); font-size: 19px; }
+.insp-grid { display: grid; grid-template-columns: minmax(0, 1.8fr) minmax(0, 1fr); gap: 18px; }
+@media (max-width: 760px) { .insp-grid { grid-template-columns: minmax(0, 1fr); } }
+.tscroll { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font: 500 11px var(--f-mono); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); white-space: nowrap; }
+td.m { font: 13px var(--f-mono); white-space: nowrap; font-variant-numeric: tabular-nums; }
+tr:last-child td { border-bottom: 0; }
+td .b { white-space: nowrap; font-size: 12.5px; }
+.empty { color: var(--muted); font-size: 14px; }
+.buf { display: grid; gap: 10px; align-content: start; }
+.slots { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.slot { border: 1.5px dashed var(--line); border-radius: 8px; padding: 8px 6px; text-align: center; font: 600 12px/1.35 var(--f-mono); color: var(--muted); min-height: 56px; display: grid; align-content: center; }
+.slot small { display: block; font-weight: 400; font-size: 11px; }
+.slot.ok { border-style: solid; border-color: var(--ok); color: var(--ok); background: color-mix(in srgb, var(--ok) 10%, transparent); }
+.slot.held { border-style: solid; border-color: var(--warn); color: var(--warn); background: color-mix(in srgb, var(--warn) 10%, transparent); }
+.slot.gap { border-color: var(--bad); color: var(--bad); }
+.expect { font-size: 14px; color: var(--muted); }
+.expect b { font-family: var(--f-mono); color: var(--fg); }
+
+.ref { display: grid; gap: 14px; }
+.ref h2 { margin: 0; font-family: var(--f-display); font-size: 26px; }
+.ref .tscroll { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; }
+.ref table { min-width: 680px; font-size: 15px; }
+.ref td, .ref th { padding: 11px 14px; }
+.notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+.note { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; }
+.note h3 { margin: 0 0 6px; font-family: var(--f-display); font-size: 19px; }
+.note p { margin: 0; font-size: 15px; }
+.note code { font: 13px var(--f-mono); background: var(--code-bg); padding: 1px 5px; border-radius: 4px; }
+
+/* ===== WellDev theme (same look as the rest of the site) — animation colours above are unchanged ===== */
+:root{
+  --bg:#f5f7fc; --surface:#ffffff; --fg:#0f172a; --muted:#5b6478; --line:#e4e8f1;
+  --accent:#6366f1; --code-bg:#f6f8fc; --stage:#eef2fb;
+  --hero:linear-gradient(135deg,#4f46e5 0%,#7c3aed 45%,#db2777 100%);
+  --shadow:0 1px 2px rgba(15,23,42,.04),0 10px 30px -12px rgba(15,23,42,.14);
+  --shadow-lg:0 2px 4px rgba(15,23,42,.05),0 24px 48px -20px rgba(30,41,99,.3);
+  --f-display:"Inter","Hind Siliguri",system-ui,sans-serif;
+  --f-body:"Hind Siliguri","Inter",system-ui,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0b0f1a; --surface:#121827; --fg:#e7ecf6; --muted:#9aa6bf; --line:#232c42; --accent:#818cf8; --code-bg:#1e1e1e; --stage:#0f1524;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6); --shadow-lg:0 24px 48px -20px rgba(0,0,0,.75);
+}}
+:root[data-theme="dark"]{
+  --bg:#0b0f1a; --surface:#121827; --fg:#e7ecf6; --muted:#9aa6bf; --line:#232c42; --accent:#818cf8; --code-bg:#1e1e1e; --stage:#0f1524;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6); --shadow-lg:0 24px 48px -20px rgba(0,0,0,.75);
+}
+body{margin:0;-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto 0;height:460px;z-index:-1;pointer-events:none;
+  background:radial-gradient(620px 260px at 25% -40px,color-mix(in srgb,#6366f1 15%,transparent),transparent 70%),
+             radial-gradient(540px 240px at 90% -60px,color-mix(in srgb,#ec4899 12%,transparent),transparent 70%)}
+.topnav{display:flex;align-items:center;gap:10px}
+.topnav .brand{display:flex;align-items:center;gap:10px;color:var(--fg);text-decoration:none;font:800 16px var(--f-display);letter-spacing:-.02em}
+.topnav .logo{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:#fff;font:800 13px var(--f-mono);background:var(--hero);box-shadow:0 6px 16px -6px #8b5cf6}
+.topnav .sp{flex:1}
+.topnav a.pill,.topnav button.pill{border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:6px 14px;font:600 13px var(--f-display);cursor:pointer;text-decoration:none;box-shadow:var(--shadow)}
+.topnav .pill:hover{color:var(--fg)}
+header.top{max-width:none;border-radius:24px;padding:34px 38px;color:#fff;background:var(--hero);box-shadow:var(--shadow-lg);position:relative;overflow:hidden}
+header.top::after{content:"";position:absolute;right:-70px;top:-90px;width:340px;height:340px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.22),transparent 65%);pointer-events:none}
+header.top .eyebrow{justify-self:start;color:#fff;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.26);padding:3px 11px;border-radius:999px;font-weight:600}
+header.top h1{color:#fff;font-weight:800;letter-spacing:-.03em;max-width:820px}
+header.top .lede{color:#fff;opacity:.94;max-width:820px}
+header.top .lede b{color:#fde68a}
+.card{border-radius:18px;box-shadow:var(--shadow)}
+#scene{border-radius:14px}
+.controls button,.controls select{border-radius:10px;font-family:var(--f-display);font-size:14px;background:var(--surface);box-shadow:0 1px 2px rgba(15,23,42,.05)}
+.controls button.primary{color:#fff;border:0;background:linear-gradient(135deg,#6366f1,#8b5cf6 55%,#ec4899);box-shadow:0 8px 18px -10px #8b5cf6}
+.controls button.primary:hover{filter:brightness(1.06)}
+.field input{border-radius:10px;background:var(--surface)}
+.scrub input{accent-color:#8b5cf6}
+section.info{border-top:4px solid var(--accent)}
+.b.info{display:inline;padding:0 5px;position:static;border:0;gap:0}
+.lbadge{border-radius:13px;box-shadow:0 8px 18px -10px rgba(15,23,42,.5)}
+.info h2,.insp h3,.ref h2,.note h3{font-weight:800;letter-spacing:-.02em}
+pre.code{background:var(--code-bg);border:1px solid var(--line);border-radius:12px;color:var(--fg);font-variant-ligatures:none}
+.ref h2{display:flex;align-items:center;gap:10px}
+.ref h2::before{content:"";width:12px;height:28px;border-radius:4px;background:linear-gradient(180deg,#6366f1,#ec4899)}
+.ref .tscroll{border-radius:16px;box-shadow:var(--shadow)}
+.ref th{background:color-mix(in srgb,var(--accent) 8%,var(--surface));color:color-mix(in srgb,var(--accent) 72%,var(--fg));font-weight:600;border-bottom-color:color-mix(in srgb,var(--accent) 22%,var(--line))}
+.ref tbody tr:nth-child(even) td{background:color-mix(in srgb,var(--accent) 3%,transparent)}
+.ref tbody tr:hover td{background:color-mix(in srgb,var(--accent) 7%,var(--surface))}
+.insp th{color:color-mix(in srgb,var(--accent) 70%,var(--fg))}
+.note{border-radius:16px;box-shadow:var(--shadow);border-top:4px solid var(--l4)}
+.note:nth-child(2){border-top-color:var(--l7)} .note:nth-child(3){border-top-color:var(--l3)} .note:nth-child(4){border-top-color:var(--l1)} .note:nth-child(5){border-top-color:var(--l6)}
+.note code{background:color-mix(in srgb,var(--accent) 10%,var(--surface));color:color-mix(in srgb,var(--accent) 72%,var(--fg));font-weight:500}
+.slot{border-radius:10px}
+@media (max-width:640px){header.top{padding:24px 20px;border-radius:20px}}
+</style>
+
+<div class="wrap">
+  <nav class="topnav">
+    <a class="brand" href="../../index.html"><span class="logo">W</span>WellDev</a>
+    <span class="sp"></span>
+    <a class="pill" href="../../index.html">⌂ সব গাইড</a>
+    <button class="pill" id="themeToggle" type="button">Theme</button>
+  </nav>
+  <header class="top">
+    <p class="eyebrow">Computer Networks · OSI Model · d3.js demo</p>
+    <h1>Seq, Checksum আর CRC: একটা মেসেজের যাত্রা</h1>
+    <p class="lede">আপনি চ্যাট অ্যাপে মেসেজ পাঠালেন। TCP সেটা <b>৩টা segment</b> এ ভাগ করে প্রতিটায় <b>seq নম্বর</b> আর <b>checksum</b> বসায়। Data Link লেয়ার প্রতিটা frame এ <b>CRC-32</b> দিয়ে <b>FCS</b> বসায়। পথে একটা segment নষ্ট হলে বা হারালে কে ধরে, আর কীভাবে আবার আসে, সেটা ধাপে ধাপে দেখুন। সব হিসাব আসল: CRC আর checksum এই পেজেই গণনা হচ্ছে।</p>
+  </header>
+
+  <div class="bench">
+    <section class="card stage" aria-label="OSI animation">
+      <div id="scene"></div>
+      <div class="scrub">
+        <input type="range" id="stepRange" min="0" max="19" value="0" aria-label="ধাপ">
+        <span id="stepNo">ধাপ 0 / 19</span>
+      </div>
+      <div class="controls">
+        <button type="button" id="prevBtn">◀ আগে</button>
+        <button type="button" id="playBtn" class="primary">▶ Play</button>
+        <button type="button" id="nextBtn">পরে ▶</button>
+        <button type="button" id="resetBtn">↺ শুরু</button>
+        <span class="spacer"></span>
+        <div class="field">
+          <label for="scenario">ঘটনা</label>
+          <select id="scenario">
+            <option value="bad">পথে bit নষ্ট (CRC ধরবে)</option>
+            <option value="lost">Router এ packet হারানো</option>
+            <option value="clean">সব ঠিক</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="msgInput">মেসেজ</label>
+          <input id="msgInput" type="text" maxlength="24" value="Hello Karim!" autocomplete="off">
+        </div>
+      </div>
+    </section>
+
+    <section class="card info" aria-live="polite">
+      <div class="badge-row">
+        <div class="lbadge" id="lbadge">✉</div>
+        <div>
+          <h2 id="infoTitle"></h2>
+          <p class="dir" id="infoDir"></p>
+        </div>
+      </div>
+      <p class="text" id="infoText"></p>
+      <pre class="code" id="infoCode"></pre>
+    </section>
+
+    <section class="card insp" aria-label="Packet inspector">
+      <div class="insp-grid">
+        <div>
+          <h3>Segment গুলো</h3>
+          <div class="tscroll" id="segTable"></div>
+        </div>
+        <div class="buf">
+          <h3>প্রাপকের TCP বাফার</h3>
+          <div class="slots" id="slots"></div>
+          <div class="expect" id="expect"></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <section class="ref">
+    <h2>তিন পাহারাদার: কে কী ধরে</h2>
+    <div class="tscroll">
+      <table>
+        <thead><tr><th>চেক</th><th>লেয়ার</th><th>কোথায় চেক হয়</th><th>কী ধরে</th><th>ভুল পেলে কী করে</th></tr></thead>
+        <tbody>
+          <tr><td><b>FCS</b> (CRC-32)</td><td>2 · Data Link</td><td>প্রতিটা hop এ: প্রতিটা switch, router আর শেষ প্রাপক</td><td>পথে bit উল্টে যাওয়া। ৩২ bit পর্যন্ত টানা ভুল সবসময় ধরে</td><td>frame চুপচাপ ফেলে দেয়, কাউকে জানায় না</td></tr>
+          <tr><td><b>Checksum</b> (16-bit)</td><td>4 · Transport</td><td>শুধু শেষ প্রাপকে (end-to-end)</td><td>router এর ভেতরে বা পথের কোথাও নষ্ট হওয়া, যেটা CRC এর আওতার বাইরে</td><td>segment ফেলে দেয়</td></tr>
+          <tr><td><b>Seq + ACK</b></td><td>4 · Transport</td><td>প্রাপক seq মেলায়, প্রেরক ACK দেখে</td><td>হারানো, দুবার আসা, উল্টোপাল্টা ক্রমে আসা segment</td><td>ACK দিয়ে জানায় কোনটা লাগবে, প্রেরক আবার পাঠায় (retransmit)</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="notes">
+      <div class="note">
+        <h3>"rcc" আসলে CRC</h3>
+        <p>CRC মানে Cyclic Redundancy Check। FCS (Frame Check Sequence) হলো frame এর শেষের ৪ বাইটের ঘর, আর সেই ঘরে যে মান বসে সেটা CRC-32 দিয়ে হিসাব করা। তাই FCS আর CRC একই চেকের দুই নাম: একটা ঘরের নাম, একটা হিসাবের পদ্ধতি।</p>
+      </div>
+      <div class="note">
+        <h3>CRC থাকতে checksum কেন?</h3>
+        <p>CRC শুধু একটা তারের এক মাথা থেকে আরেক মাথা পাহারা দেয়। Router frame খুলে নতুন CRC বসায়, তাই router এর মেমরিতে কিছু নষ্ট হলে নতুন CRC সেটাকেও "ঠিক" বলে দেবে। TCP checksum প্রেরক থেকে প্রাপক পর্যন্ত পুরো পথ পাহারা দেয়।</p>
+      </div>
+      <div class="note">
+        <h3>seq নম্বর মানে বাইটের নম্বর</h3>
+        <p>TCP তে seq মানে segment এর ক্রমিক নম্বর না। এটা হলো ওই segment এর প্রথম বাইট পুরো ডেটার কত নম্বর বাইট। তাই ৪ বাইটের segment হলে seq বাড়ে ৪ করে: <code>1001, 1005, 1009</code>। ACK নম্বর মানে "এর আগের সব পেয়েছি, এটা পাঠাও"।</p>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+(function () {
+  // ================= data & real calculations =================
+  const LAYERS = [
+    { n: 7, en: 'Application', bn: 'অ্যাপ্লিকেশন', c: '--l7' },
+    { n: 6, en: 'Presentation', bn: 'প্রেজেন্টেশন', c: '--l6' },
+    { n: 5, en: 'Session', bn: 'সেশন', c: '--l5' },
+    { n: 4, en: 'Transport', bn: 'ট্রান্সপোর্ট', c: '--l4' },
+    { n: 3, en: 'Network', bn: 'নেটওয়ার্ক', c: '--l3' },
+    { n: 2, en: 'Data Link', bn: 'ডেটা লিংক', c: '--l2' },
+    { n: 1, en: 'Physical', bn: 'ফিজিক্যাল', c: '--l1' },
+  ];
+  const SRC_MAC = [0xa4, 0x5e, 0x60, 0x1b, 0x22, 0x9c], DST_MAC = [0xf0, 0x9f, 0xc2, 0x10, 0xaa, 0x01];
+  const SRC_IP = [192, 168, 0, 5], DST_IP = [93, 184, 216, 34], SPORT = 52100, DPORT = 443, ISN = 1000;
+  const te = new TextEncoder(), td = new TextDecoder();
+  const S = { msg: 'Hello Karim!', scenario: 'bad', step: 0, prev: 0, playing: false };
+  let D = null, STEPS = [];
+
+  const CRC_T = (() => { const t = []; for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+  function crc32(bytes) { let c = 0xFFFFFFFF; for (const b of bytes) c = CRC_T[(c ^ b) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+  function inetChecksum(bytes) {
+    let sum = 0;
+    for (let i = 0; i < bytes.length; i += 2) sum += (bytes[i] << 8) + (bytes[i + 1] || 0);
+    while (sum >>> 16) sum = (sum & 0xffff) + (sum >>> 16);
+    return (~sum) & 0xffff;
+  }
+  const h16 = n => '0x' + n.toString(16).toUpperCase().padStart(4, '0');
+  const h32 = n => '0x' + n.toString(16).toUpperCase().padStart(8, '0');
+  const bin8 = n => n.toString(2).padStart(8, '0');
+  const u16 = n => [(n >>> 8) & 255, n & 255];
+  const u32 = n => [(n >>> 24) & 255, (n >>> 16) & 255, (n >>> 8) & 255, n & 255];
+  function show(bytes) {
+    const s = td.decode(new Uint8Array(bytes));
+    return s.includes('\uFFFD') ? bytes.map(b => b.toString(16).padStart(2, '0')).join(' ') : s;
+  }
+
+  function derive() {
+    const all = Array.from(te.encode(S.msg)), n = all.length;
+    const base = Math.floor(n / 3), rem = n % 3;
+    const sizes = [base + (rem > 0 ? 1 : 0), base + (rem > 1 ? 1 : 0), base];
+    let off = 0;
+    const segs = sizes.map((len, k) => {
+      const payload = all.slice(off, off + len), seq = ISN + 1 + off;
+      off += len;
+      const tcpNoSum = [...u16(SPORT), ...u16(DPORT), ...u32(seq)];
+      const chk = inetChecksum([...tcpNoSum, ...payload]);
+      const frameOf = p => [...DST_MAC, ...SRC_MAC, 0x08, 0x00, ...SRC_IP, ...DST_IP, ...tcpNoSum, ...u16(chk), ...p];
+      const crc = crc32(frameOf(payload));
+      const badPayload = payload.slice(); badPayload[0] ^= 0x04;
+      return { k, len, seq, payload, text: show(payload), chk, crc, badPayload, badText: show(badPayload), crcBad: crc32(frameOf(badPayload)) };
+    });
+    D = { n, sizes, segs, ackFinal: ISN + 1 + n, hex: all.slice(0, 6).map(b => b.toString(16).padStart(2, '0')).join(' ') + (n > 6 ? ' …' : '') };
+  }
+
+  function buildSteps() {
+    STEPS = ['intro', 's7', 's6', 's5', 's4seg', 's4chk', 's3', 's2', 's1', 'wire', 'r1', 'r2', 'r3', 'r4'];
+    if (S.scenario === 'clean') STEPS.push('ack'); else STEPS.push('dupack', 'retx', 'rretx');
+    STEPS.push('r5', 'r6', 'r7');
+  }
+  const at = id => STEPS.indexOf(id);
+  const curId = () => STEPS[S.step];
+
+  // ================= step explanations =================
+  const SEND = 'প্রেরক (আপনার ল্যাপটপ) · নিচে নামছে', RECV = 'প্রাপক (চ্যাট সার্ভার) · উপরে উঠছে';
+  function info(id) {
+    const g = D.segs, s1 = g[1], sc = S.scenario, last = D.ackFinal - 1;
+    switch (id) {
+      case 'intro': return { li: -1, title: 'শুরু: মেসেজ রেডি', dir: 'বাম: Client · মাঝে: তার + Router · ডান: Server',
+        text: 'বাম টাওয়ার আপনার ল্যাপটপ, ডান টাওয়ার চ্যাট সার্ভার। দুটোতেই একই ৭টা লেয়ার। যেকোনো লেয়ারে ক্লিক করলে সেই ধাপে চলে যাবে। এই যাত্রায় দেখবেন মেসেজ কীভাবে ৩টা segment এ ভাগ হয়, আর প্রতিটায় seq, checksum আর CRC কীভাবে বসে। ' +
+          (sc === 'bad' ? 'তারপর পথে একটা segment এর bit নষ্ট হবে। দেখবেন CRC কীভাবে সেটা ধরে আর TCP কীভাবে আবার আনায়।'
+            : sc === 'lost' ? 'তারপর Router একটা segment ফেলে দেবে। দেখবেন seq নম্বর দেখে TCP কীভাবে বোঝে আর আবার আনায়।'
+            : 'এবার কোনো সমস্যা হবে না, প্রতিটা চেক পাস করবে।'),
+        code: `message  "${S.msg}"\nbytes    ${D.n}\nভাগ      ৩টা segment (${D.sizes.join(' + ')} বাইট)` };
+      case 's7': return { li: 0, title: 'Layer 7 · Application', dir: SEND,
+        text: 'চ্যাট অ্যাপ একটা HTTP request বানায়: POST /messages, আর body তে আপনার মেসেজ।',
+        code: `+ HTTP  POST /messages\n        body: "${S.msg}"` };
+      case 's6': return { li: 1, title: 'Layer 6 · Presentation', dir: SEND,
+        text: 'টেক্সট থেকে বাইট (UTF-8)। বাস্তবে এখানে TLS দিয়ে এনক্রিপ্টও হয়। কিন্তু seq আর checksum পরিষ্কার দেখানোর জন্য এই demo তে বাইটগুলো খোলা রাখা হয়েছে।',
+        code: `"${S.msg}" → ${D.hex}` };
+      case 's5': return { li: 2, title: 'Layer 5 · Session', dir: SEND,
+        text: 'Session ID 7f2c যোগ হয়, যাতে সার্ভার চেনে এটা আপনার লগইন করা আলাপ।',
+        code: '+ SID   session = 7f2c' };
+      case 's4seg': return { li: 3, title: 'Layer 4 · Transport: ভাগ আর seq নম্বর', dir: SEND,
+        text: `TCP ডেটাকে ছোট ছোট segment এ ভাগ করে। প্রতিটা segment এ sequence number বসে। এটা মানে "এই segment এর প্রথম বাইটটা পুরো ডেটার কত নম্বর বাইট"। শুরুর নম্বর (ISN) এখানে ${ISN}, তাই প্রথম বাইট ${ISN + 1}। প্রাপক এই নম্বর দেখে বুঝবে কোনটা আগে, কোনটা পরে, আর কোনটা নেই। (HTTP আর Session এর তথ্যও আসলে এই বাইটগুলোর ভেতরে থাকে। সহজ রাখতে শুধু মেসেজটা দেখানো হচ্ছে।)`,
+        code: g.map(s => `seg ${s.k + 1}  seq ${s.seq}  "${s.text}"  (বাইট ${s.seq}–${s.seq + s.len - 1})`).join('\n') };
+      case 's4chk': return { li: 3, title: 'Layer 4 · Transport: Checksum', dir: SEND,
+        text: 'প্রতিটা segment এর বাইটগুলো ১৬ bit করে জোড়া বানিয়ে যোগ করা হয় (ones\' complement sum), তারপর উল্টানো হয়। এই ফলাফলটা TCP header এর checksum ঘরে লেখা হয়। প্রাপক একই হিসাব আবার করবে। না মিললে বুঝবে segment নষ্ট।',
+        code: g.map(s => `seg ${s.k + 1}  checksum = ${h16(s.chk)}`).join('\n') + '\n(সরলীকৃত: port + seq + data। আসল TCP তে IP pseudo-header ও যোগ হয়)' };
+      case 's3': return { li: 4, title: 'Layer 3 · Network', dir: SEND,
+        text: 'প্রতিটা segment এর সামনে IP header বসে, আর segment টা হয়ে যায় packet। ৩টা packet এর IP ঠিকানা একই, কিন্তু ইন্টারনেটে ওরা আলাদা আলাদা পথে যেতে পারে, আগে-পরে পৌঁছাতে পারে। এই কারণেই seq নম্বর দরকার।',
+        code: '+ IP   src 192.168.0.5 → dst 93.184.216.34' };
+      case 's2': return { li: 5, title: 'Layer 2 · Data Link: FCS (CRC-32)', dir: SEND,
+        text: 'প্রতিটা packet কে frame বানানো হয়: সামনে MAC header, পেছনে FCS। FCS এর মান বের করা হয় CRC-32 দিয়ে। পুরো frame এর বাইটগুলোকে একটা নির্দিষ্ট polynomial দিয়ে ভাগ করার মতো একটা হিসাব হয়, আর ভাগশেষটাই CRC। একটা bit বদলালেও ভাগশেষ পুরোপুরি বদলে যায়, তাই খুব ছোট ভুলও ধরা পড়ে।',
+        code: g.map(s => `frame ${s.k + 1}  CRC-32 = ${h32(s.crc)}  → FCS`).join('\n') + '\npolynomial 0x04C11DB7' };
+      case 's1': return { li: 6, title: 'Layer 1 · Physical', dir: SEND,
+        text: '৩টা frame 0 আর 1 এর সিগন্যাল হয়ে বের হয়: তারে ভোল্টেজ, ফাইবারে আলো, Wi-Fi তে রেডিও ওয়েভ।',
+        code: `seg 1 data: ${g[0].payload.slice(0, 3).map(bin8).join(' ')} …` };
+      case 'wire': return { li: -2, title: 'তার দিয়ে যাত্রা', dir: 'Physical medium · মাঝে Router',
+        text: sc === 'bad' ? `৩টা frame পরপর যাচ্ছে। seg 2 যখন Router পার হচ্ছে, তারে electrical noise এর কারণে একটা bit উল্টে গেল। "${s1.text}" হয়ে গেল "${s1.badText}"। প্রেরক বা প্রাপক কেউ এখনো জানে না।`
+          : sc === 'lost' ? 'seg 2 Router এ পৌঁছালে Router এর queue ভর্তি ছিল, তাই সে packet টা ফেলে দিল (drop)। ইন্টারনেটে এটা খুবই সাধারণ ঘটনা। প্রাপক জানেই না যে একটা packet আসার কথা ছিল।'
+          : '৩টা frame পরপর তার দিয়ে যাচ্ছে। Router প্রতিটার IP দেখে পথ ঠিক করে, নতুন MAC আর নতুন CRC বসিয়ে আবার পাঠায়।',
+        code: sc === 'bad' ? `seg 2 byte 1: ${bin8(s1.payload[0])} → ${bin8(s1.badPayload[0])}\n                     ^ ১টা bit উল্টে গেছে`
+          : sc === 'lost' ? `seg 2 (seq ${s1.seq})  router queue full → drop ✗` : '৩টা frame → Router → সার্ভার' };
+      case 'r1': return { li: 6, title: 'Layer 1 · Physical', dir: RECV,
+        text: 'সার্ভারের নেটওয়ার্ক কার্ড সিগন্যাল থেকে আবার bit পড়ে frame বানায়। ' + (sc === 'lost' ? 'এসেছে মাত্র ২টা frame।' : sc === 'bad' ? 'seg 2 এর একটা bit নষ্ট, কিন্তু Physical লেয়ার শুধু bit পড়ে, ঠিক-ভুল বোঝে না।' : '৩টাই এসেছে।'),
+        code: (sc === 'lost' ? [g[0], g[2]] : g).map(s => `frame এলো  (seq ${s.seq})`).join('\n') };
+      case 'r2': return { li: 5, title: 'Layer 2 · Data Link: CRC চেক', dir: RECV,
+        text: 'প্রাপক প্রতিটা frame এর CRC-32 নিজে আবার হিসাব করে, আর frame এর শেষের FCS এর সাথে মেলায়। ' +
+          (sc === 'bad' ? 'seg 1 আর 3 মিলেছে ✓। seg 2 মেলেনি ✗, কারণ একটা bit বদলে গেছে। Data Link লেয়ার নষ্ট frame চুপচাপ ফেলে দেয়, কাউকে জানায় না। আবার চাওয়ার দায়িত্ব TCP এর।' : 'সবগুলো মিলেছে ✓।'),
+        code: g.filter(s => !(sc === 'lost' && s.k === 1)).map(s => {
+          const bad = sc === 'bad' && s.k === 1;
+          return `frame ${s.k + 1}  FCS ${h32(s.crc)}\n         হিসাব ${h32(bad ? s.crcBad : s.crc)}  ${bad ? '✗ মেলেনি → drop' : '✓'}`;
+        }).join('\n') };
+      case 'r3': return { li: 4, title: 'Layer 3 · Network', dir: RECV,
+        text: 'IP header দেখে: destination IP কি আমার? হ্যাঁ। IP header খুলে segment উপরে দেয়। ' + (sc === 'bad' ? 'seg 2 এর frame আগেই ফেলে দেওয়া হয়েছে, তাই উপরে উঠল মাত্র ২টা।' : sc === 'lost' ? 'উপরে উঠল ২টা।' : ''),
+        code: 'IP dst 93.184.216.34 = আমি ✓' };
+      case 'r4': return { li: 3, title: 'Layer 4 · Transport: checksum আর seq চেক', dir: RECV,
+        text: sc === 'clean'
+          ? 'TCP প্রতিটা segment এর checksum আবার হিসাব করে মেলায় ✓। তারপর seq দেখে: 1001, তারপর 1005, তারপর 1009। ঠিক যেমন প্রত্যাশা ছিল, কোনো ফাঁক নেই।'
+          : `TCP প্রতিটা segment এর checksum আবার হিসাব করে মেলায় ✓। তারপর seq দেখে: প্রত্যাশা ছিল ${g[0].seq}, এসেছে ${g[0].seq} ✓। এরপর প্রত্যাশা ${s1.seq}, কিন্তু এসেছে ${g[2].seq}! মাঝে ${s1.seq}–${g[2].seq - 1} বাইটগুলো নেই। মানে একটা segment মিস। ${g[2].seq} কে বাফারে রেখে দেয়, অ্যাপকে এখনো দেয় না।`,
+        code: (sc === 'clean' ? g : [g[0], g[2]]).map(s => `seg ${s.k + 1}  checksum ${h16(s.chk)} ✓`).join('\n') + '\n\n' +
+          (sc === 'clean' ? g.map(s => `প্রত্যাশা ${s.seq} ← এলো ${s.seq} ✓`).join('\n')
+            : `প্রত্যাশা ${g[0].seq} ← এলো ${g[0].seq} ✓\nপ্রত্যাশা ${s1.seq} ← এলো ${g[2].seq} ✗ gap!\n${g[2].seq} বাফারে রাখা হলো`) };
+      case 'dupack': return { li: 3, title: 'Duplicate ACK: "1005 পাঠাও"', dir: 'প্রাপক → প্রেরক',
+        text: `TCP প্রেরককে ACK ${s1.seq} পাঠায়। মানে "${s1.seq - 1} পর্যন্ত সব পেয়েছি, এখন ${s1.seq} চাই"। ${g[2].seq} পাওয়ার পরও ACK ${s1.seq} যাচ্ছে, তাই একে বলে duplicate ACK। বাস্তবে ৩টা duplicate ACK পেলে (fast retransmit) অথবা টাইমার শেষ হলে (timeout) প্রেরক আবার পাঠায়।`,
+        code: `ACK ${s1.seq}  →  প্রেরক` };
+      case 'retx': return { li: 3, title: `Retransmit: seq ${s1.seq} আবার`, dir: SEND,
+        text: `ACK না আসা পর্যন্ত প্রেরকের TCP প্রতিটা segment এর একটা কপি রেখে দেয়। ACK ${s1.seq} দেখে বুঝল seq ${s1.seq} পৌঁছায়নি, তাই কপিটা আবার পাঠায়। নতুন IP header, নতুন MAC header আর নতুন CRC বসে আবার তারে যায়। এবার পথে কোনো সমস্যা হয়নি।`,
+        code: `retransmit seq ${s1.seq}  "${s1.text}"\nchecksum ${h16(s1.chk)}   FCS ${h32(s1.crc)}` };
+      case 'rretx': return { li: 3, title: 'gap পূরণ, ক্রমমতো জোড়া', dir: RECV,
+        text: `নতুন frame এ CRC ✓, IP ✓, checksum ✓। seq ${s1.seq}, ঠিক যেটা দরকার ছিল! gap পূরণ হলো। এখন বাফারে থাকা ${g[2].seq} সহ তিনটা segment ক্রমমতো জোড়া লাগে। প্রাপক ACK ${D.ackFinal} পাঠায়: "${last} পর্যন্ত সব পেয়েছি"।`,
+        code: `CRC ✓  IP ✓  checksum ✓\nseq ${s1.seq} = প্রত্যাশা ✓ → gap পূরণ\n${g.map(s => s.seq).join(' + ')} → "${S.msg}"\nACK ${D.ackFinal} → প্রেরক` };
+      case 'ack': return { li: 3, title: `ACK ${D.ackFinal}: সব পেয়েছি`, dir: 'প্রাপক → প্রেরক',
+        text: `সব ক্রমমতো এসেছে, তাই TCP একটা ACK ${D.ackFinal} পাঠায়: "${last} পর্যন্ত সব পেয়েছি"। প্রেরক এবার রেখে দেওয়া কপিগুলো মুছে ফেলতে পারে।`,
+        code: `ACK ${D.ackFinal}  →  প্রেরক` };
+      case 'r5': return { li: 2, title: 'Layer 5 · Session', dir: RECV, text: 'জোড়া লাগানো ডেটা Session লেয়ারে আসে। Session 7f2c দেখে সার্ভার চিনে নেয় কোন ইউজারের আলাপ।', code: '- SID   session 7f2c ✓' };
+      case 'r6': return { li: 1, title: 'Layer 6 · Presentation', dir: RECV, text: 'UTF-8 বাইট থেকে আবার পড়ার মতো টেক্সট।', code: `${D.hex} → "${S.msg}"` };
+      case 'r7': return { li: 0, title: 'Layer 7 · Application', dir: RECV,
+        text: `অ্যাপ পেল "${S.msg}"। পুরোটা, সঠিক, ক্রমমতো। ` + (sc === 'clean' ? 'সব চেক পাস করেছে।' : 'পথে ভুল হয়েছিল, কিন্তু CRC, checksum, seq আর ACK মিলে সেটা ঠিক করে নিয়েছে। অ্যাপ কিছু টেরই পায়নি।'),
+        code: `✓ delivered: "${S.msg}"` };
+    }
+  }
+
+  // ================= inspector =================
+  function segStatus(k, id) {
+    const i = at(id), sc = S.scenario, hit = k === 1 && sc !== 'clean';
+    if (i <= at('s1')) return i >= at('s2') ? ['frame তৈরি', 'info'] : i >= at('s3') ? ['packet তৈরি', 'info'] : ['segment তৈরি', 'info'];
+    if (id === 'wire') return hit ? (sc === 'lost' ? ['Router এ drop ✗', 'bad'] : ['noise: bit উল্টেছে', 'warn']) : ['পথে', 'info'];
+    if (hit && i < at('retx')) return sc === 'lost' ? ['হারিয়ে গেছে', 'bad'] : id === 'r1' ? ['পৌঁছেছে (নষ্ট)', 'warn'] : ['CRC ✗ → ফেলে দেওয়া', 'bad'];
+    if (hit && id === 'retx') return ['আবার পাঠানো হচ্ছে', 'warn'];
+    if (hit && id === 'rretx') return ['CRC ✓ checksum ✓ gap পূরণ', 'ok'];
+    if (id === 'r1') return ['পৌঁছেছে', 'info'];
+    if (id === 'r2') return ['CRC ✓', 'ok'];
+    if (id === 'r3') return ['IP ✓', 'ok'];
+    if (k === 2 && sc !== 'clean' && i < at('rretx')) return ['checksum ✓ · বাফারে, gap এর পরে', 'warn'];
+    if (i >= at('r5')) return ['ডেলিভারড', 'ok'];
+    return ['checksum ✓ · ক্রমমতো', 'ok'];
+  }
+  function renderInspector() {
+    const id = curId(), i = at(id), sc = S.scenario;
+    const tbl = document.getElementById('segTable');
+    if (i < at('s4seg')) tbl.innerHTML = '<p class="empty">এখনো ভাগ হয়নি। Layer 4 (Transport) এ পৌঁছালে TCP মেসেজটা ৩টা segment এ ভাগ করবে।</p>';
+    else {
+      const rows = D.segs.map(s => {
+        const [t, kind] = segStatus(s.k, id);
+        const chk = i >= at('s4chk') ? h16(s.chk) : '—';
+        const fcs = i >= at('s2') ? h32(s.crc) : '—';
+        return `<tr><td class="m">${s.k + 1}</td><td class="m">${s.seq}</td><td class="m">"${esc(s.text)}"</td><td class="m">${chk}</td><td class="m">${fcs}</td><td><span class="b ${kind}">${t}</span></td></tr>`;
+      }).join('');
+      tbl.innerHTML = `<table><thead><tr><th>#</th><th>seq</th><th>data</th><th>checksum</th><th>FCS (CRC-32)</th><th>অবস্থা</th></tr></thead><tbody>${rows}</tbody></table>`;
+    }
+    // receiver buffer
+    let states = ['empty', 'empty', 'empty'], expect = null;
+    if (i >= at('r4')) {
+      const fixed = sc === 'clean' || i >= at('rretx');
+      states = fixed ? ['ok', 'ok', 'ok'] : ['ok', 'gap', 'held'];
+      expect = fixed ? D.ackFinal : D.segs[1].seq;
+    }
+    document.getElementById('slots').innerHTML = D.segs.map((s, k) => {
+      const st = states[k], lbl = st === 'ok' ? 'পেয়েছি ✓' : st === 'held' ? 'অপেক্ষায়' : st === 'gap' ? 'নেই!' : 'খালি';
+      return `<div class="slot ${st}">${s.seq}<small>${lbl}</small></div>`;
+    }).join('');
+    document.getElementById('expect').innerHTML = expect === null
+      ? 'Segment এখনো প্রাপকের Transport লেয়ারে পৌঁছায়নি।'
+      : `পরের প্রত্যাশিত seq: <b>${expect}</b>` + (expect === D.ackFinal ? ' (সব পেয়েছি)' : ' (এটাই ACK হিসেবে যায়)');
+  }
+  const esc = s => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+  // ================= DOM / controls =================
+  const $ = id => document.getElementById(id);
+  const ui = { range: $('stepRange'), stepNo: $('stepNo'), play: $('playBtn'), msg: $('msgInput'), sc: $('scenario') };
+  function renderInfo() {
+    const id = curId(), I = info(id);
+    ui.range.max = STEPS.length - 1; ui.range.value = S.step;
+    ui.stepNo.textContent = `ধাপ ${S.step} / ${STEPS.length - 1}`;
+    $('infoTitle').textContent = I.title; $('infoDir').textContent = I.dir;
+    $('infoText').textContent = I.text; $('infoCode').textContent = I.code;
+    const b = $('lbadge');
+    if (I.li >= 0) { b.textContent = LAYERS[I.li].n; b.style.background = `var(${LAYERS[I.li].c})`; }
+    else { b.textContent = I.li === -2 ? '~' : '✉'; b.style.background = I.li === -2 ? 'var(--l1)' : 'var(--accent)'; }
+    renderInspector();
+  }
+
+  let playTimer = null;
+  function schedule() {
+    clearTimeout(playTimer);
+    if (!S.playing) return;
+    playTimer = setTimeout(() => {
+      if (S.step >= STEPS.length - 1) { setPlaying(false); return; }
+      setStep(S.step + 1, true); schedule();
+    }, Math.max(0, animEnd - performance.now()) + 2600);
+  }
+  function setPlaying(on) {
+    S.playing = on;
+    ui.play.textContent = on ? '❚❚ Pause' : '▶ Play';
+    if (on && S.step === STEPS.length - 1) setStep(0, true);
+    schedule();
+  }
+  function setStep(s, fromPlay) {
+    s = Math.max(0, Math.min(STEPS.length - 1, s));
+    if (!fromPlay) setPlaying(false);
+    if (s === S.step) return;
+    const forward = s === S.step + 1;
+    S.prev = S.step; S.step = s;
+    renderInfo();
+    applyStep(forward && !reduceMotion);
+  }
+  $('prevBtn').onclick = () => setStep(S.step - 1);
+  $('nextBtn').onclick = () => setStep(S.step + 1);
+  $('resetBtn').onclick = () => setStep(0);
+  ui.play.onclick = () => setPlaying(!S.playing);
+  ui.range.oninput = () => setStep(+ui.range.value);
+  ui.sc.onchange = () => {
+    const id = curId();
+    S.scenario = ui.sc.value; setPlaying(false); buildSteps();
+    S.step = Math.min(at(id) >= 0 ? at(id) : S.step, STEPS.length - 1); S.prev = S.step;
+    renderInfo(); applyStep(false);
+  };
+  ui.msg.oninput = () => {
+    const v = ui.msg.value.trim();
+    if (te.encode(v).length < 3) { ui.msg.setAttribute('aria-invalid', 'true'); return; }
+    ui.msg.removeAttribute('aria-invalid');
+    S.msg = v; derive(); renderInfo(); applyStep(false);
+  };
+  document.addEventListener('keydown', e => {
+    if (e.target === ui.msg || e.target === ui.sc) return;
+    if (e.key === 'ArrowRight') setStep(S.step + 1);
+    if (e.key === 'ArrowLeft') setStep(S.step - 1);
+  });
+
+  // ================= D3 scene =================
+  // Every layer row, packet slice and tag is an SVG element. A header being added is a D3 "enter",
+  // a header being removed is an "exit", and packets move with D3 transitions along a path.
+  const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const host = $('scene');
+  const svg = d3.select(host).append('svg').attr('role', 'img').attr('aria-label', 'OSI লেয়ার দিয়ে segment গুলোর যাত্রা');
+  const gTitles = svg.append('g'), gLeft = svg.append('g'), gRight = svg.append('g');
+  const gWire = svg.append('g').attr('class', 'wire');
+  const gRouter = svg.append('g').attr('class', 'router');
+  const gEnts = svg.append('g');
+  const gFx = svg.append('g');
+  let W = 760, G = null, animEnd = 0;
+
+  const mctx = document.createElement('canvas').getContext('2d');
+  const MONO = '"JetBrains Mono", monospace', BODY = '"Hind Siliguri", sans-serif';
+  function measure(s, fs, weight, fam) { mctx.font = `${weight || 700} ${fs}px ${fam || MONO}`; return mctx.measureText(s).width; }
+  function fit(s, w, fs, weight, fam) {
+    if (measure(s, fs, weight, fam) <= w) return s;
+    while (s.length > 1 && measure(s + '…', fs, weight, fam) > w) s = s.slice(0, -1);
+    return s.length > 1 ? s + '…' : '';
+  }
+
+  const SW = { eth: 20, ip: 20, tcp: 20, sid: 20, http: 26, payload: 46, fcs: 13, ack: 44 };
+  const ORDER = ['eth', 'ip', 'tcp', 'sid', 'http', 'payload', 'fcs', 'ack'];
+  const PC = { eth: '--l2', ip: '--l3', tcp: '--l4', sid: '--l5', http: '--l7', payload: '--data', fcs: '--l2', ack: '--l4' };
+  const TAG = { eth: 'ETH', ip: 'IP', tcp: 'TCP', sid: 'SID', http: 'HTTP', fcs: 'FCS', ack: 'ACK' };
+
+  function geom() {
+    const pad = 10, narrow = W < 640;
+    const stackW = narrow ? Math.max(86, W * 0.2) : Math.min(172, W * 0.21);
+    const sc = Math.max(0.62, Math.min(1, (W - 2 * pad - 2 * stackW) / 440));
+    const rowH = 54, gap = 6, y0 = 62;
+    const Lx = pad, Rx = W - pad - stackW;
+    const frameW = sc * (3 * SW.eth + SW.payload + SW.fcs + 8);
+    const stackBottom = y0 + 7 * (rowH + gap) - gap;
+    const wireY = stackBottom + 38;
+    return { pad, narrow, stackW, sc, rowH, gap, y0, Lx, Rx, stackBottom, wireY, H: wireY + 52,
+      laneS: Lx + stackW + 14 + frameW / 2, laneR: Rx - 14 - frameW / 2 };
+  }
+  const cy = li => G.y0 + li * (G.rowH + G.gap) + G.rowH / 2;
+  const OFF = [-17, 0, 17];
+  const P = (side, li, k) => ({ x: side === 'S' ? G.laneS : G.laneR, y: cy(li) + (k < 0 ? 0 : OFF[k]) });
+  const WS = () => ({ x: G.laneS, y: G.wireY }), WR = () => ({ x: G.laneR, y: G.wireY });
+  const tr = p => `translate(${p.x.toFixed(1)},${p.y.toFixed(1)})`;
+
+  // ---------- static drawing ----------
+  const SEND_IDS = ['s7', 's6', 's5', 's4seg', 's3', 's2', 's1'], RECV_IDS = ['r7', 'r6', 'r5', 'r4', 'r3', 'r2', 'r1'];
+  function drawStatic() {
+    svg.attr('width', W).attr('height', G.H).attr('viewBox', `0 0 ${W} ${G.H}`);
+    const titles = [
+      { x: G.Lx + G.stackW / 2, a: 'আপনার ল্যাপটপ', b: G.narrow ? 'Client ↓' : 'Client · প্রেরক  ↓' },
+      { x: G.Rx + G.stackW / 2, a: 'চ্যাট সার্ভার', b: G.narrow ? 'Server ↑' : 'Server · প্রাপক  ↑' },
+    ];
+    gTitles.selectAll('g').data(titles)
+      .join(e => { const g = e.append('g'); g.append('text').attr('class', 'ttl'); g.append('text').attr('class', 'sub'); return g; })
+      .each(function (d) {
+        const g = d3.select(this);
+        g.select('.ttl').attr('x', d.x).attr('y', 24).style('font-size', (G.narrow ? 14 : 16) + 'px').text(d.a);
+        g.select('.sub').attr('x', d.x).attr('y', 44).style('font-size', (G.narrow ? 11 : 12.5) + 'px').text(d.b);
+      });
+    drawStack(gLeft, G.Lx, 'S');
+    drawStack(gRight, G.Rx, 'R');
+
+    const top = cy(6) + 22;
+    gWire.selectAll('path').data([0]).join('path').attr('class', 'wire-line')
+      .attr('d', `M${G.laneS},${top} V${G.wireY} H${G.laneR} V${top}`);
+    gWire.selectAll('text').data([0]).join('text').attr('class', 'wire-lbl')
+      .attr('x', (G.laneS + W / 2) / 2).attr('y', G.wireY + 18).text(G.narrow ? 'তার' : 'তার / ফাইবার / Wi-Fi');
+    const rw = G.narrow ? 54 : 70;
+    gRouter.attr('transform', `translate(${W / 2},${G.wireY})`);
+    gRouter.selectAll('rect').data([0]).join('rect').attr('x', -rw / 2).attr('y', -15).attr('width', rw).attr('height', 30).attr('rx', 8);
+    gRouter.selectAll('text').data([0]).join('text').attr('y', 29).attr('dy', '0.35em').text('Router');
+  }
+
+  function drawStack(g, x, side) {
+    const sq = 26, room = G.stackW - sq - 22, showBn = !G.narrow;
+    const efs = G.narrow ? 12 : 14, bfs = 12;
+    const stepFor = (d, i) => at(side === 'S' ? SEND_IDS[i] : RECV_IDS[i]);
+    g.selectAll('g.row').data(LAYERS, d => d.n)
+      .join(enter => {
+        const r = enter.append('g').attr('class', 'row').attr('tabindex', 0).attr('role', 'button')
+          .style('--c', d => `var(${d.c})`)
+          .attr('aria-label', d => `Layer ${d.n} ${d.en}, ${side === 'S' ? 'প্রেরক' : 'প্রাপক'}`)
+          .on('click', (e, d) => setStep(stepFor(d, LAYERS.indexOf(d))))
+          .on('keydown', (e, d) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setStep(stepFor(d, LAYERS.indexOf(d))); } });
+        r.append('rect').attr('class', 'bg').attr('rx', 8);
+        r.append('rect').attr('class', 'sq').attr('rx', 6);
+        r.append('text').attr('class', 'num').attr('dy', '0.35em');
+        r.append('text').attr('class', 'en').attr('dy', '0.35em');
+        r.append('text').attr('class', 'bn').attr('dy', '0.35em');
+        return r;
+      })
+      .attr('transform', (d, i) => `translate(${x},${G.y0 + i * (G.rowH + G.gap)})`)
+      .each(function (d) {
+        const r = d3.select(this), tx = 8 + sq + 9, my = G.rowH / 2;
+        r.select('.bg').attr('width', G.stackW).attr('height', G.rowH);
+        r.select('.sq').attr('x', 8).attr('y', my - sq / 2).attr('width', sq).attr('height', sq);
+        r.select('.num').attr('x', 8 + sq / 2).attr('y', my).text(d.n);
+        r.select('.en').attr('x', tx).attr('y', showBn ? my - 8 : my).style('font-size', efs + 'px').text(fit(d.en, room, efs, 700, BODY));
+        r.select('.bn').attr('x', tx).attr('y', my + 10).style('font-size', bfs + 'px').style('display', showBn ? null : 'none')
+          .text(fit(d.bn, room, bfs, 400, BODY));
+      });
+  }
+
+  // ---------- packets ----------
+  function makeEnt(name, payloadW, h) {
+    const g = gEnts.append('g').attr('class', 'ent').style('opacity', 0);
+    const body = g.append('g');
+    const tag = g.append('text').attr('class', 'etag').attr('dy', '0.35em');
+    return { name, g, body, tag, payloadW, h, pos: { x: 0, y: 0 }, op: 0, st: null, total: 0, badgeShown: true, sparked: true };
+  }
+  const ents = { msg: makeEnt('msg', 92, 20), seg0: makeEnt('seg0', SW.payload, 14), seg1: makeEnt('seg1', SW.payload, 14), seg2: makeEnt('seg2', SW.payload, 14), ack: makeEnt('ack', 0, 14) };
+
+  const FULL = { eth: 1, ip: 1, tcp: 1, payload: 1, fcs: 1 };
+  function msgState(id) {
+    switch (id) {
+      case 'intro': return { to: P('S', 0, -1), slices: { payload: 1 }, label: 'message' };
+      case 's7': return { to: P('S', 0, -1), slices: { http: 1, payload: 1 }, label: 'HTTP POST' };
+      case 's6': return { to: P('S', 1, -1), slices: { http: 1, payload: 1 }, label: 'UTF-8 bytes' };
+      case 's5': return { to: P('S', 2, -1), slices: { sid: 1, http: 1, payload: 1 }, label: 'Session 7f2c' };
+      case 'r5': return { to: P('R', 2, -1), spawn: P('R', 3, -1), delay: 0.25, slices: { sid: 1, http: 1, payload: 1 }, label: 'Session 7f2c', badge: ['✓', 'ok'] };
+      case 'r6': return { to: P('R', 1, -1), slices: { http: 1, payload: 1 }, label: 'UTF-8 → টেক্সট' };
+      case 'r7': return { to: P('R', 0, -1), slices: { payload: 1 }, label: 'অ্যাপ পেল', badge: ['delivered ✓', 'ok'] };
+      default: return { op: 0, to: at(id) < at('wire') ? P('S', 3, -1) : P('R', 3, -1), slices: { sid: 1, http: 1, payload: 1 } };
+    }
+  }
+  function segState(k, id) {
+    const seg = D.segs[k], sc = S.scenario, i = at(id);
+    const isBad = k === 1 && sc === 'bad', isLost = k === 1 && sc === 'lost';
+    const lbl = `seq ${seg.seq}`;
+    const dropPos = isLost ? { x: W / 2, y: G.wireY + 34 } : { x: G.laneR - 26, y: cy(5) + 30 };
+    const gone = { op: 0, to: dropPos, slices: FULL, bad: isBad ? 1 : 0, label: lbl };
+    const T = { tcp: 1, payload: 1 };
+    if (i < at('s4seg')) return { op: 0, to: P('S', 3, -1), slices: T, label: lbl };
+    const d = k * 0.12;
+    switch (id) {
+      case 's4seg': return { to: P('S', 3, k), spawn: P('S', 3, -1), slices: T, label: lbl };
+      case 's4chk': return { to: P('S', 3, k), slices: T, label: lbl, badge: [`chk ${h16(seg.chk)}`, 'info'] };
+      case 's3': return { to: P('S', 4, k), delay: d, slices: { ip: 1, ...T }, label: lbl };
+      case 's2': return { to: P('S', 5, k), delay: d, slices: FULL, label: lbl, badge: [`FCS ${h32(seg.crc)}`, 'info'] };
+      case 's1': return { to: P('S', 6, k), delay: d, slices: FULL, bits: 1, label: lbl };
+      case 'wire':
+        if (isLost) return { via: [WS(), { x: W / 2, y: G.wireY }], to: dropPos, delay: k * 0.55, op: 0, fadeLate: 1, slices: FULL, bits: 1, label: lbl, badge: ['router drop ✗', 'bad'], badgeAfterX: W / 2 - 4 };
+        return { via: [WS(), WR()], to: P('R', 6, k), delay: k * 0.55, slices: FULL, bits: 1, label: lbl,
+          ...(isBad ? { badAfterX: W / 2, badge: ['noise ⚡ bit উল্টেছে', 'warn'], badgeAfterX: W / 2 } : {}) };
+      case 'r1': if (isLost) return gone;
+        return { to: P('R', 6, k), slices: FULL, bits: 1, bad: isBad ? 1 : 0, label: lbl, badge: isBad ? ['নষ্ট (কেউ জানে না)', 'warn'] : null };
+      case 'r2': if (isLost) return gone;
+        return { to: P('R', 5, k), delay: d, slices: FULL, bad: isBad ? 1 : 0, label: lbl, badge: isBad ? ['CRC ✗', 'bad'] : ['CRC ✓', 'ok'] };
+      case 'r3': if (isLost) return gone;
+        if (isBad) return { to: dropPos, op: 0, slices: FULL, bad: 1, label: lbl, badge: ['frame ফেলে দেওয়া', 'bad'] };
+        return { to: P('R', 4, k), delay: d, slices: { ip: 1, ...T }, label: lbl, badge: ['IP ✓', 'ok'] };
+    }
+    if (k === 1 && sc !== 'clean' && i < at('retx')) return gone;
+    if (id === 'retx' && k === 1)
+      return { spawn: P('S', 3, 1), via: [P('S', 4, 1), P('S', 5, 1), P('S', 6, 1), WS(), WR()], to: P('R', 6, 1), slices: FULL, label: `${lbl} (আবার)`, badge: [`FCS ${h32(seg.crc)}`, 'info'] };
+    if (id === 'rretx' && k === 1)
+      return { via: [P('R', 5, 1), P('R', 4, 1)], to: P('R', 3, 1), slices: T, label: lbl, badge: ['CRC ✓ chk ✓ gap পূরণ', 'ok'] };
+    if (i >= at('r5')) return { to: P('R', 2, -1), op: 0, slices: T, label: lbl };
+    const waiting = k === 2 && sc !== 'clean' && i < at('rretx');
+    return { to: P('R', 3, k), delay: id === 'r4' ? d : 0, slices: T, label: lbl, badge: waiting ? ['chk ✓ · gap এর পরে', 'warn'] : ['chk ✓ · ক্রমমতো', 'ok'] };
+  }
+  function ackState(id) {
+    const back = [P('R', 4, -1), P('R', 5, -1), P('R', 6, -1), WR(), WS(), P('S', 6, -1), P('S', 5, -1), P('S', 4, -1)];
+    const s1 = D.segs[1].seq;
+    if (id === 'dupack') return { spawn: P('R', 3, -1), via: back, to: P('S', 3, -1), slices: { ack: 1 }, label: `ACK ${s1}`, badge: ['duplicate', 'warn'] };
+    if (id === 'rretx' || id === 'ack') return { spawn: P('R', 3, -1), via: back, to: P('S', 3, -1), delay: id === 'rretx' ? 1.0 : 0, slices: { ack: 1 }, label: `ACK ${D.ackFinal}`, badge: ['সব পেয়েছি', 'ok'] };
+    return { op: 0, to: at(id) > at('r4') ? P('S', 3, -1) : P('R', 3, -1), slices: { ack: 1 }, label: 'ACK' };
+  }
+  function stateOf(name, id) {
+    const st = name === 'msg' ? msgState(id) : name === 'ack' ? ackState(id) : segState(+name.slice(3), id);
+    return Object.assign({ op: 1, via: [], delay: 0, bits: 0, bad: 0, badge: null }, st);
+  }
+  function payloadText(e, st) {
+    if (st.bits) return '0101';
+    if (e.name === 'msg') return `"${S.msg}"`;
+    if (e.name === 'ack') return '';
+    const seg = D.segs[+e.name.slice(3)];
+    return (st.bad ? seg.badText : seg.text);
+  }
+
+  function drawSlices(e, st, t) {
+    const keys = ORDER.filter(k => st.slices[k]);
+    const ws = keys.map(k => (k === 'payload' ? e.payloadW : SW[k]) * G.sc);
+    const total = d3.sum(ws) + 2 * (keys.length - 1);
+    let x = -total / 2;
+    const items = keys.map((k, i) => { const d = { key: k, w: ws[i], x }; x += ws[i] + 2; return d; });
+    e.total = total;
+    const h = e.h, fs = Math.min(9.5, h * 0.66);
+    e.body.selectAll('g.sl').data(items, d => d.key)
+      .join(
+        // a new header grows in from its centre
+        en => {
+          const s = en.append('g').attr('class', d => 'sl ' + d.key).attr('transform', d => `translate(${d.x + d.w / 2},0)`).style('opacity', 0);
+          s.append('rect').attr('y', -h / 2).attr('height', h).attr('rx', 2.5).attr('width', 0);
+          s.append('text').attr('dy', '0.35em').attr('x', 0);
+          return s;
+        },
+        up => up,
+        // a removed header lifts off and fades
+        ex => ex.attr('class', d => 'sl-exit ' + d.key).call(s => s.transition(t).attr('transform', d => `translate(${d.x},-16)`).style('opacity', 0).remove())
+      )
+      .style('--c', d => `var(${PC[d.key]})`)
+      .each(function (d) {
+        const s = d3.select(this);
+        s.transition(t).attr('transform', `translate(${d.x},0)`).style('opacity', 1);
+        s.select('rect').transition(t).attr('width', d.w);
+        const label = d.key === 'payload' ? payloadText(e, st) : TAG[d.key];
+        s.select('text').style('font-size', fs + 'px').text(d.w >= 15 ? fit(label, d.w - 3, fs) : '').transition(t).attr('x', d.w / 2);
+      });
+  }
+
+  function setTag(e) {
+    const st = e.st, tag = e.tag;
+    tag.selectAll('tspan').remove();
+    tag.append('tspan').attr('class', 'tl').text(st.label || '');
+    if (st.badge && e.badgeShown) tag.append('tspan').attr('class', 'tb ' + st.badge[1]).attr('dx', 6).text(st.badge[0]);
+  }
+  function placeTag(e) {
+    const right = e.pos.x < W / 2;
+    e.tag.attr('x', right ? e.total / 2 + 6 : -(e.total / 2 + 6)).attr('text-anchor', right ? 'start' : 'end');
+  }
+  function afterX(e) {
+    const st = e.st;
+    if (st.badAfterX !== undefined) {
+      const b = e.pos.x > st.badAfterX;
+      if (b !== e.g.classed('bad')) { e.g.classed('bad', b); e.body.selectAll('g.sl.payload text').text(fit(payloadText(e, Object.assign({}, st, { bad: b })), e.payloadW * G.sc - 3, Math.min(9.5, e.h * 0.66))); }
+    }
+    if (st.badgeAfterX !== undefined && !e.badgeShown && e.pos.x > st.badgeAfterX) {
+      e.badgeShown = true; setTag(e);
+      if (!e.sparked) { e.sparked = true; burst(e.pos, S.scenario === 'lost' ? 'bad' : 'noise'); }
+    }
+  }
+
+  function along(pts, lens, total, u, out) {
+    const d = u * total;
+    let j = 1; while (j < lens.length - 1 && lens[j] < d) j++;
+    const seg = lens[j] - lens[j - 1], f = seg > 0 ? Math.min(1, Math.max(0, (d - lens[j - 1]) / seg)) : 1;
+    out.x = pts[j - 1].x + (pts[j].x - pts[j - 1].x) * f;
+    out.y = pts[j - 1].y + (pts[j].y - pts[j - 1].y) * f;
+  }
+  const SPEED = 430; // px per second
+  function move(e, st, animate) {
+    e.g.interrupt('mv');
+    if (!animate) {
+      e.pos = { x: st.to.x, y: st.to.y }; e.op = st.op;
+      e.g.attr('transform', tr(e.pos)).style('opacity', e.op);
+      afterX(e); placeTag(e);
+      return;
+    }
+    let op0 = e.op;
+    if (e.op < 0.05 && st.spawn) { e.pos = { x: st.spawn.x, y: st.spawn.y }; op0 = 0; e.g.attr('transform', tr(e.pos)); }
+    const pts = [{ x: e.pos.x, y: e.pos.y }, ...st.via, st.to];
+    const lens = [0];
+    for (let j = 1; j < pts.length; j++) lens.push(lens[j - 1] + Math.hypot(pts[j].x - pts[j - 1].x, pts[j].y - pts[j - 1].y));
+    const total = lens[lens.length - 1];
+    placeTag(e);
+    if (total < 0.5 && Math.abs(op0 - st.op) < 0.01) return;
+    const dur = Math.max(650, total / SPEED * 1000 + 250);
+    animEnd = Math.max(animEnd, performance.now() + st.delay * 1000 + dur);
+    e.g.transition('mv').delay(st.delay * 1000).duration(dur).ease(d3.easeCubicInOut)
+      .tween('mv', () => u => {
+        along(pts, lens, total, u, e.pos);
+        e.op = st.fadeLate ? (u < 0.7 ? op0 : op0 + (st.op - op0) * (u - 0.7) / 0.3) : op0 + (st.op - op0) * u;
+        e.g.attr('transform', tr(e.pos)).style('opacity', e.op);
+        afterX(e); placeTag(e);
+      });
+  }
+
+  function burst(p, kind) {
+    if (reduceMotion) return;
+    gFx.selectAll(null).data(d3.range(16)).enter().append('circle')
+      .attr('class', 'spark ' + kind).attr('cx', p.x).attr('cy', p.y).attr('r', 3)
+      .transition().duration(700).ease(d3.easeCubicOut)
+      .attr('cx', i => p.x + Math.cos(i / 16 * Math.PI * 2) * (22 + (i % 3) * 8))
+      .attr('cy', i => p.y + Math.sin(i / 16 * Math.PI * 2) * (22 + (i % 3) * 8))
+      .attr('r', 1).style('opacity', 0).remove();
+  }
+
+  const HL = {
+    intro: [], s7: ['S0'], s6: ['S1'], s5: ['S2'], s4seg: ['S3'], s4chk: ['S3'], s3: ['S4'], s2: ['S5'], s1: ['S6'], wire: [],
+    r1: ['R6'], r2: ['R5'], r3: ['R4'], r4: ['R3'], dupack: ['R3', 'S3'], retx: ['S3', 'S4', 'S5', 'S6'], rretx: ['R6', 'R5', 'R4', 'R3'], ack: ['R3', 'S3'],
+    r5: ['R2'], r6: ['R1'], r7: ['R0'],
+  };
+  const WIRE_ON = { wire: 1, dupack: 1, retx: 1, rretx: 1, ack: 1 };
+
+  function applyStep(animate) {
+    if (!G) return;
+    const id = curId();
+    animEnd = performance.now();
+    const hl = HL[id] || [];
+    const mark = (g, side) => g.selectAll('g.row')
+      .classed('active', d => hl.includes(side + LAYERS.indexOf(d)))
+      .classed('dim', d => hl.length > 0 && !hl.includes(side + LAYERS.indexOf(d)));
+    mark(gLeft, 'S'); mark(gRight, 'R');
+    gWire.classed('active', !!WIRE_ON[id]);
+    Object.values(ents).forEach(e => {
+      const st = stateOf(e.name, id);
+      e.st = st;
+      e.badgeShown = st.badgeAfterX === undefined;
+      e.sparked = !animate;
+      e.g.classed('bits', !!st.bits).classed('bad', !!st.bad);
+      drawSlices(e, st, e.g.transition('sl').duration(animate ? 600 : 0));
+      setTag(e);
+      move(e, st, animate);
+    });
+  }
+
+  function layout() {
+    const w = Math.max(320, Math.floor(host.clientWidth));
+    if (G && w === W) return;
+    W = w; G = geom();
+    drawStatic(); applyStep(false);
+  }
+  new ResizeObserver(layout).observe(host);
+
+  // boot
+  derive(); buildSteps(); renderInfo(); layout();
+  if (document.fonts) document.fonts.ready.then(() => { G = null; layout(); });
+})();
+</script>
+<script>
+/* WellDev theme toggle (shared key with the hub page) */
+(function () {
+  const root = document.documentElement;
+  try { const t = localStorage.getItem("welldev-theme"); if (t) root.dataset.theme = t; } catch (e) {}
+  document.getElementById("themeToggle").addEventListener("click", () => {
+    const dark = root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+    root.dataset.theme = dark ? "light" : "dark";
+    try { localStorage.setItem("welldev-theme", root.dataset.theme); } catch (e) {}
+  });
+})();
+</script>

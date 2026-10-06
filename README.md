@@ -31,4 +31,4 @@ _শীঘ্রই আসছে।_
 
 ## 06 · Networking
 
-_শীঘ্রই আসছে।_
+- [Seq, Checksum ও CRC — OSI Interactive](06-networking/OSI/index.html) — একটা মেসেজের যাত্রা, seq / checksum / CRC-32 কে কোন ভুল ধরে, D3 অ্যানিমেশনে

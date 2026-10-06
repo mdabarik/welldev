@@ -180,7 +180,11 @@ const TRACKS = [
       desc: "Boot থেকে GUI, CPU core-এর ভেতর, process ও thread তৈরি, scheduling আর context switch — ধাপে ধাপে।",
       tags: ["Kernel", "Scheduler", "Context switch"], meta: [["7", "chapters"], ["25", "diagrams"]] },
   ]},
-  { id: "net", n: "06", title: "Networking", blurb: "TCP/IP, HTTP, DNS", color: "#14b8a6", guides: [] },
+  { id: "net", n: "06", title: "Networking", blurb: "OSI model, TCP, error detection", color: "#14b8a6", guides: [
+    { href: "06-networking/OSI/index.html", kicker: "OSI · Interactive", title: "Seq, Checksum ও CRC",
+      desc: "একটা মেসেজ ৭টা লেয়ার পেরিয়ে যায় — seq নম্বর, TCP checksum আর CRC-32 কে কোন ভুল ধরে, ধাপে ধাপে অ্যানিমেশনে।",
+      tags: ["OSI", "TCP", "CRC-32", "D3.js"], meta: [["19", "steps"], ["3", "scenarios"]] },
+  ]},
 ];
 
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
