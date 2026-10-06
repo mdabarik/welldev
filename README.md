@@ -2,6 +2,8 @@
 
 Software engineering interview prep — বাংলায় ব্যাখ্যা, ছবি আর কোড সহ। প্রতিটি page একটা HTML file; download করে browser-এ খুললেই চলবে।
 
+🌐 **Live site: [mdabarik.github.io/welldev](https://mdabarik.github.io/welldev/)** — কিছু download না করেই browser-এ সব গাইড দেখুন।
+
 **সব গাইড এক জায়গায়: [index.html](index.html)** — রঙিন হোম পেজ, যেখান থেকে প্রতিটা গাইড নতুন tab-এ খোলে।
 
 ## 01 · DSA & Problem Solving
@@ -19,6 +21,8 @@ _শীঘ্রই আসছে।_
 ## 03 · DBMS & SQL
 
 - [LeetCode SQL 50 — Visual Guide](03-dbms-sql/top-50-sql/index.html) — ৫০টি problem, PostgreSQL solution আর প্রতিটি ধাপের intermediate table
+- [ACID Properties](03-dbms-sql/acid/index.html) — bank transfer দিয়ে A, C, I, D; PostgreSQL output, crash test আর C# কোড
+- [Transaction Isolation Levels](03-dbms-sql/transactions/index.html) — ৪টি level, দুইটা psql session পাশাপাশি ([transaction-A.sql](03-dbms-sql/transaction-A.sql) · [transaction-B.sql](03-dbms-sql/transaction-B.sql))
 
 ## 04 · Resume Projects
 
@@ -32,3 +36,5 @@ _শীঘ্রই আসছে।_
 ## 06 · Networking
 
 - [Seq, Checksum ও CRC — OSI Interactive](06-networking/OSI/index.html) — একটা মেসেজের যাত্রা, seq / checksum / CRC-32 কে কোন ভুল ধরে, D3 অ্যানিমেশনে
+- [একটা Request-এর যাত্রা — Web Server Interactive](06-networking/web-server/index.html) — DNS → TCP → TLS → Nginx → app → Redis → database → response, আর Nginx বনাম Apache
+- [URL থেকে Pixel — Browser Rendering Interactive](06-networking/browser/index.html) ([live](https://mdabarik.github.io/welldev/06-networking/browser/)) — DOM, CSSOM, layout, paint, আর `<link>`, `<script>`, async, defer, module কখন চলে, timeline অ্যানিমেশনে

@@ -1,0 +1,463 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ACID Properties</title>
+<meta name="description" content="Atomicity, Consistency, Isolation, Durability — একটা bank transfer দিয়ে, PostgreSQL কোড, আসল output আর C# উদাহরণ সহ।">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Layout: one section per ACID letter — idea, PostgreSQL proof (real psql output) and how
+   Postgres guarantees it. Code blocks are highlighted by the small tokenizer at the bottom. */
+:root{
+  --bg:#f5f7fc; --surface:#ffffff; --surface-2:#f1f4fa; --fg:#0f172a; --muted:#5b6478; --faint:#94a0b8; --line:#e4e8f1;
+  --accent:#6366f1; --sa:#4f46e5; --sb:#db2777;
+  --pa:#e11d48; --pc:#d97706; --pi:#0284c7; --pd:#059669;
+  --ok:#059669; --bad:#e11d48; --warn:#d97706;
+  --hero:linear-gradient(135deg,#4f46e5 0%,#7c3aed 45%,#db2777 100%);
+  --shadow:0 1px 2px rgba(15,23,42,.04),0 10px 30px -12px rgba(15,23,42,.14);
+  --code-bg:#ffffff; --code-line:#e6e9f1;
+  --t-kw:#0000ff; --t-str:#a31515; --t-num:#098658; --t-com:#008000; --t-type:#267f99;
+  --sans:"Inter","Hind Siliguri",system-ui,sans-serif; --bn:"Hind Siliguri","Inter",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0b0f1a; --surface:#121827; --surface-2:#182033; --fg:#e7ecf6; --muted:#9aa6bf; --faint:#66728c; --line:#232c42;
+  --accent:#818cf8; --sa:#818cf8; --sb:#f472b6; --pa:#fb7185; --pc:#fbbf24; --pi:#38bdf8; --pd:#34d399;
+  --ok:#34d399; --bad:#fb7185; --warn:#fbbf24;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6);
+  --code-bg:#1e1e1e; --code-line:#2d2d30; --t-kw:#569cd6; --t-str:#ce9178; --t-num:#b5cea8; --t-com:#6a9955; --t-type:#4ec9b0;
+}}
+:root[data-theme="dark"]{
+  --bg:#0b0f1a; --surface:#121827; --surface-2:#182033; --fg:#e7ecf6; --muted:#9aa6bf; --faint:#66728c; --line:#232c42;
+  --accent:#818cf8; --sa:#818cf8; --sb:#f472b6; --pa:#fb7185; --pc:#fbbf24; --pi:#38bdf8; --pd:#34d399;
+  --ok:#34d399; --bad:#fb7185; --warn:#fbbf24;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6);
+  --code-bg:#1e1e1e; --code-line:#2d2d30; --t-kw:#569cd6; --t-str:#ce9178; --t-num:#b5cea8; --t-com:#6a9955; --t-type:#4ec9b0;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 var(--bn);-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto 0;height:420px;z-index:-1;pointer-events:none;
+  background:radial-gradient(620px 260px at 20% -40px,color-mix(in srgb,#6366f1 14%,transparent),transparent 70%),
+             radial-gradient(540px 240px at 90% -60px,color-mix(in srgb,#ec4899 11%,transparent),transparent 70%)}
+a{color:var(--accent)}
+button{font:inherit;color:inherit}
+code{font-family:var(--mono);font-size:.86em;font-weight:500;background:color-mix(in srgb,var(--accent) 10%,var(--surface));color:color-mix(in srgb,var(--accent) 72%,var(--fg));padding:.1em .4em;border-radius:6px}
+.wrap{max-width:1040px;margin:0 auto;padding:20px 18px 70px}
+section{margin-top:56px;scroll-margin-top:16px}
+
+.topnav{display:flex;align-items:center;gap:10px}
+.brand{display:flex;align-items:center;gap:10px;color:var(--fg);text-decoration:none;font:800 16px var(--sans);letter-spacing:-.02em}
+.logo{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:#fff;font:800 13px var(--mono);background:var(--hero)}
+.topnav .sp{flex:1}
+.pill{border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:6px 14px;font:600 13px var(--sans);cursor:pointer;text-decoration:none}
+.pill:hover{color:var(--fg)}
+
+.hero{margin-top:22px;border-radius:22px;padding:30px 32px;color:#fff;background:var(--hero);position:relative;overflow:hidden}
+.hero::after{content:"";position:absolute;right:-70px;top:-90px;width:320px;height:320px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.2),transparent 65%);pointer-events:none}
+.eyebrow{font:600 12px var(--sans);letter-spacing:.1em;text-transform:uppercase;opacity:.85}
+.hero h1{margin:8px 0 10px;font:800 clamp(28px,4.4vw,42px)/1.12 var(--sans);letter-spacing:-.03em}
+.hero p{margin:0;max-width:720px;font-size:16.5px;opacity:.94}
+
+/* the four letters */
+.letters{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:22px}
+@media (max-width:860px){.letters{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:480px){.letters{grid-template-columns:minmax(0,1fr)}}
+.letter{display:block;text-decoration:none;color:inherit;padding:16px 18px;border-top:3px solid var(--c)}
+.letter .big{font:800 34px/1 var(--sans);color:var(--c)}
+.letter b{display:block;margin-top:8px;font:700 15.5px var(--sans)}
+.letter p{margin:4px 0 0;font-size:14.5px;color:var(--muted);line-height:1.55}
+.letter small{display:block;margin-top:10px;font:500 11.5px var(--mono);color:var(--faint)}
+.letter:hover{border-color:var(--c)}
+
+h2{display:flex;align-items:center;gap:12px;margin:0 0 6px;font:800 clamp(21px,2.8vw,26px)/1.25 var(--sans);letter-spacing:-.025em}
+.num{flex:none;width:38px;height:38px;border-radius:11px;display:grid;place-items:center;color:#fff;font:800 17px var(--sans);background:var(--c,var(--accent))}
+.motto{display:inline-block;margin:2px 0 14px;font:600 13.5px var(--sans);color:var(--c);background:color-mix(in srgb,var(--c) 10%,transparent);padding:4px 12px;border-radius:999px}
+.lead{margin:0 0 18px;color:var(--muted);max-width:820px}
+.lead b{color:var(--fg)}
+h3{margin:26px 0 10px;font:700 17px var(--sans);letter-spacing:-.015em}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow)}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:start}
+@media (max-width:760px){.grid2{grid-template-columns:minmax(0,1fr)}}
+
+.story{padding:14px 16px;font-size:15px;border-left:4px solid var(--c)}
+.story b{color:var(--fg)}
+.story p{margin:0;color:var(--muted)}
+
+pre.code{margin:0;padding:12px 14px;border-radius:12px;background:var(--code-bg);border:1px solid var(--code-line);font:13px/1.65 var(--mono);white-space:pre-wrap;word-break:break-word;font-variant-ligatures:none;overflow-x:auto}
+.k{color:var(--t-kw);font-weight:600}.s{color:var(--t-str)}.d{color:var(--t-num)}.c{color:var(--t-com);font-style:italic}.t{color:var(--t-type)}
+pre.code .o{color:var(--muted);font-style:normal}
+pre.code .e{color:var(--bad);font-style:normal}
+pre.code .g{color:var(--ok);font-style:normal;font-weight:600}
+.file{display:flex;align-items:center;gap:8px;margin:0 0 6px;font:600 12px var(--mono);color:var(--muted)}
+.file i{width:8px;height:8px;border-radius:50%;background:var(--dot,var(--accent))}
+.file .r{margin-left:auto;font:600 11px var(--sans);padding:1px 8px;border-radius:6px;color:var(--tc);background:color-mix(in srgb,var(--tc) 12%,transparent)}
+
+.how{margin-top:14px;padding:14px 16px;border-radius:12px;background:color-mix(in srgb,var(--c) 7%,var(--surface));border:1px solid color-mix(in srgb,var(--c) 22%,var(--line));font-size:15px}
+.how b{color:var(--fg)}
+.how ul{margin:6px 0 0;padding-left:20px;color:var(--muted)}
+.how li{margin:3px 0}
+
+/* timeline (isolation + durability) */
+.tl{overflow:hidden}
+.tl-head,.row{display:grid;grid-template-columns:40px minmax(0,1fr) minmax(0,1fr)}
+.tl-head{background:var(--surface-2);border-bottom:1px solid var(--line);font:700 12.5px var(--sans)}
+.tl-head span{padding:10px 14px}
+.tl-head .a{color:var(--sa)} .tl-head .b{color:var(--sb);border-left:1px solid var(--line)}
+.row{border-bottom:1px solid var(--line)}
+.row:last-child{border-bottom:0}
+.row .n{display:grid;place-items:start center;padding-top:13px;font:600 11.5px var(--mono);color:var(--faint)}
+.cell{padding:10px 14px;min-width:0}
+.cell + .cell{border-left:1px solid var(--line)}
+.cell.on{background:color-mix(in srgb,var(--who) 4%,transparent)}
+.cell.a{--who:var(--sa)} .cell.b{--who:var(--sb)}
+.cell pre{margin:0;font:12.8px/1.6 var(--mono);white-space:pre-wrap;word-break:break-word;font-variant-ligatures:none}
+.out{margin-top:6px;font:12.5px/1.55 var(--mono);color:var(--muted)}
+.out b{color:var(--fg)}
+.tag{display:inline-block;margin-top:6px;font:600 12px var(--sans);padding:2px 9px;border-radius:7px;background:color-mix(in srgb,var(--tc) 12%,transparent);color:var(--tc)}
+.tag.ok{--tc:var(--ok)} .tag.bad{--tc:var(--bad)} .tag.info{--tc:var(--muted)}
+@media (max-width:700px){
+  .tl-head{display:none}
+  .row{grid-template-columns:30px minmax(0,1fr)}
+  .cell:not(.on){display:none}
+  .cell + .cell{border-left:0}
+  .cell.on::before{content:attr(data-who);display:inline-block;margin-bottom:4px;font:700 11px var(--sans);color:#fff;background:var(--who);padding:1px 8px;border-radius:6px}
+}
+
+.tscroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:640px;font-size:14.5px}
+th,td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font:600 12px var(--sans);text-transform:uppercase;letter-spacing:.05em;color:var(--muted);background:var(--surface-2)}
+tr:last-child td{border-bottom:0}
+td.p{font:700 14px var(--sans);white-space:nowrap}
+td.p span{display:inline-grid;place-items:center;width:24px;height:24px;margin-right:8px;border-radius:7px;color:#fff;font-size:12px;background:var(--c)}
+.foot{margin:10px 2px 0;font-size:13.5px;color:var(--muted)}
+
+details{border-bottom:1px solid var(--line);padding:12px 2px}
+details:last-child{border-bottom:0}
+summary{cursor:pointer;font:600 15.5px var(--bn);list-style:none;display:flex;gap:10px}
+summary::before{content:"+";font:700 15px var(--mono);color:var(--accent);width:14px}
+details[open] summary::before{content:"−"}
+details p{margin:8px 0 0 24px;color:var(--muted);font-size:15px}
+
+footer{margin-top:56px;padding-top:16px;border-top:1px solid var(--line);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;font-size:13px;color:var(--faint)}
+@media (max-width:640px){.hero{padding:24px 20px;border-radius:18px}}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="topnav">
+    <a class="brand" href="../../index.html"><span class="logo">W</span>WellDev</a>
+    <span class="sp"></span>
+    <a class="pill" href="../transactions/index.html">Isolation Levels →</a>
+    <button class="pill" id="theme" type="button">Theme</button>
+  </nav>
+
+  <header class="hero">
+    <div class="eyebrow">DBMS · PostgreSQL</div>
+    <h1>ACID — একটা bank transfer দিয়ে</h1>
+    <p>Rahim-এর account থেকে Karim-কে টাকা পাঠানো — দুইটা UPDATE। মাঝপথে error, একসাথে দুজন user, কিংবা server crash হলেও টাকা যেন হারায় না, দুবারও না হয় — এই চারটা নিশ্চয়তাই ACID। প্রতিটা উদাহরণ PostgreSQL 18-এ চালিয়ে আসল output দেওয়া।</p>
+  </header>
+
+  <div class="letters">
+    <a class="card letter" href="#atomicity" style="--c:var(--pa)"><span class="big">A</span><b>Atomicity</b><p>সব হবে, নয়তো কিছুই না।</p><small>ROLLBACK · SAVEPOINT</small></a>
+    <a class="card letter" href="#consistency" style="--c:var(--pc)"><span class="big">C</span><b>Consistency</b><p>নিয়ম ভাঙা data কখনো ঢুকবে না।</p><small>CHECK · PK · NOT NULL · FK</small></a>
+    <a class="card letter" href="#isolation" style="--c:var(--pi)"><span class="big">I</span><b>Isolation</b><p>অন্যের অর্ধেক কাজ দেখা যাবে না।</p><small>MVCC · isolation level</small></a>
+    <a class="card letter" href="#durability" style="--c:var(--pd)"><span class="big">D</span><b>Durability</b><p>COMMIT মানে চিরস্থায়ী, crash হলেও।</p><small>WAL · fsync</small></a>
+  </div>
+
+  <!-- setup -->
+  <section id="setup">
+    <h2><span class="num">0</span>Setup</h2>
+    <p class="lead">সব উদাহরণ এই table-এ। মোট টাকা <b>1500</b> — যত transfer-ই হোক, এই সংখ্যা বদলানো চলবে না।</p>
+<pre class="code" data-lang="sql">CREATE TABLE accounts (
+  id      int  PRIMARY KEY,
+  name    text NOT NULL,
+  balance int  NOT NULL CHECK (balance >= 0)   -- balance কখনো negative না
+);
+INSERT INTO accounts VALUES (1, 'Rahim', 1000), (2, 'Karim', 500);</pre>
+  </section>
+
+  <!-- A -->
+  <section id="atomicity" style="--c:var(--pa)">
+    <h2><span class="num">A</span>Atomicity</h2>
+    <span class="motto">All or nothing — transaction ভাঙা যায় না</span>
+    <p class="lead">একটা transaction-এর ভেতরের সব statement মিলে একটা <b>একক কাজ</b>। একটাও fail করলে আগের গুলোও মুছে যায় — database এমন অবস্থায় ফেরে যেন transaction শুরুই হয়নি।</p>
+    <div class="card story"><p><b>বাস্তবে:</b> bKash-এ টাকা পাঠালে — তোমার account থেকে কাটল, কিন্তু network চলে যাওয়ায় বন্ধুর account-এ পৌঁছাল না। Atomicity না থাকলে টাকাটা মাঝপথে হাওয়া হয়ে যেত।</p></div>
+
+    <h3>Karim-এর আছে 500, সে 2000 পাঠাতে চায়</h3>
+    <div class="file" style="--dot:var(--pa)"><i></i>psql<span class="r" style="--tc:var(--bad)">fail → সব বাতিল</span></div>
+<pre class="code" data-lang="sql">BEGIN;
+UPDATE accounts SET balance = balance + 2000 WHERE id = 1;   -- Rahim +2000
+SELECT * FROM accounts ORDER BY id;
+<span class="o">--  1 | Rahim | 3000     ← এই transaction-এর ভেতরে দেখা যাচ্ছে
+--  2 | Karim |  500</span>
+
+UPDATE accounts SET balance = balance - 2000 WHERE id = 2;   -- Karim −2000
+<span class="e">ERROR:  new row for relation "accounts" violates check constraint "accounts_balance_check"
+DETAIL:  Failing row contains (2, Karim, -1500).</span>
+
+SELECT * FROM accounts;
+<span class="e">ERROR:  current transaction is aborted, commands ignored until end of transaction block</span>
+
+COMMIT;
+<span class="o">ROLLBACK</span>          <span class="c">-- COMMIT চাইলেও PostgreSQL rollback করে</span></pre>
+    <div class="grid2" style="margin-top:14px">
+      <div>
+        <div class="file" style="--dot:var(--pa)"><i></i>পরে<span class="r" style="--tc:var(--ok)">কিছুই বদলায়নি</span></div>
+<pre class="code" data-lang="sql">SELECT * FROM accounts ORDER BY id;
+<span class="o">--  1 | Rahim | 1000     ← +2000 টাও মুছে গেছে
+--  2 | Karim |  500</span></pre>
+      </div>
+      <div>
+        <div class="file" style="--dot:var(--pa)"><i></i>SAVEPOINT — আংশিক rollback</div>
+<pre class="code" data-lang="sql">BEGIN;
+UPDATE accounts SET balance = balance - 200 WHERE id = 1;
+SAVEPOINT before_risky;
+UPDATE accounts SET balance = balance - 9999 WHERE id = 2;
+<span class="e">ERROR:  ... violates check constraint "accounts_balance_check"</span>
+ROLLBACK TO SAVEPOINT before_risky;   -- শুধু পরের অংশ বাতিল
+UPDATE accounts SET balance = balance + 200 WHERE id = 2;
+COMMIT;
+<span class="o">--  1 | Rahim |  800
+--  2 | Karim |  700</span></pre>
+      </div>
+    </div>
+    <div class="how"><b>PostgreSQL কীভাবে করে:</b>
+      <ul>
+        <li>UPDATE পুরনো row মুছে না, নতুন version লেখে — তাতে transaction ID (<code>xmin</code>) বসানো থাকে।</li>
+        <li>Transaction commit না rollback, সেটা আলাদা জায়গায় (<code>pg_xact</code>) লেখা থাকে। Rollback হলে নতুন version গুলো কেউ কখনো দেখে না, পরে <code>VACUUM</code> সেগুলো সরিয়ে দেয়।</li>
+        <li>তাই rollback প্রায় তাৎক্ষণিক — কোনো "undo" করে ফেরত লিখতে হয় না।</li>
+      </ul>
+    </div>
+
+    <h3>Application code-এ — C# (Npgsql)</h3>
+    <div class="grid2">
+      <div>
+        <div class="file" style="--dot:var(--bad)"><i></i>ভুল — transaction নেই<span class="r" style="--tc:var(--bad)">টাকা হারাতে পারে</span></div>
+<pre class="code" data-lang="cs">// প্রতিটা command নিজে নিজে commit হয় (autocommit)
+await Exec(conn, "UPDATE accounts SET balance = balance - 300 WHERE id = 1");
+// ← এখানে app crash / exception হলে?
+//   Rahim-এর 300 কাটা গেছে, Karim পায়নি।
+await Exec(conn, "UPDATE accounts SET balance = balance + 300 WHERE id = 2");</pre>
+      </div>
+      <div>
+        <div class="file" style="--dot:var(--ok)"><i></i>সঠিক — এক transaction<span class="r" style="--tc:var(--ok)">all or nothing</span></div>
+<pre class="code" data-lang="cs">await using var tx = await conn.BeginTransactionAsync();
+try
+{
+    await Exec(conn, "UPDATE accounts SET balance = balance - 300 WHERE id = 1", tx);
+    await Exec(conn, "UPDATE accounts SET balance = balance + 300 WHERE id = 2", tx);
+    await tx.CommitAsync();      // দুটো একসাথে স্থায়ী
+}
+catch
+{
+    await tx.RollbackAsync();    // দুটোই বাতিল
+    throw;
+}</pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- C -->
+  <section id="consistency" style="--c:var(--pc)">
+    <h2><span class="num">C</span>Consistency</h2>
+    <span class="motto">Valid state → valid state</span>
+    <p class="lead">Transaction শুরুর আগে database যদি সব নিয়ম মেনে চলে, শেষেও মেনে চলবে। নিয়ম ভাঙে এমন কোনো লেখা database নিজেই ফিরিয়ে দেয় — app-এ bug থাকলেও।</p>
+    <div class="card story"><p><b>বাস্তবে:</b> ব্যাংকের নিয়ম — balance কখনো negative হবে না, একই account number দুবার থাকবে না, আর transfer-এর আগে-পরে মোট টাকা একই থাকবে।</p></div>
+
+    <h3>Database-এর নিয়ম ভাঙার চেষ্টা</h3>
+    <div class="grid2">
+<pre class="code" data-lang="sql">UPDATE accounts SET balance = -50 WHERE id = 1;
+<span class="e">ERROR:  new row for relation "accounts" violates check constraint "accounts_balance_check"</span>
+
+INSERT INTO accounts VALUES (1, 'Duplicate', 10);
+<span class="e">ERROR:  duplicate key value violates unique constraint "accounts_pkey"
+DETAIL:  Key (id)=(1) already exists.</span>
+
+INSERT INTO accounts VALUES (9, NULL, 10);
+<span class="e">ERROR:  null value in column "name" of relation "accounts" violates not-null constraint</span></pre>
+<pre class="code" data-lang="sql">-- সফল transfer: আগে-পরে মোট টাকা একই
+SELECT sum(balance) FROM accounts;   <span class="o">-- 1500</span>
+
+BEGIN;
+UPDATE accounts SET balance = balance - 300 WHERE id = 1;
+UPDATE accounts SET balance = balance + 300 WHERE id = 2;
+COMMIT;
+
+SELECT sum(balance) FROM accounts;   <span class="o">-- 1500</span> <span class="g">✓</span></pre>
+    </div>
+    <div class="how"><b>কার দায়িত্ব কোনটা:</b>
+      <ul>
+        <li><b>Database:</b> যা declare করা আছে — <code>CHECK</code>, <code>PRIMARY KEY</code>, <code>UNIQUE</code>, <code>NOT NULL</code>, <code>FOREIGN KEY</code>, trigger। এগুলো কোনো transaction পেরোতে পারে না।</li>
+        <li><b>Application:</b> business logic — যেমন "মোট টাকা একই থাকবে" নিশ্চিত হয় কারণ app debit আর credit একই transaction-এ রাখে (Atomicity)।</li>
+        <li>একাধিক row জুড়ে নিয়ম (যেমন "Rahim + Karim ≥ 1000") একসাথে চলা transaction ভাঙতে পারে — তার জন্য <a href="../transactions/index.html#sz">SERIALIZABLE</a> লাগে।</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- I -->
+  <section id="isolation" style="--c:var(--pi)">
+    <h2><span class="num">I</span>Isolation</h2>
+    <span class="motto">একসাথে চললেও যেন একা চলছে</span>
+    <p class="lead">একাধিক transaction একই সময়ে চললে কেউ কারো <b>অর্ধেক-শেষ কাজ</b> দেখবে না। নিচে A টাকা পাঠাচ্ছে, আর একই মুহূর্তে B (ধরো, অডিট report) মোট টাকা গুনছে।</p>
+    <div class="card tl" data-tl="iso"></div>
+    <div class="how"><b>Isolation না থাকলে:</b> <code>t3</code>-এ B দেখত Rahim থেকে 300 কাটা কিন্তু Karim-এ যোগ হয়নি — মোট 1200, অডিট বলত 300 টাকা উধাও। PostgreSQL-এ MVCC-র কারণে B শুধু commit হওয়া data দেখে, আর reader কখনো writer-এর জন্য অপেক্ষা করে না।</div>
+
+    <h3>কতটা কড়া — ৪টি level</h3>
+    <div class="card tscroll">
+      <table>
+        <thead><tr><th>Level</th><th>যা ঠেকায়</th><th>যা হতে পারে</th></tr></thead>
+        <tbody>
+          <tr><td><code>READ UNCOMMITTED</code></td><td>PostgreSQL-এ Read Committed-এর মতোই</td><td>non-repeatable, phantom</td></tr>
+          <tr><td><code>READ COMMITTED</code> <small style="color:var(--muted)">default</small></td><td>dirty read</td><td>non-repeatable, phantom, write skew</td></tr>
+          <tr><td><code>REPEATABLE READ</code></td><td>+ non-repeatable, phantom, lost update</td><td>write skew</td></tr>
+          <tr><td><code>SERIALIZABLE</code></td><td>সব — ফল যেন একটার পর একটা চলেছে</td><td>কিছু না (কিন্তু retry লাগে)</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="foot">দুইটা psql session পাশাপাশি চালিয়ে প্রতিটা level-এর পূর্ণ demo: <a href="../transactions/index.html">Transaction Isolation গাইড →</a></p>
+  </section>
+
+  <!-- D -->
+  <section id="durability" style="--c:var(--pd)">
+    <h2><span class="num">D</span>Durability</h2>
+    <span class="motto">COMMIT একবার হলে আর হারাবে না</span>
+    <p class="lead"><code>COMMIT</code> সফল বললে সেই data <b>disk-এ নিরাপদ</b> — পরের মুহূর্তে বিদ্যুৎ চলে গেলেও, server crash করলেও। আর যেটা commit হয়নি, restart-এর পর সেটার কোনো চিহ্ন থাকবে না।</p>
+    <div class="card story"><p><b>বাস্তবে:</b> ATM "Transaction successful" দেখানোর পর ব্যাংকের server reboot হলো। টাকা তো তুমি হাতে পেয়েছ — balance থেকেও অবশ্যই কাটা থাকতে হবে।</p></div>
+
+    <h3>Crash test — commit-এর পর হঠাৎ server বন্ধ</h3>
+    <div class="card tl" data-tl="dur"></div>
+    <div class="grid2" style="margin-top:14px">
+      <div>
+        <div class="file"><i></i>restart-এর সময় server log</div>
+<pre class="code" data-lang="log">LOG:  database system was not properly shut down;
+      automatic recovery in progress
+LOG:  redo starts at 0/1C0AFC0
+LOG:  redo done at 0/1C4B4E8
+LOG:  database system is ready to accept connections</pre>
+      </div>
+      <div>
+        <div class="file"><i></i>durability-র setting</div>
+<pre class="code" data-lang="sql">SHOW synchronous_commit;   <span class="o">-- on</span>
+SHOW fsync;                <span class="o">-- on</span>
+<span class="c">-- pg_ctl stop -m immediate = প্লাগ টেনে খোলার মতো,
+-- কোনো checkpoint ছাড়াই বন্ধ (শুধু test-এ!)</span></pre>
+      </div>
+    </div>
+    <div class="how"><b>PostgreSQL কীভাবে করে — WAL (Write-Ahead Log):</b>
+      <ul>
+        <li>Table-এর data file-এ লেখার <b>আগে</b> পরিবর্তনটা WAL নামের একটা append-only log-এ লেখা হয়।</li>
+        <li><code>COMMIT</code>-এ শুধু WAL-টা <code>fsync</code> করে disk-এ পাঠানো হয় — ছোট, পরপর লেখা, তাই দ্রুত। আসল table page পরে checkpoint-এ লেখা হয়।</li>
+        <li>Crash-এর পর PostgreSQL শেষ checkpoint থেকে WAL আবার চালায় (<b>redo</b>) — commit হওয়া সব ফিরে আসে, uncommitted গুলো অদৃশ্য থাকে।</li>
+        <li><code>synchronous_commit = off</code> দিলে commit দ্রুত হয়, কিন্তু crash-এ শেষ কয়েকটা commit হারাতে পারে (data নষ্ট হয় না)। <code>fsync = off</code> production-এ কখনো না — crash-এ পুরো database নষ্ট হতে পারে।</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- summary -->
+  <section id="summary">
+    <h2><span class="num" style="--c:var(--accent)">Σ</span>এক নজরে</h2>
+    <div class="card tscroll">
+      <table>
+        <thead><tr><th>Property</th><th>নিশ্চয়তা</th><th>PostgreSQL-এ কে করে</th><th>না থাকলে</th></tr></thead>
+        <tbody>
+          <tr><td class="p" style="--c:var(--pa)"><span>A</span>Atomicity</td><td>সব statement একসাথে, নয়তো কিছুই না</td><td>MVCC row version + <code>pg_xact</code>, <code>ROLLBACK</code>, <code>SAVEPOINT</code></td><td>অর্ধেক transfer — টাকা কাটা, পৌঁছায়নি</td></tr>
+          <tr><td class="p" style="--c:var(--pc)"><span>C</span>Consistency</td><td>প্রতিটা commit-এর পর সব নিয়ম ঠিক</td><td>Constraint, trigger, FK + app logic</td><td>Negative balance, duplicate account</td></tr>
+          <tr><td class="p" style="--c:var(--pi)"><span>I</span>Isolation</td><td>একসাথে চলা transaction একে অপরের মাঝপথ দেখে না</td><td>MVCC snapshot, row lock, SSI</td><td>অডিটে ভুল মোট, lost update, double booking</td></tr>
+          <tr><td class="p" style="--c:var(--pd)"><span>D</span>Durability</td><td>Commit-এর পর crash হলেও data থাকে</td><td>WAL + <code>fsync</code>, crash recovery</td><td>"Successful" বলার পর টাকা গায়েব</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- interview -->
+  <section id="qa">
+    <h2><span class="num" style="--c:var(--accent)">Q</span>Interview-এ যা আসে</h2>
+    <div class="card" style="padding:4px 18px">
+      <details><summary>ACID-এর কোনটা database একা নিশ্চিত করতে পারে না?</summary><p>Consistency। Database শুধু declare করা constraint রক্ষা করে; business rule ঠিক রাখা app-এর দায়িত্ব — সঠিকভাবে transaction ব্যবহার করে। A, I, D database engine নিজেই দেয়।</p></details>
+      <details><summary>ACID-এর C আর CAP theorem-এর C কি একই?</summary><p>না। ACID-এর C মানে নিয়ম (constraint) ঠিক থাকা। CAP-এর C মানে distributed system-এর সব node একই সময়ে একই data দেখানো (linearizability)।</p></details>
+      <details><summary>Transaction-এর মাঝে error হলে PostgreSQL কী করে?</summary><p>পুরো transaction "aborted" অবস্থায় যায় — পরের সব command ignore করে, আর <code>COMMIT</code> দিলেও <code>ROLLBACK</code> হয়। শুধু একটা অংশ বাঁচাতে চাইলে আগে <code>SAVEPOINT</code> রাখতে হয়।</p></details>
+      <details><summary>WAL থাকলে commit দ্রুত হয় কেন?</summary><p>Commit-এ ছড়ানো table page গুলো disk-এ লিখতে হয় না — শুধু WAL-এর শেষে পরপর কয়েকটা byte যোগ করে fsync। Random write-এর বদলে sequential write।</p></details>
+      <details><summary>psql-এ BEGIN না লিখলে কি transaction হয় না?</summary><p>হয় — প্রতিটা statement নিজেই একটা transaction (autocommit)। একটা statement-এর ভেতরে ACID থাকে, কিন্তু একাধিক statement একসাথে রাখতে <code>BEGIN … COMMIT</code> লাগে।</p></details>
+      <details><summary>NoSQL database কি ACID মানে?</summary><p>অনেকে আংশিকভাবে। যেমন MongoDB 4.0 থেকে multi-document transaction দেয়; অনেক system BASE (Basically Available, Soft state, Eventually consistent) মডেলে চলে — availability-র জন্য তাৎক্ষণিক consistency ছাড়ে।</p></details>
+    </div>
+  </section>
+
+  <footer><span>WellDev · DBMS & SQL</span><a href="../transactions/index.html">পরের গাইড: Transaction Isolation →</a></footer>
+</div>
+
+<script>
+// Two-lane timelines: [who, sql, output, tag]; tag = [kind, text], kind = ok | bad | info.
+const STEPS = {
+  iso: [
+    ["A", "BEGIN;"],
+    ["A", "UPDATE accounts SET balance = balance - 300\nWHERE id = 1;", "", ["info", "Rahim −300, এখনো commit হয়নি"]],
+    ["B", "SELECT sum(balance) FROM accounts;", "sum → <b>1500</b>", ["ok", "অর্ধেক কাজ দেখা যায়নি"]],
+    ["A", "UPDATE accounts SET balance = balance + 300\nWHERE id = 2;"],
+    ["A", "COMMIT;"],
+    ["B", "SELECT sum(balance) FROM accounts;", "sum → <b>1500</b>", ["ok", "commit-এর পরেও ঠিক"]],
+  ],
+  dur: [
+    ["A", "BEGIN;\nUPDATE accounts SET balance = balance + 1\nWHERE id = 1;\nCOMMIT;", "Rahim 800 → <b>801</b>", ["info", "COMMIT সফল"]],
+    ["B", "BEGIN;\nUPDATE accounts SET balance = 999999\nWHERE id = 2;", "", ["info", "commit হয়নি, session খোলা"]],
+    ["A", "-- terminal: হঠাৎ বন্ধ\npg_ctl stop -m immediate\npg_ctl start", "", ["bad", "💥 crash + restart"]],
+    ["A", "SELECT * FROM accounts ORDER BY id;", "1 | Rahim | <b>801</b>\n2 | Karim | <b>700</b>", ["ok", "801 টিকে আছে · 999999 নেই"]],
+  ],
+};
+
+const esc = s => s.replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+const KW = {
+  sql: "BEGIN|COMMIT|ROLLBACK|SAVEPOINT|TO|SELECT|FROM|WHERE|UPDATE|SET|INSERT|INTO|VALUES|CREATE|TABLE|PRIMARY|KEY|NOT|NULL|CHECK|SHOW|ORDER|BY|sum|int|text",
+  cs: "async|await|using|var|try|catch|throw|new",
+};
+// Tokenise once so keywords inside strings/comments are left alone. Pre-marked spans (output) are kept.
+function highlight(src, lang) {
+  const com = lang === "cs" ? "\\/\\/[^\\n]*" : "--[^\\n]*";
+  const str = lang === "cs" ? '"(?:[^"\\\\]|\\\\.)*"' : "'(?:[^']|'')*'";
+  const re = new RegExp(`(${com})|(${str})|\\b(\\d+)\\b|\\b(${KW[lang]})\\b|\\b([A-Z][a-z]+[A-Z]\\w*)\\b`, "g");
+  return esc(src).replace(re, (m, c, s, d, k, t) =>
+    c ? `<span class="c">${c}</span>` : s ? `<span class="s">${s}</span>` : d ? `<span class="d">${d}</span>` :
+    k ? `<span class="k">${k}</span>` : lang === "cs" ? `<span class="t">${t}</span>` : t);
+}
+document.querySelectorAll("pre.code").forEach(pre => {
+  const lang = pre.dataset.lang;
+  if (!KW[lang]) return;
+  // Highlight only the plain-text parts; leave hand-marked output spans untouched.
+  [...pre.childNodes].forEach(node => {
+    if (node.nodeType !== 3) return;
+    const span = document.createElement("span");
+    span.innerHTML = highlight(node.textContent, lang);
+    node.replaceWith(...span.childNodes);
+  });
+});
+
+document.querySelectorAll("[data-tl]").forEach(box => {
+  const cell = (who, step) => {
+    if (step[0] !== who) return `<div class="cell ${who.toLowerCase()}"></div>`;
+    const [, sql, out, tag] = step;
+    return `<div class="cell ${who.toLowerCase()} on" data-who="${who}">
+      <pre>${highlight(sql, "sql")}</pre>
+      ${out ? `<div class="out">${out.replace(/\n/g, "<br>")}</div>` : ""}
+      ${tag ? `<span class="tag ${tag[0]}">${tag[1]}</span>` : ""}</div>`;
+  };
+  const [ha, hb] = box.dataset.tl === "iso" ? ["Session A · transfer", "Session B · অডিট"] : ["Session A", "Session B"];
+  box.innerHTML = `<div class="tl-head"><span></span><span class="a">${ha}</span><span class="b">${hb}</span></div>` +
+    STEPS[box.dataset.tl].map((s, i) => `<div class="row"><span class="n">t${i + 1}</span>${cell("A", s)}${cell("B", s)}</div>`).join("");
+});
+
+const root = document.documentElement;
+try { const t = localStorage.getItem("welldev-theme"); if (t) root.dataset.theme = t; } catch (e) {}
+document.getElementById("theme").addEventListener("click", () => {
+  const dark = root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  root.dataset.theme = dark ? "light" : "dark";
+  try { localStorage.setItem("welldev-theme", root.dataset.theme); } catch (e) {}
+});
+</script>
+</body>
+</html>

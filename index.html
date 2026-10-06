@@ -159,10 +159,16 @@ const TRACKS = [
       desc: "Creational, Structural, Behavioural — প্রতিটি pattern বাংলায় ব্যাখ্যা ও C# কোড সহ।",
       tags: ["Singleton", "Strategy", "C#"], meta: [["23", "patterns"], ["3", "categories"]] },
   ]},
-  { id: "sql", n: "03", title: "DBMS & SQL", blurb: "Query, join, aggregate, window function", color: "#10b981", guides: [
+  { id: "sql", n: "03", title: "DBMS & SQL", blurb: "Query, join, window function, transaction, ACID", color: "#10b981", guides: [
     { href: "03-dbms-sql/top-50-sql/index.html", kicker: "LeetCode", title: "SQL 50 — Visual Guide",
       desc: "৫০টি problem, PostgreSQL solution আর প্রতিটি JOIN, CTE, GROUP BY, window function-এর পরের আসল table।",
       tags: ["PostgreSQL", "JOIN", "Window"], meta: [["50", "problems"], ["7", "sections"]] },
+    { href: "03-dbms-sql/acid/index.html", kicker: "DBMS Theory", title: "ACID Properties",
+      desc: "একটা bank transfer দিয়ে Atomicity, Consistency, Isolation, Durability — PostgreSQL-এর আসল output, crash test আর C# কোড সহ।",
+      tags: ["PostgreSQL", "WAL", "SAVEPOINT", "C#"], meta: [["4", "properties"], ["1", "crash test"]] },
+    { href: "03-dbms-sql/transactions/index.html", kicker: "DBMS Theory", title: "Transaction Isolation Levels",
+      desc: "দুইটা psql session পাশাপাশি — dirty read, non-repeatable read, phantom আর write skew কোন level-এ হয়, ধাপে ধাপে।",
+      tags: ["PostgreSQL", "MVCC", "Serializable"], meta: [["4", "levels"], ["4", "anomalies"]] },
     { href: "03-dbms-sql/dbms-theory/n+1 query.png", kicker: "DBMS Theory", title: "N+1 Query Problem",
       desc: "N+1 query সমস্যা কী আর কীভাবে এড়ানো যায় — একটা ছবিতে।",
       tags: ["ORM", "Performance"], meta: [["1", "diagram"]] },
@@ -180,13 +186,16 @@ const TRACKS = [
       desc: "Boot থেকে GUI, CPU core-এর ভেতর, process ও thread তৈরি, scheduling আর context switch — ধাপে ধাপে।",
       tags: ["Kernel", "Scheduler", "Context switch"], meta: [["7", "chapters"], ["25", "diagrams"]] },
   ]},
-  { id: "net", n: "06", title: "Networking", blurb: "OSI model, TCP, error detection", color: "#14b8a6", guides: [
+  { id: "net", n: "06", title: "Networking", blurb: "OSI model, web server, browser rendering", color: "#14b8a6", guides: [
     { href: "06-networking/OSI/index.html", kicker: "OSI · Interactive", title: "Seq, Checksum ও CRC",
       desc: "একটা মেসেজ ৭টা লেয়ার পেরিয়ে যায় — seq নম্বর, TCP checksum আর CRC-32 কে কোন ভুল ধরে, ধাপে ধাপে অ্যানিমেশনে।",
       tags: ["OSI", "TCP", "CRC-32", "D3.js"], meta: [["19", "steps"], ["4", "scenarios"]] },
     { href: "06-networking/web-server/index.html", kicker: "Web Server · Interactive", title: "Browser থেকে Server: Request-এর যাত্রা",
       desc: "DNS, TCP ও TLS পেরিয়ে request কীভাবে Nginx, app server, cache আর database-এ যায়—TCP stack, socket ও OSI layer-সহ visual guide।",
       tags: ["TCP / TLS", "Nginx", "Socket", "GSAP"], meta: [["16", "steps"], ["5", "scenarios"]] },
+    { href: "06-networking/browser/index.html", kicker: "Browser · Interactive", title: "URL থেকে Pixel: Browser কীভাবে Page বানায়",
+      desc: "HTML থেকে DOM, CSSOM, layout আর paint — আর <link>, async, defer, module ও body-এর শেষের script ঠিক কখন চলে, timeline অ্যানিমেশনে।",
+      tags: ["DOM / CSSOM", "async / defer", "Rendering", "GSAP"], meta: [["11", "steps"], ["5", "modes"]] },
   ]},
 ];
 
