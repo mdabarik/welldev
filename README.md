@@ -9,6 +9,7 @@ _শীঘ্রই আসছে।_
 ## 02 · OOP (Java)
 
 - [OOP in C#](02-oop-java/oop/index.html) — ৪টি পিলার, sealed / private constructor, upcasting-downcasting, diamond problem, coupling ও cohesion
+- [UML Class Diagram](02-oop-java/oop/ood/index.html) — ১৪টি UML ডায়াগ্রাম, ক্লাস বক্স, multiplicity আর ৬টি relationship, আসল UML চিহ্নে আঁকা
 - [DRY, KISS, YAGNI ও SoC](02-oop-java/design-principle/kiss-dry-yagni-soc/index.html) — ৪টি বেসিক design principle, Bad বনাম Good কোড সহ
 - [SOLID Principles](02-oop-java/design-principle/solid/index.html) — SRP, OCP, LSP, ISP, DIP — Violation বনাম Solution কোড আর এক নজরে cheat sheet
 - [Design Patterns](02-oop-java/design-pattern/index.html) — Creational, Structural, Behavioural pattern, বাংলা ব্যাখ্যা ও C# কোড সহ

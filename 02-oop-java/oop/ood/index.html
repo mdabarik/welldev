@@ -1,0 +1,577 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UML Class Diagram</title>
+<meta name="description" content="UML diagram-এর ধরন, class diagram-এর গঠন, multiplicity আর ৬টি relationship — সহজ বাংলায়, আসল UML চিহ্ন আর Java কোড সহ।">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,650;1,9..144,500&family=Hind+Siliguri:wght@400;500;600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f6f3ee; --surface:#fffdf9; --surface-2:#efeae2; --side:#efeae2;
+  --ink:#1f1c18; --ink-2:#5a534a; --ink-3:#8d857a; --line:#e2dbcf;
+  --accent:#b4532a; --c1:#b4532a; --c2:#2f6f62; --c3:#5b4fa8; --c4:#a07a1d;
+  --code-bg:#1d1b19; --code-ink:#e8e2d8; --code-bar:#2a2724;
+  --t-kw:#e5946b; --t-str:#a9c97f; --t-com:#7d766c; --t-num:#d6b46a; --t-type:#87bfd9; --t-fn:#e9cf8a;
+  --uml:#3b342c;
+  --shadow:0 1px 2px rgba(40,30,20,.04),0 8px 24px -12px rgba(40,30,20,.12);
+  --sans:"Inter","Hind Siliguri",system-ui,sans-serif;
+  --bn:"Hind Siliguri","Inter",system-ui,sans-serif;
+  --serif:"Fraunces",Georgia,serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#141311; --surface:#1b1a17; --surface-2:#24221e; --side:#181714;
+  --ink:#ece6dc; --ink-2:#b3aa9c; --ink-3:#7f776b; --line:#2e2b26;
+  --accent:#e58a5c; --c1:#e58a5c; --c2:#5fb9a5; --c3:#a598f0; --c4:#d9b356;
+  --code-bg:#0f0e0d; --code-bar:#1a1917; --uml:#e2d9cb; --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px -14px rgba(0,0,0,.6);
+}}
+:root[data-theme="dark"]{
+  --bg:#141311; --surface:#1b1a17; --surface-2:#24221e; --side:#181714;
+  --ink:#ece6dc; --ink-2:#b3aa9c; --ink-3:#7f776b; --line:#2e2b26;
+  --accent:#e58a5c; --c1:#e58a5c; --c2:#5fb9a5; --c3:#a598f0; --c4:#d9b356;
+  --code-bg:#0f0e0d; --code-bar:#1a1917; --uml:#e2d9cb; --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px -14px rgba(0,0,0,.6);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:24px}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased}
+a{color:var(--accent)}
+button{font:inherit;color:inherit}
+code{font-family:var(--mono)}
+:not(pre)>code{font-size:.84em;background:var(--surface-2);border:1px solid var(--line);padding:1px 6px;border-radius:6px}
+.app{display:grid;grid-template-columns:270px 1fr;min-height:100vh}
+
+/* sidebar */
+.sidebar{position:sticky;top:0;height:100vh;overflow-y:auto;background:var(--side);border-right:1px solid var(--line);padding:22px 14px 26px;display:flex;flex-direction:column}
+.brand{display:flex;align-items:center;gap:10px;padding:2px 8px 22px;text-decoration:none;color:var(--ink)}
+.brand-mark{width:34px;height:34px;border-radius:10px;background:var(--ink);color:var(--bg);display:grid;place-items:center;font-family:var(--serif);font-size:18px;font-weight:650}
+.brand b{font-family:var(--serif);font-weight:650;font-size:19px;display:block;line-height:1.1}
+.brand small{color:var(--ink-3);font-size:12px;font-family:var(--bn)}
+.side-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-3);padding:6px 10px}
+.nav a{display:flex;gap:10px;align-items:baseline;padding:7px 10px;border-radius:9px;text-decoration:none;color:var(--ink);font-size:14px;font-family:var(--bn)}
+.nav a .n{font-family:var(--mono);font-size:11px;color:var(--ink-3);min-width:16px}
+.nav a:hover{background:var(--surface)}
+.nav a.active{background:var(--surface);box-shadow:var(--shadow)}
+.nav .sub a{padding:4px 10px 4px 36px;font-size:13px;color:var(--ink-2)}
+.side-foot{margin-top:auto;padding-top:18px;display:flex;gap:8px;flex-wrap:wrap}
+.pill-btn{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 12px;font-size:12.5px;color:var(--ink-2);cursor:pointer;text-decoration:none}
+.pill-btn:hover{color:var(--ink);border-color:var(--ink-3)}
+
+/* main */
+.main{min-width:0}
+.wrap{max-width:880px;margin:0 auto;padding:44px 32px 90px}
+.hero{padding:10px 0 30px;border-bottom:1px solid var(--line)}
+.eyebrow{font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--accent)}
+.hero h1{font-family:var(--serif);font-weight:650;font-size:clamp(36px,6vw,60px);line-height:1.04;letter-spacing:-.025em;margin:12px 0 16px}
+.hero h1 em{font-style:italic;color:var(--accent);font-weight:500}
+.hero p{font-family:var(--bn);font-size:17px;color:var(--ink-2);max-width:660px;margin:0 0 10px;line-height:1.75}
+.roadmap{display:flex;flex-wrap:wrap;gap:8px;margin-top:20px}
+.roadmap a{display:inline-flex;gap:8px;align-items:center;text-decoration:none;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:5px 14px 5px 6px;font-family:var(--bn);font-size:14px}
+.roadmap a span{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:var(--ink);color:var(--bg);font-size:12px;font-family:var(--mono)}
+.roadmap a:hover{border-color:var(--ink-3)}
+
+section.part{padding-top:58px}
+.part-head .k{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.part-head h2{font-family:var(--serif);font-size:clamp(28px,4vw,38px);font-weight:650;letter-spacing:-.02em;line-height:1.1;margin:4px 0 10px}
+.part-head p,.prose p,.prose li{font-family:var(--bn);font-size:16.5px;line-height:1.8;color:var(--ink-2)}
+.part-head p{margin:0 0 18px;max-width:700px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px 20px}
+
+/* diagram types */
+.types{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.types h3{margin:0 0 2px;font-size:16px}
+.types .sub{font-family:var(--bn);color:var(--ink-3);font-size:14px;margin-bottom:10px}
+.types ol{margin:0;padding:0;list-style:none;counter-reset:d}
+.types li{counter-increment:d;padding:9px 0 9px 30px;border-top:1px solid var(--line);position:relative}
+.types li::before{content:counter(d);position:absolute;left:0;top:10px;width:20px;height:20px;border-radius:6px;background:var(--surface-2);font-size:11px;font-family:var(--mono);display:grid;place-items:center;color:var(--ink-3)}
+.types li.hot::before{background:var(--accent);color:#fff}
+.types li b{font-size:14.5px}
+.types li p{margin:2px 0 0;font-family:var(--bn);font-size:14px;line-height:1.6;color:var(--ink-2)}
+.badge{margin-left:8px;font-size:11px;font-family:var(--bn);color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,transparent);padding:1px 8px;border-radius:999px;vertical-align:1px}
+.note-line{margin-top:14px;font-family:var(--bn);font-size:15.5px;color:var(--ink-2)}
+.note-line b{color:var(--ink)}
+
+/* class box anatomy */
+.anatomy{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:22px;align-items:center}
+.umlbox{border:2px solid var(--uml);border-radius:4px;background:var(--surface);font-family:var(--mono);font-size:13.5px;max-width:380px}
+.umlbox > div{padding:9px 14px;position:relative}
+.umlbox > div + div{border-top:2px solid var(--uml)}
+.umlbox .cname{text-align:center;font-weight:600;font-size:15px}
+.umlbox .row{display:block}
+.umlbox .tagnum{position:absolute;right:-13px;top:50%;transform:translateY(-50%);width:24px;height:24px;border-radius:50%;background:var(--accent);color:#fff;font-family:var(--sans);font-size:12px;display:grid;place-items:center}
+.parts{margin:0;padding:0;list-style:none}
+.parts li{display:grid;grid-template-columns:28px 1fr;gap:8px;margin-bottom:12px;font-family:var(--bn);font-size:15.5px}
+.parts li span{width:24px;height:24px;border-radius:50%;background:var(--accent);color:#fff;font-family:var(--sans);font-size:12px;display:grid;place-items:center;margin-top:3px}
+.parts li small{display:block;color:var(--ink-3);font-size:13.5px}
+.mods{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:20px}
+.mod{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px}
+.mod .sym{font-family:var(--mono);font-size:26px;font-weight:500;line-height:1;color:var(--accent)}
+.mod b{display:block;margin-top:8px;font-size:14px}
+.mod p{margin:4px 0 0;font-family:var(--bn);font-size:13.5px;color:var(--ink-2);line-height:1.6}
+
+/* uml svg */
+svg.uml{display:block;width:100%;max-width:560px;height:auto;color:var(--uml)}
+svg .bx{fill:var(--surface);stroke:var(--uml);stroke-width:1.6}
+svg .bt{fill:var(--ink);font:600 14px var(--mono);text-anchor:middle}
+svg .ln{stroke:var(--uml);stroke-width:1.6}
+svg .ln.dash{stroke-dasharray:7 5}
+svg .m-hollow{fill:var(--surface);stroke:var(--uml);stroke-width:1.6;stroke-linejoin:round}
+svg .m-filled{fill:var(--uml);stroke:var(--uml);stroke-width:1.6;stroke-linejoin:round}
+svg .m-open{fill:none;stroke:var(--uml);stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+svg .mt{fill:var(--accent);font:600 13px var(--mono)}
+svg .cap{fill:var(--ink-3);font:13px var(--bn);text-anchor:middle}
+svg.note{width:120px;height:28px;display:block;color:var(--uml)}
+
+/* multiplicity */
+.mgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.mcard{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px 18px}
+.mcard:last-child:nth-child(odd){grid-column:1/-1}
+.mhead{display:flex;gap:12px;align-items:center;margin-bottom:6px}
+.msym{min-width:58px;height:40px;padding:0 10px;border-radius:10px;display:grid;place-items:center;font-family:var(--mono);font-size:16px;font-weight:600;color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,transparent);white-space:nowrap}
+.mhead b{font-family:var(--bn);font-size:16px;display:block;line-height:1.2}
+.mhead small{color:var(--ink-3);font-size:12.5px}
+.mcard p{margin:0 0 10px;font-family:var(--bn);font-size:15px;line-height:1.7;color:var(--ink-2)}
+.mcard p.ex{margin:10px 0 0}
+.mcard p.ex span,.lbl{display:block;font-family:var(--sans);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-3);margin-bottom:2px}
+
+/* relationships */
+.rchips{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.rchip{display:block;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;text-decoration:none;color:var(--ink);transition:border-color .15s,transform .15s}
+.rchip:hover{border-color:var(--ink-3);transform:translateY(-1px)}
+.rchip b{display:block;margin-top:6px;font-size:14.5px}
+.rchip small{font-family:var(--bn);color:var(--ink-3);font-size:13px}
+.scale{margin:18px 0 0;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 18px}
+.scale .bar{height:8px;border-radius:99px;background:linear-gradient(90deg,color-mix(in srgb,var(--accent) 18%,transparent),var(--accent));margin:10px 0 8px}
+.scale .ticks{display:flex;justify-content:space-between;font-size:13px;font-weight:600;gap:6px}
+.scale .ticks small{display:block;font-weight:400;color:var(--ink-3);font-family:var(--bn);font-size:12px}
+.scale p{margin:8px 0 0;font-family:var(--bn);font-size:14px;color:var(--ink-2)}
+
+.rel{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:22px 24px;margin-top:18px;box-shadow:var(--shadow)}
+.rel-head{display:flex;gap:14px;align-items:center}
+.rel-n{flex:none;width:44px;height:44px;border-radius:12px;background:var(--ink);color:var(--bg);display:grid;place-items:center;font-family:var(--bn);font-size:20px;font-weight:600}
+.rel h3{margin:0;font-family:var(--serif);font-size:26px;font-weight:650;letter-spacing:-.015em;line-height:1.1}
+.rel h3 span{font-weight:500;font-style:italic;color:var(--ink-3);font-size:.65em}
+.rel-bn{font-family:var(--bn);color:var(--ink-2);font-size:15px}
+.tag{font-family:var(--mono);font-size:12px;background:var(--surface-2);border:1px solid var(--line);padding:1px 8px;border-radius:999px;color:var(--ink)}
+.rel-svg{margin:16px 0 4px;padding:14px;background:var(--bg);border-radius:12px;border:1px dashed var(--line)}
+.facts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:12px 0 16px}
+.facts div{background:var(--surface-2);border-radius:10px;padding:8px 10px}
+.facts dt{font-size:10.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3)}
+.facts dd{margin:2px 0 0;font-family:var(--bn);font-size:14px;line-height:1.45}
+.rel p{font-family:var(--bn);font-size:16px;line-height:1.8;margin:0 0 12px;color:var(--ink)}
+.codebox summary{cursor:pointer;font-size:13px;color:var(--ink-3);padding:2px 0 8px}
+.code{border-radius:12px;overflow:hidden;background:var(--code-bg)}
+.code-bar{display:flex;align-items:center;justify-content:space-between;padding:7px 14px;background:var(--code-bar);font-family:var(--mono);font-size:12px;color:#9a9286}
+.copy{border:0;background:none;color:#9a9286;cursor:pointer;font-size:12px}
+.copy:hover{color:#fff}
+.code pre{margin:0;padding:14px 18px;overflow-x:auto;font-size:13px;line-height:1.65;color:var(--code-ink);tab-size:4}
+.t-kw{color:var(--t-kw)} .t-str{color:var(--t-str)} .t-com{color:var(--t-com);font-style:italic} .t-num{color:var(--t-num)} .t-type{color:var(--t-type)} .t-fn{color:var(--t-fn)}
+
+/* rules & summary */
+.rules{display:grid;gap:12px}
+.rule{display:grid;grid-template-columns:42px 1fr;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 18px}
+.rule .q{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;font-family:var(--serif);font-weight:650;font-size:20px;color:#fff;background:var(--accent)}
+.rule b{font-family:var(--bn);font-size:16px}
+.rule ul{margin:6px 0 0;padding:0;list-style:none}
+.rule li{font-family:var(--bn);font-size:15px;line-height:1.7;display:flex;gap:10px;align-items:center;flex-wrap:wrap;color:var(--ink-2)}
+.rule li svg.note{width:84px}
+.tricks{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:16px}
+.trick{background:var(--ink);color:var(--bg);border-radius:14px;padding:16px}
+.trick .lbl{color:color-mix(in srgb,var(--bg) 60%,transparent)}
+.trick p{margin:0;font-family:var(--bn);font-size:15px;line-height:1.7}
+.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:14px;background:var(--surface);margin-top:18px}
+table{border-collapse:collapse;width:100%;font-family:var(--bn);font-size:14.5px;line-height:1.55}
+th,td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--line);vertical-align:middle}
+th{font-family:var(--sans);font-size:11.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);background:var(--surface-2)}
+tr:last-child td{border-bottom:0}
+td small{color:var(--ink-3)}
+.svgcell small{display:block;font-family:var(--mono);font-size:11.5px}
+.lib{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px;align-items:center}
+.lib ul{margin:0;padding-left:20px;font-family:var(--bn);font-size:15.5px;line-height:1.8;color:var(--ink-2)}
+footer{margin-top:60px;padding-top:20px;border-top:1px solid var(--line);color:var(--ink-3);font-size:13px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+
+.topbar{display:none}
+@media (max-width:920px){
+  .app{grid-template-columns:1fr}
+  .sidebar{display:none}
+  .topbar{display:flex;position:sticky;top:0;z-index:5;gap:6px;overflow-x:auto;padding:10px 14px;background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);scrollbar-width:none}
+  .topbar a{white-space:nowrap;text-decoration:none;color:var(--ink-2);font-size:13.5px;padding:5px 12px;border-radius:999px;border:1px solid var(--line);background:var(--surface);font-family:var(--bn)}
+  .topbar a.active{color:var(--ink);border-color:var(--ink-3)}
+  html{scroll-padding-top:64px}
+  .facts{grid-template-columns:1fr 1fr}
+}
+@media (max-width:700px){
+  .wrap{padding:28px 16px 70px}
+  .types,.anatomy,.mgrid,.lib{grid-template-columns:1fr}
+  .mods,.rchips{grid-template-columns:1fr 1fr}
+  .tricks{grid-template-columns:1fr}
+  .rel{padding:18px 16px}
+  .umlbox{max-width:none}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <a class="brand" href="#top"><div class="brand-mark">U</div><div><b>UML</b><small>Class Diagram · সহজ বাংলায়</small></div></a>
+    <nav class="nav" id="nav">
+      <div class="side-label">অধ্যায়</div>
+      <a href="#types" data-sec="types"><span class="n">01</span>UML ডায়াগ্রামের ধরন</a>
+      <a href="#anatomy" data-sec="anatomy"><span class="n">02</span>ক্লাস বক্সের গঠন</a>
+      <a href="#multiplicity" data-sec="multiplicity"><span class="n">03</span>Multiplicity</a>
+      <a href="#relationships" data-sec="relationships"><span class="n">04</span>৬টি Relationship</a>
+      <div class="sub">
+        <a href="#inheritance">Inheritance</a><a href="#realization">Realization</a><a href="#association">Association</a>
+        <a href="#aggregation">Aggregation</a><a href="#composition">Composition</a><a href="#dependency">Dependency</a>
+      </div>
+      <a href="#rules" data-sec="rules"><span class="n">05</span>কোনটা কখন — এক নজরে</a>
+    </nav>
+    <div class="side-foot">
+      <a class="pill-btn" href="../index.html">← OOP</a>
+      <button class="pill-btn" id="theme" type="button">Theme</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <nav class="topbar" id="topbar"></nav>
+    <div class="wrap">
+
+      <section class="hero" id="top">
+        <div class="eyebrow">Object-Oriented Design · UML · বাংলা</div>
+        <h1>UML Class Diagram,<br><em>line by line.</em></h1>
+        <p>UML (Unified Modeling Language) দিয়ে সফটওয়্যারের ডিজাইন ছবিতে দেখানো হয়। এই পাতায় আগে পুরো UML-এর ম্যাপ, তারপর সবচেয়ে বেশি ব্যবহৃত <b>Class Diagram</b> — ক্লাস বক্স, multiplicity আর ৬টি সম্পর্কের লাইন, তীর আর ডায়মন্ড কোন দিকে যায়।</p>
+        <p>ছবিগুলো আসল UML চিহ্নে আঁকা: সলিড বনাম ড্যাশড লাইন, ফাঁপা ত্রিভুজ, সাধারণ তীর, ফাঁপা ◇ আর ভরাট ◆ ডায়মন্ড।</p>
+        <div class="roadmap">
+          <a href="#types"><span>১</span>ডায়াগ্রামের ধরন</a>
+          <a href="#anatomy"><span>২</span>ক্লাস বক্স</a>
+          <a href="#multiplicity"><span>৩</span>Multiplicity</a>
+          <a href="#relationships"><span>৪</span>Relationship</a>
+          <a href="#rules"><span>৫</span>এক নজরে</a>
+        </div>
+      </section>
+
+      <section class="part" id="types">
+        <div class="part-head">
+          <div class="k">অধ্যায় ১</div>
+          <h2>UML ডায়াগ্রামের ১৪টি ধরন</h2>
+          <p>UML 2.5 অনুযায়ী মোট <b>১৪ ধরনের</b> ডায়াগ্রাম, দুই ভাগে: <b>Structural</b> — সিস্টেমের স্থির কাঠামো, আর <b>Behavioral</b> — সিস্টেমের গতিশীল আচরণ।</p>
+        </div>
+        <div class="types">
+          <div class="card"><h3>Structural Diagrams</h3><div class="sub">৭টি · সিস্টেমের গঠন ও উপাদানের সম্পর্ক</div><ol><li class="hot"><b>Class Diagram</b><span class="badge">বেশি ব্যবহৃত</span><p>সবচেয়ে বেশি ব্যবহৃত। ক্লাস, তাদের অ্যাট্রিবিউট, মেথড আর ক্লাসগুলোর সম্পর্ক (যেমন inheritance) দেখায়।</p></li><li class=""><b>Object Diagram</b><p>Class diagram-এর একটা নির্দিষ্ট মুহূর্তের ছবি — তখন কোন অবজেক্ট কোন অবস্থায় আর কার সাথে যুক্ত।</p></li><li class=""><b>Component Diagram</b><p>সিস্টেমের কম্পোনেন্ট (module বা library) কীভাবে একে অপরের সাথে যুক্ত হয়ে কাজ করে।</p></li><li class=""><b>Deployment Diagram</b><p>হার্ডওয়্যার আর্কিটেকচার — কোন সার্ভার বা নোডে কোন সফটওয়্যার কম্পোনেন্ট চলবে।</p></li><li class=""><b>Package Diagram</b><p>ক্লাস বা কম্পোনেন্টগুলো কীভাবে প্যাকেজ বা লজিক্যাল গ্রুপে ভাগ করা।</p></li><li class=""><b>Composite Structure Diagram</b><p>একটা নির্দিষ্ট ক্লাসের ভেতরের গঠন আর তার অংশগুলো কীভাবে কাজ করে।</p></li><li class=""><b>Profile Diagram</b><p>UML-কে নিজের ডোমেইনের জন্য কাস্টমাইজ করা (নিজস্ব stereotype ইত্যাদি)।</p></li></ol></div>
+          <div class="card"><h3>Behavioral Diagrams</h3><div class="sub">৭টি · সিস্টেম কীভাবে কাজ করে, কে কার সাথে কথা বলে</div><ol><li class="hot"><b>Use Case Diagram</b><span class="badge">বেশি ব্যবহৃত</span><p>ব্যবহারকারী (Actor) সিস্টেমের সাথে কীভাবে ইন্টারঅ্যাক্ট করে — সিস্টেমে কী কী ফিচার আছে তার হাই-লেভেল ছবি।</p></li><li class="hot"><b>Activity Diagram</b><span class="badge">বেশি ব্যবহৃত</span><p>ফ্লোচার্টের মতো — একটা কাজ শুরু থেকে শেষ পর্যন্ত কোন ধাপে হয়।</p></li><li class=""><b>State Machine Diagram</b><p>ইভেন্টের কারণে একটা অবজেক্ট এক স্টেট থেকে আরেক স্টেটে কীভাবে যায়।</p></li><li class="hot"><b>Sequence Diagram</b><span class="badge">বেশি ব্যবহৃত</span><p>সময়ের ক্রমে অবজেক্টগুলোর মধ্যে মেসেজ আদান-প্রদান (Interaction diagram-এর অংশ)।</p></li><li class=""><b>Communication Diagram</b><p>Sequence-এর মতোই, তবে সময়ের চেয়ে অবজেক্টগুলোর সম্পর্কে বেশি জোর।</p></li><li class=""><b>Interaction Overview Diagram</b><p>Activity আর Sequence diagram-এর মিশ্রণ — পুরো ইন্টারঅ্যাকশনের ওভারভিউ।</p></li><li class=""><b>Timing Diagram</b><p>সময়ের সাথে অবজেক্টের অবস্থার পরিবর্তন — যেখানে সময়ের হিসাব জরুরি (যেমন রিয়েল-টাইম সিস্টেম)।</p></li></ol></div>
+        </div>
+        <p class="note-line">সংক্ষেপে: বাস্তবে সবচেয়ে বেশি ব্যবহৃত হয় <b>Class, Use Case, Sequence</b> আর <b>Activity</b> ডায়াগ্রাম। নিচের বাকি পাতাটা Class Diagram নিয়ে।</p>
+      </section>
+
+      <section class="part" id="anatomy">
+        <div class="part-head">
+          <div class="k">অধ্যায় ২</div>
+          <h2>ক্লাস বক্সের গঠন</h2>
+          <p>Class diagram তিনটা জিনিস দিয়ে তৈরি: <b>Class</b>, <b>Multiplicity</b> আর <b>Relationships</b>। প্রথমে ক্লাস — প্রতিটা ক্লাস একটা বক্স, যার ভেতরে তিনটা ঘর।</p>
+        </div>
+        <div class="anatomy">
+          <div class="umlbox" aria-label="UML class box">
+            <div class="cname">ClassName<span class="tagnum">১</span></div>
+            <div><span class="row">- attribute1: type</span><span class="row">+ attribute2: type</span><span class="tagnum">২</span></div>
+            <div><span class="row">+ method1(param): returnType</span><span class="row">- method2(): returnType</span><span class="tagnum">৩</span></div>
+          </div>
+          <ol class="parts">
+            <li><span>১</span><div><b>ক্লাসের নাম</b><small>Class Name — বক্সের একদম উপরে</small></div></li>
+            <li><span>২</span><div><b>অ্যাট্রিবিউট</b><small>প্রোপার্টি / ডেটা — <code>নাম: টাইপ</code></small></div></li>
+            <li><span>৩</span><div><b>মেথড</b><small>ফাংশন / কাজ — <code>নাম(প্যারামিটার): রিটার্ন টাইপ</code></small></div></li>
+          </ol>
+        </div>
+        <div class="mods">
+          <div class="mod"><div class="sym">-</div><b>Private</b><p>শুধু ওই ক্লাসের ভেতরেই অ্যাক্সেস।</p></div>
+          <div class="mod"><div class="sym">+</div><b>Public</b><p>যেকোনো ক্লাস থেকে অ্যাক্সেস।</p></div>
+          <div class="mod"><div class="sym">#</div><b>Protected</b><p>নিজের ক্লাস আর তার চাইল্ড ক্লাস।</p></div>
+          <div class="mod"><div class="sym">~</div><b>Package / Default</b><p>একই প্যাকেজের ভেতরের ক্লাসগুলো।</p></div>
+        </div>
+      </section>
+
+      <section class="part" id="multiplicity">
+        <div class="part-head">
+          <div class="k">অধ্যায় ৩</div>
+          <h2>Multiplicity / Cardinality</h2>
+          <p>দুই ক্লাসের মাঝের লাইনের দুই প্রান্তে লেখা সংখ্যা বা চিহ্ন। এটা বলে — একটা ক্লাসের <b>একটা অবজেক্ট</b> অন্য ক্লাসের <b>কতগুলো অবজেক্টের</b> সাথে যুক্ত থাকতে পারে। যে প্রান্তে সংখ্যা লেখা, সেটা ওই প্রান্তের ক্লাসের সংখ্যা।</p>
+        </div>
+        <div class="mgrid">
+<article class="mcard">
+  <div class="mhead"><span class="msym">1</span><div><b>ঠিক একটি</b><small>Exactly One</small></div></div>
+  <p>বাধ্যতামূলক — ঠিক ১টি, কম বা বেশি না।</p>
+  <svg class="uml" viewBox="0 0 560 80" role="img" aria-label="Citizen — plain — NationalID"><rect x="10" y="24" width="160" height="44" rx="8" class="bx"/><text x="90" y="51" class="bt">Citizen</text><rect x="390" y="24" width="160" height="44" rx="8" class="bx"/><text x="470" y="51" class="bt">NationalID</text><line x1="170" y1="46" x2="390" y2="46" class="ln"/><text x="178" y="36" class="mt">1</text><text x="380" y="36" class="mt" text-anchor="end">1</text></svg>
+  <p class="ex"><span>উদাহরণ:</span> একজন নাগরিকের (<code>Citizen</code>) ঠিক একটি ন্যাশনাল আইডি (<code>NationalID</code>) থাকে।</p>
+</article>
+<article class="mcard">
+  <div class="mhead"><span class="msym">0..1</span><div><b>শূন্য অথবা একটি</b><small>Zero or One</small></div></div>
+  <p>ঐচ্ছিক — থাকতেও পারে, নাও থাকতে পারে; সর্বোচ্চ ১টি।</p>
+  <svg class="uml" viewBox="0 0 560 80" role="img" aria-label="Employee — plain — OfficeCar"><rect x="10" y="24" width="160" height="44" rx="8" class="bx"/><text x="90" y="51" class="bt">Employee</text><rect x="390" y="24" width="160" height="44" rx="8" class="bx"/><text x="470" y="51" class="bt">OfficeCar</text><line x1="170" y1="46" x2="390" y2="46" class="ln"/><text x="178" y="36" class="mt">1</text><text x="380" y="36" class="mt" text-anchor="end">0..1</text></svg>
+  <p class="ex"><span>উদাহরণ:</span> একজন চাকরিজীবীর (<code>Employee</code>) অফিস কার (<code>OfficeCar</code>) থাকতে পারে, নাও পারে।</p>
+</article>
+<article class="mcard">
+  <div class="mhead"><span class="msym">* বা 0..*</span><div><b>শূন্য অথবা অনেক</b><small>Zero or Many</small></div></div>
+  <p>ঐচ্ছিক — একটাও না থাকতে পারে, আবার অনেকগুলোও।</p>
+  <svg class="uml" viewBox="0 0 560 80" role="img" aria-label="Customer — plain — Order"><rect x="10" y="24" width="160" height="44" rx="8" class="bx"/><text x="90" y="51" class="bt">Customer</text><rect x="390" y="24" width="160" height="44" rx="8" class="bx"/><text x="470" y="51" class="bt">Order</text><line x1="170" y1="46" x2="390" y2="46" class="ln"/><text x="178" y="36" class="mt">1</text><text x="380" y="36" class="mt" text-anchor="end">*</text></svg>
+  <p class="ex"><span>উদাহরণ:</span> একজন ক্রেতা (<code>Customer</code>) কোনো অর্ডার না-ও দিতে পারেন, আবার অনেক অর্ডারও দিতে পারেন।</p>
+</article>
+<article class="mcard">
+  <div class="mhead"><span class="msym">1..*</span><div><b>কমপক্ষে একটি</b><small>One or Many</small></div></div>
+  <p>বাধ্যতামূলক — কমপক্ষে ১টি থাকতেই হবে, বেশিও হতে পারে।</p>
+  <svg class="uml" viewBox="0 0 560 80" role="img" aria-label="Department — plain — Teacher"><rect x="10" y="24" width="160" height="44" rx="8" class="bx"/><text x="90" y="51" class="bt">Department</text><rect x="390" y="24" width="160" height="44" rx="8" class="bx"/><text x="470" y="51" class="bt">Teacher</text><line x1="170" y1="46" x2="390" y2="46" class="ln"/><text x="178" y="36" class="mt">1</text><text x="380" y="36" class="mt" text-anchor="end">1..*</text></svg>
+  <p class="ex"><span>উদাহরণ:</span> একটা ডিপার্টমেন্টে (<code>Department</code>) কমপক্ষে ১ জন শিক্ষক (<code>Teacher</code>) থাকতেই হবে।</p>
+</article>
+<article class="mcard">
+  <div class="mhead"><span class="msym">n..m</span><div><b>নির্দিষ্ট সীমা</b><small>Specific Range</small></div></div>
+  <p>সংখ্যা একটা নির্দিষ্ট সীমার ভেতরে (যেমন <code>2..4</code>), বা নির্দিষ্ট একটা সংখ্যা।</p>
+  <svg class="uml" viewBox="0 0 560 80" role="img" aria-label="Car — plain — Wheel"><rect x="10" y="24" width="160" height="44" rx="8" class="bx"/><text x="90" y="51" class="bt">Car</text><rect x="390" y="24" width="160" height="44" rx="8" class="bx"/><text x="470" y="51" class="bt">Wheel</text><line x1="170" y1="46" x2="390" y2="46" class="ln"/><text x="178" y="36" class="mt">1</text><text x="380" y="36" class="mt" text-anchor="end">4</text></svg>
+  <p class="ex"><span>উদাহরণ:</span> একটা গাড়ির (<code>Car</code>) সাধারণত <code>4</code>টা চাকা (<code>Wheel</code>); ফুটবল টিমে মাঠে <code>11</code> জন।</p>
+</article></div>
+      </section>
+
+      <section class="part" id="relationships">
+        <div class="part-head">
+          <div class="k">অধ্যায় ৪</div>
+          <h2>৬টি Relationship</h2>
+          <p>একটা সফটওয়্যারে কখনো এক ক্লাস দিয়ে সব কাজ হয় না। Relationship-এর লাইন দেখায় — একটা ক্লাস অন্য ক্লাসের সাথে <b>কীভাবে</b> আর <b>কতটা গভীরভাবে</b> যুক্ত। লাইন সলিড না ড্যাশড, আর মাথায় কোন চিহ্ন — এই দুটোতেই পুরো অর্থ।</p>
+        </div>
+        <div class="rchips"><a class="rchip" href="#inheritance"><svg class="note" viewBox="0 0 120 28" aria-hidden="true"><line x1="4" y1="14" x2="102" y2="14" class="ln"/><path d="M116 14 L102 6 L102 22 Z" class="m-hollow"/></svg><b>Inheritance</b><small>উত্তরাধিকার</small></a><a class="rchip" href="#realization"><svg class="note" viewBox="0 0 120 28" aria-hidden="true"><line x1="4" y1="14" x2="102" y2="14" class="ln dash"/><path d="M116 14 L102 6 L102 22 Z" class="m-hollow"/></svg><b>Realization</b><small>চুক্তি বা বাস্তবায়ন</small></a><a class="rchip" href="#association"><svg class="note" viewBox="0 0 120 28" aria-hidden="true"><line x1="4" y1="14" x2="116" y2="14" class="ln"/><path d="M104 7 L116 14 L104 21" class="m-open"/></svg><b>Association</b><small>সাধারণ যোগাযোগ</small></a><a class="rchip" href="#aggregation"><svg class="note" viewBox="0 0 120 28" aria-hidden="true"><line x1="4" y1="14" x2="94" y2="14" class="ln"/><path d="M116 14 L105 7 L94 14 L105 21 Z" class="m-hollow"/></svg><b>Aggregation</b><small>শিথিল মালিকানা</small></a><a class="rchip" href="#composition"><svg class="note" viewBox="0 0 120 28" aria-hidden="true"><line x1="4" y1="14" x2="94" y2="14" class="ln"/><path d="M116 14 L105 7 L94 14 L105 21 Z" class="m-filled"/></svg><b>Composition</b><small>দৃঢ় মালিকানা</small></a><a class="rchip" href="#dependency"><svg class="note" viewBox="0 0 120 28" aria-hidden="true"><line x1="4" y1="14" x2="116" y2="14" class="ln dash"/><path d="M104 7 L116 14 L104 21" class="m-open"/></svg><b>Dependency</b><small>সাময়িক নির্ভরশীলতা</small></a></div>
+        <div class="scale">
+          <span class="lbl">“Has / Uses” সম্পর্কগুলোর শক্তি</span>
+          <div class="bar"></div>
+          <div class="ticks"><span>Dependency<small>সাময়িক ব্যবহার</small></span><span>Association<small>চেনে, রেফারেন্স রাখে</small></span><span>Aggregation<small>মালিক, কিন্তু আলাদা বাঁচে</small></span><span style="text-align:right">Composition<small>একসাথে জন্ম, একসাথে শেষ</small></span></div>
+          <p>Inheritance আর Realization এই স্কেলের বাইরে — ওগুলো “Is-A” আর “চুক্তি” সম্পর্ক, মালিকানা না।</p>
+        </div>
+        
+<article class="rel" id="inheritance">
+  <header class="rel-head">
+    <span class="rel-n">১</span>
+    <div><h3>Inheritance <span>/ Generalization</span></h3><div class="rel-bn">উত্তরাধিকার · <span class="tag">Is-A</span></div></div>
+  </header>
+  <div class="rel-svg"><svg class="uml" viewBox="0 0 560 80" role="img" aria-label="Car — inheritance — Vehicle"><rect x="10" y="24" width="160" height="44" rx="8" class="bx"/><text x="90" y="51" class="bt">Car</text><rect x="390" y="24" width="160" height="44" rx="8" class="bx"/><text x="470" y="51" class="bt">Vehicle</text><line x1="170" y1="46" x2="374" y2="46" class="ln"/><path d="M390 46 L374 36 L374 56 Z" class="m-hollow"/></svg></div>
+  <dl class="facts">
+    <div><dt>লাইন</dt><dd>সলিড</dd></div>
+    <div><dt>মাথার চিহ্ন</dt><dd>ফাঁপা ত্রিভুজ</dd></div>
+    <div><dt>শুরু</dt><dd>Child / Subclass</dd></div>
+    <div><dt>শেষ (তীর / ডায়মন্ড)</dt><dd>Parent / Superclass</dd></div>
+  </dl>
+  <p><span class="lbl">সহজ কথায়</span>একটা ক্লাসের সব বৈশিষ্ট্য (ভেরিয়েবল ও মেথড) আরেকটা ক্লাসে স্বয়ংক্রিয়ভাবে চলে আসে। তীর সবসময় দেখায় — <b>প্যারেন্ট কে</b>।</p>
+  <p><span class="lbl">বাস্তব উদাহরণ</span><b>গাড়ি</b> (<code>Car</code>) এক ধরনের <b>যানবাহন</b> (<code>Vehicle</code>); <b>বিড়াল</b> (<code>Cat</code>) এক ধরনের <b>প্রাণী</b> (<code>Animal</code>)। এখানে <code>Vehicle</code> প্যারেন্ট, <code>Car</code> চাইল্ড।</p>
+  <details class="codebox" open><summary>কোডে কেমন দেখায়</summary><div class="code"><div class="code-bar"><span>Java</span><button class="copy" type="button">Copy</button></div><pre><code><span class="t-com">// পিতা (Superclass)</span>
+<span class="t-kw">class</span> <span class="t-type">Vehicle</span> {
+    <span class="t-kw">String</span> brand;
+    <span class="t-kw">void</span> <span class="t-fn">start</span>() {
+        System.out.<span class="t-fn">println</span>(<span class="t-str">"Engine started"</span>);
+    }
+}
+
+<span class="t-com">// সন্তান (Subclass) - extends ব্যবহারের মাধ্যমে Inheritance হয়</span>
+<span class="t-kw">class</span> <span class="t-type">Car</span> <span class="t-kw">extends</span> <span class="t-type">Vehicle</span> {
+    <span class="t-kw">int</span> doors = <span class="t-num">4</span>;
+}</code></pre></div></details>
+</article>
+<article class="rel" id="realization">
+  <header class="rel-head">
+    <span class="rel-n">২</span>
+    <div><h3>Realization <span>/ Implementation</span></h3><div class="rel-bn">চুক্তি বা বাস্তবায়ন · <span class="tag">Implements</span></div></div>
+  </header>
+  <div class="rel-svg"><svg class="uml" viewBox="0 0 560 80" role="img" aria-label="SonyTV — realization — RemoteControl"><rect x="10" y="24" width="160" height="44" rx="8" class="bx"/><text x="90" y="51" class="bt">SonyTV</text><rect x="390" y="24" width="160" height="44" rx="8" class="bx"/><text x="470" y="51" class="bt">RemoteControl</text><line x1="170" y1="46" x2="374" y2="46" class="ln dash"/><path d="M390 46 L374 36 L374 56 Z" class="m-hollow"/></svg></div>
+  <dl class="facts">
+    <div><dt>লাইন</dt><dd>ড্যাশড</dd></div>
+    <div><dt>মাথার চিহ্ন</dt><dd>ফাঁপা ত্রিভুজ</dd></div>
+    <div><dt>শুরু</dt><dd>Concrete class</dd></div>
+    <div><dt>শেষ (তীর / ডায়মন্ড)</dt><dd>Interface</dd></div>
+  </dl>
+  <p><span class="lbl">সহজ কথায়</span>একটা Interface শুধু বলে দেয় কী কী কাজ করা যাবে (নিয়ম); আরেকটা ক্লাস কোড লিখে সেই নিয়মগুলো বাস্তবে কীভাবে কাজ করবে তা দেখায়।</p>
+  <p><span class="lbl">বাস্তব উদাহরণ</span><b>রিমোট কন্ট্রোল</b> (<code>RemoteControl</code>) একটা নিয়ম — এতে <code>powerOn()</code> বোতাম আছে। <b>সনি টিভি</b> (<code>SonyTV</code>) বা <b>স্যামসাং টিভি</b> (<code>SamsungTV</code>) ঠিক করে বোতাম চাপলে কী হবে।</p>
+  <details class="codebox" open><summary>কোডে কেমন দেখায়</summary><div class="code"><div class="code-bar"><span>Java</span><button class="copy" type="button">Copy</button></div><pre><code><span class="t-com">// নিয়ম বা চুক্তি (Interface)</span>
+<span class="t-kw">interface</span> <span class="t-type">RemoteControl</span> {
+    <span class="t-kw">void</span> <span class="t-fn">powerOn</span>();
+}
+
+<span class="t-com">// নিয়ম বাস্তবায়নকারী ক্লাস (Concrete Class) - implements ব্যবহার করা হয়</span>
+<span class="t-kw">class</span> <span class="t-type">SonyTV</span> <span class="t-kw">implements</span> <span class="t-type">RemoteControl</span> {
+    <span class="t-kw">public</span> <span class="t-kw">void</span> <span class="t-fn">powerOn</span>() {
+        System.out.<span class="t-fn">println</span>(<span class="t-str">"Sony TV is now ON"</span>);
+    }
+}</code></pre></div></details>
+</article>
+<article class="rel" id="association">
+  <header class="rel-head">
+    <span class="rel-n">৩</span>
+    <div><h3>Association <span>/ Directed Association</span></h3><div class="rel-bn">সাধারণ যোগাযোগ · <span class="tag">Has-A</span></div></div>
+  </header>
+  <div class="rel-svg"><svg class="uml" viewBox="0 0 560 80" role="img" aria-label="Customer — association — Order"><rect x="10" y="24" width="160" height="44" rx="8" class="bx"/><text x="90" y="51" class="bt">Customer</text><rect x="390" y="24" width="160" height="44" rx="8" class="bx"/><text x="470" y="51" class="bt">Order</text><line x1="170" y1="46" x2="390" y2="46" class="ln"/><path d="M376 38 L390 46 L376 54" class="m-open"/></svg></div>
+  <dl class="facts">
+    <div><dt>লাইন</dt><dd>সলিড</dd></div>
+    <div><dt>মাথার চিহ্ন</dt><dd>সাধারণ তীর</dd></div>
+    <div><dt>শুরু</dt><dd>যে ক্লাসের ভেতরে রেফারেন্স আছে</dd></div>
+    <div><dt>শেষ (তীর / ডায়মন্ড)</dt><dd>যে ক্লাস ব্যবহৃত হচ্ছে</dd></div>
+  </dl>
+  <p><span class="lbl">সহজ কথায়</span>দুটো ক্লাস একে অপরকে চেনে বা সরাসরি যোগাযোগ করে। <b>একমুখী (Directed)</b> হলে শুধু A, B-কে চেনে; <b>উভমুখী (Bidirectional)</b> হলে দুজনেই দুজনকে চেনে।</p>
+  <p><span class="lbl">বাস্তব উদাহরণ</span><b>ক্রেতা</b> (<code>Customer</code>) আর <b>অর্ডার</b> (<code>Order</code>) — ক্রেতার কাছে তার অর্ডারের তথ্য থাকে।</p>
+  <details class="codebox" open><summary>কোডে কেমন দেখায়</summary><div class="code"><div class="code-bar"><span>Java</span><button class="copy" type="button">Copy</button></div><pre><code><span class="t-kw">class</span> <span class="t-type">Order</span> {
+    <span class="t-kw">String</span> orderId;
+}
+
+<span class="t-kw">class</span> <span class="t-type">Customer</span> {
+    <span class="t-kw">String</span> name;
+    Order myOrder; <span class="t-com">// Customer ক্লাসের ভেতরে Order ক্লাসের অবজেক্ট ভেরিয়েবল হিসেবে রাখা হয়েছে</span>
+}</code></pre></div></details>
+</article>
+<article class="rel" id="aggregation">
+  <header class="rel-head">
+    <span class="rel-n">৪</span>
+    <div><h3>Aggregation <span>/ Weak Has-A</span></h3><div class="rel-bn">শিথিল মালিকানা · <span class="tag">Weak Has-A</span></div></div>
+  </header>
+  <div class="rel-svg"><svg class="uml" viewBox="0 0 560 80" role="img" aria-label="Book — aggregation — Library"><rect x="10" y="24" width="160" height="44" rx="8" class="bx"/><text x="90" y="51" class="bt">Book</text><rect x="390" y="24" width="160" height="44" rx="8" class="bx"/><text x="470" y="51" class="bt">Library</text><line x1="170" y1="46" x2="364" y2="46" class="ln"/><path d="M390 46 L377 38 L364 46 L377 54 Z" class="m-hollow"/></svg></div>
+  <dl class="facts">
+    <div><dt>লাইন</dt><dd>সলিড</dd></div>
+    <div><dt>মাথার চিহ্ন</dt><dd>ফাঁপা ডায়মন্ড ◇</dd></div>
+    <div><dt>শুরু</dt><dd>Part / অংশ</dd></div>
+    <div><dt>শেষ (তীর / ডায়মন্ড)</dt><dd>Whole / মূল (ডায়মন্ড এর গায়ে)</dd></div>
+  </dl>
+  <p><span class="lbl">সহজ কথায়</span>এক ধরনের association, তবে মালিকানা আছে। সবচেয়ে গুরুত্বপূর্ণ: <b>মূল ক্লাস ধ্বংস হলেও ভেতরের অবজেক্টগুলো স্বাধীনভাবে বেঁচে থাকতে পারে।</b></p>
+  <p><span class="lbl">বাস্তব উদাহরণ</span><b>লাইব্রেরি</b> (<code>Library</code>) আর <b>বই</b> (<code>Book</code>) — লাইব্রেরি বন্ধ হয়ে গেলেও বই নষ্ট হয় না, অন্য লাইব্রেরিতে নেওয়া যায়। একইভাবে ডিপার্টমেন্ট বন্ধ হলেও শিক্ষকেরা থাকেন।</p>
+  <details class="codebox" open><summary>কোডে কেমন দেখায়</summary><div class="code"><div class="code-bar"><span>Java</span><button class="copy" type="button">Copy</button></div><pre><code><span class="t-kw">class</span> <span class="t-type">Book</span> {
+    <span class="t-kw">String</span> title;
+}
+
+<span class="t-kw">class</span> <span class="t-type">Library</span> {
+    <span class="t-kw">String</span> name;
+    <span class="t-kw">List</span>&lt;Book&gt; books; <span class="t-com">// বইগুলো লাইব্রেরির বাইরে তৈরি হয়ে এখানে পাস করা হয়</span>
+
+    <span class="t-fn">Library</span>(<span class="t-kw">List</span>&lt;Book&gt; books) {
+        <span class="t-kw">this</span>.books = books;
+    }
+}</code></pre></div></details>
+</article>
+<article class="rel" id="composition">
+  <header class="rel-head">
+    <span class="rel-n">৫</span>
+    <div><h3>Composition <span>/ Strong Has-A</span></h3><div class="rel-bn">দৃঢ় মালিকানা · <span class="tag">Strong Has-A</span></div></div>
+  </header>
+  <div class="rel-svg"><svg class="uml" viewBox="0 0 560 80" role="img" aria-label="Heart — composition — Human"><rect x="10" y="24" width="160" height="44" rx="8" class="bx"/><text x="90" y="51" class="bt">Heart</text><rect x="390" y="24" width="160" height="44" rx="8" class="bx"/><text x="470" y="51" class="bt">Human</text><line x1="170" y1="46" x2="364" y2="46" class="ln"/><path d="M390 46 L377 38 L364 46 L377 54 Z" class="m-filled"/></svg></div>
+  <dl class="facts">
+    <div><dt>লাইন</dt><dd>সলিড</dd></div>
+    <div><dt>মাথার চিহ্ন</dt><dd>ভরাট ডায়মন্ড ◆</dd></div>
+    <div><dt>শুরু</dt><dd>Part / অংশ</dd></div>
+    <div><dt>শেষ (তীর / ডায়মন্ড)</dt><dd>Whole / মূল (ডায়মন্ড এর গায়ে)</dd></div>
+  </dl>
+  <p><span class="lbl">সহজ কথায়</span>সবচেয়ে শক্ত মালিকানা — মূল আর অংশের জীবনকাল একসাথে বাঁধা। <b>মূল ক্লাস ধ্বংস হলে ভেতরের অবজেক্টও সাথে সাথে ধ্বংস হয়; আলাদা অস্তিত্ব নেই।</b></p>
+  <p><span class="lbl">বাস্তব উদাহরণ</span><b>মানুষ</b> (<code>Human</code>) আর <b>হৃদপিণ্ড</b> (<code>Heart</code>) — শরীর ছাড়া হৃদপিণ্ড বাঁচে না। একইভাবে বাড়ি (<code>House</code>) ভাঙলে রুম (<code>Room</code>)-ও থাকে না।</p>
+  <details class="codebox" open><summary>কোডে কেমন দেখায়</summary><div class="code"><div class="code-bar"><span>Java</span><button class="copy" type="button">Copy</button></div><pre><code><span class="t-kw">class</span> <span class="t-type">Heart</span> {
+    <span class="t-kw">void</span> <span class="t-fn">beat</span>() { }
+}
+
+<span class="t-kw">class</span> <span class="t-type">Human</span> {
+    Heart heart;
+
+    <span class="t-fn">Human</span>() {
+        <span class="t-com">// Human তৈরি হওয়ার সময় ভেতরেই Heart তৈরি হচ্ছে</span>
+        <span class="t-kw">this</span>.heart = <span class="t-kw">new</span> <span class="t-fn">Heart</span>();
+    }
+    <span class="t-com">// Human অবজেক্ট যখন মেমোরি থেকে ডিলিট হবে, heart-ও ডিলিট হয়ে যাবে</span>
+}</code></pre></div></details>
+</article>
+<article class="rel" id="dependency">
+  <header class="rel-head">
+    <span class="rel-n">৬</span>
+    <div><h3>Dependency <span>/ Uses-A</span></h3><div class="rel-bn">সাময়িক নির্ভরশীলতা · <span class="tag">Uses-A</span></div></div>
+  </header>
+  <div class="rel-svg"><svg class="uml" viewBox="0 0 560 80" role="img" aria-label="Driver — dependency — Car"><rect x="10" y="24" width="160" height="44" rx="8" class="bx"/><text x="90" y="51" class="bt">Driver</text><rect x="390" y="24" width="160" height="44" rx="8" class="bx"/><text x="470" y="51" class="bt">Car</text><line x1="170" y1="46" x2="390" y2="46" class="ln dash"/><path d="M376 38 L390 46 L376 54" class="m-open"/></svg></div>
+  <dl class="facts">
+    <div><dt>লাইন</dt><dd>ড্যাশড</dd></div>
+    <div><dt>মাথার চিহ্ন</dt><dd>সাধারণ তীর</dd></div>
+    <div><dt>শুরু</dt><dd>Client / নির্ভরশীল ক্লাস</dd></div>
+    <div><dt>শেষ (তীর / ডায়মন্ড)</dt><dd>Supplier / যার ওপর নির্ভর</dd></div>
+  </dl>
+  <p><span class="lbl">সহজ কথায়</span>সবচেয়ে দুর্বল সম্পর্ক। একটা ক্লাস আরেকটাকে নিজের কাছে স্থায়ীভাবে রাখে না — শুধু সাময়িক কাজে ব্যবহার করে, যেমন মেথডের প্যারামিটার বা লোকাল ভেরিয়েবল হিসেবে।</p>
+  <p><span class="lbl">বাস্তব উদাহরণ</span><b>ড্রাইভার</b> (<code>Driver</code>) আর <b>গাড়ি</b> (<code>Car</code>) — ড্রাইভার শুধু চালানোর সময় (<code>drive(Car car)</code>) গাড়িটা ব্যবহার করেন। একইভাবে <code>Printer</code> প্রিন্টের সময় <code>Document</code> ব্যবহার করে।</p>
+  <details class="codebox" open><summary>কোডে কেমন দেখায়</summary><div class="code"><div class="code-bar"><span>Java</span><button class="copy" type="button">Copy</button></div><pre><code><span class="t-kw">class</span> <span class="t-type">Car</span> {
+    <span class="t-kw">void</span> <span class="t-fn">move</span>() { }
+}
+
+<span class="t-kw">class</span> <span class="t-type">Driver</span> {
+    <span class="t-com">// Car কিন্তু ক্লাসের মেম্বার ভেরিয়েবল হিসেবে নেই।</span>
+    <span class="t-com">// এটি শুধু drive মেথডের ভেতর সাময়িক প্যারামিটার হিসেবে ব্যবহৃত হচ্ছে।</span>
+    <span class="t-kw">void</span> <span class="t-fn">drive</span>(Car car) {
+        car.<span class="t-fn">move</span>();
+    }
+}</code></pre></div></details>
+</article>
+
+        <div class="card" style="margin-top:22px">
+          <span class="lbl">সব একসাথে: Relationship + Multiplicity</span>
+          <div class="lib">
+            <div><svg class="uml" viewBox="0 0 560 80" role="img" aria-label="Book — aggregation — Library"><rect x="10" y="24" width="160" height="44" rx="8" class="bx"/><text x="90" y="51" class="bt">Book</text><rect x="390" y="24" width="160" height="44" rx="8" class="bx"/><text x="470" y="51" class="bt">Library</text><line x1="170" y1="46" x2="364" y2="46" class="ln"/><path d="M390 46 L377 38 L364 46 L377 54 Z" class="m-hollow"/><text x="178" y="36" class="mt">1..*</text><text x="358" y="36" class="mt" text-anchor="end">1</text></svg></div>
+            <ul>
+              <li>১টা লাইব্রেরিতে কমপক্ষে ১টা বা তার বেশি বই — বইয়ের প্রান্তে <code>1..*</code>।</li>
+              <li>১টা বই একসাথে ১টার বেশি লাইব্রেরির অংশ হতে পারে না — লাইব্রেরির প্রান্তে <code>1</code>।</li>
+              <li>লাইব্রেরি বন্ধ হলেও বই নষ্ট হয় না — তাই ফাঁপা ◇, অর্থাৎ <b>Aggregation</b>।</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="part" id="rules">
+        <div class="part-head">
+          <div class="k">অধ্যায় ৫</div>
+          <h2>কোনটা কখন — এক নজরে</h2>
+          <p>নিজে ডিজাইন করার সময় এই তিনটা প্রশ্ন করুন।</p>
+        </div>
+        <div class="rules">
+          <div class="rule"><div class="q">?</div><div><b>এটা কি অন্যটার একটা রূপ? (Is-A)</b><ul><li>হ্যাঁ হলে <svg class="note" viewBox="0 0 120 28" aria-hidden="true"><line x1="4" y1="14" x2="102" y2="14" class="ln"/><path d="M116 14 L102 6 L102 22 Z" class="m-hollow"/></svg> <b>Inheritance</b> — যেমন Dog is an Animal।</li></ul></div></div>
+          <div class="rule"><div class="q">?</div><div><b>মালিকানা কি খুব শক্ত? মূল অবজেক্ট গেলে কি অংশটাও যায়?</b><ul>
+            <li>হ্যাঁ হলে <svg class="note" viewBox="0 0 120 28" aria-hidden="true"><line x1="4" y1="14" x2="94" y2="14" class="ln"/><path d="M116 14 L105 7 L94 14 L105 21 Z" class="m-filled"/></svg> <b>Composition</b> — যেমন House আর Room।</li>
+            <li>না, কিন্তু সম্পর্ক আছে <svg class="note" viewBox="0 0 120 28" aria-hidden="true"><line x1="4" y1="14" x2="94" y2="14" class="ln"/><path d="M116 14 L105 7 L94 14 L105 21 Z" class="m-hollow"/></svg> <b>Aggregation</b> — যেমন Department আর Teacher।</li></ul></div></div>
+          <div class="rule"><div class="q">?</div><div><b>যোগাযোগটা কি শুধু সাময়িক মেথড কলের জন্য?</b><ul><li>হ্যাঁ হলে <svg class="note" viewBox="0 0 120 28" aria-hidden="true"><line x1="4" y1="14" x2="116" y2="14" class="ln dash"/><path d="M104 7 L116 14 L104 21" class="m-open"/></svg> <b>Dependency</b>।</li></ul></div></div>
+        </div>
+
+        <div class="tricks">
+          <div class="trick"><span class="lbl">তীর</span><p>সাধারণ বা ফাঁপা তীর সবসময় <b>টার্গেটের</b> দিকে — যার ওপর নির্ভর করছে, বা যে প্যারেন্ট।</p></div>
+          <div class="trick"><span class="lbl">ডায়মন্ড</span><p>ফাঁপা হোক বা ভরাট, ডায়মন্ড সবসময় <b>মূল / ধারক (Whole)</b> ক্লাসের গায়ে লাগানো।</p></div>
+          <div class="trick"><span class="lbl">সলিড বনাম ড্যাশড</span><p>স্থায়ী, সরাসরি সম্পর্ক = <b>সলিড</b>। চুক্তি (interface) বা সাময়িক ব্যবহার = <b>ড্যাশড</b>।</p></div>
+        </div>
+
+        <div class="table-wrap"><table>
+          <thead><tr><th>সম্পর্ক</th><th>চিহ্ন · উদাহরণ</th><th>লাইন</th><th>মাথা কোথায়</th></tr></thead>
+          <tbody><tr><td><b>Inheritance</b><br><small>উত্তরাধিকার</small></td><td class="svgcell"><svg class="note" viewBox="0 0 120 28" aria-hidden="true"><line x1="4" y1="14" x2="102" y2="14" class="ln"/><path d="M116 14 L102 6 L102 22 Z" class="m-hollow"/></svg><small>Car → Vehicle</small></td><td>সলিড</td><td>ফাঁপা ত্রিভুজ → <b>Parent / Superclass</b></td></tr><tr><td><b>Realization</b><br><small>চুক্তি বা বাস্তবায়ন</small></td><td class="svgcell"><svg class="note" viewBox="0 0 120 28" aria-hidden="true"><line x1="4" y1="14" x2="102" y2="14" class="ln dash"/><path d="M116 14 L102 6 L102 22 Z" class="m-hollow"/></svg><small>SonyTV → RemoteControl</small></td><td>ড্যাশড</td><td>ফাঁপা ত্রিভুজ → <b>Interface</b></td></tr><tr><td><b>Association</b><br><small>সাধারণ যোগাযোগ</small></td><td class="svgcell"><svg class="note" viewBox="0 0 120 28" aria-hidden="true"><line x1="4" y1="14" x2="116" y2="14" class="ln"/><path d="M104 7 L116 14 L104 21" class="m-open"/></svg><small>Customer → Order</small></td><td>সলিড</td><td>সাধারণ তীর → <b>যে ক্লাস ব্যবহৃত হচ্ছে</b></td></tr><tr><td><b>Aggregation</b><br><small>শিথিল মালিকানা</small></td><td class="svgcell"><svg class="note" viewBox="0 0 120 28" aria-hidden="true"><line x1="4" y1="14" x2="94" y2="14" class="ln"/><path d="M116 14 L105 7 L94 14 L105 21 Z" class="m-hollow"/></svg><small>Book → Library</small></td><td>সলিড</td><td>ফাঁপা ডায়মন্ড ◇ → <b>Whole / মূল</b></td></tr><tr><td><b>Composition</b><br><small>দৃঢ় মালিকানা</small></td><td class="svgcell"><svg class="note" viewBox="0 0 120 28" aria-hidden="true"><line x1="4" y1="14" x2="94" y2="14" class="ln"/><path d="M116 14 L105 7 L94 14 L105 21 Z" class="m-filled"/></svg><small>Heart → Human</small></td><td>সলিড</td><td>ভরাট ডায়মন্ড ◆ → <b>Whole / মূল</b></td></tr><tr><td><b>Dependency</b><br><small>সাময়িক নির্ভরশীলতা</small></td><td class="svgcell"><svg class="note" viewBox="0 0 120 28" aria-hidden="true"><line x1="4" y1="14" x2="116" y2="14" class="ln dash"/><path d="M104 7 L116 14 L104 21" class="m-open"/></svg><small>Driver → Car</small></td><td>ড্যাশড</td><td>সাধারণ তীর → <b>Supplier / যার ওপর নির্ভর</b></td></tr></tbody>
+        </table></div>
+
+        <footer><span>WellDev · 02-oop-java / oop / ood</span><a href="../index.html">← OOP in C#</a></footer>
+      </section>
+    </div>
+  </main>
+</div>
+
+<script>
+document.addEventListener("click", e => {
+  const c = e.target.closest(".copy");
+  if (c && navigator.clipboard) {
+    navigator.clipboard.writeText(c.closest(".code").querySelector("code").innerText)
+      .then(() => { c.textContent = "Copied"; setTimeout(() => (c.textContent = "Copy"), 1300); }, () => {});
+  }
+});
+// mobile top nav
+const topNav = document.getElementById("topbar");
+topNav.innerHTML = [...document.querySelectorAll(".nav > a")].map(a =>
+  `<a href="${a.getAttribute("href")}" data-sec="${a.dataset.sec}">${a.lastChild.textContent.trim()}</a>`).join("");
+// section in view
+const links = [...document.querySelectorAll("[data-sec]")];
+const spy = new IntersectionObserver(es => es.forEach(en => {
+  if (en.isIntersecting) links.forEach(l => l.classList.toggle("active", l.dataset.sec === en.target.id));
+}), { rootMargin: "-30% 0px -65% 0px" });
+document.querySelectorAll("section.part").forEach(s => spy.observe(s));
+// theme (shared with the OOP pages)
+const root = document.documentElement;
+try { const t = localStorage.getItem("oop-theme"); if (t) root.dataset.theme = t; } catch (e) {}
+document.getElementById("theme").addEventListener("click", () => {
+  const dark = root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  root.dataset.theme = dark ? "light" : "dark";
+  try { localStorage.setItem("oop-theme", root.dataset.theme); } catch (e) {}
+});
+</script>
+</body>
+</html>
