@@ -1,0 +1,456 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Event Loop</title>
+<meta name="description" content="JavaScript আর Node.js-এ event loop কীভাবে কাজ করে — call stack, microtask, task queue আর Node-এর phase, D3 animation-এ ধাপে ধাপে।">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<style>
+/* Layout: one section per ACID letter — idea, PostgreSQL proof (real psql output) and how
+   Postgres guarantees it. Code blocks are highlighted by the small tokenizer at the bottom. */
+:root{
+  --bg:#f5f7fc; --surface:#ffffff; --surface-2:#f1f4fa; --fg:#0f172a; --muted:#5b6478; --faint:#94a0b8; --line:#e4e8f1;
+  --accent:#6366f1; --sa:#4f46e5; --sb:#db2777;
+  --pa:#e11d48; --pc:#d97706; --pi:#0284c7; --pd:#059669;
+  --ok:#059669; --bad:#e11d48; --warn:#d97706;
+  --hero:linear-gradient(135deg,#4f46e5 0%,#7c3aed 45%,#db2777 100%);
+  --shadow:0 1px 2px rgba(15,23,42,.04),0 10px 30px -12px rgba(15,23,42,.14);
+  --code-bg:#ffffff; --code-line:#e6e9f1;
+  --t-kw:#0000ff; --t-str:#a31515; --t-num:#098658; --t-com:#008000; --t-type:#267f99;
+  --sans:"Inter","Hind Siliguri",system-ui,sans-serif; --bn:"Hind Siliguri","Inter",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0b0f1a; --surface:#121827; --surface-2:#182033; --fg:#e7ecf6; --muted:#9aa6bf; --faint:#66728c; --line:#232c42;
+  --accent:#818cf8; --sa:#818cf8; --sb:#f472b6; --pa:#fb7185; --pc:#fbbf24; --pi:#38bdf8; --pd:#34d399;
+  --ok:#34d399; --bad:#fb7185; --warn:#fbbf24;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6);
+  --code-bg:#1e1e1e; --code-line:#2d2d30; --t-kw:#569cd6; --t-str:#ce9178; --t-num:#b5cea8; --t-com:#6a9955; --t-type:#4ec9b0;
+}}
+:root[data-theme="dark"]{
+  --bg:#0b0f1a; --surface:#121827; --surface-2:#182033; --fg:#e7ecf6; --muted:#9aa6bf; --faint:#66728c; --line:#232c42;
+  --accent:#818cf8; --sa:#818cf8; --sb:#f472b6; --pa:#fb7185; --pc:#fbbf24; --pi:#38bdf8; --pd:#34d399;
+  --ok:#34d399; --bad:#fb7185; --warn:#fbbf24;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6);
+  --code-bg:#1e1e1e; --code-line:#2d2d30; --t-kw:#569cd6; --t-str:#ce9178; --t-num:#b5cea8; --t-com:#6a9955; --t-type:#4ec9b0;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 var(--bn);-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto 0;height:420px;z-index:-1;pointer-events:none;
+  background:radial-gradient(620px 260px at 20% -40px,color-mix(in srgb,#6366f1 14%,transparent),transparent 70%),
+             radial-gradient(540px 240px at 90% -60px,color-mix(in srgb,#ec4899 11%,transparent),transparent 70%)}
+a{color:var(--accent)}
+button{font:inherit;color:inherit}
+code{font-family:var(--mono);font-size:.86em;font-weight:500;background:color-mix(in srgb,var(--accent) 10%,var(--surface));color:color-mix(in srgb,var(--accent) 72%,var(--fg));padding:.1em .4em;border-radius:6px}
+.wrap{max-width:1040px;margin:0 auto;padding:20px 18px 70px}
+section{margin-top:56px;scroll-margin-top:16px}
+
+.topnav{display:flex;align-items:center;gap:10px}
+.brand{display:flex;align-items:center;gap:10px;color:var(--fg);text-decoration:none;font:800 16px var(--sans);letter-spacing:-.02em}
+.logo{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:#fff;font:800 13px var(--mono);background:var(--hero)}
+.topnav .sp{flex:1}
+.pill{border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:6px 14px;font:600 13px var(--sans);cursor:pointer;text-decoration:none}
+.pill:hover{color:var(--fg)}
+
+.hero{margin-top:22px;border-radius:22px;padding:30px 32px;color:#fff;background:var(--hero);position:relative;overflow:hidden}
+.hero::after{content:"";position:absolute;right:-70px;top:-90px;width:320px;height:320px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.2),transparent 65%);pointer-events:none}
+.eyebrow{font:600 12px var(--sans);letter-spacing:.1em;text-transform:uppercase;opacity:.85}
+.hero h1{margin:8px 0 10px;font:800 clamp(28px,4.4vw,42px)/1.12 var(--sans);letter-spacing:-.03em}
+.hero p{margin:0;max-width:720px;font-size:16.5px;opacity:.94}
+
+/* the four letters */
+.letters{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:22px}
+@media (max-width:860px){.letters{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:480px){.letters{grid-template-columns:minmax(0,1fr)}}
+.letter{display:block;text-decoration:none;color:inherit;padding:16px 18px;border-top:3px solid var(--c)}
+.letter .big{font:800 34px/1 var(--sans);color:var(--c)}
+.letter b{display:block;margin-top:8px;font:700 15.5px var(--sans)}
+.letter p{margin:4px 0 0;font-size:14.5px;color:var(--muted);line-height:1.55}
+.letter small{display:block;margin-top:10px;font:500 11.5px var(--mono);color:var(--faint)}
+.letter:hover{border-color:var(--c)}
+
+h2{display:flex;align-items:center;gap:12px;margin:0 0 6px;font:800 clamp(21px,2.8vw,26px)/1.25 var(--sans);letter-spacing:-.025em}
+.num{flex:none;width:38px;height:38px;border-radius:11px;display:grid;place-items:center;color:#fff;font:800 17px var(--sans);background:var(--c,var(--accent))}
+.motto{display:inline-block;margin:2px 0 14px;font:600 13.5px var(--sans);color:var(--c);background:color-mix(in srgb,var(--c) 10%,transparent);padding:4px 12px;border-radius:999px}
+.lead{margin:0 0 18px;color:var(--muted);max-width:820px}
+.lead b{color:var(--fg)}
+h3{margin:26px 0 10px;font:700 17px var(--sans);letter-spacing:-.015em}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow)}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:start}
+@media (max-width:760px){.grid2{grid-template-columns:minmax(0,1fr)}}
+
+.story{padding:14px 16px;font-size:15px;border-left:4px solid var(--c)}
+.story b{color:var(--fg)}
+.story p{margin:0;color:var(--muted)}
+
+pre.code{margin:0;padding:12px 14px;border-radius:12px;background:var(--code-bg);border:1px solid var(--code-line);font:13px/1.65 var(--mono);white-space:pre-wrap;word-break:break-word;font-variant-ligatures:none;overflow-x:auto}
+.k{color:var(--t-kw);font-weight:600}.s{color:var(--t-str)}.d{color:var(--t-num)}.c{color:var(--t-com);font-style:italic}.t{color:var(--t-type)}
+pre.code .o{color:var(--muted);font-style:normal}
+pre.code .e{color:var(--bad);font-style:normal}
+pre.code .g{color:var(--ok);font-style:normal;font-weight:600}
+.file{display:flex;align-items:center;gap:8px;margin:0 0 6px;font:600 12px var(--mono);color:var(--muted)}
+.file i{width:8px;height:8px;border-radius:50%;background:var(--dot,var(--accent))}
+.file .r{margin-left:auto;font:600 11px var(--sans);padding:1px 8px;border-radius:6px;color:var(--tc);background:color-mix(in srgb,var(--tc) 12%,transparent)}
+
+.how{margin-top:14px;padding:14px 16px;border-radius:12px;background:color-mix(in srgb,var(--c) 7%,var(--surface));border:1px solid color-mix(in srgb,var(--c) 22%,var(--line));font-size:15px}
+.how b{color:var(--fg)}
+.how ul{margin:6px 0 0;padding-left:20px;color:var(--muted)}
+.how li{margin:3px 0}
+
+/* timeline (isolation + durability) */
+.tl{overflow:hidden}
+.tl-head,.row{display:grid;grid-template-columns:40px minmax(0,1fr) minmax(0,1fr)}
+.tl-head{background:var(--surface-2);border-bottom:1px solid var(--line);font:700 12.5px var(--sans)}
+.tl-head span{padding:10px 14px}
+.tl-head .a{color:var(--sa)} .tl-head .b{color:var(--sb);border-left:1px solid var(--line)}
+.row{border-bottom:1px solid var(--line)}
+.row:last-child{border-bottom:0}
+.row .n{display:grid;place-items:start center;padding-top:13px;font:600 11.5px var(--mono);color:var(--faint)}
+.cell{padding:10px 14px;min-width:0}
+.cell + .cell{border-left:1px solid var(--line)}
+.cell.on{background:color-mix(in srgb,var(--who) 4%,transparent)}
+.cell.a{--who:var(--sa)} .cell.b{--who:var(--sb)}
+.cell pre{margin:0;font:12.8px/1.6 var(--mono);white-space:pre-wrap;word-break:break-word;font-variant-ligatures:none}
+.out{margin-top:6px;font:12.5px/1.55 var(--mono);color:var(--muted)}
+.out b{color:var(--fg)}
+.tag{display:inline-block;margin-top:6px;font:600 12px var(--sans);padding:2px 9px;border-radius:7px;background:color-mix(in srgb,var(--tc) 12%,transparent);color:var(--tc)}
+.tag.ok{--tc:var(--ok)} .tag.bad{--tc:var(--bad)} .tag.info{--tc:var(--muted)}
+@media (max-width:700px){
+  .tl-head{display:none}
+  .row{grid-template-columns:30px minmax(0,1fr)}
+  .cell:not(.on){display:none}
+  .cell + .cell{border-left:0}
+  .cell.on::before{content:attr(data-who);display:inline-block;margin-bottom:4px;font:700 11px var(--sans);color:#fff;background:var(--who);padding:1px 8px;border-radius:6px}
+}
+
+.tscroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:640px;font-size:14.5px}
+th,td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font:600 12px var(--sans);text-transform:uppercase;letter-spacing:.05em;color:var(--muted);background:var(--surface-2)}
+tr:last-child td{border-bottom:0}
+td.p{font:700 14px var(--sans);white-space:nowrap}
+td.p span{display:inline-grid;place-items:center;width:24px;height:24px;margin-right:8px;border-radius:7px;color:#fff;font-size:12px;background:var(--c)}
+.foot{margin:10px 2px 0;font-size:13.5px;color:var(--muted)}
+
+details{border-bottom:1px solid var(--line);padding:12px 2px}
+details:last-child{border-bottom:0}
+summary{cursor:pointer;font:600 15.5px var(--bn);list-style:none;display:flex;gap:10px}
+summary::before{content:"+";font:700 15px var(--mono);color:var(--accent);width:14px}
+details[open] summary::before{content:"−"}
+details p{margin:8px 0 0 24px;color:var(--muted);font-size:15px}
+
+footer{margin-top:56px;padding-top:16px;border-top:1px solid var(--line);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;font-size:13px;color:var(--faint)}
+@media (max-width:640px){.hero{padding:24px 20px;border-radius:18px}}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+/* event loop lab */
+.lab{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.5fr);gap:14px;padding:14px;align-items:start}
+.codebox{border:1px solid var(--line);border-radius:12px;background:var(--surface-2);padding:10px 0;overflow-x:auto}
+.codebox .ln{display:block;padding:2px 14px;font:500 12.5px/1.6 var(--mono);white-space:pre-wrap;word-break:break-word;border-left:3px solid transparent;color:var(--fg)}
+.codebox .ln.on{background:color-mix(in srgb,var(--accent) 14%,transparent);border-left-color:var(--accent)}
+.right{display:grid;gap:10px;min-width:0}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.bar .sp{flex:1}
+.btn{border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:10px;padding:7px 12px;font:600 13px var(--sans);cursor:pointer}
+.btn:hover:not(:disabled){border-color:var(--accent)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.primary{border-color:transparent;color:#fff;background:linear-gradient(135deg,#6366f1,#8b5cf6 55%,#ec4899);min-width:96px}
+.prog{font:600 12.5px var(--mono);color:var(--muted)}
+.stage{border-radius:14px;background:var(--surface-2);overflow-x:auto;-webkit-overflow-scrolling:touch}
+.stage svg{display:block;width:100%;height:auto}
+.stage text{font-family:var(--sans)}
+.cbox{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+.cbox.hot{stroke:var(--accent);stroke-width:2.5}
+.ctitle{font:700 12px var(--sans);fill:var(--muted);letter-spacing:.04em}
+.it rect{stroke-width:1.8}
+.it text{font:600 12.5px var(--mono);text-anchor:middle;dominant-baseline:central;fill:var(--fg)}
+.ph rect{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+.ph.on rect{fill:color-mix(in srgb,var(--accent) 22%,var(--surface));stroke:var(--accent);stroke-width:2.5}
+.ph text{font:700 12px var(--mono);text-anchor:middle;dominant-baseline:central;fill:var(--muted)}
+.ph.on text{fill:var(--fg)}
+.loopnote{font:600 12px var(--sans);fill:var(--muted)}
+.note{display:flex;gap:10px;align-items:flex-start;padding:11px 14px;border-radius:12px;background:var(--surface-2);font-size:15px;min-height:50px}
+.note>b{flex:none;width:24px;height:24px;border-radius:7px;display:grid;place-items:center;color:#fff;background:var(--accent);font:700 12px var(--sans)}
+.result{font:600 14px var(--mono);padding:10px 14px;border-radius:12px;border-left:4px solid var(--ok);background:color-mix(in srgb,var(--ok) 9%,var(--surface))}
+.result:empty{display:none}
+@media(max-width:820px){.lab{grid-template-columns:1fr}.stage svg{min-width:640px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="topnav">
+    <a class="brand" href="../../index.html"><span class="logo">W</span>WellDev</a>
+    <span class="sp"></span>
+    <button class="pill" id="theme" type="button">Theme</button>
+  </nav>
+
+  <header class="hero">
+    <div class="eyebrow">JavaScript · Runtime</div>
+    <h1>Event Loop — একটা thread, অনেক কাজ</h1>
+    <p>JavaScript-এ একসাথে একটাই কাজ চলে। তাহলে <code>setTimeout</code>, <code>fetch</code> আর <code>Promise</code> একসাথে সামলায় কীভাবে? উত্তর: call stack, কিছু queue, আর একটা loop।</p>
+  </header>
+
+  <section id="idea">
+    <h2><span class="num">1</span>মূল কথা</h2>
+    <div class="grid2">
+      <div class="card story"><p><b>Call Stack</b> — যে কাজ এখন চলছে। একবারে একটাই। Stack ব্যস্ত থাকলে বাকি সবাইকে অপেক্ষা করতে হয়।</p></div>
+      <div class="card story"><p><b>Queue</b> — অপেক্ষার লাইন। সময় বা I/O শেষ হলে callback এখানে এসে দাঁড়ায়। দুই রকম: <b>Microtask</b> (Promise) আর <b>Task</b> (setTimeout, event)।</p></div>
+    </div>
+    <div class="card story" style="margin-top:14px"><p><b>Event Loop</b> — একটা অবিরাম loop। Stack খালি হলে queue থেকে পরের কাজ তুলে stack-এ দেয়। এটা ছাড়া callback কখনো চলত না।</p></div>
+<pre class="code" data-lang="js">while (true) {
+  runMicrotasks();            // stack খালি → আগে সব microtask
+  const task = taskQueue.next();
+  if (task) run(task);        // তারপর একটা task
+}</pre>
+  </section>
+
+  <section id="browser">
+    <h2><span class="num">2</span>Browser / JavaScript</h2>
+    <span class="motto">Microtask আগে, Task পরে</span>
+    <div class="card lab" id="lab1">
+      <div class="codebox" id="code1"></div>
+      <div class="right">
+        <div class="bar">
+          <button class="btn primary" id="play1" type="button">▶ চালাও</button>
+          <button class="btn" id="step1" type="button">⏭ এক ধাপ</button>
+          <button class="btn" id="reset1" type="button">↺ Reset</button>
+          <span class="sp"></span><span class="prog" id="prog1"></span>
+        </div>
+        <div class="stage"><svg id="svg1" role="img" aria-label="Call stack, Web API, microtask queue, task queue ও console"></svg></div>
+        <div class="note" id="note1"></div>
+        <div class="result" id="res1"></div>
+      </div>
+    </div>
+    <div class="how"><b>নিয়ম:</b> Script নিজেই একটা task। প্রতিটা task শেষ হলে stack খালি হয়, আর তখন event loop <b>পুরো Microtask queue</b> খালি করে, তারপর পরের <b>একটা</b> Task নেয়। তাই <code>Promise.then</code> সবসময় <code>setTimeout(…, 0)</code>-এর আগে চলে।</div>
+  </section>
+
+  <section id="node">
+    <h2><span class="num">3</span>Node.js</h2>
+    <span class="motto">একই ধারণা, কিন্তু loop-এ আছে phase</span>
+    <p class="lead">Node-এ event loop চালায় <b>libuv</b>। Loop প্রতি ঘূর্ণনে ধাপে ধাপে phase পার হয়: <b>timers → pending → poll → check → close</b>। ফাইল, crypto-র মতো ভারী কাজ যায় <b>thread pool</b>-এ; নেটওয়ার্কের কাজ OS নিজে সামলায়। এই উদাহরণে I/O callback-এর ভেতরে চারটা জিনিস register হয় — ক্রমটা সবসময় একই।</p>
+    <div class="card lab" id="lab2">
+      <div class="codebox" id="code2"></div>
+      <div class="right">
+        <div class="bar">
+          <button class="btn primary" id="play2" type="button">▶ চালাও</button>
+          <button class="btn" id="step2" type="button">⏭ এক ধাপ</button>
+          <button class="btn" id="reset2" type="button">↺ Reset</button>
+          <span class="sp"></span><span class="prog" id="prog2"></span>
+        </div>
+        <div class="stage"><svg id="svg2" role="img" aria-label="Node.js event loop phase, queue, thread pool ও console"></svg></div>
+        <div class="note" id="note2"></div>
+        <div class="result" id="res2"></div>
+      </div>
+    </div>
+    <div class="how"><b>নিয়ম:</b> প্রতিটা callback-এর পর (এবং phase বদলের আগে) Node আগে <code>process.nextTick</code> queue খালি করে, তারপর Promise microtask। তাই <code>nextTick → promise</code> সবসময় আগে। এরপর poll শেষে <b>check</b> phase-এ <code>setImmediate</code> চলে, আর timer চলে পরের ঘূর্ণনের <b>timers</b> phase-এ।</div>
+    <h3>Main script থেকে ডাকলে?</h3>
+<pre class="code" data-lang="js">console.log('A');
+setTimeout(() => console.log('timeout'), 0);
+setImmediate(() => console.log('immediate'));
+process.nextTick(() => console.log('nextTick'));
+Promise.resolve().then(() => console.log('promise'));
+console.log('D');</pre>
+<pre class="code" data-lang="out"><span class="o">$ node main.js     <span class="c">(১২ বার চালিয়ে — Node v20.12.1)</span>
+9 বার:  A D nextTick promise timeout immediate
+3 বার:  A D nextTick promise immediate timeout</span></pre>
+    <p class="foot">A, D, nextTick, promise সবসময় এই ক্রমে। কিন্তু main script থেকে <code>timeout</code> আর <code>immediate</code>-এর ক্রম নিশ্চিত না — loop শুরু হওয়ার সময় 1 ms পার হয়েছে কিনা তার উপর নির্ভর করে। I/O callback-এর ভেতরে <code>immediate</code> সবসময় আগে (উপরের animation)।</p>
+  </section>
+
+  <section id="diff">
+    <h2><span class="num">4</span>Browser বনাম Node</h2>
+    <div class="card tscroll">
+      <table>
+        <thead><tr><th></th><th>Browser</th><th>Node.js</th></tr></thead>
+        <tbody>
+          <tr><td><b>Loop চালায়</b></td><td>Browser engine</td><td>libuv</td></tr>
+          <tr><td><b>Queue</b></td><td>Task + Microtask</td><td>প্রতি phase-এর queue + nextTick + Microtask</td></tr>
+          <tr><td><b>ভারী কাজ</b></td><td>Web APIs</td><td>Thread pool + OS</td></tr>
+          <tr><td><b>Microtask-এর আগে</b></td><td>—</td><td><code>process.nextTick</code></td></tr>
+          <tr><td><b>Rendering</b></td><td>Task-গুলোর ফাঁকে (microtask-এর পর)</td><td>নেই</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer><span>WellDev · JavaScript</span><a href="../../index.html">Hub →</a></footer>
+</div>
+
+<script>
+const esc = s => s.replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+const KW = "const|let|var|while|true|if|function|return|new|async|await";
+function hl(src) {
+  const re = new RegExp(`(\\/\\/[^\\n]*)|('(?:[^'\\\\]|\\\\.)*')|\\b(\\d+)\\b|\\b(${KW})\\b`, "g");
+  return esc(src).replace(re, (m, c, s, d, k) => c ? `<span class="c">${c}</span>` : s ? `<span class="s">${s}</span>` : d ? `<span class="d">${d}</span>` : `<span class="k">${k}</span>`);
+}
+document.querySelectorAll('pre.code[data-lang="js"]').forEach(pre => { pre.innerHTML = hl(pre.textContent); });
+
+const css = n => `var(--${n})`;
+const KIND = { sync: css("accent"), timer: css("warn"), micro: css("pi"), tick: css("pc"), io: css("pd"), out: css("muted") };
+
+// A generic stepper: every step is a full snapshot, so items glide between containers by id.
+function makeSim(cfg) {
+  const svg = d3.select(cfg.svg).attr("viewBox", `0 0 ${cfg.w} ${cfg.h}`);
+  const boxes = {};
+  for (const [name, c] of Object.entries(cfg.containers)) {
+    const g = svg.append("g");
+    boxes[name] = g.append("rect").attr("class", "cbox").attr("x", c.x).attr("y", c.y).attr("width", c.w).attr("height", c.h).attr("rx", 12);
+    g.append("text").attr("class", "ctitle").attr("x", c.x + 12).attr("y", c.y + 18).text(c.title);
+  }
+  const phases = (cfg.phases || []).map((p, i) => {
+    const g = svg.append("g").attr("class", "ph");
+    g.append("rect").attr("x", 20 + i * 172).attr("y", 8).attr("width", 160).attr("height", 38).attr("rx", 10);
+    g.append("text").attr("x", 100 + i * 172).attr("y", 27).text(p);
+    return g;
+  });
+  if (cfg.loopNote) svg.append("text").attr("class", "loopnote").attr("x", cfg.loopNote.x).attr("y", cfg.loopNote.y).text(cfg.loopNote.t);
+  const layer = svg.append("g");
+  const code = document.querySelector(cfg.code);
+  code.innerHTML = cfg.lines.map((l, i) => `<span class="ln" data-n="${i + 1}">${hl(l)}</span>`).join("");
+  const note = document.querySelector(cfg.note), res = document.querySelector(cfg.res);
+  const prog = document.querySelector(cfg.prog), play = document.querySelector(cfg.play), stepBtn = document.querySelector(cfg.step);
+  let i = 0, timer = null;
+
+  const place = (name, idx) => {
+    const c = cfg.containers[name];
+    if (c.dir === "v") return [c.x + (c.w - c.iw) / 2, c.y + c.h - (idx + 1) * (c.ih + 6) - 4];
+    if (c.dir === "down") return [c.x + (c.w - c.iw) / 2, c.y + 30 + idx * (c.ih + 5)];
+    return [c.x + 10 + idx * (c.iw + 8), c.y + 34 + (c.h - 34 - c.ih) / 2];
+  };
+  function draw(first) {
+    const st = cfg.steps[i];
+    const list = [];
+    for (const name of Object.keys(cfg.containers)) (st[name] || []).forEach((id, idx) => list.push({ id, name, idx }));
+    const sel = layer.selectAll("g.it").data(list, d => d.id);
+    const ent = sel.enter().append("g").attr("class", "it").attr("opacity", 0)
+      .attr("transform", d => `translate(${place(d.name, d.idx)})`);
+    ent.append("rect").attr("rx", 8);
+    ent.append("text");
+    const all = ent.merge(sel);
+    all.each(function (d) {
+      const meta = cfg.items[d.id], c = cfg.containers[d.name];
+      d3.select(this).select("rect").attr("width", c.iw).attr("height", c.ih).attr("stroke", meta.color)
+        .attr("fill", `color-mix(in srgb, ${meta.color} 16%, transparent)`);
+      d3.select(this).select("text").attr("x", c.iw / 2).attr("y", c.ih / 2).text(meta.label);
+    });
+    const t = first ? 0 : 520;
+    all.transition().duration(t).attr("opacity", 1).attr("transform", d => `translate(${place(d.name, d.idx)})`);
+    sel.exit().transition().duration(t / 2).attr("opacity", 0).remove();
+    for (const [name, r] of Object.entries(boxes)) r.classed("hot", st.hot === name);
+    phases.forEach((g, k) => g.classed("on", st.phase === k));
+    code.querySelectorAll(".ln").forEach(el => el.classList.toggle("on", (st.line || []).includes(+el.dataset.n)));
+    note.innerHTML = `<b>${i + 1}</b><span>${st.note}</span>`;
+    prog.textContent = `ধাপ ${i + 1} / ${cfg.steps.length}`;
+    stepBtn.disabled = i >= cfg.steps.length - 1;
+    const last = i === cfg.steps.length - 1;
+    res.textContent = last ? cfg.result : "";
+    play.textContent = timer ? "⏸ থামাও" : (last ? "▶ আবার" : "▶ চালাও");
+  }
+  const stop = () => { clearInterval(timer); timer = null; };
+  const next = () => { if (i < cfg.steps.length - 1) { i++; draw(); } else { stop(); draw(); } };
+  play.onclick = () => {
+    if (timer) { stop(); draw(); return; }
+    if (i >= cfg.steps.length - 1) { i = 0; draw(true); }
+    timer = setInterval(next, 1700); draw();
+  };
+  stepBtn.onclick = () => { stop(); next(); };
+  document.querySelector(cfg.reset).onclick = () => { stop(); i = 0; draw(true); };
+  draw(true);
+}
+
+// ---------- 1. Browser ----------
+const B_ITEMS = {
+  main: { label: "main()", color: KIND.sync }, lA: { label: "log('A')", color: KIND.sync }, stm: { label: "setTimeout()", color: KIND.timer },
+  timer: { label: "timer 0ms", color: KIND.timer }, cbB: { label: "cb B", color: KIND.timer }, lB: { label: "log('B')", color: KIND.sync },
+  cbC: { label: "cb C", color: KIND.micro }, lC: { label: "log('C')", color: KIND.sync }, lD: { label: "log('D')", color: KIND.sync },
+  oA: { label: "A", color: KIND.out }, oD: { label: "D", color: KIND.out }, oC: { label: "C", color: KIND.out }, oB: { label: "B", color: KIND.out },
+};
+const bs = (o) => o;
+makeSim({
+  svg: "#svg1", code: "#code1", note: "#note1", res: "#res1", prog: "#prog1", play: "#play1", step: "#step1", reset: "#reset1",
+  w: 860, h: 460, items: B_ITEMS,
+  lines: ["console.log('A');", "setTimeout(() => console.log('B'), 0);", "Promise.resolve().then(() => console.log('C'));", "console.log('D');"],
+  containers: {
+    stack: { x: 20, y: 20, w: 190, h: 420, dir: "v", iw: 160, ih: 34, title: "CALL STACK" },
+    web: { x: 250, y: 20, w: 330, h: 90, dir: "h", iw: 140, ih: 34, title: "WEB API" },
+    micro: { x: 250, y: 150, w: 330, h: 90, dir: "h", iw: 96, ih: 34, title: "MICROTASK QUEUE" },
+    task: { x: 250, y: 280, w: 330, h: 90, dir: "h", iw: 96, ih: 34, title: "TASK QUEUE" },
+    out: { x: 620, y: 20, w: 220, h: 350, dir: "down", iw: 120, ih: 32, title: "CONSOLE" },
+  },
+  loopNote: { x: 250, y: 410, t: "↻ Event loop: stack খালি → আগে Microtask, তারপর একটা Task" },
+  result: "Output: A D C B — sync আগে, তারপর Promise (microtask), সবশেষে setTimeout (task)।",
+  steps: [
+    bs({ note: "শুরুতে সব খালি।", stack: [], line: [] }),
+    bs({ note: "Script নিজেই একটা task — main() call stack-এ।", stack: ["main"], hot: "stack" }),
+    bs({ note: "<code>console.log('A')</code> — sync, সাথে সাথে চলে।", stack: ["main", "lA"], out: ["oA"], line: [1], hot: "stack" }),
+    bs({ note: "<code>setTimeout</code> — timer Web API-কে দেওয়া হলো। JS অপেক্ষা করে না।", stack: ["main", "stm"], out: ["oA"], line: [2] }),
+    bs({ note: "Timer চলছে stack-এর বাইরে, Web API-তে।", stack: ["main"], web: ["timer"], out: ["oA"], hot: "web" }),
+    bs({ note: "<code>Promise.then</code> — callback গেল <b>Microtask queue</b>-তে।", stack: ["main"], web: ["timer"], micro: ["cbC"], out: ["oA"], line: [3], hot: "micro" }),
+    bs({ note: "<code>console.log('D')</code> — sync, এখনই চলে।", stack: ["main", "lD"], web: ["timer"], micro: ["cbC"], out: ["oA", "oD"], line: [4], hot: "stack" }),
+    bs({ note: "Timer (0ms) শেষ → callback <b>Task queue</b>-তে। কিন্তু stack খালি না, তাই অপেক্ষা।", stack: ["main"], micro: ["cbC"], task: ["cbB"], out: ["oA", "oD"], hot: "task" }),
+    bs({ note: "main() শেষ, stack খালি। Event loop আগে <b>Microtask</b> queue দেখে।", stack: [], micro: ["cbC"], task: ["cbB"], out: ["oA", "oD"], hot: "micro" }),
+    bs({ note: "Microtask stack-এ উঠল।", stack: ["cbC"], micro: [], task: ["cbB"], out: ["oA", "oD"], line: [3], hot: "stack" }),
+    bs({ note: "<code>console.log('C')</code> চলল।", stack: ["cbC", "lC"], task: ["cbB"], out: ["oA", "oD", "oC"], line: [3], hot: "stack" }),
+    bs({ note: "Microtask খালি। এবার Task queue থেকে <b>একটা</b> task নেবে।", stack: [], task: ["cbB"], out: ["oA", "oD", "oC"], hot: "task" }),
+    bs({ note: "Task stack-এ উঠল।", stack: ["cbB"], task: [], out: ["oA", "oD", "oC"], line: [2], hot: "stack" }),
+    bs({ note: "<code>console.log('B')</code> চলল।", stack: ["cbB", "lB"], out: ["oA", "oD", "oC", "oB"], line: [2], hot: "stack" }),
+    bs({ note: "সব খালি। Event loop নতুন event-এর অপেক্ষায় ঘুরছে।", stack: [], out: ["oA", "oD", "oC", "oB"] }),
+  ],
+});
+
+// ---------- 2. Node.js ----------
+const N_ITEMS = {
+  rf: { label: "fs.readFile", color: KIND.io }, cb: { label: "readFile cb", color: KIND.io },
+  tmr: { label: "timeout cb", color: KIND.timer }, imm: { label: "immediate cb", color: KIND.sync },
+  tick: { label: "tick cb", color: KIND.tick }, pr: { label: "promise cb", color: KIND.micro },
+  oNT: { label: "nextTick", color: KIND.out }, oPR: { label: "promise", color: KIND.out },
+  oIM: { label: "immediate", color: KIND.out }, oTM: { label: "timeout", color: KIND.out },
+};
+makeSim({
+  svg: "#svg2", code: "#code2", note: "#note2", res: "#res2", prog: "#prog2", play: "#play2", step: "#step2", reset: "#reset2",
+  w: 880, h: 510, items: N_ITEMS,
+  phases: ["timers", "pending", "poll", "check", "close"],
+  lines: ["fs.readFile(__filename, () => {", "  setTimeout(() => console.log('timeout'), 0);", "  setImmediate(() => console.log('immediate'));",
+    "  process.nextTick(() => console.log('nextTick'));", "  Promise.resolve().then(() => console.log('promise'));", "});"],
+  containers: {
+    stack: { x: 20, y: 62, w: 170, h: 420, dir: "v", iw: 142, ih: 34, title: "CALL STACK" },
+    tick: { x: 210, y: 62, w: 300, h: 84, dir: "h", iw: 130, ih: 34, title: "process.nextTick QUEUE" },
+    micro: { x: 210, y: 162, w: 300, h: 84, dir: "h", iw: 130, ih: 34, title: "MICROTASK (PROMISE) QUEUE" },
+    timers: { x: 210, y: 262, w: 300, h: 84, dir: "h", iw: 130, ih: 34, title: "TIMERS  (setTimeout)" },
+    check: { x: 210, y: 362, w: 300, h: 84, dir: "h", iw: 130, ih: 34, title: "CHECK  (setImmediate)" },
+    pool: { x: 530, y: 62, w: 330, h: 84, dir: "h", iw: 140, ih: 34, title: "THREAD POOL  (fs, crypto…)" },
+    out: { x: 530, y: 162, w: 330, h: 284, dir: "down", iw: 150, ih: 32, title: "CONSOLE" },
+  },
+  result: "Output: nextTick promise immediate timeout — callback-এর পর nextTick, তারপর promise; poll-এর পর check (immediate); timer পরের ঘূর্ণনে।",
+  steps: [
+    { note: "<code>fs.readFile</code> — কাজ <b>thread pool</b>-এ গেল। Main script শেষ, loop ঘুরতে শুরু করে।", pool: ["rf"], line: [1], hot: "pool" },
+    { note: "<b>timers</b> phase — কোনো timer নেই, পার হয়ে গেল।", pool: ["rf"], phase: 0 },
+    { note: "<b>poll</b> phase — I/O শেষ হওয়ার অপেক্ষা।", pool: ["rf"], phase: 2 },
+    { note: "File পড়া শেষ → callback poll phase-এ stack-এ উঠল।", pool: [], stack: ["cb"], phase: 2, line: [1], hot: "stack" },
+    { note: "Callback চারটা জিনিস register করল: timer, immediate, nextTick, promise।", stack: ["cb"], timers: ["tmr"], check: ["imm"], tick: ["tick"], micro: ["pr"], phase: 2, line: [2, 3, 4, 5] },
+    { note: "Callback শেষ, stack খালি। এখন আগে <b>nextTick</b> queue।", stack: [], timers: ["tmr"], check: ["imm"], tick: ["tick"], micro: ["pr"], phase: 2, hot: "tick" },
+    { note: "nextTick callback চলল।", stack: ["tick"], tick: [], timers: ["tmr"], check: ["imm"], micro: ["pr"], out: ["oNT"], phase: 2, line: [4], hot: "stack" },
+    { note: "তারপর <b>Promise</b> microtask।", stack: ["pr"], micro: [], timers: ["tmr"], check: ["imm"], out: ["oNT", "oPR"], phase: 2, line: [5], hot: "stack" },
+    { note: "Poll শেষ → <b>check</b> phase। <code>setImmediate</code> এখানে চলে।", stack: [], timers: ["tmr"], check: ["imm"], out: ["oNT", "oPR"], phase: 3, hot: "check" },
+    { note: "Immediate callback চলল।", stack: ["imm"], check: [], timers: ["tmr"], out: ["oNT", "oPR", "oIM"], phase: 3, line: [3], hot: "stack" },
+    { note: "<b>close</b> callbacks — কিছু নেই। ঘূর্ণন শেষ।", stack: [], timers: ["tmr"], out: ["oNT", "oPR", "oIM"], phase: 4 },
+    { note: "পরের ঘূর্ণন: <b>timers</b> phase — timer মেয়াদ পেরিয়েছে।", stack: [], timers: ["tmr"], out: ["oNT", "oPR", "oIM"], phase: 0, hot: "timers" },
+    { note: "Timeout callback চলল।", stack: ["tmr"], timers: [], out: ["oNT", "oPR", "oIM", "oTM"], phase: 0, line: [2], hot: "stack" },
+    { note: "সব খালি। Loop আবার অপেক্ষায়।", stack: [], out: ["oNT", "oPR", "oIM", "oTM"] },
+  ],
+});
+
+const root = document.documentElement;
+try { const t = localStorage.getItem("welldev-theme"); if (t) root.dataset.theme = t; } catch (e) {}
+document.getElementById("theme").addEventListener("click", () => {
+  const dark = root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  root.dataset.theme = dark ? "light" : "dark";
+  try { localStorage.setItem("welldev-theme", root.dataset.theme); } catch (e) {}
+});
+</script>
+</body>
+</html>

@@ -233,6 +233,11 @@ const TRACKS = [
       desc: "HTML থেকে DOM, CSSOM, layout আর paint — আর <link>, async, defer, module ও body-এর শেষের script ঠিক কখন চলে, timeline অ্যানিমেশনে।",
       tags: ["DOM / CSSOM", "async / defer", "Rendering", "GSAP"], meta: [["11", "steps"], ["5", "modes"]] },
   ]},
+  { id: "js", n: "07", title: "JavaScript", blurb: "Runtime, event loop, async", color: "#eab308", guides: [
+    { href: "07-javascript/event-loop/index.html", kicker: "JavaScript · Interactive", title: "Event Loop — একটা thread, অনেক কাজ",
+      desc: "Call stack, microtask, task queue আর Node.js-এর phase — Browser ও Node দুই জায়গায় event loop কীভাবে চলে, D3 animation-এ।",
+      tags: ["Event loop", "Promise", "Node.js", "D3.js"], meta: [["15", "steps"], ["2", "runtimes"]] },
+  ]},
 ];
 
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));

@@ -50,3 +50,7 @@ _শীঘ্রই আসছে।_
 - [Seq, Checksum ও CRC — OSI Interactive](06-networking/OSI/index.html) — একটা মেসেজের যাত্রা, seq / checksum / CRC-32 কে কোন ভুল ধরে, D3 অ্যানিমেশনে
 - [একটা Request-এর যাত্রা — Web Server Interactive](06-networking/web-server/index.html) — DNS → TCP → TLS → Nginx → app → Redis → database → response, আর Nginx বনাম Apache
 - [URL থেকে Pixel — Browser Rendering Interactive](06-networking/browser/index.html) ([live](https://mdabarik.github.io/welldev/06-networking/browser/)) — DOM, CSSOM, layout, paint, আর `<link>`, `<script>`, async, defer, module কখন চলে, timeline অ্যানিমেশনে
+
+## 07 · JavaScript
+
+- [Event Loop — Browser ও Node.js Interactive](07-javascript/event-loop/index.html) — call stack, microtask, task queue, Node-এর phase, D3 animation-এ
