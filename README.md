@@ -24,6 +24,7 @@ _শীঘ্রই আসছে।_
 - [ACID Properties](03-dbms-sql/acid/index.html) — bank transfer দিয়ে A, C, I, D; PostgreSQL output, crash test আর C# কোড
 - [Transaction Isolation Levels](03-dbms-sql/transactions/index.html) — ৪টি level, D3 playground-এ A/B session চালিয়ে দেখা, দুইটা psql session পাশাপাশি ([transaction-A.sql](03-dbms-sql/transaction-A.sql) · [transaction-B.sql](03-dbms-sql/transaction-B.sql))
 - [Optimistic vs Pessimistic Locking](03-dbms-sql/optimistic-pessimistic/index.html) — lost update, FOR UPDATE / NOWAIT / SKIP LOCKED আর version column, A/B animation সহ
+- [N+1, Race Condition ও Deadlock](03-dbms-sql/dbms-theory/index.html) — N+1 query ও সমাধান, race condition, DB deadlock; আসল PostgreSQL output আর D3 animation
 - [Idempotency](03-dbms-sql/dbms/index.html) — retry-তে duplicate charge ঠেকানো: idempotency key, ON CONFLICT, UNIQUE, conditional update, D3 simulation
 - [DBMS Keys](03-dbms-sql/dbms/keys/index.html) — super, candidate, primary, alternate, composite, unique, foreign, surrogate key; interactive key checker
 - [Normalization](03-dbms-sql/dbms/normalization/index.html) — 1NF, 2NF, 3NF, BCNF: definition, সমস্যা ও সমাধান আসল table-এ, step-through demo আর quiz
