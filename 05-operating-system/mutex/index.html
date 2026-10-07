@@ -1,0 +1,1240 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mutex</title>
+<meta name="description" content="Mutex কীভাবে race condition ঠেকায় — counter++ কেন তিন ধাপ, pthread-এর আসল lost-update output, atomic instruction, spinlock বনাম sleeping mutex (futex), আর দুই core-এর D3 animation।">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Layout: race condition (real pthread output) → critical section → how a mutex works (atomic ops, spin vs sleep, futex)
+   → D3 animation (4 modes) → common mistakes → comparison → Q&A. Theme tokens and code highlighter shared with the other guides. */
+:root{
+  --bg:#f5f7fc; --surface:#ffffff; --surface-2:#f1f4fa; --fg:#0f172a; --muted:#5b6478; --faint:#94a0b8; --line:#e4e8f1;
+  --accent:#6366f1; --sa:#4f46e5; --sb:#db2777;
+  --pa:#e11d48; --pc:#d97706; --pi:#0284c7; --pd:#059669;
+  --ok:#059669; --bad:#e11d48; --warn:#d97706;
+  --hero:linear-gradient(135deg,#4f46e5 0%,#7c3aed 45%,#db2777 100%);
+  --shadow:0 1px 2px rgba(15,23,42,.04),0 10px 30px -12px rgba(15,23,42,.14);
+  --code-bg:#ffffff; --code-line:#e6e9f1;
+  --t-kw:#0000ff; --t-str:#a31515; --t-num:#098658; --t-com:#008000; --t-type:#267f99;
+  --sans:"Inter","Hind Siliguri",system-ui,sans-serif; --bn:"Hind Siliguri","Inter",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0b0f1a; --surface:#121827; --surface-2:#182033; --fg:#e7ecf6; --muted:#9aa6bf; --faint:#66728c; --line:#232c42;
+  --accent:#818cf8; --sa:#818cf8; --sb:#f472b6; --pa:#fb7185; --pc:#fbbf24; --pi:#38bdf8; --pd:#34d399;
+  --ok:#34d399; --bad:#fb7185; --warn:#fbbf24;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6);
+  --code-bg:#1e1e1e; --code-line:#2d2d30; --t-kw:#569cd6; --t-str:#ce9178; --t-num:#b5cea8; --t-com:#6a9955; --t-type:#4ec9b0;
+}}
+:root[data-theme="dark"]{
+  --bg:#0b0f1a; --surface:#121827; --surface-2:#182033; --fg:#e7ecf6; --muted:#9aa6bf; --faint:#66728c; --line:#232c42;
+  --accent:#818cf8; --sa:#818cf8; --sb:#f472b6; --pa:#fb7185; --pc:#fbbf24; --pi:#38bdf8; --pd:#34d399;
+  --ok:#34d399; --bad:#fb7185; --warn:#fbbf24;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6);
+  --code-bg:#1e1e1e; --code-line:#2d2d30; --t-kw:#569cd6; --t-str:#ce9178; --t-num:#b5cea8; --t-com:#6a9955; --t-type:#4ec9b0;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 var(--bn);-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto 0;height:420px;z-index:-1;pointer-events:none;
+  background:radial-gradient(620px 260px at 20% -40px,color-mix(in srgb,#6366f1 14%,transparent),transparent 70%),
+             radial-gradient(540px 240px at 90% -60px,color-mix(in srgb,#ec4899 11%,transparent),transparent 70%)}
+a{color:var(--accent)}
+button{font:inherit;color:inherit}
+code{font-family:var(--mono);font-size:.86em;font-weight:500;background:color-mix(in srgb,var(--accent) 10%,var(--surface));color:color-mix(in srgb,var(--accent) 72%,var(--fg));padding:.1em .4em;border-radius:6px}
+.wrap{max-width:1040px;margin:0 auto;padding:20px 18px 70px}
+section{margin-top:56px;scroll-margin-top:16px}
+
+.topnav{display:flex;align-items:center;gap:10px}
+.brand{display:flex;align-items:center;gap:10px;color:var(--fg);text-decoration:none;font:800 16px var(--sans);letter-spacing:-.02em}
+.logo{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:#fff;font:800 13px var(--mono);background:var(--hero)}
+.topnav .sp{flex:1}
+.pill{border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:6px 14px;font:600 13px var(--sans);cursor:pointer;text-decoration:none}
+.pill:hover{color:var(--fg)}
+
+.hero{margin-top:22px;border-radius:22px;padding:30px 32px;color:#fff;background:var(--hero);position:relative;overflow:hidden}
+.hero::after{content:"";position:absolute;right:-70px;top:-90px;width:320px;height:320px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.2),transparent 65%);pointer-events:none}
+.eyebrow{font:600 12px var(--sans);letter-spacing:.1em;text-transform:uppercase;opacity:.85}
+.hero h1{margin:8px 0 10px;font:800 clamp(28px,4.4vw,42px)/1.12 var(--sans);letter-spacing:-.03em}
+.hero p{margin:0;max-width:720px;font-size:16.5px;opacity:.94}
+
+/* quick-jump cards */
+.letters{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:22px}
+@media (max-width:860px){.letters{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:480px){.letters{grid-template-columns:minmax(0,1fr)}}
+.letter{display:block;text-decoration:none;color:inherit;padding:16px 18px;border-top:3px solid var(--c)}
+.letter .big{font:800 34px/1 var(--sans);color:var(--c)}
+.letter b{display:block;margin-top:8px;font:700 15.5px var(--sans)}
+.letter p{margin:4px 0 0;font-size:14.5px;color:var(--muted);line-height:1.55}
+.letter small{display:block;margin-top:10px;font:500 11.5px var(--mono);color:var(--faint)}
+.letter:hover{border-color:var(--c)}
+
+h2{display:flex;align-items:center;gap:12px;margin:0 0 6px;font:800 clamp(21px,2.8vw,26px)/1.25 var(--sans);letter-spacing:-.025em}
+.num{flex:none;width:38px;height:38px;border-radius:11px;display:grid;place-items:center;color:#fff;font:800 17px var(--sans);background:var(--c,var(--accent))}
+.motto{display:inline-block;margin:2px 0 14px;font:600 13.5px var(--sans);color:var(--c);background:color-mix(in srgb,var(--c) 10%,transparent);padding:4px 12px;border-radius:999px}
+.lead{margin:0 0 18px;color:var(--muted);max-width:820px}
+.lead b{color:var(--fg)}
+h3{margin:26px 0 10px;font:700 17px var(--sans);letter-spacing:-.015em}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow)}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:start}
+@media (max-width:760px){.grid2{grid-template-columns:minmax(0,1fr)}}
+
+.story{padding:14px 16px;font-size:15px;border-left:4px solid var(--c)}
+.story b{color:var(--fg)}
+.story p{margin:0;color:var(--muted)}
+.story p + p{margin-top:8px}
+
+pre.code{margin:0;padding:12px 14px;border-radius:12px;background:var(--code-bg);border:1px solid var(--code-line);font:13px/1.65 var(--mono);white-space:pre-wrap;word-break:break-word;font-variant-ligatures:none;overflow-x:auto}
+.k{color:var(--t-kw);font-weight:600}.s{color:var(--t-str)}.d{color:var(--t-num)}.c{color:var(--t-com);font-style:italic}.t{color:var(--t-type)}
+pre.code .o{color:var(--muted);font-style:normal}
+pre.code .e{color:var(--bad);font-style:normal}
+pre.code .g{color:var(--ok);font-style:normal;font-weight:600}
+.file{display:flex;align-items:center;gap:8px;margin:0 0 6px;font:600 12px var(--mono);color:var(--muted)}
+.file i{width:8px;height:8px;border-radius:50%;background:var(--dot,var(--accent))}
+.file .r{margin-left:auto;font:600 11px var(--sans);padding:1px 8px;border-radius:6px;color:var(--tc);background:color-mix(in srgb,var(--tc) 12%,transparent)}
+
+.how{margin-top:14px;padding:14px 16px;border-radius:12px;background:color-mix(in srgb,var(--c) 7%,var(--surface));border:1px solid color-mix(in srgb,var(--c) 22%,var(--line));font-size:15px}
+.how b{color:var(--fg)}
+.how ul,.how ol{margin:6px 0 0;padding-left:20px;color:var(--muted)}
+.how li{margin:3px 0}
+.how p{margin:6px 0 0;color:var(--muted)}
+
+/* two-lane timeline */
+.tl{overflow:hidden}
+.tl-head,.row{display:grid;grid-template-columns:40px minmax(0,1fr) minmax(0,1fr)}
+.tl-head{background:var(--surface-2);border-bottom:1px solid var(--line);font:700 12.5px var(--sans)}
+.tl-head span{padding:10px 14px}
+.tl-head .a{color:var(--sa)} .tl-head .b{color:var(--sb);border-left:1px solid var(--line)}
+.row{border-bottom:1px solid var(--line)}
+.row:last-child{border-bottom:0}
+.row .n{display:grid;place-items:start center;padding-top:13px;font:600 11.5px var(--mono);color:var(--faint)}
+.cell{padding:10px 14px;min-width:0}
+.cell + .cell{border-left:1px solid var(--line)}
+.cell.on{background:color-mix(in srgb,var(--who) 4%,transparent)}
+.cell.a{--who:var(--sa)} .cell.b{--who:var(--sb)}
+.cell pre{margin:0;font:12.8px/1.6 var(--mono);white-space:pre-wrap;word-break:break-word;font-variant-ligatures:none}
+.out{margin-top:6px;font:12.5px/1.55 var(--mono);color:var(--muted);white-space:pre-wrap;word-break:break-word}
+.out b{color:var(--fg)}
+.out .e{color:var(--bad)}
+.tag{display:inline-block;margin-top:6px;font:600 12px var(--sans);padding:2px 9px;border-radius:7px;background:color-mix(in srgb,var(--tc) 12%,transparent);color:var(--tc)}
+.tag.ok{--tc:var(--ok)} .tag.bad{--tc:var(--bad)} .tag.info{--tc:var(--muted)} .tag.warn{--tc:var(--warn)}
+@media (max-width:700px){
+  .tl-head{display:none}
+  .row{grid-template-columns:30px minmax(0,1fr)}
+  .cell:not(.on){display:none}
+  .cell + .cell{border-left:0}
+  /* a tick where both lanes act: B's error happens first, then A resumes */
+  .row.both .n{grid-row:1 / 3}
+  .row.both .cell.b{grid-column:2;grid-row:1}
+  .row.both .cell.a{grid-column:2;grid-row:2;border-top:1px dashed var(--line)}
+  .cell.on::before{content:attr(data-who);display:inline-block;margin-bottom:4px;font:700 11px var(--sans);color:#fff;background:var(--who);padding:1px 8px;border-radius:6px}
+}
+
+.tscroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:640px;font-size:14.5px}
+th,td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font:600 12px var(--sans);text-transform:uppercase;letter-spacing:.05em;color:var(--muted);background:var(--surface-2)}
+tr:last-child td{border-bottom:0}
+td.p{font:700 14px var(--sans);white-space:nowrap}
+td.p span{display:inline-grid;place-items:center;width:24px;height:24px;margin-right:8px;border-radius:7px;color:#fff;font-size:12px;background:var(--c)}
+.foot{margin:10px 2px 0;font-size:13.5px;color:var(--muted)}
+table.small{min-width:0;width:auto}
+table.small td,table.small th{padding:8px 16px}
+td.mono,th.mono{font-family:var(--mono);font-size:13.5px}
+
+details{border-bottom:1px solid var(--line);padding:12px 2px}
+details:last-child{border-bottom:0}
+summary{cursor:pointer;font:600 15.5px var(--bn);list-style:none;display:flex;gap:10px}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"+";font:700 15px var(--mono);color:var(--accent);width:14px;flex:none}
+details[open] summary::before{content:"−"}
+details p,details ul{margin:8px 0 0 24px;color:var(--muted);font-size:15px}
+details ul{padding-left:18px}
+
+footer{margin-top:56px;padding-top:16px;border-top:1px solid var(--line);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;font-size:13px;color:var(--faint)}
+@media (max-width:640px){.hero{padding:24px 20px;border-radius:18px}}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+
+.btn{border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:10px;padding:7px 12px;font:600 13px var(--sans);cursor:pointer}
+.btn:hover:not(:disabled){border-color:var(--accent)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.primary{border-color:transparent;color:#fff;background:linear-gradient(135deg,#6366f1,#8b5cf6 55%,#ec4899)}
+.btn.on{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,var(--surface))}
+.bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid var(--line)}
+.bar .sp{flex:1}
+.switch{display:inline-flex;align-items:center;gap:8px;font:600 13px var(--sans);color:var(--muted);cursor:pointer;user-select:none}
+.switch input{width:16px;height:16px;accent-color:var(--ok);margin:0}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;padding:10px 14px;font-size:13px;color:var(--muted);border-top:1px solid var(--line)}
+.legend i{display:inline-block;width:22px;height:0;border-top:2.5px solid var(--lc);margin-right:6px;vertical-align:middle}
+.legend i.dash{border-top-style:dashed}
+
+/* ---------- this page ---------- */
+.verdict{margin:0;padding:12px 14px;border-top:1px solid var(--line);font-size:15px}
+.verdict:empty{display:none}
+.verdict.ok{background:color-mix(in srgb,var(--ok) 9%,var(--surface))}
+.verdict.bad{background:color-mix(in srgb,var(--bad) 9%,var(--surface))}
+.verdict.warn{background:color-mix(in srgb,var(--warn) 10%,var(--surface))}
+.verdict b{color:var(--fg)}
+.log{margin:0;padding:10px 14px 12px 40px;border-top:1px solid var(--line);font:12.5px/1.7 var(--mono);color:var(--muted);height:170px;overflow:auto}
+.log:empty{display:none}
+.log li.t1::marker{color:var(--sa)} .log li.t2::marker{color:var(--sb)}
+.log li b.t1{color:var(--sa)} .log li b.t2{color:var(--sb)}
+.log li.bad{color:var(--bad)} .log li.ok{color:var(--ok)}
+.t1c{color:var(--sa);font-weight:700} .t2c{color:var(--sb);font-weight:700}
+.trace td,.trace th{white-space:nowrap}
+.trace td.bad{color:var(--bad);font-weight:700}
+.trace td.mono,.trace th.mono{font-family:var(--mono)}
+table.trace{min-width:560px}
+.out{margin-top:6px;font:12.5px/1.55 var(--mono);color:var(--muted);white-space:pre-wrap;word-break:break-word}
+.tag{display:inline-block;font:600 12px var(--sans);padding:2px 9px;border-radius:7px;background:color-mix(in srgb,var(--tc) 12%,transparent);color:var(--tc)}
+.tag.ok{--tc:var(--ok)} .tag.bad{--tc:var(--bad)} .tag.warn{--tc:var(--warn)} .tag.info{--tc:var(--muted)}
+.foot{margin:10px 2px 0;font-size:13.5px;color:var(--muted)}
+.nb{display:inline-block;font:600 11.5px var(--sans);padding:1px 8px;border-radius:6px;color:var(--warn);background:color-mix(in srgb,var(--warn) 12%,transparent);vertical-align:1px}
+.three{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;align-items:start}
+@media (max-width:860px){.three{grid-template-columns:minmax(0,1fr)}}
+.req3{padding:14px 16px;border-top:3px solid var(--c)}
+.req3 h4{margin:0 0 6px;font:700 15.5px var(--sans);color:var(--c)}
+.req3 p{margin:0;font-size:14.5px;color:var(--muted)}
+.mk{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+@media (max-width:760px){.mk{grid-template-columns:minmax(0,1fr)}}
+.mk .card{padding:14px 16px;border-left:4px solid var(--c)}
+.mk h4{margin:0 0 6px;font:700 15px var(--sans)}
+.mk p{margin:0;font-size:14.5px;color:var(--muted)}
+
+/* simulator */
+.modes{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid var(--line)}
+.modes .sp,.bar .sp{flex:1}
+.btn.t1b{--hl:var(--sa)} .btn.t2b{--hl:var(--sb)}
+.btn.t1b,.btn.t2b{border-color:color-mix(in srgb,var(--hl) 45%,var(--line));color:var(--hl)}
+.rng{display:inline-flex;align-items:center;gap:8px;font:600 13px var(--sans);color:var(--muted)}
+.rng input{width:96px;accent-color:var(--accent)}
+.sel{font:600 13px var(--sans);color:var(--fg);background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:6px 8px}
+.intro{margin:0;padding:10px 14px;font-size:14.5px;color:var(--muted);border-bottom:1px solid var(--line)}
+.intro b{color:var(--fg)}
+.sscroll{overflow-x:auto}
+#mxSvg{display:block;width:100%;min-width:660px;height:auto}
+#mxSvg text{font-family:var(--sans);fill:var(--fg)}
+#mxSvg .mono{font-family:var(--mono)}
+#mxSvg .panel{fill:var(--surface);stroke:var(--line);stroke-width:1.5;transition:stroke .25s}
+#mxSvg .panel.act{stroke:var(--who);stroke-width:2.5}
+#mxSvg .ttl{font-weight:800;font-size:15px}
+#mxSvg .dim{fill:var(--muted);font-size:11px;font-weight:600}
+#mxSvg .row rect{fill:var(--surface-2);stroke:none}
+#mxSvg .row text{font-family:var(--mono);font-size:12px;fill:var(--muted)}
+#mxSvg .row.cur rect{fill:color-mix(in srgb,var(--who) 16%,var(--surface))}
+#mxSvg .row.cur text{fill:var(--fg);font-weight:700}
+#mxSvg .row.done text{fill:var(--faint);text-decoration:line-through}
+#mxSvg .row.stuck rect{fill:color-mix(in srgb,var(--bad) 16%,var(--surface))}
+#mxSvg .row.spin rect{fill:color-mix(in srgb,var(--warn) 22%,var(--surface))}
+#mxSvg .spill rect{stroke:none;fill:color-mix(in srgb,var(--pc) 15%,var(--surface))}
+#mxSvg .spill text{font-size:11px;font-weight:800;fill:var(--pc);letter-spacing:.04em}
+#mxSvg .spill.READY{--pc:var(--accent)} #mxSvg .spill.BLOCKED{--pc:var(--bad)} #mxSvg .spill.SPINNING{--pc:var(--warn)} #mxSvg .spill.DONE{--pc:var(--ok)}
+#mxSvg .box{fill:var(--surface-2);stroke:var(--muted);stroke-width:1.8}
+#mxSvg .box.lock.on{stroke:var(--bad);fill:color-mix(in srgb,var(--bad) 7%,var(--surface))}
+#mxSvg .box.lock.off{stroke:var(--ok)}
+#mxSvg .box.lock.na{stroke:var(--line);stroke-dasharray:5 4}
+#mxSvg .lockst{font-weight:800;font-size:16px;letter-spacing:.04em}
+#mxSvg .lockst.on{fill:var(--bad)} #mxSvg .lockst.off{fill:var(--ok)} #mxSvg .lockst.na{fill:var(--faint)}
+#mxSvg .owner rect{fill:var(--who);stroke:none}
+#mxSvg .owner text{fill:#fff;font-size:12px;font-weight:800}
+#mxSvg .slot{fill:none;stroke:var(--line);stroke-width:1.5;stroke-dasharray:4 3}
+#mxSvg .chip rect{stroke:none;fill:var(--who)}
+#mxSvg .chip text{fill:#fff;font-size:12px;font-weight:800}
+#mxSvg .cellv{font-family:var(--mono);font-weight:800;font-size:34px}
+#mxSvg .regv{font-family:var(--mono);font-weight:800;font-size:22px}
+#mxSvg .regbox{fill:var(--surface-2);stroke:var(--who);stroke-width:2}
+#mxSvg .flash{fill:none;stroke:var(--warn);stroke-width:3;opacity:0}
+#mxSvg .tok circle{fill:var(--who);stroke:var(--surface);stroke-width:2}
+#mxSvg .tok text{fill:#fff;font-family:var(--mono);font-weight:800;font-size:14px}
+#mxSvg .meter{fill:color-mix(in srgb,var(--warn) 18%,var(--surface-2));stroke:none}
+#mxSvg .meterfill{fill:var(--warn)}
+#mxSvg .burn{fill:var(--warn);font-size:11px;font-weight:800}
+.statrow{display:flex;flex-wrap:wrap;gap:6px 14px;padding:10px 14px;border-top:1px solid var(--line);font:600 12.5px var(--mono);color:var(--muted)}
+.statrow b{color:var(--fg)}
+.dl-msg{margin:0;padding:12px 14px;border-top:1px solid var(--line);font-size:15px;min-height:3.6em}
+.dl-msg b{color:var(--fg)}
+.rtab{min-width:0}
+.rtab td,.rtab th{padding:7px 12px;font-size:13.5px}
+.rtab td.bad{color:var(--bad);font-weight:700} .rtab td.ok{color:var(--ok);font-weight:700}
+
+/* naive-flag mini animation */
+.nv{display:grid;grid-template-columns:minmax(0,1fr) 150px minmax(0,1fr);gap:12px;padding:14px;align-items:stretch}
+@media (max-width:640px){.nv{grid-template-columns:minmax(0,1fr)}}
+.nv .th{padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:var(--surface-2);min-height:92px;transition:border-color .25s,background .25s}
+.nv .th h5{margin:0 0 4px;font:800 14px var(--sans)}
+.nv .th.t1 h5{color:var(--sa)} .nv .th.t2 h5{color:var(--sb)}
+.nv .th.hot{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 8%,var(--surface))}
+.nv .th.in{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 9%,var(--surface))}
+.nv .th.in.good{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 9%,var(--surface))}
+.nv .th p{margin:0;white-space:pre-line;font:12.5px/1.55 var(--mono);color:var(--muted);word-break:break-word}
+.nv .fl{display:grid;place-items:center;text-align:center;border-radius:12px;border:2px solid var(--muted);background:var(--surface)}
+.nv .fl small{display:block;font:600 11px var(--sans);color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.nv .fl b{display:block;font:800 38px/1.1 var(--mono);transition:color .25s}
+.nv .fl.one b{color:var(--bad)} .nv .fl.zero b{color:var(--ok)}
+.nv .fl.pulse{animation:pulse .5s}
+@keyframes pulse{50%{transform:scale(1.07)}}
+@keyframes burn{50%{opacity:.35}}
+#mxSvg .burn.on{animation:burn .7s linear infinite}
+@media (prefers-reduced-motion:reduce){.nv .fl.pulse,#mxSvg .burn.on{animation:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="topnav">
+    <a class="brand" href="../../index.html"><span class="logo">W</span>WellDev</a>
+    <span class="sp"></span>
+    <a class="pill" href="../01-os-kernel-process-thread.html">← Process ও Thread</a>
+    <button class="pill" id="theme" type="button">Theme</button>
+  </nav>
+
+  <header class="hero">
+    <div class="eyebrow">Operating System · Concurrency</div>
+    <h1>Mutex — critical section-এ একজনের বেশি ঢুকতে দেয় না</h1>
+    <p>দুই thread একই counter বাড়ালে কেন update হারিয়ে যায়, আর mutex কীভাবে সেটা ঠেকায় — আসল C program চালিয়ে পাওয়া output, hardware-এর atomic instruction, spinlock বনাম sleeping mutex, আর D3 animation যেখানে দুই core-এ ধাপে ধাপে দেখবে lock, wait queue আর lost update।</p>
+  </header>
+
+  <div class="letters">
+    <a class="card letter" href="#race" style="--c:var(--pa)"><span class="big">1</span><b>Race condition</b><p><code>counter++</code> আসলে তিন ধাপ — মাঝে ঢুকলেই update হারায়।</p><small>real output · pthread</small></a>
+    <a class="card letter" href="#how" style="--c:var(--pc)"><span class="big">3</span><b>Mutex ভেতরে</b><p>atomic instruction, spin বনাম sleep, futex।</p><small>lock cmpxchg · futex</small></a>
+    <a class="card letter" href="#sim" style="--c:var(--accent)"><span class="big">4</span><b>D3 animation</b><p>no lock · mutex · spinlock · atomic — চারটা mode।</p><small>Play · Step · Random</small></a>
+    <a class="card letter" href="#qa" style="--c:var(--pd)"><span class="big">Q</span><b>Interview Q&amp;A</b><p>mutex vs semaphore, priority inversion, TSan…</p><small>10 প্রশ্ন</small></a>
+  </div>
+
+  <!-- 1 -->
+  <section id="race" style="--c:var(--pa)">
+    <h2><span class="num">1</span>Race condition কী</h2>
+    <span class="motto">shared data + একাধিক thread + অন্তত একটা write + কোনো সমন্বয় নেই</span>
+    <p class="lead">Program-এর ফল যখন <b>thread গুলোর কে কখন চলল</b> তার ওপর নির্ভর করে — তখন সেটা <b>race condition</b>। সবচেয়ে সাধারণ চেহারা: দুই thread একই variable পড়ে-বদলে-লেখে, আর মাঝখানে কেউ কাউকে আটকায় না। ফলে একটার লেখা আরেকটা মুছে দেয় — <b>lost update</b>।</p>
+    <div class="grid2">
+      <div class="card story" style="--c:var(--pa)"><p><b>শেয়ার করা খাতা:</b> দুজন একই খাতায় "মোট = 5" দেখে নিজের মাথায় +1 করে 6 লিখল। দুজনই 5 দেখেছিল, তাই খাতায় শেষে 6 — অথচ দুটো +1 হলে 7 হওয়ার কথা। কেউ ভুল করেনি; ভুলটা হলো <b>পড়া আর লেখার মাঝে অন্যজন ঢুকে যাওয়া</b>।</p></div>
+      <div class="how" style="--c:var(--pa);margin-top:0"><b>Race condition-এর চারটা উপাদান (সবগুলো লাগে):</b>
+        <ol>
+          <li><b>Shared</b> mutable data — একাধিক thread-এর কাছে একই memory।</li>
+          <li><b>Concurrent</b> access — thread গুলো একই সময়ে (multi-core) বা পালা করে (context switch) চলছে।</li>
+          <li>অন্তত একটা <b>write</b> — সবাই শুধু পড়লে সমস্যা নেই।</li>
+          <li><b>কোনো synchronisation নেই</b> — lock, atomic, বা অন্য ব্যবস্থা।</li>
+        </ol>
+      </div>
+    </div>
+
+    <h3><code>counter++</code> একটা step না — তিনটা</h3>
+    <p class="lead">C-তে এক লাইন, কিন্তু CPU-র কাছে তিনটা আলাদা instruction: memory থেকে register-এ <b>LOAD</b>, register-এ <b>ADD</b>, আবার memory-তে <b>STORE</b>। Context switch (বা অন্য core) এই তিনটার <i>যেকোনো দুইটার মাঝে</i> ঘটতে পারে।</p>
+    <div class="grid2">
+      <div>
+        <div class="file" style="--dot:var(--muted)"><i></i>x86-64 style<span class="r" style="--tc:var(--warn)">illustrative</span></div>
+<pre class="code" data-lang="asm">mov  eax, [counter]    ; LOAD   memory → register
+add  eax, 1            ; ADD    register-এ +1
+mov  [counter], eax    ; STORE  register → memory</pre>
+        <p class="foot">সাধারণ x86-64 compiler output-এর ধাঁচ — এই পাতার জন্য লেখা, নির্দিষ্ট কোনো build থেকে নেওয়া না।</p>
+      </div>
+      <div>
+        <div class="file" style="--dot:var(--ok)"><i></i>এই Mac-এ (Apple M1, arm64) — <code>clang -O0 -S</code><span class="r" style="--tc:var(--ok)">real output</span></div>
+<pre class="code" data-lang="asm">ldr  w8, [x9, _counter@PAGEOFF]   ; LOAD
+add  w8, w8, #1                   ; ADD
+str  w8, [x9, _counter@PAGEOFF]   ; STORE</pre>
+        <p class="foot">compiler-এর আসল output থেকে নেওয়া (ঠিকানা আনার <code>adrp</code> লাইন আর <code>;</code> comment বাদে/যোগে)। Instruction-এর নাম আলাদা, কিন্তু তিনটা ধাপ একই।</p>
+      </div>
+    </div>
+
+    <h3>দুই thread interleave করলে — lost update</h3>
+    <p class="lead"><code>counter = 5</code>, T1 আর T2 প্রত্যেকে একবার <code>counter++</code> চালায়। সঠিক ফল <b>5 + 1 + 1 = 7</b>। নিচের schedule-এ দুজনই 5 পড়ে ফেলেছে, তাই দুজনই 6 লেখে:</p>
+    <div class="card tscroll">
+      <table class="trace">
+        <thead><tr><th>#</th><th>কে · কী করল</th><th>T1 reg</th><th>T2 reg</th><th>counter</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">1</td><td><span class="t1c">T1</span> LOAD — counter পড়ল</td><td class="mono">5</td><td class="mono">—</td><td class="mono">5</td></tr>
+          <tr><td class="mono">2</td><td><span class="t2c">T2</span> LOAD — <i>এখনো 5</i>, কারণ T1 কিছু লেখেনি</td><td class="mono">5</td><td class="mono">5</td><td class="mono">5</td></tr>
+          <tr><td class="mono">3</td><td><span class="t1c">T1</span> ADD</td><td class="mono">6</td><td class="mono">5</td><td class="mono">5</td></tr>
+          <tr><td class="mono">4</td><td><span class="t2c">T2</span> ADD</td><td class="mono">6</td><td class="mono">6</td><td class="mono">5</td></tr>
+          <tr><td class="mono">5</td><td><span class="t1c">T1</span> STORE</td><td class="mono">6</td><td class="mono">6</td><td class="mono">6</td></tr>
+          <tr><td class="mono">6</td><td><span class="t2c">T2</span> STORE — T1-এর লেখা মুছে দিল</td><td class="mono">6</td><td class="mono">6</td><td class="mono bad">6 ✗ (হওয়ার কথা 7)</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="foot">Single core-এ এটা context switch থেকে হয়; multi-core-এ দুই core সত্যিই একই সময়ে চলে বলে আরও সহজে হয়। দুই ক্ষেত্রেই ফল এক। নিচের animation-এ এই schedule নিজে চালাতে পারবে।</p>
+
+    <h3>প্রমাণ — আসল C program, আসল output</h3>
+    <p class="lead">দুইটা thread, প্রত্যেকে shared <code>int</code> এক মিলিয়ন বার বাড়ায়; সঠিক ফল <b>2,000,000</b>। নিচের সবকিছু এই Mac-এ (Apple M1, macOS, Apple clang 15) <code>clang -O0 -pthread</code> দিয়ে compile করে চালানো — প্রতিটা output আসল।</p>
+    <div class="file" style="--dot:var(--bad)"><i></i>race.c — কোনো lock নেই<span class="r" style="--tc:var(--bad)">ভুল ফল</span></div>
+<pre class="code" data-lang="c">#include &lt;pthread.h&gt;
+#include &lt;stdio.h&gt;
+
+#define N 1000000
+int counter = 0;                       // shared, কোনো সুরক্ষা নেই
+
+void *work(void *arg) {
+    for (int i = 0; i &lt; N; i++)
+        counter++;                     // load, add, store
+    return NULL;
+}
+
+int main(void) {
+    pthread_t t1, t2;
+    pthread_create(&amp;t1, NULL, work, NULL);
+    pthread_create(&amp;t2, NULL, work, NULL);
+    pthread_join(t1, NULL);
+    pthread_join(t2, NULL);
+    printf("counter = %d (expected %d)\n", counter, 2 * N);
+    return 0;
+}</pre>
+    <div class="grid2" style="margin-top:14px">
+      <div>
+        <div class="file" style="--dot:var(--bad)"><i></i>$ clang -O0 -pthread race.c -o race &amp;&amp; ./race  (৫ বার)</div>
+<pre class="code" data-lang="log"><span class="e">counter = 1097960 (expected 2000000)
+counter = 1000820 (expected 2000000)
+counter = 1000581 (expected 2000000)
+counter = 1091472 (expected 2000000)
+counter = 1003467 (expected 2000000)</span></pre>
+        <p class="foot">প্রতিবার ভুল, প্রতিবার আলাদা — প্রায় অর্ধেক increment হারিয়ে গেছে। এটাই race condition-এর বৈশিষ্ট্য: ফল <b>অনির্দিষ্ট</b>, তাই test-এ ধরা কঠিন।</p>
+      </div>
+      <div>
+        <div class="file" style="--dot:var(--ok)"><i></i>mutex.c — শুধু loop-এর ভেতর বদল<span class="r" style="--tc:var(--ok)">2,000,000</span></div>
+<pre class="code" data-lang="c">pthread_mutex_t m = PTHREAD_MUTEX_INITIALIZER;
+
+for (int i = 0; i &lt; N; i++) {
+    pthread_mutex_lock(&amp;m);
+    counter++;                  // critical section
+    pthread_mutex_unlock(&amp;m);
+}</pre>
+        <div class="file" style="--dot:var(--ok);margin-top:12px"><i></i>atomic.c — <code>stdatomic.h</code><span class="r" style="--tc:var(--ok)">2,000,000</span></div>
+<pre class="code" data-lang="c">#include &lt;stdatomic.h&gt;
+atomic_int counter = 0;
+
+for (int i = 0; i &lt; N; i++)
+    atomic_fetch_add(&amp;counter, 1);   // এক অবিভাজ্য step</pre>
+      </div>
+    </div>
+    <div class="grid2" style="margin-top:14px">
+      <div>
+        <div class="file" style="--dot:var(--ok)"><i></i>./mutex  (৫ বার)</div>
+<pre class="code" data-lang="log"><span class="g">counter = 2000000 (expected 2000000)
+counter = 2000000 (expected 2000000)
+counter = 2000000 (expected 2000000)
+counter = 2000000 (expected 2000000)
+counter = 2000000 (expected 2000000)</span></pre>
+      </div>
+      <div>
+        <div class="file" style="--dot:var(--ok)"><i></i>./atomic  (৫ বার)</div>
+<pre class="code" data-lang="log"><span class="g">counter = 2000000 (expected 2000000)
+counter = 2000000 (expected 2000000)
+counter = 2000000 (expected 2000000)
+counter = 2000000 (expected 2000000)
+counter = 2000000 (expected 2000000)</span></pre>
+      </div>
+    </div>
+
+    <h3>সময় কত লাগল — সৎ ব্যাখ্যা</h3>
+    <p class="lead">প্রতিটা version ৫ বার চালিয়ে wall-clock সময় (process শুরু থেকে শেষ, shell থেকে মাপা, তাই ছোট একটা fixed overhead আছে):</p>
+    <div class="card tscroll">
+      <table class="small" style="min-width:560px">
+        <thead><tr><th>Version</th><th>ফল</th><th>৫ বারের সময়</th></tr></thead>
+        <tbody>
+          <tr><td><b>no lock</b></td><td class="bad" style="color:var(--bad);font-weight:700">ভুল (~1.0M)</td><td class="mono">7.0 · 6.1 · 6.1 · 6.4 · 6.1 ms</td></tr>
+          <tr><td><b>pthread mutex</b></td><td style="color:var(--ok);font-weight:700">2,000,000 ✓</td><td class="mono">52.8 · 53.5 · 51.6 · 45.6 · 53.2 ms</td></tr>
+          <tr><td><b>atomic_int</b></td><td style="color:var(--ok);font-weight:700">2,000,000 ✓</td><td class="mono">61.8 · 59.4 · 61.4 · 59.9 · 60.7 ms</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="how" style="--c:var(--pc)"><b>এই সংখ্যা কী বলে, কী বলে না:</b>
+      <ul>
+        <li>No-lock version প্রায় <b>৮–১০ গুণ দ্রুত</b> — কিন্তু <b>ভুল</b>। "Fast but wrong" কোনো optimisation না, bug। Correctness আগে, speed পরে।</li>
+        <li>এটা একটা <b>worst-case micro-benchmark</b>: দুই thread শুধু ওই একটা variable নিয়েই লড়ছে, অন্য কোনো কাজ নেই। বাস্তব program-এ lock ধরা সময়ের তুলনায় বাকি কাজ অনেক বেশি, তাই এত বড় ব্যবধান দেখা যায় না।</li>
+        <li>এখানে atomic, mutex-এর চেয়ে ধীর এসেছে — <b>এটা সাধারণ নিয়ম না</b>। এই ঘটনা এই machine, এই workload আর দুই thread-এর পুরো-contention-এর ফল; আনুমানিক কারণ, দুই core একই cache line বারবার কেড়ে নিচ্ছে। Contention কম হলে uncontended atomic সাধারণত mutex-এর চেয়ে অনেক সস্তা। অন্য hardware-এ আলাদা ফল আসতে পারে — আমি শুধু এই machine-এর সংখ্যা দেখিয়েছি।</li>
+        <li><code>-O2</code>-তে একই unlocked program কখনো 2,000,000, কখনো 1,000,000 দিয়েছে (আমার দুই run-এ) — optimiser loop-এর ভেতর <code>counter</code>-কে register-এ রেখে একবারে লিখে দেয়। Data race-এ C-এর behaviour <b>undefined</b>, তাই compiler যা খুশি করতে পারে; "আমার machine-এ ঠিক চলছে" কোনো প্রমাণ না।</li>
+      </ul>
+    </div>
+
+    <h3>Java আর C#-এ একই জিনিস</h3>
+    <div class="grid2">
+      <div>
+        <div class="file" style="--dot:var(--bad)"><i></i>Race.java — Java 17-এ চালানো<span class="r" style="--tc:var(--ok)">real output</span></div>
+<pre class="code" data-lang="java">static int counter = 0;
+static final Object LOCK = new Object();
+
+Runnable r = () -&gt; {
+    for (int i = 0; i &lt; 1_000_000; i++) {
+        if (locked) { synchronized (LOCK) { counter++; } }
+        else counter++;               // race!
+    }
+};
+// দুই thread start + join করে counter ছাপা</pre>
+        <div class="file" style="--dot:var(--muted);margin-top:8px"><i></i>output (৩ জোড়া run)</div>
+<pre class="code" data-lang="log"><span class="e">no lock:      1009131
+no lock:      1314737
+no lock:      1359201</span>
+<span class="g">synchronized: 2000000
+synchronized: 2000000
+synchronized: 2000000</span></pre>
+      </div>
+      <div>
+        <div class="file" style="--dot:var(--ok)"><i></i>C# — <code>lock</code> / <code>Interlocked</code><span class="r" style="--tc:var(--warn)">illustrative — not run</span></div>
+<pre class="code" data-lang="cs">static int counter = 0;
+static readonly object Gate = new object();
+
+void Worker()
+{
+    for (int i = 0; i &lt; 1_000_000; i++)
+    {
+        lock (Gate)               // Monitor.Enter / Exit (finally সহ)
+        {
+            counter++;
+        }
+        // বিকল্প: Interlocked.Increment(ref counter);
+    }
+}</pre>
+        <p class="foot">C# এই machine-এ install নেই, তাই চালানো হয়নি — API ঠিক আছে, কিন্তু কোনো output দাবি করছি না।</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2 -->
+  <section id="cs" style="--c:var(--pc)">
+    <h2><span class="num">2</span>Critical section আর তার ৩টা শর্ত</h2>
+    <span class="motto">যে code shared data ছোঁয়, সেটাকে "একবারে একজন" করে দাও</span>
+    <p class="lead"><b>Critical section</b> = code-এর সেই অংশ যা shared resource পড়ে-বদলায় এবং যেটা একসাথে একাধিক thread চালালে ভুল হয়। Mutex-এর কাজ হলো এই অংশের চারপাশে দরজা বসানো।</p>
+<pre class="code" data-lang="c">while (true) {
+    lock(&amp;m);          // entry section   — ঢোকার অনুমতি চাও
+        counter++;     // CRITICAL SECTION — shared data ছোঁয়া
+    unlock(&amp;m);        // exit section    — অন্যকে ঢুকতে দাও
+    do_other_work();   // remainder section — shared data নেই
+}</pre>
+    <h3>সমাধানকে যে ৩টা শর্ত মানতে হয়</h3>
+    <div class="three">
+      <div class="card req3" style="--c:var(--pa)"><h4>1. Mutual Exclusion</h4><p>একসময়ে critical section-এ <b>সর্বোচ্চ একটা</b> thread। এটাই মূল শর্ত — এটা ভাঙলে race ফিরে আসে।</p></div>
+      <div class="card req3" style="--c:var(--pc)"><h4>2. Progress</h4><p>Section ফাঁকা থাকলে আর কেউ ঢুকতে চাইলে, <b>বাইরের কেউ</b> (যে ঢুকতে চায় না) তাকে আটকাতে পারবে না; কে ঢুকবে সেই সিদ্ধান্ত অনির্দিষ্টকাল ঝুলে থাকবে না।</p></div>
+      <div class="card req3" style="--c:var(--pi)"><h4>3. Bounded Waiting</h4><p>কেউ ঢোকার অনুরোধ করার পর, অন্যরা কতবার তার আগে ঢুকতে পারবে তার একটা <b>সীমা</b> আছে — নইলে কেউ <b>starve</b> করে।</p></div>
+    </div>
+    <div class="how" style="--c:var(--pc)"><b>Interview-এ যেভাবে বলবে:</b> "Mutual exclusion = safety, progress আর bounded waiting = liveness।" একটা lock যদি সবাইকে চিরকাল আটকে রাখে, সেটা mutual exclusion মানে — কিন্তু progress মানে না। আর যদি lock <b>unfair</b> হয় (কোনো thread বারবার হেরে যেতে পারে) তাহলে bounded waiting ভাঙে — সব practical mutex এটা কঠোরভাবে দেয় না; FIFO queue বা ticket lock দিলে দেয়। Peterson's algorithm software দিয়ে এই তিনটাই দেয় (শুধু দুই thread), কিন্তু আধুনিক CPU-র reordering-এ memory barrier ছাড়া ভাঙে — তাই বাস্তবে hardware atomic instruction ব্যবহার হয়।</div>
+  </section>
+
+  <!-- 3 -->
+  <section id="how" style="--c:var(--pi)">
+    <h2><span class="num">3</span>Mutex কীভাবে কাজ করে</h2>
+    <span class="motto">lock / unlock · owner আছে · ভেতরে একটা atomic instruction</span>
+    <p class="lead"><b>Mutex</b> (mutual exclusion lock) একটা object যার দুইটা অবস্থা: <b>unlocked</b> বা <b>locked</b>। <code>lock()</code> ফাঁকা পেলে নিয়ে নেয়; আগে থেকে locked থাকলে <b>অপেক্ষা</b> করে। <code>unlock()</code> ছেড়ে দেয় এবং (দরকারে) একজন অপেক্ষাকারীকে সুযোগ দেয়।</p>
+
+    <div class="grid2">
+      <div>
+        <div class="file" style="--dot:var(--pi)"><i></i>Mutex-এর ভেতরের state (ধারণাগত)<span class="r" style="--tc:var(--warn)">illustrative</span></div>
+<pre class="code" data-lang="c">struct mutex {
+    int     locked;      // 0 = ফাঁকা, 1 = কারো হাতে
+    thread *owner;       // কে ধরে আছে
+    queue   waiters;     // sleep করা thread-এর লাইন
+};</pre>
+      </div>
+      <div class="card story" style="--c:var(--pi)"><p><b>Ownership:</b> যে thread <code>lock()</code> করেছে <b>শুধু সেই-ই</b> <code>unlock()</code> করতে পারে। অন্য thread unlock করতে গেলে error (error-checking mutex <code>EPERM</code> দেয়) বা undefined behaviour।</p><p><b>Semaphore-এর সাথে পার্থক্য:</b> semaphore-এর কোনো owner নেই — এক thread <code>wait()</code> করে, অন্য thread <code>post()</code> করতে পারে। তাই semaphore "ইঙ্গিত দেওয়ার" (signalling), mutex "দরজায় তালা"-র (locking) জন্য। বিস্তারিত নিচের তুলনায়।</p></div>
+    </div>
+
+    <h3>"Check, তারপর set" — এই দুই ধাপেও race আছে</h3>
+    <p class="lead">Mutex বানানোর সবচেয়ে সরল চেষ্টা: <code>if (!locked) locked = true;</code>। কিন্তু এটাও দুইটা ধাপ — <b>flag পড়া</b>, তারপর <b>flag লেখা</b>। মাঝে অন্য thread ঢুকলে দুজনই "ফাঁকা" দেখে দুজনই ঢুকে পড়ে। সমস্যাটা <code>counter++</code>-এর সমস্যারই হুবহু একই — lock নিজেই একটা shared variable! নিচে Step চাপো:</p>
+    <div class="card" id="nvBox">
+      <div class="bar">
+        <button type="button" class="btn on" data-nv="naive">Naive: if (!locked) locked = true</button>
+        <button type="button" class="btn" data-nv="tas">Atomic test-and-set</button>
+        <span class="sp"></span>
+        <button type="button" class="btn primary" id="nvStep">⏭ Step</button>
+        <button type="button" class="btn" id="nvReset">↺ Reset</button>
+      </div>
+      <div class="nv">
+        <div class="th t1" id="nvT1"><h5>Thread T1</h5><p></p></div>
+        <div class="fl zero" id="nvFl"><div><small>locked flag</small><b>0</b></div></div>
+        <div class="th t2" id="nvT2"><h5>Thread T2</h5><p></p></div>
+      </div>
+      <p class="dl-msg" id="nvMsg"></p>
+      <p class="verdict" id="nvVerdict"></p>
+    </div>
+
+    <h3>সমাধান — hardware-এর atomic instruction</h3>
+    <p class="lead">"পড়ো আর লেখো" যদি <b>একটাই অবিভাজ্য instruction</b> হয়, মাঝে কেউ ঢুকতে পারে না। CPU এটা দেয়:</p>
+    <div class="grid2">
+      <div class="how" style="--c:var(--pi);margin-top:0"><b>Test-and-Set (TAS) আর Compare-and-Swap (CAS):</b>
+        <ul>
+          <li><b>TAS:</b> একই step-এ পুরোনো মান ফেরত দেয় <i>এবং</i> flag = 1 করে দেয়। পুরোনো মান 0 পেলে তুমিই lock পেয়েছ; 1 পেলে অন্য কারো হাতে।</li>
+          <li><b>CAS(addr, expected, new):</b> <code>*addr == expected</code> হলেই শুধু <code>new</code> লেখে, আর সফল হলো কি না জানায়। Mutex-এর lock = <code>CAS(&amp;state, 0, 1)</code>।</li>
+          <li><b>x86-এ:</b> <code>lock cmpxchg</code>, <code>xchg [mem], reg</code> (memory operand থাকলে implicit lock), <code>lock xadd</code>। <code>lock</code> prefix মানে ওই memory-তে read-modify-write কোনো core-এর মাঝখানে ঢোকার সুযোগ ছাড়া শেষ হয়।</li>
+          <li><b>ARM-এ:</b> load-exclusive / store-exclusive জোড়া (<code>ldxr</code>/<code>stxr</code>), বা নতুন version-এ single-instruction atomics (যেমন <code>cas</code>, <code>ldadd</code>)।</li>
+        </ul>
+        <p>Cache-এর দিক থেকে (সরলীকৃত): core ওই cache line-এর <b>exclusive মালিকানা</b> নিয়ে read-modify-write শেষ করে; অন্য core-কে অপেক্ষা করতে হয়। তাই contended atomic ব্যয়বহুল — line দুই core-এর মধ্যে ঘুরতে থাকে।</p>
+      </div>
+      <div>
+        <div class="file" style="--dot:var(--pi)"><i></i>Spinlock — TAS দিয়ে (C11)<span class="r" style="--tc:var(--warn)">illustrative — not run</span></div>
+<pre class="code" data-lang="c">atomic_flag f = ATOMIC_FLAG_INIT;
+
+void spin_lock(void) {
+    while (atomic_flag_test_and_set_explicit(&amp;f, memory_order_acquire))
+        ;                       // পেলাম না → আবার চেষ্টা (busy-wait)
+}
+void spin_unlock(void) {
+    atomic_flag_clear_explicit(&amp;f, memory_order_release);
+}</pre>
+        <div class="file" style="--dot:var(--pi);margin-top:12px"><i></i>CAS দিয়ে lock<span class="r" style="--tc:var(--warn)">illustrative</span></div>
+<pre class="code" data-lang="c">int expected = 0;
+while (!atomic_compare_exchange_weak(&amp;state, &amp;expected, 1))
+    expected = 0;               // ব্যর্থ হলে expected বদলে যায়, আবার দিই</pre>
+      </div>
+    </div>
+
+    <h3>লক না পেলে কী হয় — দুই কৌশল</h3>
+    <div class="card tscroll">
+      <table style="min-width:620px">
+        <thead><tr><th></th><th>Spinlock (busy-wait)</th><th>Sleeping mutex</th></tr></thead>
+        <tbody>
+          <tr><td><b>না পেলে</b></td><td>loop-এ ঘুরে বারবার TAS চেষ্টা করে</td><td>Kernel thread-কে <b>sleep</b> করায়, wait queue-তে রাখে; CPU অন্য thread-কে দেয়</td></tr>
+          <tr><td><b>অপেক্ষার সময় CPU</b></td><td>100% খরচ — কিন্তু কোনো কাজ হচ্ছে না</td><td>প্রায় শূন্য — thread ঘুমিয়ে</td></tr>
+          <tr><td><b>জাগানো</b></td><td>নিজেই দেখে flag 0 হলো</td><td><code>unlock()</code> kernel-কে বলে একজনকে wake করতে</td></tr>
+          <tr><td><b>খরচ</b></td><td>context switch নেই; কিন্তু অপেক্ষা লম্বা হলে CPU নষ্ট</td><td>sleep + wake = <b>দুইটা context switch</b> + cache ঠান্ডা হওয়া (সাধারণত কয়েক µs-এর order, আনুমানিক)</td></tr>
+          <tr><td><b>কখন ভালো</b></td><td>critical section <b>অতি ছোট</b>, multi-core, holder এখনই ছাড়বে (kernel-এর ভেতর, interrupt context)</td><td>অপেক্ষা লম্বা হতে পারে, user-space code, I/O আছে, core কম</td></tr>
+          <tr><td><b>Single core-এ</b></td><td><b>খারাপ</b> — holder CPU পায়নি, spinner পুরো time slice পুড়িয়ে দেয়, কিছুই এগোয় না</td><td>ঠিক আছে — block হলেই holder চলার সুযোগ পায়</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="how" style="--c:var(--pi)"><b>Hybrid / adaptive mutex:</b> বেশিরভাগ production mutex <b>spin-then-sleep</b> — আগে অল্প কয়েকবার spin (holder হয়তো এখনই ছাড়বে), না পেলে sleep। এতে ছোট অপেক্ষায় context switch বাঁচে, লম্বা অপেক্ষায় CPU পোড়ে না। Context switch আসলে কী করে: <a href="../thread-process/index.html">Process ও Thread internals →</a>; কোন thread কখন CPU পায়: <a href="../os-scheduling-algo/index.html">CPU Scheduling →</a></div>
+
+    <h3>Linux-এ sleeping mutex — futex</h3>
+    <p class="lead">Linux-এ pthread mutex <b>futex</b> (fast userspace mutex) দিয়ে বানানো। মূল ধারণা: <b>contention না থাকলে kernel-এ যাওয়াই লাগে না</b>।</p>
+    <div class="grid2">
+      <div class="how" style="--c:var(--pi);margin-top:0"><b>দুটো পথ:</b>
+        <ul>
+          <li><b>Fast path (uncontended):</b> <code>lock()</code> = user space-এ <b>একটা</b> atomic CAS (0 → 1)। <code>unlock()</code> = একটা atomic লেখা। <b>কোনো system call নেই</b> — তাই মাত্র কয়েক nanosecond।</li>
+          <li><b>Slow path (contended):</b> CAS ব্যর্থ হলে thread <code>futex(FUTEX_WAIT)</code> system call করে — kernel দেখে "ওই ঠিকানার মান এখনো আমি যা ভেবেছিলাম?", হ্যাঁ হলে thread-কে sleep করিয়ে ওই ঠিকানার wait queue-তে রাখে।</li>
+          <li><b>Unlock-এ:</b> যদি কেউ অপেক্ষা করে (state ≠ "locked, no waiters"), <code>futex(FUTEX_WAKE, 1)</code> একজনকে জাগায়। জেগে সে আবার lock নেওয়ার চেষ্টা করে — ইতিমধ্যে আরেকজন নিয়ে নিলে আবার sleep।</li>
+        </ul>
+        <p>macOS-এ futex নেই; সেখানে আলাদা kernel API একই কাজ করে। উপরের real run-গুলো macOS-এ, futex ধারণাটা Linux-এর।</p>
+      </div>
+      <div>
+        <div class="file" style="--dot:var(--pi)"><i></i>সরলীকৃত futex mutex (Drepper-এর ধাঁচ)<span class="r" style="--tc:var(--warn)">illustrative — not run</span></div>
+<pre class="code" data-lang="c">// state: 0 = unlocked | 1 = locked, কেউ অপেক্ষায় নেই | 2 = locked, অপেক্ষাকারী আছে
+void lock(int *s) {
+    int c = cmpxchg(s, 0, 1);          // fast path: একটা atomic op, syscall নেই
+    if (c != 0) {                       // কারো হাতে
+        do {
+            if (c == 2 || cmpxchg(s, 1, 2) != 0)
+                futex_wait(s, 2);       // *s == 2 থাকলে kernel-এ sleep
+        } while ((c = cmpxchg(s, 0, 2)) != 0);
+    }
+}
+void unlock(int *s) {
+    if (atomic_dec(s) != 1) {           // পুরোনো মান 1 না হলে কেউ অপেক্ষায়
+        *s = 0;
+        futex_wake(s, 1);               // একজনকে জাগাও
+    }
+}</pre>
+      </div>
+    </div>
+
+    <h3>Memory visibility — lock শুধু "একজন" না, "দেখতে পাওয়া"-ও</h3>
+    <div class="how" style="--c:var(--pi)">
+      <p style="margin-top:0">CPU আর compiler performance-এর জন্য instruction <b>reorder</b> করে, আর প্রতিটা core-এর নিজের cache/store buffer থাকে। তাই এক thread-এর লেখা অন্য thread সঙ্গে সঙ্গে দেখবে — এর নিশ্চয়তা নেই। Mutex এই নিশ্চয়তাও দেয়:</p>
+      <ul>
+        <li><code>unlock()</code> = <b>release</b>: critical section-এর সব write unlock-এর <i>আগে</i> সম্পূর্ণ হয়েছে বলে ধরা হয়, কোনো লেখা unlock-এর পরে সরে যেতে পারে না।</li>
+        <li><code>lock()</code> = <b>acquire</b>: lock পাওয়ার পরের সব read আর write lock-এর <i>পরে</i>ই হয়; আগে সরে যেতে পারে না।</li>
+        <li>একই mutex-এ T1-এর unlock এবং T2-এর পরের lock-এর মধ্যে তৈরি হয় <b>happens-before</b> সম্পর্ক — তাই T1 critical section-এ যা লিখেছে T2 ঢুকে তা <b>নিশ্চিতভাবে</b> দেখবে।</li>
+        <li>এই কারণেই "সব thread-এ একই mutex" নিয়ম জরুরি: আলাদা mutex দিয়ে বা lock ছাড়া পড়লে এই গ্যারান্টি পাও না। (x86 তুলনামূলক শক্ত ordering দেয়, ARM — এই Mac-এর M1 — দুর্বল; তাই ARM-এ memory-order ভুল আগে ধরা পড়ে।)</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 4 -->
+  <section id="sim" style="--c:var(--accent)">
+    <h2><span class="num">4</span>Animation — দুই core, এক counter</h2>
+    <span class="motto">Core 0 চালাচ্ছে T1, Core 1 চালাচ্ছে T2 — দুজনেই <code>counter++</code> করবে</span>
+    <p class="lead"><code>counter</code> শুরুতে <b>5</b>। T1 আর T2 প্রত্যেকে <b>+1</b> করবে, তাই সঠিক ফল <b>5 + 1 + 1 = 7</b>। প্রতিটা <b>Step</b> = একটা thread-এর একটা micro-op। Mode বদলে দেখো: lock ছাড়া ফল ভুল (6) কীভাবে আসে, mutex-এ T2 কীভাবে ঘুমায়, spinlock-এ কীভাবে ঘোরে, আর atomic-এ কেন কিছু ভাঙার সুযোগই নেই। চাইলে <b>T1 ▶ / T2 ▶</b> দিয়ে নিজেই schedule বানাও।</p>
+
+    <div class="card sim" id="mxBox" style="overflow:hidden">
+      <div class="modes" role="group" aria-label="Mode">
+        <button type="button" class="btn on" data-mode="nolock">1 · No lock</button>
+        <button type="button" class="btn" data-mode="mutex">2 · Mutex</button>
+        <button type="button" class="btn" data-mode="spin">3 · Spinlock</button>
+        <button type="button" class="btn" data-mode="atomic">4 · Atomic (lock xadd)</button>
+        <span class="sp"></span>
+        <select class="sel" id="mxSched" aria-label="Schedule">
+          <option value="nolock-bad">schedule: খারাপ interleaving</option>
+          <option value="nolock-lucky">schedule: ভাগ্যবান (T1 শেষ, তারপর T2)</option>
+        </select>
+      </div>
+      <div class="bar">
+        <button type="button" class="btn primary" id="mxPlay">▶ Play</button>
+        <button type="button" class="btn" id="mxStep">⏭ Step</button>
+        <button type="button" class="btn t1b" id="mxT1">T1 ▶</button>
+        <button type="button" class="btn t2b" id="mxT2">T2 ▶</button>
+        <button type="button" class="btn" id="mxReset">↺ Reset</button>
+        <span class="sp"></span>
+        <label class="rng">Speed <input type="range" id="mxSpeed" min="0.5" max="3" step="0.25" value="1" aria-label="Speed"></label>
+      </div>
+      <p class="intro" id="mxIntro"></p>
+      <div class="sscroll"><svg id="mxSvg" viewBox="0 0 760 322" role="img" aria-label="দুটো core, প্রতিটায় একটা thread আর register; মাঝখানে mutex-এর অবস্থা, wait queue এবং shared memory-র counter"></svg></div>
+      <div class="statrow" id="mxStat"></div>
+      <p class="dl-msg" id="mxMsg">Play বা Step চাপো।</p>
+      <p class="verdict" id="mxVerdict"></p>
+      <ol class="log" id="mxLog" aria-label="Event log"></ol>
+    </div>
+    <p class="foot">Step-by-step প্রতিটা micro-op একটা সময়ে দেখানো হয় (serialised)। বাস্তবে দুই core-এর micro-op সত্যিই একই সময়ে চলতে পারে — কিন্তু ফল সবসময় এমন কোনো একটা ক্রমের সমান, যেটা এখানে দেখানো যায়; তাই এই model ঠিক।</p>
+
+    <h3>সব schedule যাচাই — এই পাতার simulator নিজেই চালিয়েছে</h3>
+    <p class="lead">নিচের table পাতা load হওয়ার সময় ওপরের <b>একই simulator code</b> দিয়ে হিসাব করা: প্রতিটা ধাপে কোন thread চলবে তার <b>সব সম্ভাব্য সিদ্ধান্ত</b> (exhaustive) পরীক্ষা করা হয়েছে।</p>
+    <div class="card tscroll"><table class="rtab" id="mxExh" style="min-width:560px"></table></div>
+    <div class="how" style="--c:var(--accent)"><b>Random schedule — কতবার ভুল হয়?</b>
+      <p>নিচের button প্রতিটা mode-এ <b>১০,০০০ বার</b> চালায়; প্রতি step-এ চলার যোগ্য thread-দের মধ্যে fair coin flip করে একটা বাছে (সত্যিকারের random interleaver, নিজে বানানো)।</p>
+      <p><button type="button" class="btn primary" id="mxRand">🎲 Random schedule × 10,000</button></p>
+      <div class="card tscroll" id="mxRandOut" style="margin-top:10px" hidden><table class="rtab" id="mxRandTab" style="min-width:560px"></table></div>
+      <p class="foot" id="mxRandNote" hidden>ওপরের % সংখ্যা এই coin-flip model-এর — আসল OS-এর নয়। আসল scheduler thread-কে লম্বা burst-এ চালায়, তাই ছোট critical section-এ race <b>কম</b> ঘটে কিন্তু একেবারে বন্ধ হয় না — ওপরের C program-এ 1M iteration-এ প্রায় অর্ধেক increment হারিয়েছে। সম্ভাবনা কম মানে bug নেই না: load বাড়লে, machine বদলালে প্রকাশ পায়।</p>
+    </div>
+  </section>
+
+  <!-- 5 -->
+  <section id="mistakes" style="--c:var(--pa)">
+    <h2><span class="num">5</span>Common ভুল</h2>
+    <span class="motto">Mutex নিজে সহজ — ভুল হয় ব্যবহারে</span>
+    <div class="mk">
+      <div class="card" style="--c:var(--pa)"><h4>1. Unlock ভুলে যাওয়া</h4><p>Early <code>return</code> বা exception-এ <code>unlock()</code> বাদ পড়লে lock চিরকাল locked, বাকি সবাই ঝুলে। সমাধান: scope-ভিত্তিক release — C++ <code>std::lock_guard</code> (RAII), C# <code>lock</code>, Java <code>try/finally</code> (বা <code>synchronized</code>), Go <code>defer mu.Unlock()</code>।</p></div>
+      <div class="card" style="--c:var(--pc)"><h4>2. Lock-এর scope বেশি বড় (coarse)</h4><p>সব কিছুর ওপর একটা বড় lock = সবাই লাইনে দাঁড়ায়, multi-core-এর সুবিধা শেষ (<b>contention</b>)। উল্টোদিকে খুব ছোট/ভুল জায়গায় lock = race ফিরে আসে। লক্ষ্য: <b>যতটুকু shared data ছোঁয়, ঠিক ততটুকু</b>।</p></div>
+      <div class="card" style="--c:var(--pi)"><h4>3. Lock ধরে I/O বা ধীর কাজ</h4><p>Lock ধরে network call, disk, <code>sleep</code> বা অজানা callback চালালে সেই সময় সবাই আটকে। হিসাব/I/O lock-এর <b>বাইরে</b> করো, শুধু shared state-এর update ভেতরে।</p></div>
+      <div class="card" style="--c:var(--pa)"><h4>4. Deadlock — উল্টো ক্রমে lock</h4><p>T1: A তারপর B; T2: B তারপর A → দুজন চিরকাল অপেক্ষা। সমাধান: সব জায়গায় একই lock order। পুরো গল্প, Coffman-এর ৪ শর্ত: <a href="../deadlock/index.html">Deadlock গাইড →</a></p></div>
+      <div class="card" style="--c:var(--pc)"><h4>5. Non-recursive mutex-এ আবার lock (self-deadlock)</h4><p>Thread নিজের ধরা mutex আবার চাইলে নিজেই নিজের জন্য অপেক্ষা (default pthread mutex-এ undefined/hang)। <b>Recursive (reentrant)</b> mutex — pthread <code>PTHREAD_MUTEX_RECURSIVE</code>, Java <code>synchronized</code>/<code>ReentrantLock</code>, C# <code>lock</code> — একই thread-কে আবার ঢুকতে দেয় ও hold count রাখে। তবে এটা design-এর গন্ধ ঢেকে রাখতে পারে।</p></div>
+      <div class="card" style="--c:var(--pi)"><h4>6. অন্য thread থেকে unlock</h4><p>Mutex-এর owner আছে: যে lock করেছে সেই unlock করবে। অন্যজন করলে error বা undefined behaviour। "এক thread আটকাবে, অন্য thread ছাড়বে" দরকার হলে সেটা <b>semaphore</b>-এর কাজ।</p></div>
+      <div class="card" style="--c:var(--pa)"><h4>7. Priority inversion</h4><p>Low-priority L mutex ধরে আছে; High-priority H সেটা চায় → H ঘুমায়। এরপর Medium M এসে L-কে preempt করে চলতে থাকে → L unlock করতে পারে না → H অনির্দিষ্টকাল আটকে, যদিও H-ই সবচেয়ে জরুরি। বিখ্যাত ঘটনা: <b>Mars Pathfinder (1997)</b> — মহাকাশযানে বারবার system reset; কারণ ছিল এই inversion। সমাধান: <b>priority inheritance</b> (L সাময়িকভাবে H-এর priority পায়) বা priority ceiling।</p></div>
+      <div class="card" style="--c:var(--pc)"><h4>8. Lock convoy</h4><p>অনেক thread একই hot lock চায়, প্রতিটা handoff-এ sleep/wake context switch লাগে — throughput ধসে যায়, যদিও কেউ deadlock-এ নেই। প্রতিকার: critical section ছোট করা, lock ভাগ করা (sharding), read-mostly হলে read-write lock বা atomic।</p></div>
+    </div>
+
+    <h3>প্রতিটা operation আলাদা lock-এ — তবু race</h3>
+    <p class="lead">Mutex শুধু <b>একটা critical section-এর ভেতরটা</b> রক্ষা করে। দুটো ধাপ (check, তারপর act) যদি আলাদা আলাদা lock নেয়, মাঝখানে ফাঁক থেকে যায়। এটা <b>check-then-act</b> race:</p>
+    <div class="grid2">
+      <div>
+        <div class="file" style="--dot:var(--bad)"><i></i>ভুল — প্রতিটা method নিজে thread-safe<span class="r" style="--tc:var(--warn)">illustrative — not run</span></div>
+<pre class="code" data-lang="java">// balance = 600; T1 আর T2 দুজনই 500 তুলতে চায়
+if (account.getBalance() &gt;= 500) {   // synchronized — lock নিয়ে পড়ে ছেড়ে দিল
+    account.withdraw(500);            // synchronized — আবার আলাদা lock
+}
+// দুজনই 600 দেখল → দুজনই withdraw → balance = -400</pre>
+      </div>
+      <div>
+        <div class="file" style="--dot:var(--ok)"><i></i>ঠিক — check + act একই lock-এ<span class="r" style="--tc:var(--warn)">illustrative — not run</span></div>
+<pre class="code" data-lang="java">synchronized (account) {              // একটাই critical section
+    if (account.getBalance() &gt;= 500) {
+        account.withdraw(500);        // reentrant, তাই ভেতরে আবার ঢুকতে পারে
+    }
+}
+// অথবা একটা atomic operation: account.tryWithdraw(500)</pre>
+      </div>
+    </div>
+    <p class="foot">Database-এও এই গল্প হুবহু এক: <code>SELECT balance</code> তারপর <code>UPDATE</code> আলাদা ধাপ হলে lost update। সমাধানও এক জাতের — <code>SELECT … FOR UPDATE</code> (pessimistic row lock) বা version column (optimistic)। দেখো: <a href="../../03-dbms-sql/optimistic-pessimistic/index.html">Optimistic বনাম Pessimistic Locking →</a> এবং <a href="../../03-dbms-sql/dbms-theory/index.html">DBMS theory →</a></p>
+  </section>
+
+  <!-- 6 -->
+  <section id="compare" style="--c:var(--pd)">
+    <h2><span class="num">6</span>Mutex vs Semaphore vs Spinlock vs Monitor vs Atomics</h2>
+    <span class="motto">একই সমস্যার আলাদা হাতিয়ার</span>
+    <div class="card tscroll">
+      <table style="min-width:860px">
+        <thead><tr><th></th><th>Ownership</th><th>Count / state</th><th>না পেলে</th><th>কখন ব্যবহার</th></tr></thead>
+        <tbody>
+          <tr><td class="p" style="--c:var(--pa)"><span>M</span>Mutex</td><td>আছে — lock করা thread-ই unlock করে</td><td>locked / unlocked (১টা)</td><td>Sleep (বা spin-then-sleep)</td><td>critical section রক্ষা, shared data-র একক access</td></tr>
+          <tr><td class="p" style="--c:var(--pc)"><span>S</span>Spinlock</td><td>সাধারণত আছে</td><td>flag (১টা)</td><td>Busy-wait, CPU পোড়ে</td><td>অতি ছোট section, multi-core, kernel / interrupt-এর ভেতর</td></tr>
+          <tr><td class="p" style="--c:var(--pi)"><span>B</span>Binary semaphore</td><td><b>নেই</b> — যে কেউ post করতে পারে</td><td>0 বা 1</td><td>Sleep</td><td>signalling ("event হয়েছে"); mutex-এর বিকল্প <b>না</b> — ownership আর priority inheritance নেই</td></tr>
+          <tr><td class="p" style="--c:var(--pi)"><span>N</span>Counting semaphore</td><td>নেই</td><td>0 … N</td><td>count 0 হলে sleep</td><td>N-টা resource (connection pool, N জন পর্যন্ত একসাথে), producer-consumer-এ slot গোনা</td></tr>
+          <tr><td class="p" style="--c:var(--pd)"><span>C</span>Monitor / condition variable</td><td>mutex-এর সাথে — wait করার সময় mutex ছাড়ে</td><td>mutex + "শর্ত" (যেমন queue খালি নয়)</td><td>শর্ত না মেটা পর্যন্ত sleep</td><td>"কিছু হওয়ার জন্য অপেক্ষা" — Java <code>wait/notify</code>, C# <code>Monitor.Wait/Pulse</code>, pthread <code>cond_wait</code></td></tr>
+          <tr><td class="p" style="--c:var(--pa)"><span>A</span>Atomics / lock-free</td><td>lock নেই</td><td>একটা machine word</td><td>অপেক্ষা নেই — CAS ব্যর্থ হলে retry</td><td>একটা variable-এর counter, flag, pointer swap; একাধিক variable-এর invariant হলে mutex</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="how" style="--c:var(--pd)"><b>মনে রাখার সূত্র:</b>
+      <ul>
+        <li><b>Mutex = তালা</b> (যে লাগায় সে-ই খোলে), <b>Semaphore = টিকেটের গোনা / ঘণ্টা</b> (যে কেউ বাজাতে পারে)।</li>
+        <li>Mutex একা "শর্তের জন্য অপেক্ষা" করতে পারে না — ফাঁকা queue-তে busy-loop না করে ঘুমাতে condition variable লাগে, যা <code>wait()</code>-এ mutex atomic-ভাবে ছেড়ে ঘুমায়।</li>
+        <li><b>Database-এও একই ধারণা:</b> row lock / <code>SELECT … FOR UPDATE</code> হলো mutex-এর database সংস্করণ (সেখানে transaction শেষ হলে unlock), আর optimistic locking ঠিক CAS-এর মতো — "version বদলায়নি তো? তাহলেই লেখো, নইলে retry।" <a href="../../03-dbms-sql/optimistic-pessimistic/index.html">Optimistic বনাম Pessimistic →</a> · <a href="../../03-dbms-sql/dbms-theory/index.html">DBMS theory →</a></li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 7 -->
+  <section id="qa" style="--c:var(--accent)">
+    <h2><span class="num" style="--c:var(--accent)">Q</span>Interview-এ যা আসে</h2>
+    <div class="card" style="padding:4px 18px">
+      <details><summary>Race condition আর data race — একই জিনিস?</summary>
+        <ul>
+          <li><b>Data race:</b> দুই thread <b>একই memory location</b>-এ একই সময়ে access করে, অন্তত একটা write, আর কোনো synchronisation নেই। এটা একটা সংকীর্ণ, যান্ত্রিক সংজ্ঞা; C/C++/Java-র memory model-এ এর আলাদা নিয়ম আছে (C/C++-এ undefined behaviour)।</li>
+          <li><b>Race condition:</b> ফল <b>timing / ক্রমের ওপর নির্ভর</b> করে — বড় ধারণা, logic-এর সমস্যা।</li>
+          <li>Data race ছাড়াও race condition হয়: প্রতিটা access আলাদা lock-এ, তাই data race নেই — কিন্তু check-then-act-এর মাঝে ফাঁক (ওপরের balance উদাহরণ)। আবার data race সাধারণত race condition-এর কারণ, আর "benign data race" ভেবে ছেড়ে দেওয়া C/C++-এ ঝুঁকিপূর্ণ।</li>
+        </ul>
+      </details>
+      <details><summary>Mutex আর semaphore-এর পার্থক্য? Binary semaphore কি mutex?</summary>
+        <ul>
+          <li><b>Ownership:</b> mutex-এর owner আছে, শুধু সে-ই unlock করে। Semaphore-এ নেই — এক thread <code>wait</code>, অন্য thread <code>post</code> করতে পারে।</li>
+          <li><b>Purpose:</b> mutex = mutual exclusion (locking); semaphore = signalling আর resource গোনা।</li>
+          <li><b>Binary semaphore ≠ mutex:</b> মান দুটো (0/1) বলেই একই না। Binary semaphore-এ ownership নেই, তাই priority inheritance দেওয়া যায় না (কাকে boost করবে?), ভুল thread-এর post-ও আটকানো যায় না; recursive locking-ও হয় না। Mutex চাইলে mutex-ই নাও।</li>
+        </ul>
+      </details>
+      <details><summary>Single core-এ spinlock খারাপ কেন?</summary>
+        <p>কারণ spinner যতক্ষণ CPU-তে ঘুরছে, <b>lock-holder চলতেই পারছে না</b> (core মাত্র একটা, সে preempted)। Spinner তার পুরো time slice শুধু ঘুরে নষ্ট করে, তারপর scheduler holder-কে চালায় — spin পুরোটাই বৃথা। Multi-core-এ holder অন্য core-এ চলতে থাকে, তাই অল্প spin কাজে আসে। Kernel spinlock ধরা অবস্থায় preemption বন্ধ রাখে যাতে holder মাঝপথে preempt না হয় (মনে থাকা তথ্য, এখানে যাচাই করিনি: uniprocessor kernel build-এ spinlock প্রায় শুধু preemption বন্ধ করাতেই নেমে আসে)।</p>
+      </details>
+      <details><summary>Mutex কীভাবে thread-কে block করে?</summary>
+        <ul>
+          <li><code>lock()</code> প্রথমে user space-এ atomic CAS করে (fast path)। সফল হলে কোনো kernel call নেই।</li>
+          <li>ব্যর্থ হলে (কেউ ধরে আছে) thread system call করে kernel-কে বলে "এই ঠিকানা বদলালে আমাকে ডেকো" — Linux-এ <code>futex(FUTEX_WAIT)</code>। Kernel thread-কে <b>sleeping/blocked</b> করে wait queue-তে রাখে, CPU অন্য runnable thread-কে দেয়।</li>
+          <li><code>unlock()</code> flag ছেড়ে, কেউ অপেক্ষায় থাকলে <code>futex(FUTEX_WAKE)</code> দিয়ে একজনকে runnable করে। সে CPU পেলে আবার lock নেওয়ার চেষ্টা করে।</li>
+          <li>তাই block হওয়া মানে busy-wait না; thread scheduler-এর run queue থেকে সরে যায়।</li>
+        </ul>
+      </details>
+      <details><summary><code>i++</code> কি atomic?</summary>
+        <p><b>না।</b> এটা load → add → store, আর মাঝে অন্য thread ঢুকতে পারে — ওপরের real run-এ প্রায় অর্ধেক increment হারিয়েছে। এমনকি x86-এ <code>add [mem], 1</code> এক instruction হলেও, <code>lock</code> prefix ছাড়া multi-core-এ সেটা atomic না (ভেতরে read-modify-write আলাদা ধাপ)। Java-তে <code>volatile int</code>-এর <code>i++</code>-ও atomic না — <code>AtomicInteger.incrementAndGet()</code> বা <code>synchronized</code>। C#-এ <code>Interlocked.Increment</code>, C11-এ <code>atomic_fetch_add</code>। (Java-তে 32-bit <code>int</code> একটা read বা write atomic, কিন্তু <code>++</code> যৌগিক।)</p>
+      </details>
+      <details><summary>Mutex ধরা thread crash করলে কী হয়?</summary>
+        <ul>
+          <li>পুরো process ভেঙে গেলে মেমরিসহ mutex-ও শেষ — সমস্যা নেই। সমস্যা: <b>thread শেষ হয়ে গেল lock ধরা অবস্থায়</b> (বা process-shared mutex-এ অন্য process মরল) — lock চিরকাল locked থাকে, বাকিরা ঝুলে।</li>
+          <li>POSIX <b>robust mutex</b> (<code>PTHREAD_MUTEX_ROBUST</code>): owner মরলে পরের <code>lock()</code> <code>EOWNERDEAD</code> ফেরত দেয়; নতুন owner shared data মেরামত করে <code>pthread_mutex_consistent()</code> ডাকে, তারপর স্বাভাবিক চলে। মেরামত না করে unlock করলে mutex অব্যবহারযোগ্য (<code>ENOTRECOVERABLE</code>)।</li>
+          <li>Java/C#-এ <code>synchronized</code>/<code>lock</code> exception হলেও release হয়; তবে data অর্ধেক-বদলানো থেকে যেতে পারে — lock ছাড়া ≠ state ঠিক।</li>
+        </ul>
+      </details>
+      <details><summary>Priority inversion কী? কীভাবে ঠেকায়?</summary>
+        <p>High-priority task এমন mutex চাইছে যেটা low-priority task ধরে আছে; Medium-priority task low-কে preempt করে চলতে থাকায় low unlock করতে পারে না, ফলে High আটকে থাকে Medium-এর কারণে — priority উল্টে গেছে। Mars Pathfinder-এ এটাই ঘটেছিল (পরে priority inheritance চালু করে সারানো হয়)। সমাধান: <b>priority inheritance</b> (holder সাময়িক waiter-এর priority পায়, POSIX <code>PTHREAD_PRIO_INHERIT</code>), <b>priority ceiling</b>, বা critical section ছোট রাখা / lock-free।</p>
+      </details>
+      <details><summary>Reentrant (recursive) lock কী? কখন সমস্যা?</summary>
+        <p>একই thread বারবার একই lock নিতে পারে; lock একটা <b>hold count</b> রাখে, যতবার নিয়েছে ততবার unlock করলে তবেই অন্যরা পায়। Java <code>synchronized</code> আর <code>ReentrantLock</code>, C# <code>lock</code> reentrant; Go-র <code>sync.Mutex</code> আর default pthread mutex <b>না</b> (আবার lock = self-deadlock)। সমস্যা: reentrancy-তে ঢোকা method দেখতে পারে <b>অর্ধেক-বদলানো</b> state (invariant সাময়িক ভাঙা), আর design-এর ভুল (কে কোন lock ধরে আছে) চাপা পড়ে যায়।</p>
+      </details>
+      <details><summary>কখন mutex না লাগিয়ে atomic-ই যথেষ্ট?</summary>
+        <ul>
+          <li>যখন সুরক্ষা দিতে হবে <b>একটা মাত্র variable</b> (counter, flag, pointer, reference count) আর operation-টা এক atomic ধাপে হয় (fetch-add, CAS, exchange)।</li>
+          <li>একাধিক variable নিয়ে invariant থাকলে (যেমন "balance আর history একসাথে বদলাবে") atomic যথেষ্ট না — mutex লাগে, নইলে মাঝের অবস্থা দেখা যায়।</li>
+          <li>Lock-free code লেখা কঠিন (ABA সমস্যা, memory ordering); সাধারণ ক্ষেত্রে mutex-ই সহজ ও নিরাপদ, আর uncontended mutex ইতিমধ্যে সস্তা (user-space fast path)।</li>
+        </ul>
+      </details>
+      <details><summary>Race কীভাবে ধরবে? (ThreadSanitizer)</summary>
+        <p>Race ধরা কঠিন কারণ ফল অনির্দিষ্ট; run-এ ধরা পড়লেও না-ও পড়তে পারে। তাই <b>dynamic race detector</b>: C/C++ (clang/gcc) <code>-fsanitize=thread</code> (<b>ThreadSanitizer</b>), Go <code>-race</code>, Valgrind-এর Helgrind/DRD (আমার জানা মতে, এগুলো চালাইনি)। TSan-এর মূল সুবিধা: race <b>বাস্তবে ফল ভুল না করলেও</b> দুই access-এর মাঝে happens-before নেই দেখলেই রিপোর্ট করে। এই পাতার <code>race.c</code> এই Mac-এ <code>clang -O0 -g -pthread -fsanitize=thread</code> দিয়ে চালিয়ে পাওয়া আসল report:</p>
+<pre class="code" data-lang="log"><span class="e">WARNING: ThreadSanitizer: data race (pid=62583)
+  Write of size 4 at 0x00010263c000 by thread T2:
+    #0 work race.c:9 (race_tsan:arm64+0x100003d40)
+
+  Previous write of size 4 at 0x00010263c000 by thread T1:
+    #0 work race.c:9 (race_tsan:arm64+0x100003d40)
+
+  Location is global 'counter' at 0x00010263c000 (race_tsan+0x100008000)
+  ...
+SUMMARY: ThreadSanitizer: data race race.c:9 in work</span>
+<span class="o">counter = 1007591 (expected 2000000)
+ThreadSanitizer: reported 1 warnings</span></pre>
+        <p class="foot">Thread creation-এর stack ইত্যাদি মাঝের অংশ <code>...</code> দিয়ে ছোট করেছি; বাকিটা অক্ষত। <code>race.c:9</code> = <code>counter++</code> লাইন। একই tool দিয়ে <code>mutex.c</code> চালালে কোনো warning আসেনি, ফল 2000000। TSan ধীর (কয়েকগুণ) আর memory বেশি খায়, তাই test/CI-তে চালানো হয়, production-এ না। Java-তে এর সমান built-in নেই; stress test আর library (যেমন jcstress) ব্যবহার করা হয়।</p>
+      </details>
+      <details><summary>Spinlock বনাম sleeping mutex — কোনটা কখন?</summary>
+        <p>অপেক্ষা <b>context switch-এর খরচের চেয়ে কম</b> হবে মনে হলে spin (ছোট section, multi-core, holder এখন চলছে)। অপেক্ষা লম্বা বা অনিশ্চিত হলে sleep। বাস্তবে hybrid — আগে অল্প spin, তারপর sleep (adaptive mutex)। User-space application-এ সাধারণত library-র mutex নাও (সে এটা জানে); নিজে spinlock লিখো না — holder preempt হলে spinner CPU পোড়াবে। Kernel-এর interrupt context-এ sleep নিষিদ্ধ, তাই সেখানে spinlock-ই একমাত্র উপায়।</p>
+      </details>
+    </div>
+  </section>
+
+  <footer><span>WellDev · Operating System · Concurrency</span><a href="../01-os-kernel-process-thread.html">← OS, Kernel, Process ও Thread</a></footer>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script>
+/* ===================== code highlighter ===================== */
+const esc = s => s.replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+const KW = {
+  c: "int|void|char|const|static|struct|return|for|while|do|if|else|true|false|NULL|define|include|typedef|volatile|unsigned",
+  cs: "static|readonly|object|void|lock|for|int|return|var|new|if|else|using|try|finally",
+  java: "static|final|int|void|synchronized|for|if|else|return|new|class|try|finally|boolean|true|false",
+  asm: "mov|add|ldr|str|lock|xadd|cmpxchg|xchg|adrp",
+};
+function highlight(src, lang) {
+  const com = lang === "asm" ? ";[^\\n]*" : "\\/\\/[^\\n]*";
+  const re = new RegExp(`(${com})|("(?:[^"\\\\]|\\\\.)*")|\\b(\\d+)\\b|\\b(${KW[lang]})\\b|\\b([A-Z][a-z]+[A-Z]\\w*)\\b`, "g");
+  return esc(src).replace(re, (m, c, s, d, k, t) =>
+    c ? `<span class="c">${c}</span>` : s ? `<span class="s">${s}</span>` : d ? `<span class="d">${d}</span>` :
+    k ? `<span class="k">${k}</span>` : (lang === "cs" || lang === "java") ? `<span class="t">${t}</span>` : t);
+}
+document.querySelectorAll("pre.code").forEach(pre => {
+  const lang = pre.dataset.lang;
+  if (!KW[lang]) return;
+  [...pre.childNodes].forEach(node => {
+    if (node.nodeType !== 3) return;
+    const span = document.createElement("span");
+    span.innerHTML = highlight(node.textContent, lang);
+    node.replaceWith(...span.childNodes);
+  });
+});
+
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const TN = ["T1", "T2"], WHO = ["var(--sa)", "var(--sb)"];
+
+/* ===================== mini: why "check then set" is itself a race ===================== */
+(function () {
+  const FLOWS = {
+    naive: [
+      { f: 0, a: "", b: "", m: "flag = 0 (ফাঁকা)। দুই thread-ই lock নিতে চায়: <code>if (!locked) locked = true;</code> — এর ভেতরে দুইটা ধাপ: <b>পড়া</b>, তারপর <b>লেখা</b>।" },
+      { f: 0, a: "read flag → 0\n(ফাঁকা মনে হলো)", b: "", hot: 0, m: "<b>T1</b> flag পড়ল: 0। এখনো কিছু লেখেনি।" },
+      { f: 0, a: "read flag → 0", b: "read flag → 0\n(এখনোও ফাঁকা!)", hot: 1, m: "<b>T2</b> flag পড়ল — T1 এখনো লেখেনি, তাই T2-ও <b>0</b> দেখল।" },
+      { f: 1, a: "write flag = 1\n→ আমি owner,\nCS-এ ঢুকলাম", b: "read flag → 0", hot: 0, inA: 1, m: "<b>T1</b> লিখল flag = 1, ভাবল সে একাই মালিক।" },
+      { f: 1, a: "write flag = 1\n→ আমি owner,\nCS-এ ঢুকলাম", b: "write flag = 1\n→ আমিও owner!\nCS-এ ঢুকলাম", hot: 1, inA: 1, inB: 1, bad: 1, m: "<b>T2</b>-ও flag = 1 লিখে ঢুকে পড়ল।" },
+    ],
+    tas: [
+      { f: 0, a: "", b: "", m: "flag = 0। এবার <code>test_and_set(&amp;flag)</code> — পুরোনো মান ফেরত দেওয়া <b>আর</b> 1 লেখা, একটাই অবিভাজ্য hardware step।" },
+      { f: 1, a: "tas(flag) → 0\nflag এখন 1 (একই step)\n→ owner ✓", b: "", hot: 0, inA: 1, good: 1, m: "<b>T1</b>: tas পুরোনো মান <b>0</b> পেল ও একই step-এ flag = 1 হয়ে গেল। T1 owner।" },
+      { f: 1, a: "owner, CS-এ আছে", b: "tas(flag) → 1\n→ ব্যর্থ, অপেক্ষা\n(spin বা sleep)", hot: 1, inA: 1, good: 1, m: "<b>T2</b>: tas পুরোনো মান <b>1</b> পেল — বোঝা গেল lock অন্যের হাতে। মাঝখানে ঢোকার ফাঁক ছিল না।" },
+      { f: 0, a: "CS শেষ\nflag ← 0 (release)", b: "অপেক্ষায়…", hot: 0, m: "<b>T1</b> unlock করল: flag = 0।" },
+      { f: 1, a: "শেষ ✓", b: "tas(flag) → 0\nflag এখন 1\n→ owner ✓", hot: 1, inB: 1, good: 1, ok: 1, m: "<b>T2</b>-র পরের tas পুরোনো মান 0 পেল — এখন সে owner। একসময়ে একজনই।" },
+    ],
+  };
+  let kind = "naive", k = 0;
+  const T1 = d3.select("#nvT1"), T2 = d3.select("#nvT2"), FL = d3.select("#nvFl"), MSG = d3.select("#nvMsg"), V = d3.select("#nvVerdict");
+  function draw(pulse) {
+    const s = FLOWS[kind][k], last = k === FLOWS[kind].length - 1;
+    T1.select("p").text(s.a || "—"); T2.select("p").text(s.b || "—");
+    T1.classed("hot", s.hot === 0).classed("in", !!s.inA).classed("good", !!s.good);
+    T2.classed("hot", s.hot === 1).classed("in", !!s.inB).classed("good", !!s.good);
+    FL.classed("one", s.f === 1).classed("zero", s.f === 0);
+    FL.select("b").text(s.f);
+    if (pulse) { FL.classed("pulse", false); void FL.node().offsetWidth; FL.classed("pulse", true); }
+    MSG.html(s.m);
+    d3.select("#nvStep").property("disabled", last);
+    V.attr("class", "verdict" + (last ? (s.bad ? " bad" : " ok") : "")).html(
+      !last ? "" : s.bad ? "<b>✗ Mutual exclusion ভাঙল</b> — দুই thread একই সময়ে critical section-এ। Lock নিজেই একটা race ছিল।"
+                         : "<b>✓ ঠিক</b> — check আর set একটাই atomic step, তাই শুধু একজন ঢুকল।");
+  }
+  d3.selectAll("[data-nv]").on("click", function () {
+    kind = this.dataset.nv; k = 0;
+    d3.selectAll("[data-nv]").classed("on", function () { return this.dataset.nv === kind; });
+    draw(false);
+  });
+  d3.select("#nvStep").on("click", () => { if (k < FLOWS[kind].length - 1) { k++; draw(true); } });
+  d3.select("#nvReset").on("click", () => { k = 0; draw(false); });
+  draw(false);
+})();
+
+/* SIM-START */
+// Pure simulator logic (no DOM). One "step" = one thread executes one micro-op.
+const START = 5, EXPECT = 7;                       // counter starts at 5; two threads add 1 each -> 7
+const PROG = {
+  nolock: [["LOAD", "reg ← [counter]"], ["ADD", "reg ← reg + 1"], ["STORE", "[counter] ← reg"]],
+  mutex:  [["LOCK", "mutex_lock(&m)"], ["LOAD", "reg ← [counter]"], ["ADD", "reg ← reg + 1"], ["STORE", "[counter] ← reg"], ["UNLOCK", "mutex_unlock(&m)"]],
+  spin:   [["LOCK", "while (tas(&flag)) ;"], ["LOAD", "reg ← [counter]"], ["ADD", "reg ← reg + 1"], ["STORE", "[counter] ← reg"], ["UNLOCK", "flag ← 0"]],
+  atomic: [["XADD", "lock xadd [counter], 1"]],
+};
+const SCRIPT = {
+  "nolock-bad":   [0, 1, 0, 1, 0, 1],                                  // both LOAD before either STORE
+  "nolock-lucky": [0, 0, 0, 1, 1, 1],                                  // T1 finishes, then T2
+  mutex:  [0, 0, 1, 0, 0, 0, 1, 1, 1, 1, 1],                           // T2 tries lock while T1 holds it
+  spin:   [0, 0, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1],
+  atomic: [0, 1],
+};
+function initState(mode) {
+  return { mode, counter: START, steps: 0, lock: { owner: null, queue: [] },
+    th: [0, 1].map(() => ({ pc: 0, reg: null, loaded: null, st: "READY", spins: 0 })) };
+}
+const runnable = (S, i) => S.th[i].st === "READY" || S.th[i].st === "SPINNING";
+const allDone = S => S.th.every(t => t.st === "DONE");
+function step(S, i) {
+  const t = S.th[i], prog = PROG[S.mode], op = prog[t.pc][0], ev = { t: i, op, mode: S.mode, kind: "" };
+  switch (op) {
+    case "LOCK":
+      if (S.lock.owner === null) { S.lock.owner = i; t.st = "READY"; t.pc++; ev.kind = "acquire"; }
+      else if (S.mode === "mutex") { S.lock.queue.push(i); t.st = "BLOCKED"; ev.kind = "block"; ev.owner = S.lock.owner; }
+      else { t.st = "SPINNING"; t.spins++; ev.kind = "spin"; ev.owner = S.lock.owner; }
+      break;
+    case "UNLOCK":
+      if (S.lock.owner !== i) throw new Error("unlock by a thread that does not own the lock");
+      S.lock.owner = null; t.pc++; ev.kind = "release";
+      if (S.mode === "mutex" && S.lock.queue.length) { const w = S.lock.queue.shift(); S.th[w].st = "READY"; ev.woke = w; }
+      break;
+    case "LOAD":  t.reg = S.counter; t.loaded = t.reg; t.pc++; ev.kind = "load"; ev.val = t.reg; break;
+    case "ADD":   ev.from = t.reg; t.reg += 1; t.pc++; ev.kind = "add"; ev.val = t.reg; break;
+    case "STORE": ev.prev = S.counter; ev.lost = S.counter !== t.loaded; S.counter = t.reg; t.pc++; ev.kind = "store"; ev.val = t.reg; break;
+    case "XADD":  ev.from = S.counter; S.counter += 1; t.reg = ev.from; t.pc++; ev.kind = "xadd"; ev.val = S.counter; break;
+  }
+  if (t.pc >= prog.length) t.st = "DONE";
+  S.steps++;
+  return ev;
+}
+// A spinning thread that retries while the lock is still held changes nothing -> not a distinct schedule.
+const choices = S => [0, 1].filter(i => runnable(S, i) && !(S.th[i].st === "SPINNING" && S.lock.owner !== null));
+const inCS = (S, i) => { const n = PROG[S.mode].length, p = S.th[i].pc; return S.th[i].st !== "DONE" ? p >= 1 && p <= n - 1 : false; };
+// Exhaustive: every possible interleaving of micro-ops (each distinct schedule counted once).
+function exhaustive(mode) {
+  const r = { schedules: 0, finals: {}, deadlocks: 0, mutexViolations: 0 };
+  (function go(S) {
+    if (mode === "mutex" || mode === "spin") { if (inCS(S, 0) && inCS(S, 1)) r.mutexViolations++; }
+    const opts = choices(S);
+    if (!opts.length) {
+      if (allDone(S)) { r.schedules++; r.finals[S.counter] = (r.finals[S.counter] || 0) + 1; } else r.deadlocks++;
+      return;
+    }
+    for (const i of opts) { const c = JSON.parse(JSON.stringify(S)); step(c, i); go(c); }
+  })(initState(mode));
+  return r;
+}
+// Random scheduler: at every step pick one runnable thread by a fair coin flip.
+function randomRuns(mode, n, rnd = Math.random) {
+  const finals = {};
+  for (let k = 0; k < n; k++) {
+    const S = initState(mode);
+    for (let guard = 0; guard < 1000; guard++) {
+      const opts = [0, 1].filter(i => runnable(S, i));
+      if (!opts.length) break;
+      step(S, opts[opts.length === 1 ? 0 : (rnd() < 0.5 ? 0 : 1)]);
+    }
+    finals[S.counter] = (finals[S.counter] || 0) + 1;
+  }
+  return finals;
+}
+/* SIM-END */
+
+
+/* ===================== D3 animation ===================== */
+(function () {
+  const svg = d3.select("#mxSvg");
+  const THX = [20, 490], TY = 16, TW = 250, TH = 290, LX = 290, MEM = { x: 380, y: 258 };
+  const REG = [{ x: THX[0] + 140, y: TY + 232, w: 96, h: 44 }, { x: THX[1] + 16, y: TY + 232, w: 96, h: 44 }];
+  const regC = i => [REG[i].x + REG[i].w / 2, REG[i].y + REG[i].h / 2];
+  const SLOT = j => ({ x: 304 + j * 50, y: 134 });
+  const INTRO = {
+    nolock: "<b>No lock:</b> LOAD, ADD, STORE — thread-গুলো একে অপরকে ঠেকায় না। Schedule বদলে দেখো ফল কতটা বদলায়।",
+    mutex: "<b>Sleeping mutex:</b> lock না পেলে thread <b>BLOCKED</b> হয়ে wait queue-তে ঘুমায়; unlock-এ kernel একজনকে জাগায়। ঘুমানো thread-এর core অন্য কাজ করতে পারে।",
+    spin: "<b>Spinlock:</b> lock না পেলে thread ঘুমায় না — loop-এ বারবার test-and-set করে (busy-wait)। Core ব্যস্ত দেখায়, কিন্তু কোনো কাজ হয় না।",
+    atomic: "<b>Atomic (<code>lock xadd</code>):</b> read-modify-write একটাই অবিভাজ্য step। মাঝখানে ঢোকার সুযোগ নেই — তাই lock ছাড়াই ঠিক।",
+  };
+  let mode = "nolock", S, si = 0, playing = false, gen = 0, timers = [], pending = null, logN = 0;
+  const later = (fn, ms) => { const g = gen; const id = setTimeout(() => { if (g === gen) fn(); }, ms); timers.push(id); };
+
+  /* ---------- static scaffolding ---------- */
+  const g = svg.append("g");
+  const thr = [0, 1].map(i => {
+    const G = g.append("g").attr("class", "thr").style("--who", WHO[i]);
+    G.append("rect").attr("class", "panel").attr("x", THX[i]).attr("y", TY).attr("width", TW).attr("height", TH).attr("rx", 14);
+    G.append("text").attr("class", "ttl").attr("x", THX[i] + 16).attr("y", TY + 28).style("fill", WHO[i]).text(`${TN[i]} · Core ${i}`);
+    const pill = G.append("g").attr("class", "spill READY").attr("transform", `translate(${THX[i] + TW - 112},${TY + 12})`);
+    pill.append("rect").attr("width", 100).attr("height", 24).attr("rx", 12);
+    pill.append("text").attr("x", 50).attr("y", 16).attr("text-anchor", "middle");
+    G.append("text").attr("class", "dim").attr("x", THX[i] + 16).attr("y", TY + 56).text("micro-ops  (counter++)");
+    G.append("g").attr("class", "rows");
+    const rx = REG[i].x, ry = REG[i].y;
+    G.append("text").attr("class", "dim").attr("x", rx).attr("y", ry - 6).text("register");
+    G.append("rect").attr("class", "regbox").attr("x", rx).attr("y", ry).attr("width", REG[i].w).attr("height", REG[i].h).attr("rx", 9);
+    G.append("text").attr("class", "regv").attr("x", rx + REG[i].w / 2).attr("y", ry + 30).attr("text-anchor", "middle").text("—");
+    const mx = i === 0 ? THX[0] + 16 : THX[1] + 130;
+    const meter = G.append("g").attr("class", "meterg").attr("transform", `translate(${mx},${TY + 232})`).style("display", "none");
+    meter.append("text").attr("class", "burn").attr("y", -6).text("CPU: spin ×0");
+    meter.append("rect").attr("class", "meter").attr("width", 104).attr("height", 14).attr("rx", 7).attr("y", 8);
+    meter.append("rect").attr("class", "meterfill").attr("width", 0).attr("height", 14).attr("rx", 7).attr("y", 8);
+    meter.append("text").attr("class", "dim").attr("y", 40).text("core ব্যস্ত, কাজ নেই");
+    return G;
+  });
+  // lock box
+  const lock = g.append("g");
+  lock.append("rect").attr("class", "box lock na").attr("x", LX).attr("y", TY).attr("width", 180).attr("height", 146).attr("rx", 14);
+  const lockTitle = lock.append("text").attr("class", "ttl").attr("x", LX + 90).attr("y", TY + 26).attr("text-anchor", "middle").text("mutex m");
+  const lockState = lock.append("text").attr("class", "lockst na").attr("x", LX + 90).attr("y", TY + 52).attr("text-anchor", "middle").text("UNLOCKED");
+  const owner = lock.append("g").attr("class", "owner").style("--who", WHO[0]).attr("transform", `translate(${LX + 40},${TY + 62})`);
+  owner.append("rect").attr("width", 100).attr("height", 24).attr("rx", 12); owner.append("text").attr("x", 50).attr("y", 16).attr("text-anchor", "middle");
+  lock.append("text").attr("class", "dim").attr("x", LX + 14).attr("y", TY + 112).text("wait queue");
+  [0, 1, 2].forEach(j => lock.append("rect").attr("class", "slot").attr("x", SLOT(j).x).attr("y", SLOT(j).y).attr("width", 44).attr("height", 22).attr("rx", 6).attr("transform", `translate(0,0)`));
+  const chips = g.append("g");
+  // memory
+  const memG = g.append("g");
+  memG.append("rect").attr("class", "box").attr("x", LX).attr("y", 190).attr("width", 180).attr("height", 116).attr("rx", 14);
+  memG.append("text").attr("class", "dim").attr("x", LX + 14).attr("y", 210).text("MEMORY (shared)");
+  memG.append("rect").attr("class", "regbox").style("--who", "var(--muted)").attr("x", LX + 20).attr("y", 220).attr("width", 140).attr("height", 70).attr("rx", 10);
+  memG.append("text").attr("class", "mono dim").attr("x", LX + 90).attr("y", 238).attr("text-anchor", "middle").text("counter");
+  const cellV = memG.append("text").attr("class", "cellv").attr("x", LX + 90).attr("y", 276).attr("text-anchor", "middle").text(START);
+  const flash = memG.append("rect").attr("class", "flash").attr("x", LX + 14).attr("y", 214).attr("width", 152).attr("height", 82).attr("rx", 13);
+  const atomTag = memG.append("text").attr("class", "burn").attr("x", LX + 90).attr("y", 300).attr("text-anchor", "middle").style("display", "none").text("ATOMIC — অবিভাজ্য");
+  const tok = g.append("g").attr("class", "tok").style("opacity", 0);
+  tok.append("circle").attr("r", 17); const tokT = tok.append("text").attr("text-anchor", "middle").attr("y", 5);
+
+  /* ---------- helpers ---------- */
+  const dur = () => reduce ? 0 : Math.min(650, delay() * 0.55);
+  const delay = () => 1300 / +document.getElementById("mxSpeed").value;
+  const regText = i => S.th[i].reg === null ? "—" : S.th[i].reg;
+  const stLabel = t => ({ READY: "RUNNABLE", BLOCKED: "BLOCKED · sleep", SPINNING: "SPINNING", DONE: "DONE" }[t.st]);
+
+  function buildRows() {
+    const prog = PROG[mode];
+    thr.forEach((G, i) => {
+      const rows = G.select(".rows").selectAll("g.row").data(prog, (d, j) => i + "-" + j);
+      rows.exit().remove();
+      const e = rows.enter().append("g").attr("class", "row");
+      e.append("rect").attr("x", THX[i] + 12).attr("width", 226).attr("height", 24).attr("rx", 6);
+      e.append("text").attr("x", THX[i] + 22).attr("y", 16);
+      G.select(".rows").selectAll("g.row").attr("transform", (d, j) => `translate(0,${TY + 64 + j * 28})`)
+        .select("text").text(d => d[0].padEnd(7, " ") + d[1]).attr("xml:space", "preserve").style("white-space", "pre");
+      G.select(".rows").selectAll("g.row rect").attr("y", 0);
+    });
+  }
+  function paintStatic(ev) {
+    const prog = PROG[mode], hasLock = mode === "mutex" || mode === "spin";
+    // lock box
+    const held = S.lock.owner !== null;
+    lock.select(".box.lock").attr("class", "box lock " + (!hasLock ? "na" : held ? "on" : "off"));
+    lockTitle.text(mode === "spin" ? "spinlock (flag)" : mode === "mutex" ? "mutex m" : mode === "atomic" ? "(lock নেই)" : "(lock নেই)");
+    lockState.attr("class", "lockst " + (!hasLock ? "na" : held ? "on" : "off")).text(!hasLock ? "NO LOCK" : held ? "LOCKED" : "UNLOCKED");
+    owner.style("display", hasLock && held ? null : "none").style("--who", held ? WHO[S.lock.owner] : WHO[0]);
+    owner.select("text").text(held ? `owner: ${TN[S.lock.owner]}` : "");
+    lock.selectAll(".slot").style("display", mode === "mutex" ? null : "none");
+    lock.selectAll(".dim").style("display", mode === "mutex" ? null : "none");
+    atomTag.style("display", mode === "atomic" ? null : "none");
+    // queue chips
+    const cs = chips.selectAll("g.chip").data(S.lock.queue, d => d);
+    cs.exit().transition().duration(dur()).style("opacity", 0).remove();
+    const en = cs.enter().append("g").attr("class", "chip").style("--who", d => WHO[d]).attr("transform", d => `translate(${d === 0 ? 270 : 490},60)`).style("opacity", 0);
+    en.append("rect").attr("width", 44).attr("height", 22).attr("rx", 6); en.append("text").attr("x", 22).attr("y", 15).attr("text-anchor", "middle").text(d => TN[d]);
+    en.merge(cs).transition().duration(dur()).style("opacity", 1).attr("transform", (d, j) => `translate(${SLOT(S.lock.queue.indexOf(d)).x},${SLOT(0).y})`);
+    // threads
+    S.th.forEach((t, i) => {
+      const G = thr[i];
+      G.select(".spill").attr("class", "spill " + t.st); G.select(".spill text").text(stLabel(t));
+      G.select(".panel").classed("act", ev && ev.t === i);
+      G.selectAll("g.row").attr("class", (d, j) => "row" + (t.st === "DONE" || j < t.pc ? " done" : j === t.pc ? " cur" : "") +
+        (j === t.pc && t.st === "BLOCKED" ? " stuck" : "") + (j === t.pc && t.st === "SPINNING" ? " spin" : "")).style("--who", WHO[i]);
+      const mg = G.select(".meterg"), sp = mode === "spin";
+      mg.style("display", sp ? null : "none");
+      mg.select(".meterfill").attr("width", Math.min(104, t.spins * 20));
+      mg.select(".burn").text(`CPU: spin ×${t.spins}`).classed("on", t.st === "SPINNING");
+      mg.select(".dim").style("opacity", t.st === "SPINNING" ? 1 : 0.0);
+    });
+    document.getElementById("mxStat").innerHTML =
+      `<span>lock: <b>${!hasLock ? "—" : held ? "LOCKED by " + TN[S.lock.owner] : "UNLOCKED"}</b></span>` +
+      `<span>wait queue: <b>[${S.lock.queue.map(q => TN[q]).join(", ")}]</b></span>` +
+      `<span class="t1c">T1: <b>${stLabel(S.th[0])}</b></span><span class="t2c">T2: <b>${stLabel(S.th[1])}</b></span>` +
+      `<span>counter: <b>${S.counter}</b></span><span>steps: <b>${S.steps}</b></span>`;
+  }
+  function setReg(i) { thr[i].select(".regv").text(regText(i)); }
+  function setCell() { cellV.text(S.counter); }
+  function pulse(sel) { if (reduce) return; sel.transition().duration(160).style("opacity", 0.25).transition().duration(220).style("opacity", 1); }
+  function moveTok(i, fromMem, val, done) {
+    const [rx, ry] = regC(i), a = fromMem ? [MEM.x, MEM.y] : [rx, ry], b = fromMem ? [rx, ry] : [MEM.x, MEM.y];
+    tok.style("--who", WHO[i]).interrupt().attr("transform", `translate(${a[0]},${a[1]})`).style("opacity", 1);
+    tokT.text(val);
+    if (reduce) { tok.style("opacity", 0); done(); return; }
+    tok.transition().duration(dur()).ease(d3.easeCubicInOut).attr("transform", `translate(${b[0]},${b[1]})`)
+      .transition().duration(120).style("opacity", 0).on("end", () => {});
+    later(done, dur());
+  }
+
+  /* ---------- messages ---------- */
+  function message(ev, S0) {
+    const T = `<b class="${ev.t ? "t2c" : "t1c"}">${TN[ev.t]}</b>`, W = ev.woke !== undefined ? `<b class="${ev.woke ? "t2c" : "t1c"}">${TN[ev.woke]}</b>` : "";
+    const O = ev.owner !== undefined ? TN[ev.owner] : "";
+    switch (ev.kind) {
+      case "load": return `${T} <b>LOAD</b> — memory-র counter (<b>${ev.val}</b>) পড়ে নিজের register-এ নিল।`;
+      case "add": return `${T} <b>ADD</b> — register ${ev.from} → <b>${ev.val}</b>। এখনো memory-তে লেখা হয়নি।`;
+      case "store": return `${T} <b>STORE</b> — register-এর <b>${ev.val}</b> memory-র counter-এ লিখল।` +
+        (ev.lost ? ` <span style="color:var(--bad);font-weight:700">লেখার আগে counter ছিল ${ev.prev}, কিন্তু ${TN[ev.t]} পড়েছিল ${S0.th[ev.t].loaded} — অন্য thread-এর update মুছে গেল (lost update)!</span>` : "");
+      case "xadd": return `${T} <b>lock xadd</b> — counter-এ +1 একটাই অবিভাজ্য step: ${ev.from} → <b>${ev.val}</b>। কেউ মাঝে ঢুকতে পারেনি।`;
+      case "acquire": return `${T} <b>${mode === "spin" ? "test-and-set" : "lock()"}</b> — lock ফাঁকা ছিল, atomic ভাবে নিল। এখন owner ${TN[ev.t]}।`;
+      case "block": return `${T} <b>lock()</b> — mutex এখন ${O}-র হাতে। Kernel ${TN[ev.t]}-কে <b>sleep</b> করাল ও wait queue-তে রাখল; Core ${ev.t} এখন অন্য কাজ করতে পারে।`;
+      case "spin": return `${T} <b>spin</b> — test-and-set ব্যর্থ (flag = 1, owner ${O})। ${TN[ev.t]} ঘুমায়নি, আবার চেষ্টা করছে — Core ${ev.t} ব্যস্ত কিন্তু কোনো কাজ হচ্ছে না।`;
+      case "release": return `${T} <b>${mode === "spin" ? "flag ← 0" : "unlock()"}</b> — lock ছাড়ল।` + (W ? ` Kernel অপেক্ষারত ${W}-কে <b>wake</b> করল (এখন RUNNABLE) — সে এবার lock নেওয়ার চেষ্টা করবে।` : mode === "spin" ? " Spin করা thread পরের চেষ্টাতেই পাবে।" : "");
+    }
+    return "";
+  }
+  const logLine = (ev, S0) => {
+    const o = document.getElementById("mxLog"), li = document.createElement("li");
+    li.className = (ev.t ? "t2" : "t1") + (ev.lost ? " bad" : "");
+    const plain = message(ev, S0).replace(/<[^>]+>/g, "");
+    li.textContent = plain;
+    o.appendChild(li); o.scrollTop = o.scrollHeight;
+  };
+
+  /* ---------- engine ---------- */
+  function stepThread(i) {
+    if (!S || allDone(S)) return false;
+    if (!runnable(S, i)) { document.getElementById("mxMsg").innerHTML = `<b>${TN[i]}</b> এখন চলতে পারে না — ${S.th[i].st === "DONE" ? "কাজ শেষ" : "BLOCKED, wait queue-তে ঘুমাচ্ছে (unlock-এর জন্য অপেক্ষা)"}।`; return false; }
+    const S0 = JSON.parse(JSON.stringify(S)), ev = step(S, i);
+    animate(ev, S0);
+    return true;
+  }
+  function pickScripted() {
+    const sc = SCRIPT[mode === "nolock" ? document.getElementById("mxSched").value : mode];
+    while (si < sc.length) { const c = sc[si++]; if (runnable(S, c)) return c; }
+    const r = choices(S); return r.length ? r[0] : null;
+  }
+  function animate(ev, S0) {
+    document.getElementById("mxMsg").innerHTML = message(ev, S0);
+    logLine(ev, S0);
+    const i = ev.t;
+    paintStatic(ev);
+    if (ev.kind === "load") { moveTok(i, true, ev.val, () => setReg(i)); }
+    else if (ev.kind === "store") { setReg(i); moveTok(i, false, ev.val, () => { setCell(); if (ev.lost) flashBad(); }); }
+    else if (ev.kind === "xadd") {
+      atomTag.style("display", null);
+      flash.interrupt().style("stroke", "var(--ok)").style("opacity", 1).transition().duration(reduce ? 0 : dur() + 250).style("opacity", 0);
+      moveTok(i, true, ev.from, () => { setReg(i); setCell(); });
+    }
+    else if (ev.kind === "add") { setReg(i); pulse(thr[i].select(".regv")); }
+    else { setReg(i); setCell(); }
+    // finish
+    if (allDone(S)) { playing = false; setPlayLabel(); later(showVerdict, dur() + 60); }
+  }
+  function flashBad() { flash.interrupt().style("stroke", "var(--bad)").style("opacity", 1).transition().duration(reduce ? 0 : 900).style("opacity", 0); }
+  function showVerdict() {
+    const v = document.getElementById("mxVerdict"), ok = S.counter === EXPECT;
+    v.className = "verdict " + (ok ? "ok" : "bad");
+    v.innerHTML = ok ? `<b>✓ ঠিক:</b> counter = <b>${S.counter}</b> (5 + 1 + 1)।` + (mode === "nolock" ? " এই schedule-টা ভাগ্যবান ছিল — T1 পুরোটা শেষ করে তবেই T2 শুরু করেছে। এটা গ্যারান্টি না।" : mode === "atomic" ? " কোনো lock ছাড়াই, কারণ increment নিজেই অবিভাজ্য।" : " Critical section-এ একবারে একজন ঢুকেছে।")
+                     : `<b>✗ Lost update:</b> counter = <b>${S.counter}</b>, হওয়ার কথা <b>7</b>। দুই thread-ই 5 পড়েছিল, দুজনই 6 লিখেছে — একটা increment হারিয়ে গেছে।`;
+  }
+  function setPlayLabel() { const b = document.getElementById("mxPlay"); b.textContent = playing ? "⏸ Pause" : "▶ Play"; }
+  function tick() {
+    if (!playing) return;
+    const i = pickScripted();
+    if (i === null || !stepThread(i)) { playing = false; setPlayLabel(); return; }
+    if (playing) { const g0 = gen; setTimeout(() => { if (g0 === gen) tick(); }, delay()); }
+  }
+  function reset() {
+    gen++; timers.forEach(clearTimeout); timers = []; playing = false; si = 0;
+    svg.selectAll("*").interrupt(); tok.style("opacity", 0); flash.style("opacity", 0);
+    S = initState(mode); chips.selectAll("*").remove();
+    buildRows(); paintStatic(null); setReg(0); setReg(1); setCell(); setPlayLabel();
+    document.getElementById("mxMsg").innerHTML = "Play বা Step চাপো।";
+    document.getElementById("mxVerdict").className = "verdict"; document.getElementById("mxVerdict").innerHTML = "";
+    document.getElementById("mxLog").innerHTML = "";
+    document.getElementById("mxIntro").innerHTML = INTRO[mode];
+    document.getElementById("mxSched").hidden = mode !== "nolock";
+  }
+  const manual = () => { playing = false; setPlayLabel(); };
+  d3.selectAll("[data-mode]").on("click", function () {
+    mode = this.dataset.mode; d3.selectAll("[data-mode]").classed("on", function () { return this.dataset.mode === mode; }); reset();
+  });
+  d3.select("#mxSched").on("change", reset);
+  d3.select("#mxReset").on("click", reset);
+  d3.select("#mxPlay").on("click", () => {
+    if (allDone(S)) reset();
+    playing = !playing; setPlayLabel();
+    if (playing) tick();
+  });
+  d3.select("#mxStep").on("click", () => { manual(); if (allDone(S)) return; const i = pickScripted(); if (i !== null) stepThread(i); });
+  d3.select("#mxT1").on("click", () => { manual(); stepThread(0); });
+  d3.select("#mxT2").on("click", () => { manual(); stepThread(1); });
+
+  /* ---------- exhaustive + random tables ---------- */
+  const MODES = [["nolock", "No lock"], ["mutex", "Mutex"], ["spin", "Spinlock"], ["atomic", "Atomic"]];
+  const pct = (n, d) => (100 * n / d).toFixed(1).replace(/\.0$/, "") + "%";
+  const exh = document.getElementById("mxExh");
+  exh.innerHTML = "<thead><tr><th>Mode</th><th>মোট schedule</th><th>ফল 7 ✓</th><th>ফল 6 ✗</th><th>Deadlock</th><th>দুজন একসাথে CS-এ</th></tr></thead><tbody>" +
+    MODES.map(([m, n]) => {
+      const r = exhaustive(m), good = r.finals[EXPECT] || 0, bad = r.schedules - good;
+      return `<tr><td><b>${n}</b></td><td class="mono">${r.schedules}</td><td class="mono ok">${good}</td><td class="mono ${bad ? "bad" : ""}">${bad}</td><td class="mono">${r.deadlocks}</td><td class="mono">${m === "mutex" || m === "spin" ? r.mutexViolations : "—"}</td></tr>`;
+    }).join("") + "</tbody>";
+  d3.select("#mxRand").on("click", () => {
+    const N = 10000;
+    document.getElementById("mxRandTab").innerHTML = "<thead><tr><th>Mode</th><th>runs</th><th>ফল 7 ✓</th><th>ফল 6 ✗</th><th>ভুল %</th></tr></thead><tbody>" +
+      MODES.map(([m, n]) => {
+        const f = randomRuns(m, N), good = f[EXPECT] || 0, bad = N - good;
+        return `<tr><td><b>${n}</b></td><td class="mono">${N.toLocaleString()}</td><td class="mono ok">${good}</td><td class="mono ${bad ? "bad" : ""}">${bad}</td><td class="mono ${bad ? "bad" : "ok"}">${pct(bad, N)}</td></tr>`;
+      }).join("") + "</tbody>";
+    document.getElementById("mxRandOut").hidden = false; document.getElementById("mxRandNote").hidden = false;
+  });
+  reset();
+})();
+
+/* ===================== theme ===================== */
+const root = document.documentElement;
+try { const t = localStorage.getItem("welldev-theme"); if (t) root.dataset.theme = t; } catch (e) {}
+document.getElementById("theme").addEventListener("click", () => {
+  const dark = root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  root.dataset.theme = dark ? "light" : "dark";
+  try { localStorage.setItem("welldev-theme", root.dataset.theme); } catch (e) {}
+});
+</script>
+</body>
+</html>
