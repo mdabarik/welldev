@@ -23,6 +23,7 @@ Software engineering interview prep — বাংলায় ব্যাখ্
 ## 03 · DBMS & SQL
 
 - [LeetCode SQL 50 — Visual Guide](03-dbms-sql/top-50-sql/index.html) — ৫০টি problem, PostgreSQL solution আর প্রতিটি ধাপের intermediate table
+- [DBMS Basics](03-dbms-sql/dbms-basics/index.html) - join-এর সব ধরন, clustered বনাম non-clustered index, SQL বনাম NoSQL (Cassandra), data model বনাম ER, trigger ও cascading, view; ধাপে ধাপে D3 animation
 - [ACID Properties](03-dbms-sql/acid/index.html) — bank transfer দিয়ে A, C, I, D; PostgreSQL output, crash test আর C# কোড
 - [Transaction Isolation Levels](03-dbms-sql/transactions/index.html) — ৪টি level, D3 playground-এ A/B session চালিয়ে দেখা, দুইটা psql session পাশাপাশি ([transaction-A.sql](03-dbms-sql/transaction-A.sql) · [transaction-B.sql](03-dbms-sql/transaction-B.sql))
 - [Optimistic vs Pessimistic Locking](03-dbms-sql/optimistic-pessimistic/index.html) — lost update, FOR UPDATE / NOWAIT / SKIP LOCKED আর version column, A/B animation সহ
@@ -34,7 +35,7 @@ Software engineering interview prep — বাংলায় ব্যাখ্
 
 ## 04 · Resume Projects
 
-- [XSS, CSRF, JWT, Access ও Refresh Token](04-resume-projects/01-xss-csrf-jwt-refresh-token-access-token/index.html)
+- [XSS, CSRF, JWT, Access ও Refresh Token](04-resume-projects/01-xss-csrf-jwt-refresh-token-access-token/index.html) — সাথে OWASP Top 10 (2025), Clickjacking, SSRF, IDOR, security header, SSO (OAuth/OIDC/SAML)
 - [Encoding, Encryption ও Hashing](04-resume-projects/02-encoding-encryption-hashing/index.html)
 - [CORS](04-resume-projects/03-cors/index.html) — Same-Origin Policy, preflight, error ও fix, simulator; CORS বনাম CSRF / XSS / SQL injection
 
@@ -48,6 +49,7 @@ Software engineering interview prep — বাংলায় ব্যাখ্
 
 ## 06 · Networking
 
+- [Network Basics](06-networking/network-basics/index.html) - ১৬টি interview প্রশ্ন, শেখার ক্রমে সাজানো (উত্তর পরের ধাপে)
 - [Seq, Checksum ও CRC — OSI Interactive](06-networking/OSI/index.html) — একটা মেসেজের যাত্রা, seq / checksum / CRC-32 কে কোন ভুল ধরে, D3 অ্যানিমেশনে
 - [একটা Request-এর যাত্রা — Web Server Interactive](06-networking/web-server/index.html) — DNS → TCP → TLS → Nginx → app → Redis → database → response, আর Nginx বনাম Apache
 - [URL থেকে Pixel — Browser Rendering Interactive](06-networking/browser/index.html) ([live](https://mdabarik.github.io/welldev/06-networking/browser/)) — DOM, CSSOM, layout, paint, আর `<link>`, `<script>`, async, defer, module কখন চলে, timeline অ্যানিমেশনে
@@ -55,3 +57,7 @@ Software engineering interview prep — বাংলায় ব্যাখ্
 ## 07 · JavaScript
 
 - [Event Loop — Browser ও Node.js Interactive](07-javascript/event-loop/index.html) — call stack, microtask, task queue, Node-এর phase, D3 animation-এ
+
+## 08 · System Design
+
+- ★ **Core** · [System Design Basics](08-system-design/basics/index.html) - Client-Server architecture, Reliability, Availability: প্রতিটির সংক্ষিপ্ত উত্তর ও step-by-step D3 animation

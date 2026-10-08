@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Network Basics - Interview Cheat Sheet</title>
+<meta name="description" content="Trainee Software Engineer interview-এর জন্য Networking-এর 16টি প্রশ্ন, শেখার ক্রমে সাজানো।">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f5f7fc;--surface:#fff;--surface-2:#f1f4fa;--fg:#0f172a;--muted:#5b6478;--line:#e4e8f1;--accent:#0d9488;--hero:linear-gradient(135deg,#0d9488,#0284c7 55%,#6366f1);--sans:"Inter","Hind Siliguri",system-ui,sans-serif;--bn:"Hind Siliguri","Inter",system-ui,sans-serif}
+@media (prefers-color-scheme:dark){:root{--bg:#0b0f1a;--surface:#121827;--surface-2:#182033;--fg:#e7ecf6;--muted:#9aa6bf;--line:#232c42;--accent:#2dd4bf}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 var(--bn)}
+.wrap{max-width:1000px;margin:0 auto;padding:20px 18px 70px}
+.back{color:var(--muted);font:600 13px var(--sans);text-decoration:none}
+.hero{margin-top:14px;border-radius:22px;padding:26px 30px;color:#fff;background:var(--hero)}
+.hero h1{margin:0 0 8px;font:800 clamp(26px,4.2vw,38px)/1.15 var(--sans)}
+.hero p{margin:0;opacity:.94}
+.parts{position:sticky;top:0;z-index:5;margin:14px -18px 0;padding:10px 18px;display:flex;gap:8px;overflow-x:auto;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.parts a{flex:none;text-decoration:none;font:600 13px var(--sans);color:var(--muted);border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 13px}
+.parts a b{color:var(--accent);margin-right:4px}
+.part{margin-top:40px;scroll-margin-top:60px}
+.part>h2{margin:0;font:800 24px/1.25 var(--sans)}
+.part>h2 span{color:var(--accent);margin-right:8px}
+.q{margin-top:14px;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:18px 22px}
+.q h3{display:flex;gap:12px;align-items:flex-start;margin:0 0 8px;font:700 18px/1.4 var(--sans)}
+.num{flex:none;min-width:34px;height:34px;padding:0 8px;border-radius:10px;display:grid;place-items:center;color:#fff;font:800 14px var(--sans);background:var(--hero)}
+.q ul{margin:0 0 8px;padding-left:20px;color:var(--muted)}
+.soon{margin:0;font:500 13px var(--sans);color:var(--muted)}
+.sd{border-style:dashed}
+.note{margin-top:44px;padding:14px 18px;border-radius:14px;background:var(--surface-2);color:var(--muted);font-size:14.5px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<a class="back" href="../../index.html">← Home</a>
+<header class="hero"><h1>Network Basics</h1><p>16টি প্রশ্ন, শেখার ক্রমে সাজানো: network থেকে addressing, তারপর transport, শেষে web ও security।</p></header>
+<nav class="parts"><a href="#p1"><b>1</b>Network Fundamentals</a><a href="#p2"><b>2</b>Addressing</a><a href="#p3"><b>3</b>Transport</a><a href="#p4"><b>4</b>Web ও Security</a></nav>
+<section class="part" id="p1"><h2><span>1</span>Network Fundamentals</h2><div class="q" id="q1"><h3><span class="num">1</span>Network কী, Network-এর ধরন (LAN, MAN, WAN, PAN) আর Topology (Bus, Star, Ring, Mesh, Tree)</h3><ul><li>Network, LAN / MAN / WAN / PAN</li><li>Bus, Star, Ring, Mesh, Tree topology</li></ul><p class="soon">উত্তর ও animation পরের ধাপে আসছে</p></div><div class="q" id="q2"><h3><span class="num">2</span>Bandwidth, Throughput আর Latency</h3><ul><li>Bandwidth বনাম throughput</li><li>Latency (RTT) কী, কীসে বাড়ে</li></ul><p class="soon">উত্তর ও animation পরের ধাপে আসছে</p></div><div class="q" id="q3"><h3><span class="num">3</span>Hub, Switch ও Router</h3><ul><li>তিনটার কাজ ও OSI layer</li><li>Collision domain, broadcast domain</li></ul><p class="soon">উত্তর ও animation পরের ধাপে আসছে</p></div></section><section class="part" id="p2"><h2><span>2</span>Addressing</h2><div class="q" id="q4"><h3><span class="num">4</span>MAC address কী, data কীভাবে send ও receive হয়</h3><ul><li>MAC format, ARP</li><li>Frame-এ destination MAC দেখে switch/NIC কী করে</li></ul><p class="soon">উত্তর ও animation পরের ধাপে আসছে</p></div><div class="q" id="q5"><h3><span class="num">5</span>IP address কী; Public, Private, Static ও Dynamic IP</h3><ul><li>Private range (10.x, 172.16–31.x, 192.168.x)</li><li>Static বনাম dynamic কখন কোনটা</li></ul><p class="soon">উত্তর ও animation পরের ধাপে আসছে</p></div><div class="q" id="q6"><h3><span class="num">6</span>IPv4 বনাম IPv6</h3><ul><li>32-bit বনাম 128-bit</li><li>কেন IPv6 লাগল</li></ul><p class="soon">উত্তর ও animation পরের ধাপে আসছে</p></div><div class="q" id="q7"><h3><span class="num">7</span>Subnet mask; Class A, B, C; Classful বনাম Classless (CIDR)</h3><ul><li>Network ID বনাম host ID</li><li>/24 মানে কী, কয়টা host</li></ul><p class="soon">উত্তর ও animation পরের ধাপে আসছে</p></div><div class="q" id="q8"><h3><span class="num">8</span>DHCP কী ও কীভাবে কাজ করে</h3><ul><li>DORA: Discover, Offer, Request, Ack</li></ul><p class="soon">উত্তর ও animation পরের ধাপে আসছে</p></div><div class="q" id="q9"><h3><span class="num">9</span>NAT ও NAT table</h3><ul><li>Private IP থেকে public IP, port translation</li></ul><p class="soon">উত্তর ও animation পরের ধাপে আসছে</p></div><div class="q" id="q10"><h3><span class="num">10</span>DSCP (QoS marking)</h3><ul><li>Packet-এর priority, voice/video বনাম bulk</li></ul><p class="soon">উত্তর ও animation পরের ধাপে আসছে</p></div></section><section class="part" id="p3"><h2><span>3</span>Transport</h2><div class="q" id="q11"><h3><span class="num">11</span>Default port: HTTP 80, HTTPS 443, FTP 20/21, DNS 53, SMTP 25</h3><ul><li>Well-known port, socket = IP + port</li></ul><p class="soon">উত্তর ও animation পরের ধাপে আসছে</p></div><div class="q" id="q12"><h3><span class="num">12</span>TCP বনাম UDP</h3><ul><li>Reliable বনাম fast, কখন কোনটা</li></ul><p class="soon">উত্তর ও animation পরের ধাপে আসছে</p></div><div class="q" id="q13"><h3><span class="num">13</span>TCP 3-way handshake</h3><ul><li>SYN, SYN-ACK, ACK</li></ul><p class="soon">উত্তর ও animation পরের ধাপে আসছে</p></div></section><section class="part" id="p4"><h2><span>4</span>Web ও Security</h2><div class="q" id="q14"><h3><span class="num">14</span>HTTP বনাম HTTPS</h3><ul><li>Request/response, method, status</li><li>HTTPS = HTTP + TLS</li></ul><p class="soon">উত্তর ও animation পরের ধাপে আসছে</p></div><div class="q" id="q15"><h3><span class="num">15</span>SSL বনাম TLS</h3><ul><li>ইতিহাস ও version, কেন SSL বন্ধ</li></ul><p class="soon">উত্তর ও animation পরের ধাপে আসছে</p></div><div class="q" id="q16"><h3><span class="num">16</span>TLS handshake</h3><ul><li>Certificate, key exchange, session key</li></ul><p class="soon">উত্তর ও animation পরের ধাপে আসছে</p></div></section>
+<section class="part"><h2>System Design-এ আলাদা করা</h2>
+<p class="note">এগুলো networking-এর চেয়ে system design-এর topic, তাই এই পাতায় নেই। Bandwidth, throughput, latency networking-এ রাখা হয়েছে।</p>
+<div class="q sd"><h3>Client-Server architecture</h3><p class="soon">Request/response, thin vs thick client, 2-tier / 3-tier</p></div><div class="q sd"><h3>Reliability</h3><p class="soon">System fail করলেও ঠিকমতো কাজ করা</p></div><div class="q sd"><h3>Availability</h3><p class="soon">Uptime, “nine”s (99.9%), redundancy</p></div></section>
+</div>
+</body>
+</html>

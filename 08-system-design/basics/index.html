@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>System Design Basics - Interview Cheat Sheet</title>
+<meta name="description" content="Trainee Software Engineer interview-এর জন্য System Design-এর ৩টি প্রশ্ন - প্রতিটির সংক্ষিপ্ত উত্তর আর ক্লিক করে ধাপে ধাপে দেখার D3 animation।">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<style>
+/* One card per interview question: short answer, 2-3 bullets, and a step-by-step D3 scene.
+   Scenes are plain data (see TOPICS at the bottom): each step adds / modifies / deletes nodes by id
+   and the tiny engine animates the difference. */
+:root{
+  --bg:#f5f7fc; --surface:#ffffff; --surface-2:#f1f4fa; --fg:#0f172a; --muted:#5b6478; --faint:#94a0b8; --line:#e4e8f1;
+  --accent:#6366f1;
+  --a:#4f46e5; --b:#db2777; --g:#059669; --o:#d97706; --r:#e11d48; --s:#0284c7;
+  --hero:linear-gradient(135deg,#4f46e5 0%,#7c3aed 45%,#db2777 100%);
+  --shadow:0 1px 2px rgba(15,23,42,.04),0 10px 30px -12px rgba(15,23,42,.14);
+  --sans:"Inter","Hind Siliguri",system-ui,sans-serif; --bn:"Hind Siliguri","Inter",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0b0f1a; --surface:#121827; --surface-2:#182033; --fg:#e7ecf6; --muted:#9aa6bf; --faint:#66728c; --line:#232c42;
+  --accent:#818cf8; --a:#818cf8; --b:#f472b6; --g:#34d399; --o:#fbbf24; --r:#fb7185; --s:#38bdf8;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6);
+}}
+:root[data-theme="dark"]{
+  --bg:#0b0f1a; --surface:#121827; --surface-2:#182033; --fg:#e7ecf6; --muted:#9aa6bf; --faint:#66728c; --line:#232c42;
+  --accent:#818cf8; --a:#818cf8; --b:#f472b6; --g:#34d399; --o:#fbbf24; --r:#fb7185; --s:#38bdf8;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 var(--bn);-webkit-font-smoothing:antialiased}
+a{color:var(--accent)}
+button{font:inherit;color:inherit}
+code{font-family:var(--mono);font-size:.86em;font-weight:500;background:color-mix(in srgb,var(--accent) 10%,var(--surface));color:color-mix(in srgb,var(--accent) 72%,var(--fg));padding:.1em .4em;border-radius:6px}
+.wrap{max-width:1000px;margin:0 auto;padding:20px 18px 70px}
+
+.topnav{display:flex;align-items:center;gap:10px}
+.brand{display:flex;align-items:center;gap:10px;color:var(--fg);text-decoration:none;font:800 16px var(--sans);letter-spacing:-.02em}
+.logo{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:#fff;font:800 13px var(--mono);background:var(--hero)}
+.topnav .sp{flex:1}
+.pill{border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:6px 14px;font:600 13px var(--sans);cursor:pointer;text-decoration:none}
+.pill:hover{color:var(--fg)}
+
+.hero{margin-top:20px;border-radius:22px;padding:26px 30px;color:#fff;background:var(--hero)}
+.hero .eyebrow{font:600 12px var(--sans);letter-spacing:.1em;text-transform:uppercase;opacity:.85}
+.hero h1{margin:6px 0 8px;font:800 clamp(26px,4.2vw,38px)/1.15 var(--sans);letter-spacing:-.03em}
+.hero p{margin:0;max-width:680px;opacity:.94}
+.jump{display:flex;flex-wrap:wrap;gap:6px;margin-top:16px}
+.jump a{min-width:32px;padding:0 6px;height:32px;display:grid;place-items:center;border-radius:9px;text-decoration:none;font:700 13px var(--sans);color:#fff;background:rgba(255,255,255,.18)}
+.jump a:hover{background:rgba(255,255,255,.34)}
+
+.parts{position:sticky;top:0;z-index:5;margin:14px -18px 0;padding:10px 18px;display:flex;gap:8px;overflow-x:auto;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);scrollbar-width:none}
+.parts a{flex:none;text-decoration:none;font:600 13px var(--sans);color:var(--muted);border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 13px}
+.parts a:hover{color:var(--fg)}
+.parts a b{color:var(--accent);margin-right:4px}
+
+.part{margin-top:44px;scroll-margin-top:60px}
+.part>h2{margin:0;font:800 clamp(20px,2.6vw,25px)/1.25 var(--sans);letter-spacing:-.02em}
+.part>h2 span{color:var(--accent);margin-right:8px}
+
+.q{margin-top:16px;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:20px 22px;box-shadow:var(--shadow);scroll-margin-top:64px}
+.q h3{display:flex;gap:12px;align-items:flex-start;margin:0 0 10px;font:700 18px/1.4 var(--sans);letter-spacing:-.01em}
+.skip{display:inline-block;margin-left:8px;padding:1px 10px;border-radius:999px;font:600 12px var(--sans);font-style:normal;white-space:nowrap;color:var(--muted);background:var(--surface-2);border:1px dashed var(--faint);vertical-align:middle}
+.num{flex:none;min-width:34px;height:34px;padding:0 8px;border-radius:10px;display:grid;place-items:center;color:#fff;font:800 14px var(--sans);background:var(--hero)}
+.ans{margin:0 0 10px;padding:10px 14px;border-left:4px solid var(--accent);border-radius:0 10px 10px 0;background:color-mix(in srgb,var(--accent) 8%,var(--surface))}
+.q ul{margin:0 0 12px;padding-left:20px;color:var(--muted)}
+.q li{margin:2px 0}
+.q li b,.ans b{color:var(--fg)}
+.extra{margin:0 0 12px;overflow-x:auto}
+.extra table{border-collapse:collapse;font:500 13px var(--mono)}
+.extra th,.extra td{border:1px solid var(--line);padding:3px 10px;text-align:center}
+.extra th{background:var(--surface-2)}
+.extra .cmp td,.extra .cmp th{text-align:left;vertical-align:top;font:500 13.5px/1.55 var(--bn);min-width:150px}
+.extra .cmp td:first-child{font-weight:700;white-space:nowrap;min-width:0}
+
+.viz{border:1px solid var(--line);border-radius:14px;background:var(--surface-2);overflow:hidden}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;padding:10px 12px 0}
+.tabs button{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:3px 12px;font:600 12.5px var(--sans);color:var(--muted);cursor:pointer}
+.tabs button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.stage{overflow-x:auto;padding-top:8px}
+.stage svg{display:block;width:100%;min-width:680px;height:auto;cursor:pointer;user-select:none}
+.cap{padding:10px 16px;min-height:3.4em;border-top:1px dashed var(--line);font-size:15px}
+.ctl{display:flex;align-items:center;gap:8px;padding:0 12px 12px}
+.b{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:5px 14px;font:600 13px var(--sans);cursor:pointer}
+.b:hover:not(:disabled){border-color:var(--accent)}
+.b:disabled{opacity:.4;cursor:default}
+.b.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+.cnt{margin-left:auto;font:500 12px var(--mono);color:var(--faint)}
+
+/* svg scene */
+svg text,svg tspan{white-space:pre}
+svg text{font-family:var(--sans);font-size:13px;fill:var(--fg);dominant-baseline:central}
+.c-n{--cc:var(--muted)} .c-a{--cc:var(--a)} .c-b{--cc:var(--b)} .c-g{--cc:var(--g)}
+.c-o{--cc:var(--o)} .c-r{--cc:var(--r)} .c-s{--cc:var(--s)} .c-f{--cc:var(--fg)}
+.box rect,.circ circle{fill:color-mix(in srgb,var(--cc) 14%,var(--surface));stroke:var(--cc);stroke-width:1.6;transition:fill .45s,stroke .45s}
+.dash rect,.dash circle{stroke-dasharray:6 4;fill:color-mix(in srgb,var(--cc) 4%,transparent)}
+.hl rect,.hl circle{stroke-width:3.4;filter:drop-shadow(0 0 7px color-mix(in srgb,var(--cc) 65%,transparent))}
+.text text{fill:var(--cc);transition:fill .45s}
+.text.b text,.text.lg text{font-weight:700}
+.text.lg text{font-size:15px}
+.sm text{font-size:11.5px}
+.m text{font-family:var(--mono);font-size:12px}
+.path path{fill:none;stroke:var(--cc);stroke-width:3.4;stroke-linecap:round}
+.arrow line{stroke:var(--cc);stroke-width:2.2;transition:stroke .4s}
+.arrow.dash line{stroke-dasharray:6 4}
+.arrow.hl line{stroke-width:3.4}
+footer{margin-top:50px;text-align:center;color:var(--faint);font:500 13px var(--sans)}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs id="defs"></defs></svg>
+<div class="wrap">
+  <nav class="topnav">
+    <a class="brand" href="../../index.html"><span class="logo">W</span>WellDev</a>
+    <span class="sp"></span>
+    <button class="pill" id="theme" type="button">Theme</button>
+  </nav>
+
+  <header class="hero">
+    <div class="eyebrow">System Design · Interview</div>
+    <h1>System Design Basics - ৩টি প্রশ্ন, সোজা উত্তর</h1>
+    <p>প্রতিটি প্রশ্নে এক লাইনের উত্তর আর একটা animation। scene-এ ক্লিক করো বা <b>Next</b> চাপো - ধাপে ধাপে দেখো।</p>
+    <div class="jump" id="jump"></div>
+  </header>
+  <nav class="parts" id="parts"></nav>
+  <main id="app"></main>
+  <footer>Trainee Software Engineer · System design basics</footer>
+</div>
+
+<script>
+/* ---------- theme ---------- */
+(function(){
+  const root=document.documentElement,btn=document.getElementById('theme');
+  try{const t=localStorage.getItem('theme');if(t)root.dataset.theme=t;}catch(e){}
+  const dark=()=>root.dataset.theme?root.dataset.theme==='dark':matchMedia('(prefers-color-scheme:dark)').matches;
+  const label=()=>btn.textContent=dark()?'Light':'Dark';
+  btn.onclick=()=>{root.dataset.theme=dark()?'light':'dark';try{localStorage.setItem('theme',root.dataset.theme);}catch(e){}label();};
+  label();
+})();
+
+/* ---------- scene engine ---------- */
+const COLORS=['n','a','b','g','o','r','s','f'];
+document.getElementById('defs').innerHTML=COLORS.map(c=>
+  `<marker id="ah-${c}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" style="fill:var(--${c==='n'?'muted':c==='f'?'fg':c})"/></marker>`).join('');
+
+const B=(id,x,y,w,h,label,c='n',o={})=>({id,k:'box',x,y,w,h,label,c,...o});
+const T=(id,x,y,label,o={})=>({id,k:'text',x,y,label,c:'n',...o});
+const A=(id,x1,y1,x2,y2,c='n',o={})=>({id,k:'arrow',x:0,y:0,x1,y1,x2,y2,c,...o});
+const C=(id,x,y,r,label,c='n',o={})=>({id,k:'circ',x,y,r,label,c,...o});
+const S=(cap,o={})=>({cap,...o});
+const P=(id,d,c='n',o={})=>({id,k:'path',x:0,y:0,d,c,...o});
+
+function stateAt(steps,i){
+  const m=new Map();
+  for(let k=0;k<=i;k++){
+    const s=steps[k];
+    (s.del||[]).forEach(id=>m.delete(id));
+    (s.add||[]).forEach(n=>m.set(n.id,{...n}));
+    Object.entries(s.mod||{}).forEach(([id,p])=>{if(m.has(id))Object.assign(m.get(id),p);});
+  }
+  return [...m.values()];
+}
+
+function setText(g,cls,str,x,y,anchor,lh=15.5){
+  let tx=g.select('text.'+cls);
+  if(tx.empty())tx=g.append('text').attr('class',cls);
+  const ls=String(str??'').split('\n');
+  tx.attr('text-anchor',anchor);
+  tx.selectAll('tspan').data(ls).join('tspan').attr('x',x).attr('y',(d,i)=>y-(ls.length-1)*lh/2+i*lh).text(d=>d);
+}
+
+function upd(g,d,t){
+  g.attr('class',`n ${d.k} c-${d.c||'n'}${d.dash?' dash':''}${d.hl?' hl':''}${d.s?' '+d.s:''}${d.m?' m':''}`);
+  if(d.k==='box'){
+    let r=g.select('rect');
+    if(r.empty())r=g.insert('rect',':first-child').attr('rx',9).attr('width',d.w).attr('height',d.h);
+    r.transition(t).attr('width',d.w).attr('height',d.h);
+    setText(g,'lb',d.label,d.w/2,d.h/2,'middle');
+  }else if(d.k==='circ'){
+    let r=g.select('circle');
+    if(r.empty())r=g.insert('circle',':first-child').attr('r',d.r);
+    r.transition(t).attr('r',d.r);
+    setText(g,'lb',d.label,0,0,'middle');
+  }else if(d.k==='text'){
+    setText(g,'lb',d.label,0,0,d.a||'start');
+  }else if(d.k==='path'){
+    let p=g.select('path');
+    if(p.empty()){p=g.append('path').attr('d',d.d);const L=p.node().getTotalLength();p.attr('stroke-dasharray',L).attr('stroke-dashoffset',L).transition(t).attr('stroke-dashoffset',0);}
+  }else if(d.k==='arrow'){
+    let l=g.select('line');
+    if(l.empty())l=g.append('line').attr('x1',d.x1).attr('y1',d.y1).attr('x2',d.x2).attr('y2',d.y2);
+    l.attr('marker-end',`url(#ah-${d.c||'n'})`).transition(t).attr('x1',d.x1).attr('y1',d.y1).attr('x2',d.x2).attr('y2',d.y2);
+  }
+}
+
+function draw(svg,nodes,dur){
+  const t=d3.transition().duration(dur).ease(d3.easeCubicInOut);
+  svg.select('.layer').selectAll('g.n').data(nodes,d=>d.id).join(
+    en=>en.append('g').attr('opacity',0).attr('transform',d=>`translate(${d.x},${d.y})`),
+    up=>up,
+    ex=>ex.transition(t).attr('opacity',0).remove()
+  ).each(function(d){upd(d3.select(this),d,t);})
+   .transition(t).attr('transform',d=>`translate(${d.x},${d.y})`).attr('opacity',d=>d.o??1);
+}
+
+function mount(host,topic){
+  const tabs=topic.tabs||[{n:'',steps:topic.steps}];
+  host.innerHTML='<div class="tabs"></div><div class="stage"><svg viewBox="0 0 760 240" role="img"><g class="layer"></g></svg></div><div class="cap"></div><div class="ctl"><button class="b prev" type="button">◀</button><button class="b pri next" type="button">Next ▶</button><span class="cnt"></span></div>';
+  const svg=d3.select(host).select('svg'),cap=host.querySelector('.cap'),cnt=host.querySelector('.cnt');
+  const prev=host.querySelector('.prev'),next=host.querySelector('.next'),tabBox=host.querySelector('.tabs');
+  let ti=0,si=0,steps;
+  function show(dur){
+    draw(svg,stateAt(steps,si),dur);
+    cap.innerHTML=steps[si].cap;
+    cnt.textContent=`${si+1} / ${steps.length}`;
+    prev.disabled=si===0;
+    next.textContent=si===steps.length-1?'↻ আবার':'Next ▶';
+  }
+  function load(i){
+    ti=i;si=0;
+    const tb=tabs[ti];steps=typeof tb.steps==='function'?tb.steps():tb.steps;
+    tabBox.querySelectorAll('button').forEach((b,k)=>b.classList.toggle('on',k===ti));
+    show(0);
+  }
+  if(tabs.length>1){
+    tabs.forEach((tb,i)=>{const b=document.createElement('button');b.type='button';b.textContent=tb.n;b.onclick=()=>load(i);tabBox.appendChild(b);});
+  }else tabBox.remove();
+  const go=()=>{si=si===steps.length-1?0:si+1;show(600);};
+  next.onclick=go;svg.on('click',go);
+  prev.onclick=()=>{if(si>0){si--;show(600);}};
+  load(0);
+}
+
+/* ---------- content ---------- */
+const PARTS=[['A','System Design Basics']];
+
+const TOPICS=[
+{p:0,q:'Client-Server architecture কী?',
+ ans:'<b>Client</b> request পাঠায়, <b>server</b> সেটা process করে <b>response</b> ফেরত দেয়। Server সবসময় চালু থাকে আর একসাথে অনেক client-কে সেবা দেয়।',
+ pts:['Client = browser / mobile app; server = যে machine logic ও data সামলায়।','<b>Thin client:</b> logic server-এ। <b>Thick client:</b> logic client-এও।','<b>2-tier:</b> client ↔ DB। <b>3-tier:</b> client ↔ app server ↔ DB।'],
+ tabs:[
+  {n:'1. Request-Response',steps:[
+   S('দুই পক্ষ: <b>client</b> আর <b>server</b>।',{add:[B('cl',30,80,150,70,'Client\n(browser / app)','a'),B('sv',580,80,150,70,'Server\n(সবসময় চালু)','g')]}),
+   S('Client <b>request</b> পাঠায়।',{add:[A('rq',184,100,576,100,'a'),T('rql',380,84,'Request: GET /profile',{a:'middle',c:'a',s:'sm'})]}),
+   S('Server দরকারে <b>database</b> থেকে data আনে।',{mod:{sv:{hl:1,label:'Server\nprocess করছে'}},add:[B('db',590,185,130,44,'Database','o'),A('sd',655,152,655,183,'o')]}),
+   S('Server <b>response</b> ফেরত দেয়। Client সেটা দেখায়।',{mod:{sv:{hl:0,label:'Server\n(সবসময় চালু)'},cl:{hl:1}},add:[A('rs',576,130,184,130,'g'),T('rsl',380,148,'Response: 200 + data',{a:'middle',c:'g',s:'sm'})]})
+  ]},
+  {n:'2. Thin বনাম Thick',steps:[
+   S('<b>Thin client:</b> client শুধু UI দেখায়। সব logic আর data server-এ।',{add:[T('tl',20,16,'Thin client',{c:'a',s:'b'}),B('t1',20,60,130,70,'Browser\nশুধু UI','a'),B('t2',220,60,130,70,'Server\nlogic + data','g'),A('ta',152,95,218,95,'n'),T('tn',185,160,'client হালকা, server-এ চাপ বেশি',{a:'middle',s:'sm'})]}),
+   S('<b>Thick client:</b> client নিজেই logic চালায়। Server শুধু data দেয়।',{add:[T('kl',410,16,'Thick client',{c:'b',s:'b'}),B('k1',410,60,130,70,'Desktop app\nUI + logic','b'),B('k2',610,60,130,70,'Server\nশুধু data','g'),A('ka',542,95,608,95,'n'),T('kn',575,160,'client ভারী, server-এ চাপ কম',{a:'middle',s:'sm'})]}),
+   S('উদাহরণ: thin = ওয়েবসাইট, thick = desktop game / mobile app।',{add:[B('ex',20,192,720,38,'Thin = ওয়েবসাইট  ·  Thick = desktop game, mobile app','o',{s:'sm'})]})
+  ]},
+  {n:'3. 2-tier বনাম 3-tier',steps:[
+   S('<b>2-tier:</b> client সরাসরি database-এর সাথে কথা বলে, logic client-এই।',{add:[B('c',40,90,170,60,'Client\nUI + logic','a'),B('d',550,90,170,60,'Database','o'),A('a1',212,120,548,120,'n'),T('l',380,104,'সরাসরি query',{a:'middle',s:'sm'})]}),
+   S('<b>3-tier:</b> মাঝে <b>app server</b> বসে। Client শুধু UI, logic app server-এ।',{del:['a1','l'],mod:{c:{label:'Client\nশুধু UI'}},add:[B('s',300,90,160,60,'App server\nlogic','g'),A('a2',212,120,298,120,'n'),A('a3',462,120,548,120,'n'),T('p1',125,66,'Tier 1',{a:'middle',c:'a',s:'sm b'}),T('p2',380,66,'Tier 2',{a:'middle',c:'g',s:'sm b'}),T('p3',635,66,'Tier 3',{a:'middle',c:'o',s:'sm b'})]}),
+   S('লাভ: প্রতিটা tier আলাদা scale করা যায়, আর database সরাসরি বাইরে খোলা থাকে না।',{add:[B('bn',100,180,560,44,'আলাদা scale  ·  বেশি নিরাপদ  ·  logic এক জায়গায়','g',{s:'sm'})]})
+  ]}
+ ]},
+
+{p:0,q:'Reliability কী?',
+ ans:'<b>Reliability</b> = কোনো অংশ fail করলেও system <b>ঠিকমতো, সঠিক ফল</b> দিয়ে কাজ করা। কাজের মান ধরে রাখা।',
+ pts:['<b>Fault</b> = একটা অংশের সমস্যা; <b>failure</b> = পুরো system user-কে ঠিক সেবা দিতে না পারা।','লক্ষ্য: fault হবেই, কিন্তু যেন failure না হয় (<b>fault tolerance</b>)।','উপায়: redundancy (replica), retry, backup, monitoring।'],
+ tabs:[
+  {n:'1. Single point of failure',steps:[
+   S('একটাই server। User ঠিকমতো সেবা পাচ্ছে।',{add:[B('u',20,95,110,50,'User','a'),B('s1',330,95,150,50,'Server','g'),A('a',132,120,328,120,'g')]}),
+   S('Server-এ <b>fault</b>: সে crash করল।',{mod:{s1:{c:'r',label:'Server\n💥 crash',hl:1}}}),
+   S('Backup নেই, তাই fault <b>failure</b> হয়ে গেল। User error পায়।',{mod:{a:{c:'r',dash:1}},add:[T('x',520,120,'কোনো backup নেই → সেবা বন্ধ',{c:'r',s:'b'})]})
+  ]},
+  {n:'2. Replica দিয়ে সমাধান',steps:[
+   S('দুটো server (replica), সামনে load balancer।',{add:[B('u',20,95,110,50,'User','a'),B('lb',190,95,120,50,'Load\nbalancer','a'),B('r1',470,40,150,50,'Server 1','g'),B('r2',470,150,150,50,'Server 2','g'),A('a0',132,120,188,120,'a'),A('a1',312,110,468,70,'g'),A('a2',312,130,468,170,'g')]}),
+   S('Server 1 <b>fault</b>: crash।',{mod:{r1:{c:'r',label:'Server 1\n💥 crash',hl:1},a1:{c:'r',dash:1}}}),
+   S('Load balancer সব request Server 2-তে পাঠায়। User কিছুই টের পায় না: fault হলো, failure হলো না।',{mod:{r2:{hl:1,label:'Server 2\nএকাই সামলাচ্ছে'},a2:{hl:1}},add:[T('ok',690,120,'✓ সেবা চালু',{a:'middle',c:'g',s:'b'})]})
+  ]},
+  {n:'3. Retry + Timeout',steps:[
+   S('Client request পাঠায়, কিন্তু network-এ হারিয়ে যায়।',{add:[B('c',30,90,130,60,'Client','a'),B('s',600,90,130,60,'Server','g'),A('rq1',162,110,420,110,'a',{dash:1}),T('t1',290,92,'request #1',{a:'middle',c:'a',s:'sm'}),T('lost',440,110,'✗ হারাল',{c:'r',s:'b'})]}),
+   S('কোনো উত্তর আসে না। Client <b>timeout</b> পর্যন্ত অপেক্ষা করে।',{add:[T('to',95,180,'⏱ timeout...',{a:'middle',c:'o',s:'b'})]}),
+   S('Timeout হলে <b>retry</b>। এবার request পৌঁছায়, response আসে। Transient fault সামলানো গেল।',{del:['lost'],mod:{to:{label:'⏱ timeout → retry'}},add:[A('rq2',162,130,598,130,'g'),T('t2',380,148,'request #2 → 200 OK',{a:'middle',c:'g',s:'sm'})]})
+  ]}
+ ]},
+
+{p:0,q:'Availability কী?',
+ ans:'<b>Availability</b> = system কত সময় <b>চালু ও ব্যবহারের উপযোগী</b> থাকে, শতাংশে। <code>Uptime ÷ (Uptime + Downtime)</code>।',
+ pts:['<b>Reliability</b> = সঠিক কাজ করা; <b>availability</b> = দরকারের সময় পাওয়া যাওয়া। Server চালু কিন্তু ভুল ফল দিলে available, কিন্তু reliable না।','Industry-তে "nine" দিয়ে মাপে: 99.9% = three nines।','বাড়ানোর উপায়: redundancy, failover, health check।'],
+ tabs:[
+  {n:'1. Uptime শতাংশ',steps:[
+   S('সূত্র: <b>Availability = Uptime ÷ (Uptime + Downtime)</b>।',{add:[B('f',60,40,640,50,'Availability = Uptime ÷ (Uptime + Downtime)','a',{s:'lg'})]}),
+   S('একটা বছর: প্রায় সবটাই <b>uptime</b> (সবুজ)।',{add:[T('yl',20,130,'১ বছর',{c:'f',s:'sm b'}),B('up',20,148,712,44,'Uptime','g'),B('dn',732,148,8,44,'','r')]}),
+   S('ছোট লাল অংশটা <b>downtime</b>। বছরে ৮.৭৬ ঘণ্টা down মানে <b>99.9%</b> available।',{mod:{dn:{hl:1}},add:[A('ar',736,196,736,222,'r'),T('dl',730,232,'downtime ≈ ৮.৭৬ ঘণ্টা',{a:'end',c:'r',s:'sm b'})]})
+  ]},
+  {n:'2. Nine-এর হিসাব',steps:[
+   S('<b>99%</b> (two nines): বছরে প্রায় ৩.৬৫ দিন বন্ধ।',{add:[B('n1',20,30,150,36,'99%','a',{s:'sm'}),B('d1',185,30,520,36,'৩.৬৫ দিন','r',{s:'sm'})]}),
+   S('<b>99.9%</b> (three nines): ৮.৭৬ ঘণ্টা।',{add:[B('n2',20,84,150,36,'99.9%','a',{s:'sm'}),B('d2',185,84,330,36,'৮.৭৬ ঘণ্টা','r',{s:'sm'})]}),
+   S('<b>99.99%</b> (four nines): ৫২.৬ মিনিট।',{add:[B('n3',20,138,150,36,'99.99%','a',{s:'sm'}),B('d3',185,138,170,36,'৫২.৬ মিনিট','r',{s:'sm'})]}),
+   S('<b>99.999%</b> (five nines): ৫.২৬ মিনিট। প্রতি nine-এ downtime প্রায় ১০ গুণ কমে, খরচ অনেক বাড়ে।',{add:[B('n4',20,192,150,36,'99.999%','a',{s:'sm'}),B('d4',185,192,70,36,'৫.২৬ মিনিট','r',{s:'sm'})]})
+  ]},
+  {n:'3. Redundancy',steps:[
+   S('<b>Series:</b> দুটোই লাগলে একটা পড়লেই সব বন্ধ। Availability <b>কমে</b>: 99% × 99% = 98.01%।',{add:[T('sl',380,40,'Series (দুটোই দরকার)',{a:'middle',c:'r',s:'b'}),B('a',150,80,150,60,'Server A\n99%','g'),B('b',460,80,150,60,'Server B\n99%','g'),A('x',302,110,458,110,'n'),T('r',380,185,'99% × 99% = 98.01%',{a:'middle',c:'r',s:'lg'})]}),
+   S('<b>Parallel (redundancy):</b> একটা পড়লে অন্যটা চালায়। দুটোই একসাথে পড়ার সম্ভাবনা মাত্র 1% × 1%।',{del:['sl','a','b','x','r'],add:[T('pl',380,20,'Parallel (একটা থাকলেই চলে)',{a:'middle',c:'g',s:'b'}),B('lb',40,95,120,50,'Load\nbalancer','a'),B('p1',330,50,150,50,'Replica 1\n99%','g'),B('p2',330,140,150,50,'Replica 2\n99%','g'),A('q1',162,108,328,78,'g'),A('q2',162,132,328,162,'g')]}),
+   S('ফল: 1 − (0.01 × 0.01) = <b>99.99%</b>। Replica যোগ করে availability বাড়ে।',{add:[B('res',560,95,170,50,'99.99%\n≈ ৫২ মিনিট/বছর','g',{hl:1}),A('q3',482,125,558,120,'g'),T('fm',380,222,'1 − (0.01 × 0.01) = 0.9999',{a:'middle',c:'g',s:'sm b'})]})
+  ]}
+ ]}
+];
+
+/* ---------- build page ---------- */
+const app=document.getElementById('app'),jump=document.getElementById('jump'),partsNav=document.getElementById('parts');
+PARTS.forEach((pt,pi)=>{
+  const a=document.createElement('a');a.href='#part'+pi;a.innerHTML=`<b>${pt[0]}</b>${pt[1]}`;partsNav.appendChild(a);
+  const sec=document.createElement('section');sec.className='part';sec.id='part'+pi;
+  sec.innerHTML=`<h2><span>${pt[0]}</span>${pt[1]}</h2>`;app.appendChild(sec);
+});
+TOPICS.forEach((t,i)=>{
+  const n=String(i+1);
+  const j=document.createElement('a');j.href='#q'+n;j.textContent=n;j.title=t.q;jump.appendChild(j);
+  const card=document.createElement('article');card.className='q';card.id='q'+n;
+  card.innerHTML=`<h3><span class="num">${n}</span><span>${t.q}</span></h3><p class="ans">${t.ans}</p><ul>${t.pts.map(x=>`<li>${x}</li>`).join('')}</ul><div class="viz"></div>`;
+  document.getElementById('part'+t.p).appendChild(card);
+  mount(card.querySelector('.viz'),t);
+});
+</script>
+</body>
+</html>

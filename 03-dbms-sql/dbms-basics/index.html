@@ -1,0 +1,496 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DBMS Basics</title>
+<meta name="description" content="DBMS basics: join-এর সব ধরন, index, SQL বনাম NoSQL (Cassandra সহ), data model বনাম ER, trigger ও cascading, view; ধাপে ধাপে D3 animation-এ।">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<style>
+/* One card per interview question: short answer, 2-3 bullets, and a step-by-step D3 scene.
+   Scenes are plain data (see TOPICS at the bottom): each step adds / modifies / deletes nodes by id
+   and the tiny engine animates the difference. */
+:root{
+  --bg:#f5f7fc; --surface:#ffffff; --surface-2:#f1f4fa; --fg:#0f172a; --muted:#5b6478; --faint:#94a0b8; --line:#e4e8f1;
+  --accent:#6366f1;
+  --a:#4f46e5; --b:#db2777; --g:#059669; --o:#d97706; --r:#e11d48; --s:#0284c7;
+  --hero:linear-gradient(135deg,#4f46e5 0%,#7c3aed 45%,#db2777 100%);
+  --shadow:0 1px 2px rgba(15,23,42,.04),0 10px 30px -12px rgba(15,23,42,.14);
+  --sans:"Inter","Hind Siliguri",system-ui,sans-serif; --bn:"Hind Siliguri","Inter",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0b0f1a; --surface:#121827; --surface-2:#182033; --fg:#e7ecf6; --muted:#9aa6bf; --faint:#66728c; --line:#232c42;
+  --accent:#818cf8; --a:#818cf8; --b:#f472b6; --g:#34d399; --o:#fbbf24; --r:#fb7185; --s:#38bdf8;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6);
+}}
+:root[data-theme="dark"]{
+  --bg:#0b0f1a; --surface:#121827; --surface-2:#182033; --fg:#e7ecf6; --muted:#9aa6bf; --faint:#66728c; --line:#232c42;
+  --accent:#818cf8; --a:#818cf8; --b:#f472b6; --g:#34d399; --o:#fbbf24; --r:#fb7185; --s:#38bdf8;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 var(--bn);-webkit-font-smoothing:antialiased}
+a{color:var(--accent)}
+button{font:inherit;color:inherit}
+code{font-family:var(--mono);font-size:.86em;font-weight:500;background:color-mix(in srgb,var(--accent) 10%,var(--surface));color:color-mix(in srgb,var(--accent) 72%,var(--fg));padding:.1em .4em;border-radius:6px}
+.wrap{max-width:1000px;margin:0 auto;padding:20px 18px 70px}
+
+.topnav{display:flex;align-items:center;gap:10px}
+.brand{display:flex;align-items:center;gap:10px;color:var(--fg);text-decoration:none;font:800 16px var(--sans);letter-spacing:-.02em}
+.logo{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:#fff;font:800 13px var(--mono);background:var(--hero)}
+.topnav .sp{flex:1}
+.pill{border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:6px 14px;font:600 13px var(--sans);cursor:pointer;text-decoration:none}
+.pill:hover{color:var(--fg)}
+
+.hero{margin-top:20px;border-radius:22px;padding:26px 30px;color:#fff;background:var(--hero)}
+.hero .eyebrow{font:600 12px var(--sans);letter-spacing:.1em;text-transform:uppercase;opacity:.85}
+.hero h1{margin:6px 0 8px;font:800 clamp(26px,4.2vw,38px)/1.15 var(--sans);letter-spacing:-.03em}
+.hero p{margin:0;max-width:680px;opacity:.94}
+.jump{display:flex;flex-wrap:wrap;gap:6px;margin-top:16px}
+.jump a{min-width:32px;padding:0 6px;height:32px;display:grid;place-items:center;border-radius:9px;text-decoration:none;font:700 13px var(--sans);color:#fff;background:rgba(255,255,255,.18)}
+.jump a:hover{background:rgba(255,255,255,.34)}
+
+.parts{position:sticky;top:0;z-index:5;margin:14px -18px 0;padding:10px 18px;display:flex;gap:8px;overflow-x:auto;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);scrollbar-width:none}
+.parts a{flex:none;text-decoration:none;font:600 13px var(--sans);color:var(--muted);border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 13px}
+.parts a:hover{color:var(--fg)}
+.parts a b{color:var(--accent);margin-right:4px}
+
+.part{margin-top:44px;scroll-margin-top:60px}
+.part>h2{margin:0;font:800 clamp(20px,2.6vw,25px)/1.25 var(--sans);letter-spacing:-.02em}
+.part>h2 span{color:var(--accent);margin-right:8px}
+
+.q{margin-top:16px;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:20px 22px;box-shadow:var(--shadow);scroll-margin-top:64px}
+.q h3{display:flex;gap:12px;align-items:flex-start;margin:0 0 10px;font:700 18px/1.4 var(--sans);letter-spacing:-.01em}
+.skip{display:inline-block;margin-left:8px;padding:1px 10px;border-radius:999px;font:600 12px var(--sans);font-style:normal;white-space:nowrap;color:var(--muted);background:var(--surface-2);border:1px dashed var(--faint);vertical-align:middle}
+.num{flex:none;min-width:34px;height:34px;padding:0 8px;border-radius:10px;display:grid;place-items:center;color:#fff;font:800 14px var(--sans);background:var(--hero)}
+.ans{margin:0 0 10px;padding:10px 14px;border-left:4px solid var(--accent);border-radius:0 10px 10px 0;background:color-mix(in srgb,var(--accent) 8%,var(--surface))}
+.q ul{margin:0 0 12px;padding-left:20px;color:var(--muted)}
+.q li{margin:2px 0}
+.q li b,.ans b{color:var(--fg)}
+.extra{margin:0 0 12px;overflow-x:auto}
+.extra table{border-collapse:collapse;font:500 13px var(--mono)}
+.extra th,.extra td{border:1px solid var(--line);padding:3px 10px;text-align:center}
+.extra th{background:var(--surface-2)}
+.extra .cmp td,.extra .cmp th{text-align:left;vertical-align:top;font:500 13.5px/1.55 var(--bn);min-width:150px}
+.extra .cmp td:first-child{font-weight:700;white-space:nowrap;min-width:0}
+
+.viz{border:1px solid var(--line);border-radius:14px;background:var(--surface-2);overflow:hidden}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;padding:10px 12px 0}
+.tabs button{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:3px 12px;font:600 12.5px var(--sans);color:var(--muted);cursor:pointer}
+.tabs button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.stage{overflow-x:auto;padding-top:8px}
+.stage svg{display:block;width:100%;min-width:680px;height:auto;cursor:pointer;user-select:none}
+.cap{padding:10px 16px;min-height:3.4em;border-top:1px dashed var(--line);font-size:15px}
+.ctl{display:flex;align-items:center;gap:8px;padding:0 12px 12px}
+.b{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:5px 14px;font:600 13px var(--sans);cursor:pointer}
+.b:hover:not(:disabled){border-color:var(--accent)}
+.b:disabled{opacity:.4;cursor:default}
+.b.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+.cnt{margin-left:auto;font:500 12px var(--mono);color:var(--faint)}
+
+/* svg scene */
+svg text,svg tspan{white-space:pre}
+svg text{font-family:var(--sans);font-size:13px;fill:var(--fg);dominant-baseline:central}
+.c-n{--cc:var(--muted)} .c-a{--cc:var(--a)} .c-b{--cc:var(--b)} .c-g{--cc:var(--g)}
+.c-o{--cc:var(--o)} .c-r{--cc:var(--r)} .c-s{--cc:var(--s)} .c-f{--cc:var(--fg)}
+.box rect,.circ circle{fill:color-mix(in srgb,var(--cc) 14%,var(--surface));stroke:var(--cc);stroke-width:1.6;transition:fill .45s,stroke .45s}
+.dash rect,.dash circle{stroke-dasharray:6 4;fill:color-mix(in srgb,var(--cc) 4%,transparent)}
+.hl rect,.hl circle{stroke-width:3.4;filter:drop-shadow(0 0 7px color-mix(in srgb,var(--cc) 65%,transparent))}
+.text text{fill:var(--cc);transition:fill .45s}
+.text.b text,.text.lg text{font-weight:700}
+.text.lg text{font-size:15px}
+.sm text{font-size:11.5px}
+.m text{font-family:var(--mono);font-size:12px}
+.path path{fill:none;stroke:var(--cc);stroke-width:3.4;stroke-linecap:round}
+.arrow line{stroke:var(--cc);stroke-width:2.2;transition:stroke .4s}
+.arrow.dash line{stroke-dasharray:6 4}
+.arrow.hl line{stroke-width:3.4}
+footer{margin-top:50px;text-align:center;color:var(--faint);font:500 13px var(--sans)}
+
+.q .ans code,.q li code{white-space:nowrap}
+.hero{background:linear-gradient(135deg,#0ea5e9 0%,#6366f1 50%,#a855f7 100%)}
+.extra .cmp td code,.extra .cmp td{font-size:13px}
+.extra pre{margin:10px 0 0;padding:10px 14px;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;font:500 12.5px/1.6 var(--mono);overflow-x:auto;white-space:pre-wrap}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs id="defs"></defs></svg>
+<div class="wrap">
+  <nav class="topnav">
+    <a class="brand" href="../../index.html"><span class="logo">W</span>WellDev</a>
+    <span class="sp"></span>
+    <button class="pill" id="theme" type="button">Theme</button>
+  </nav>
+  <header class="hero">
+    <div class="eyebrow">DBMS · Basics</div>
+    <h1>DBMS Basics: ৬টি প্রশ্ন</h1>
+    <p>Join-এর সব ধরন, index, SQL বনাম NoSQL, data model বনাম ER diagram, trigger ও cascading, আর view। প্রতিটা ধাপে animation, scene-এ ক্লিক করো বা <b>Next</b> চাপো।</p>
+  </header>
+  <nav class="parts" id="parts"></nav>
+  <main id="app"></main>
+  <footer>DBMS · Basics</footer>
+</div>
+<script>
+/* ---------- theme ---------- */
+(function(){
+  const root=document.documentElement,btn=document.getElementById('theme');
+  try{const t=localStorage.getItem('theme');if(t)root.dataset.theme=t;}catch(e){}
+  const dark=()=>root.dataset.theme?root.dataset.theme==='dark':matchMedia('(prefers-color-scheme:dark)').matches;
+  const label=()=>btn.textContent=dark()?'Light':'Dark';
+  btn.onclick=()=>{root.dataset.theme=dark()?'light':'dark';try{localStorage.setItem('theme',root.dataset.theme);}catch(e){}label();};
+  label();
+})();
+
+/* ---------- scene engine ---------- */
+const COLORS=['n','a','b','g','o','r','s','f'];
+document.getElementById('defs').innerHTML=COLORS.map(c=>
+  `<marker id="ah-${c}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" style="fill:var(--${c==='n'?'muted':c==='f'?'fg':c})"/></marker>`).join('');
+
+const B=(id,x,y,w,h,label,c='n',o={})=>({id,k:'box',x,y,w,h,label,c,...o});
+const T=(id,x,y,label,o={})=>({id,k:'text',x,y,label,c:'n',...o});
+const A=(id,x1,y1,x2,y2,c='n',o={})=>({id,k:'arrow',x:0,y:0,x1,y1,x2,y2,c,...o});
+const C=(id,x,y,r,label,c='n',o={})=>({id,k:'circ',x,y,r,label,c,...o});
+const S=(cap,o={})=>({cap,...o});
+const P=(id,d,c='n',o={})=>({id,k:'path',x:0,y:0,d,c,...o});
+
+function stateAt(steps,i){
+  const m=new Map();
+  for(let k=0;k<=i;k++){
+    const s=steps[k];
+    (s.del||[]).forEach(id=>m.delete(id));
+    (s.add||[]).forEach(n=>m.set(n.id,{...n}));
+    Object.entries(s.mod||{}).forEach(([id,p])=>{if(m.has(id))Object.assign(m.get(id),p);});
+  }
+  return [...m.values()];
+}
+
+function setText(g,cls,str,x,y,anchor,lh=15.5){
+  let tx=g.select('text.'+cls);
+  if(tx.empty())tx=g.append('text').attr('class',cls);
+  const ls=String(str??'').split('\n');
+  tx.attr('text-anchor',anchor);
+  tx.selectAll('tspan').data(ls).join('tspan').attr('x',x).attr('y',(d,i)=>y-(ls.length-1)*lh/2+i*lh).text(d=>d);
+}
+
+function upd(g,d,t){
+  g.attr('class',`n ${d.k} c-${d.c||'n'}${d.dash?' dash':''}${d.hl?' hl':''}${d.s?' '+d.s:''}${d.m?' m':''}`);
+  if(d.k==='box'){
+    let r=g.select('rect');
+    if(r.empty())r=g.insert('rect',':first-child').attr('rx',9).attr('width',d.w).attr('height',d.h);
+    r.transition(t).attr('width',d.w).attr('height',d.h);
+    setText(g,'lb',d.label,d.w/2,d.h/2,'middle');
+  }else if(d.k==='circ'){
+    let r=g.select('circle');
+    if(r.empty())r=g.insert('circle',':first-child').attr('r',d.r);
+    r.transition(t).attr('r',d.r);
+    setText(g,'lb',d.label,0,0,'middle');
+  }else if(d.k==='text'){
+    setText(g,'lb',d.label,0,0,d.a||'start');
+  }else if(d.k==='path'){
+    let p=g.select('path');
+    if(p.empty()){p=g.append('path').attr('d',d.d);const L=p.node().getTotalLength();p.attr('stroke-dasharray',L).attr('stroke-dashoffset',L).transition(t).attr('stroke-dashoffset',0);}
+  }else if(d.k==='arrow'){
+    let l=g.select('line');
+    if(l.empty())l=g.append('line').attr('x1',d.x1).attr('y1',d.y1).attr('x2',d.x2).attr('y2',d.y2);
+    l.attr('marker-end',`url(#ah-${d.c||'n'})`).transition(t).attr('x1',d.x1).attr('y1',d.y1).attr('x2',d.x2).attr('y2',d.y2);
+  }
+}
+
+function draw(svg,nodes,dur){
+  const t=d3.transition().duration(dur).ease(d3.easeCubicInOut);
+  svg.select('.layer').selectAll('g.n').data(nodes,d=>d.id).join(
+    en=>en.append('g').attr('opacity',0).attr('transform',d=>`translate(${d.x},${d.y})`),
+    up=>up,
+    ex=>ex.transition(t).attr('opacity',0).remove()
+  ).each(function(d){upd(d3.select(this),d,t);})
+   .transition(t).attr('transform',d=>`translate(${d.x},${d.y})`).attr('opacity',d=>d.o??1);
+}
+
+function mount(host,topic){
+  const tabs=topic.tabs||[{n:'',steps:topic.steps}];
+  host.innerHTML='<div class="tabs"></div><div class="stage"><svg viewBox="0 0 760 240" role="img"><g class="layer"></g></svg></div><div class="cap"></div><div class="ctl"><button class="b prev" type="button">◀</button><button class="b pri next" type="button">Next ▶</button><span class="cnt"></span></div>';
+  const svg=d3.select(host).select('svg'),cap=host.querySelector('.cap'),cnt=host.querySelector('.cnt');
+  const prev=host.querySelector('.prev'),next=host.querySelector('.next'),tabBox=host.querySelector('.tabs');
+  let ti=0,si=0,steps;
+  function show(dur){
+    draw(svg,stateAt(steps,si),dur);
+    cap.innerHTML=steps[si].cap;
+    cnt.textContent=`${si+1} / ${steps.length}`;
+    prev.disabled=si===0;
+    next.textContent=si===steps.length-1?'↻ আবার':'Next ▶';
+  }
+  function load(i){
+    ti=i;si=0;
+    const tb=tabs[ti];steps=typeof tb.steps==='function'?tb.steps():tb.steps;
+    tabBox.querySelectorAll('button').forEach((b,k)=>b.classList.toggle('on',k===ti));
+    show(0);
+  }
+  if(tabs.length>1){
+    tabs.forEach((tb,i)=>{const b=document.createElement('button');b.type='button';b.textContent=tb.n;b.onclick=()=>load(i);tabBox.appendChild(b);});
+  }else tabBox.remove();
+  const go=()=>{si=si===steps.length-1?0:si+1;show(600);};
+  next.onclick=go;svg.on('click',go);
+  prev.onclick=()=>{if(si>0){si--;show(600);}};
+  load(0);
+}
+
+
+/* ---------- content ---------- */
+const PARTS=[['1','Joins'],['2','Clustered বনাম Non-clustered'],['3','SQL বনাম NoSQL'],['4','Data Model বনাম ER'],['5','Trigger ও Cascading'],['6','Views']];
+
+/* ===== 1. Joins ===== */
+const JEMP={lt:'employees',rt:'departments',header:'name  |  dept',
+  L:[{label:'1  Rahim   dept=10',key:10,n:'Rahim'},{label:'2  Karim   dept=20',key:20,n:'Karim'},{label:'3  Sumon   dept=NULL',key:null,n:'Sumon'},{label:'4  Anika   dept=30',key:30,n:'Anika'}],
+  R:[{label:'10  Sales',id:10,n:'Sales'},{label:'20  HR',id:20,n:'HR'},{label:'40  IT',id:40,n:'IT'}],
+  sql:{INNER:'SELECT e.name, d.name FROM employees e INNER JOIN departments d ON e.dept = d.id;',LEFT:'SELECT e.name, d.name FROM employees e LEFT JOIN departments d ON e.dept = d.id;',RIGHT:'SELECT e.name, d.name FROM employees e RIGHT JOIN departments d ON e.dept = d.id;',FULL:'SELECT e.name, d.name FROM employees e FULL OUTER JOIN departments d ON e.dept = d.id;',CROSS:'SELECT e.name, d.name FROM employees e CROSS JOIN departments d;'},
+  intro:{
+    INNER:'<b>INNER JOIN:</b> শুধু যাদের <b>দুই table-এই match আছে</b> তারা ফলে আসে। Employee-র dept আর department-এর id মিললে row ঢোকে।',
+    LEFT:'<b>LEFT JOIN:</b> <b>বাঁ table (employees)-এর সব row</b> আসে। ডানে match না থাকলে ডানের অংশ <b>NULL</b>।',
+    RIGHT:'<b>RIGHT JOIN:</b> <b>ডান table (departments)-এর সব row</b> আসে। বাঁয়ে match না থাকলে বাঁয়ের অংশ <b>NULL</b>।',
+    FULL:'<b>FULL OUTER JOIN:</b> <b>দুই table-এর সব row</b> আসে। যেখানে match নেই সেখানে অন্য পাশ NULL।',
+    CROSS:'<b>CROSS JOIN:</b> কোনো শর্ত নেই। <b>প্রতিটা employee × প্রতিটা department</b> (Cartesian product): 4 × 3 = 12 row।'}};
+function joinScene(cfg,type){
+  const {L,R}=cfg,RH=type==='CROSS'?15:21;let k=0,prev=[];
+  const base=[T('lt',20,12,cfg.lt,{c:'a',s:'sm b'}),...L.map((r,i)=>B('l'+i,20,26+i*38,230,32,r.label,'a',{m:1,s:'sm'})),T('rt',270,12,cfg.rt,{c:'b',s:'sm b'}),...R.map((r,i)=>B('r'+i,270,26+i*38,170,32,r.label,'b',{m:1,s:'sm'})),
+    B('of',470,8,270,214,'','g',{dash:1}),T('oh',482,22,cfg.header,{c:'n',s:'m b'}),T('sql',20,232,cfg.sql[type],{c:'f',s:'m'})];
+  const steps=[S(cfg.intro[type],{add:base})];
+  const row=(txt,c)=>{const n=T('o'+k,482,44+k*RH,txt,{c,s:'m'});k++;return n;};
+  const clr=()=>Object.fromEntries(prev.map(id=>[id,{hl:0,c:id[0]==='l'?'a':'b'}]));
+  const norm=(arr)=>arr;
+  if(type==='INNER'||type==='LEFT'){
+    L.forEach((l,i)=>{const m=R.findIndex(r=>r.id===l.key);const mod={...clr()};prev=['l'+i];mod['l'+i]={hl:1,c:m>=0?'g':'r'};const add=[];
+      if(m>=0){mod['r'+m]={hl:1,c:'g'};prev.push('r'+m);add.push(row(`${l.n}  |  ${R[m].n}`,'g'));}
+      else if(type==='LEFT')add.push(row(`${l.n}  |  NULL`,'o'));
+      const cap=m>=0?`<b>${l.n}</b> (dept ${l.key}): departments-এ <b>${R[m].n}</b> পাওয়া গেল, তাই ফলে ঢুকল।`:(type==='LEFT'?`<b>${l.n}</b>: ${l.key==null?'dept NULL':'dept '+l.key+' departments-এ নেই'}। Match নেই, কিন্তু LEFT JOIN বাঁয়ের সব row রাখে, তাই <b>NULL সহ</b> ঢুকল।`:`<b>${l.n}</b>: ${l.key==null?'dept NULL':'dept '+l.key+' departments-এ নেই'}। Match নেই, INNER JOIN-এ তাই <b>বাদ</b>।`);
+      steps.push(S(cap,{add,mod}));});
+  }else if(type==='RIGHT'){
+    R.forEach((r,j)=>{const ms=L.map((l,i)=>l.key===r.id?i:-1).filter(i=>i>=0);const mod={...clr()};mod['r'+j]={hl:1,c:ms.length?'g':'r'};prev=['r'+j];const add=[];
+      ms.forEach(i=>{mod['l'+i]={hl:1,c:'g'};prev.push('l'+i);add.push(row(`${L[i].n}  |  ${r.n}`,'g'));});
+      if(!ms.length)add.push(row(`NULL  |  ${r.n}`,'o'));
+      steps.push(S(ms.length?`<b>${r.n}</b> (id ${r.id}): employees-এ <b>${ms.map(i=>L[i].n).join(', ')}</b> আছে, ফলে ঢুকল।`:`<b>${r.n}</b> (id ${r.id}): কোনো employee নেই। RIGHT JOIN ডানের সব row রাখে, তাই <b>NULL সহ</b> ঢুকল।`,{add,mod}));});
+  }else if(type==='FULL'){
+    L.forEach((l,i)=>{const m=R.findIndex(r=>r.id===l.key);const mod={...clr()};prev=['l'+i];mod['l'+i]={hl:1,c:m>=0?'g':'r'};const add=[];
+      if(m>=0){mod['r'+m]={hl:1,c:'g'};prev.push('r'+m);add.push(row(`${l.n}  |  ${R[m].n}`,'g'));}else add.push(row(`${l.n}  |  NULL`,'o'));
+      steps.push(S(m>=0?`<b>${l.n}</b> ↔ <b>${R[m].n}</b>: match, ঢুকল।`:`<b>${l.n}</b>: match নেই, তবু <b>NULL সহ</b> ঢুকল (বাঁয়ের সব row আসে)।`,{add,mod}));});
+    R.forEach((r,j)=>{if(L.some(l=>l.key===r.id))return;const mod={...clr()};mod['r'+j]={hl:1,c:'r'};prev=['r'+j];steps.push(S(`<b>${r.n}</b>-এ কোনো employee নেই, তবু <b>NULL সহ</b> ঢুকল (ডানের সব row-ও আসে)।`,{add:[row(`NULL  |  ${r.n}`,'o')],mod}));});
+  }else{
+    L.forEach((l,i)=>{const mod={...clr()};prev=['l'+i];mod['l'+i]={hl:1,c:'g'};const add=R.map(r=>row(`${l.n}  |  ${r.n}`,'g'));steps.push(S(`<b>${l.n}</b> প্রতিটা department-এর সাথে জোড়া লাগল (3টা row)।`,{add,mod}));});
+  }
+  const cnt=k;
+  steps.push(S({INNER:`<b>ফল:</b> ${cnt}টা row। যাদের match নেই (Sumon, Anika, IT) তারা নেই।`,LEFT:`<b>ফল:</b> ${cnt}টা row। সব employee আছে, match না থাকলে NULL।`,RIGHT:`<b>ফল:</b> ${cnt}টা row। সব department আছে (IT সহ), match না থাকলে NULL।`,FULL:`<b>ফল:</b> ${cnt}টা row। দুই পাশের সবাই আছে, match না থাকলে NULL।`,CROSS:`<b>ফল:</b> ${cnt}টা row (4 × 3)। শর্ত নেই বলে সব সম্ভাব্য জোড়া। সাবধান: বড় table-এ বিশাল হয়ে যায়।`}[type],{mod:clr()}));
+  return steps;
+}
+const JSELF={lt:'employees e',rt:'employees m (manager)',header:'employee  |  manager',
+  L:[{label:'1  Rahim   mgr=NULL',key:null,n:'Rahim'},{label:'2  Karim   mgr=1',key:1,n:'Karim'},{label:'3  Sumon   mgr=1',key:1,n:'Sumon'},{label:'4  Anika   mgr=2',key:2,n:'Anika'}],
+  R:[{label:'1  Rahim',id:1,n:'Rahim'},{label:'2  Karim',id:2,n:'Karim'},{label:'3  Sumon',id:3,n:'Sumon'},{label:'4  Anika',id:4,n:'Anika'}],
+  sql:{LEFT:'SELECT e.name, m.name FROM employees e LEFT JOIN employees m ON e.manager_id = m.id;'},
+  intro:{LEFT:'<b>SELF JOIN:</b> একটা table নিজের সাথেই join। এখানে employees-কে দুইবার ধরা হয়: <b>e</b> (কর্মী) আর <b>m</b> (ম্যানেজার)। <code>manager_id</code> দিয়ে মেলানো।'}};
+function selfScene(){
+  const steps=joinScene(JSELF,'LEFT');
+  // fix captions for self join wording
+  steps.forEach((s,i)=>{if(i>0&&i<steps.length-1)s.cap=s.cap.replace('departments-এ','employees (m)-এ').replace('dept ','manager ');});
+  steps[steps.length-1].cap='<b>ফল:</b> প্রতিটা কর্মীর পাশে তার ম্যানেজার। Rahim-এর manager নেই, তাই NULL। Hierarchy (কে কার অধীনে) বোঝাতে SELF JOIN।';
+  return steps;
+}
+
+/* ===== 2. Indexing ===== */
+const CLUSTERED=[
+  S('<b>Clustered index:</b> table-এর <b>row গুলোই index-এর key (id) অনুযায়ী সাজানো</b>। Index-এর leaf-ই আসল data। উদাহরণ: <code>id = 42</code> খুঁজি।',{add:[
+    B('rt',300,8,160,34,'Root: 1 - 100','b'),B('m1',130,64,160,34,'1 - 50','b'),B('m2',470,64,160,34,'51 - 100','b'),
+    B('p1',20,128,170,64,'Leaf: id 1-25\nপুরো row এখানে','g',{s:'sm'}),B('p2',210,128,170,64,'Leaf: id 26-50\nপুরো row এখানে','g',{s:'sm'}),B('p3',400,128,170,64,'Leaf: id 51-75\nপুরো row এখানে','g',{s:'sm'}),B('p4',590,128,150,64,'Leaf: id 76-100\nপুরো row এখানে','g',{s:'sm'}),
+    A('e1',350,44,240,62,'n'),A('e2',410,44,540,62,'n'),A('e3',210,100,110,126,'n'),A('e4',230,100,290,126,'n'),A('e5',550,100,490,126,'n'),A('e6',570,100,660,126,'n'),
+    T('qq',380,222,'SELECT * FROM users WHERE id = 42;',{a:'middle',c:'f',s:'m'})]}),
+  S('Root-এ দেখি: 42 ≤ 50, তাই <b>বাঁ দিকে</b> (1 - 50)।',{mod:{rt:{c:'o',hl:1},m1:{c:'o',hl:1}}}),
+  S('Mid node-এ: 42 > 25, তাই leaf <b>26-50</b>-এ।',{mod:{rt:{hl:0,c:'b'},m1:{hl:0,c:'b'},p2:{c:'o',hl:1}}}),
+  S('Leaf-এই <b>পুরো row (id 42)</b> পেয়ে গেলাম। আর কোথাও যেতে হয়নি, কারণ leaf-ই data।',{mod:{p2:{c:'g',hl:1,label:'Leaf: id 26-50\nrow 42 পাওয়া গেল ✓'}}}),
+  S('<b>Range query</b> (id 40 থেকে 60): row গুলো সাজানো, তাই পাশাপাশি দুটো leaf-ই যথেষ্ট। খুব দ্রুত।',{mod:{p2:{label:'Leaf: id 26-50\nrow 40..50 ✓',hl:1},p3:{c:'g',hl:1,label:'Leaf: id 51-75\nrow 51..60 ✓'}}}),
+  S('<b>Table-এ clustered index একটাই</b> হতে পারে, কারণ row একভাবেই সাজানো যায় (id অনুযায়ী, আবার একসাথে email অনুযায়ী না)।',{mod:{p2:{hl:0},p3:{hl:0}}})
+];
+const NONCLUST=[
+  S('<b>Non-clustered index:</b> table থেকে <b>আলাদা</b> একটা structure। এখানে email অনুযায়ী সাজানো, ভেতরে <b>email + row-এর pointer</b>। উদাহরণ: <code>email = rahim@x.com</code>।',{add:[
+    B('ir',40,8,230,34,'Index on email (root)','b'),
+    B('il',20,64,270,92,'Index leaf (email অনুযায়ী সাজানো)\nanika@x.com  →  row 17\nrahim@x.com  →  row 3\nsumon@x.com  →  row 9','b',{m:1,s:'sm'}),A('ia',155,44,155,62,'n'),
+    B('tb',420,8,320,214,'','g',{dash:1}),T('tbl',434,22,'users table (id অনুযায়ী সাজানো)',{c:'g',s:'sm b'}),
+    B('t3',436,40,288,36,'id 3   Rahim   rahim@x.com','g',{m:1,s:'sm'}),B('t9',436,84,288,36,'id 9   Sumon   sumon@x.com','g',{m:1,s:'sm'}),B('t17',436,128,288,36,'id 17  Anika   anika@x.com','g',{m:1,s:'sm'}),
+    T('qq',380,222,'SELECT * FROM users WHERE email = \'rahim@x.com\';',{a:'middle',c:'f',s:'m'})]}),
+  S('<b>প্রথমে index-এ খুঁজি।</b> Index email অনুযায়ী সাজানো, তাই দ্রুত খোঁজা যায়: <code>rahim@x.com</code> পাওয়া গেল।',{mod:{ir:{c:'o',hl:1},il:{c:'o',hl:1}}}),
+  S('Index-এর leaf-এ লেখা আছে: <b>row 3</b>। এটা একটা <b>pointer</b>, আসল data এখানে নেই।',{mod:{ir:{hl:0,c:'b'}}}),
+  S('<b>Pointer ধরে table-এর row 3-এ</b> যাই। এটা বাড়তি একটা ধাপ (lookup)। একেই বলে non-clustered index-এর বাড়তি খরচ।',{add:[A('pt',292,110,434,58,'o')],mod:{t3:{c:'o',hl:1}}}),
+  S('<b>Row পেলাম।</b> Table সাজানো id অনুযায়ী, তাই index ছাড়া email খুঁজতে পুরো table scan করতে হতো। Index সেই কাজ বাঁচাল।',{mod:{t3:{c:'g',hl:1},il:{hl:0,c:'b'}}}),
+  S('<b>এক table-এ অনেক non-clustered index</b> থাকতে পারে (email, name, phone...)। প্রতিটা আলাদা structure, তাই insert/update-এ সবগুলো আপডেট হয়, খরচ বাড়ে।',{mod:{t3:{hl:0}}})
+];
+
+/* ===== 3. SQL vs NoSQL ===== */
+const SQLTAB=[
+  S('<b>SQL (relational):</b> data <b>table</b>-এ, প্রতিটা table-এর <b>নির্দিষ্ট column</b> (schema আগে ঠিক করা)।',{add:[T('ut',20,10,'users',{c:'a',s:'sm b'}),B('u',20,26,330,104,'id | name  | email\n1  | Rahim | r@x.com\n2  | Karim | k@x.com\n3  | Sumon | s@x.com','a',{m:1,s:'sm'}),T('ot',410,10,'orders',{c:'b',s:'sm b'}),B('o',410,26,330,104,'id | user_id | total\n1  | 1       | 500\n2  | 1       | 300\n3  | 2       | 700','b',{m:1,s:'sm'})]}),
+  S('Table গুলো <b>relation</b>-এ জোড়া: <code>orders.user_id</code> → <code>users.id</code> (foreign key)। <code>JOIN</code> দিয়ে একসাথে আনা যায়।',{add:[A('fk',412,78,352,78,'g'),T('fkl',380,62,'FK',{a:'middle',c:'g',s:'sm b'}),B('jq',20,150,720,40,'SELECT u.name, o.total FROM users u JOIN orders o ON o.user_id = u.id;','g',{m:1,s:'sm'})]}),
+  S('নতুন একটা field (<code>phone</code>) চাইলে <b>ALTER TABLE</b>: <b>সব row-এ</b> নতুন column আসে (খালি/NULL)। Schema সবার জন্য একই।',{mod:{u:{label:'id | name  | email   | phone\n1  | Rahim | r@x.com | NULL\n2  | Karim | k@x.com | NULL\n3  | Sumon | s@x.com | NULL',c:'o'}},add:[T('al',380,210,'ALTER TABLE users ADD phone text;',{a:'middle',c:'o',s:'m b'})]}),
+  S('<b>ACID transaction:</b> একাধিক table একসাথে বদলায়, হয় সবটা নয় কিছুই না। ব্যাংক, order, payment-এর মতো জায়গায় এটাই দরকার।',{del:['al'],mod:{u:{c:'g'},o:{c:'g'}},add:[T('ac',380,210,'BEGIN; ... ; COMMIT;   (সব বা কিছুই না)',{a:'middle',c:'g',s:'m b'})]})
+];
+const DOCTAB=[
+  S('<b>NoSQL (document):</b> data <b>JSON document</b> হিসেবে। কোনো fixed table নেই, প্রতিটা document নিজের শেপ নিয়ে থাকতে পারে।',{add:[B('d1',20,20,230,150,'{\n  "name": "Rahim",\n  "email": "r@x.com"\n}','a',{m:1,s:'sm'}),B('d2',270,20,230,150,'{\n  "name": "Karim",\n  "email": "k@x.com"\n}','a',{m:1,s:'sm'}),B('d3',520,20,220,150,'{\n  "name": "Sumon",\n  "email": "s@x.com"\n}','a',{m:1,s:'sm'})]}),
+  S('<b>Flexible schema:</b> Karim-এর document-এ <code>phone</code> যোগ হল, Sumon-এ <code>address</code>। আর কারো কিছু বদলাতে হল না, <b>ALTER নেই</b>।',{mod:{d2:{label:'{\n  "name": "Karim",\n  "email": "k@x.com",\n  "phone": "017..."\n}',c:'o'},d3:{label:'{\n  "name": "Sumon",\n  "email": "s@x.com",\n  "address": {"city": "Dhaka"}\n}',c:'o'}}}),
+  S('<b>Embedded data:</b> Rahim-এর order সরাসরি তার document-এর <b>ভেতরে</b>। Join লাগে না, এক read-এ সব আসে।',{mod:{d1:{label:'{\n  "name": "Rahim",\n  "email": "r@x.com",\n  "orders": [\n    {"total": 500},\n    {"total": 300}\n  ]\n}',c:'g'}}}),
+  S('<b>Scale:</b> NoSQL সাধারণত <b>horizontal scaling</b>-এর জন্য বানানো: data অনেক server-এ ভাগ হয়ে থাকে। বদলে অনেক জায়গায় কম কড়া consistency (eventual) থাকে।',{add:[B('sv1',20,186,230,40,'Server 1','n',{dash:1,s:'sm'}),B('sv2',270,186,230,40,'Server 2','n',{dash:1,s:'sm'}),B('sv3',520,186,220,40,'Server 3','n',{dash:1,s:'sm'})]})
+];
+const NOSQLTYPES=[
+  S('NoSQL <b>এক ধরনের না</b>, চার ধরনের। প্রতিটার নিজস্ব কাজ। একে একে দেখো।',{add:[B('t1',20,20,350,92,'','n',{dash:1}),B('t2',390,20,350,92,'','n',{dash:1}),B('t3',20,128,350,92,'','n',{dash:1}),B('t4',390,128,350,92,'','n',{dash:1})]}),
+  S('<b>Document</b> (MongoDB): JSON document। উদাহরণ: product catalog, যেখানে প্রতিটা product-এর attribute আলাদা।',{mod:{t1:{c:'a',dash:0,hl:1,label:'Document  (MongoDB)\nproduct catalog, user profile\n{ "name": ..., "specs": {...} }'}}}),
+  S('<b>Key-Value</b> (Redis): শুধু key দিয়ে value। অতি দ্রুত। উদাহরণ: session, cache, leaderboard।',{mod:{t1:{hl:0},t2:{c:'g',dash:0,hl:1,label:'Key-Value  (Redis)\nsession, cache, leaderboard\nuser:42  →  "online"'}}}),
+  S('<b>Column-family</b> (Cassandra): অনেক বড় পরিমাণ write, সময় অনুযায়ী data। উদাহরণ: log, sensor data, time-series।',{mod:{t2:{hl:0},t3:{c:'o',dash:0,hl:1,label:'Column-family  (Cassandra)\nlog, sensor data, time-series\nঅনেক write, অনেক server'}}}),
+  S('<b>Graph</b> (Neo4j): data আর তাদের <b>সম্পর্ক</b> নিয়েই কাজ। উদাহরণ: social network ("বন্ধুর বন্ধু"), recommendation।',{mod:{t3:{hl:0},t4:{c:'b',dash:0,hl:1,label:'Graph  (Neo4j)\nsocial network, recommendation\nRahim ─বন্ধু─ Karim ─বন্ধু─ Sumon'}}}),
+  S('সারকথা: <b>কী ধরনের data আর কী ধরনের প্রশ্ন</b> তার ওপর নির্ভর করে কোন NoSQL। পরের tab-এ দেখো কখন SQL, কখন NoSQL।',{mod:{t4:{hl:0}}})
+];
+const WHEN=[
+  S('<b>কখন কোনটা?</b> কিছু বাস্তব কাজ নিয়ে ঠিক করি। বাঁয়ে SQL, ডানে NoSQL।',{add:[B('ls',20,10,350,226,'','a',{dash:1}),T('lsl',34,26,'SQL ভালো যেখানে',{c:'a',s:'sm b'}),B('rs',390,10,350,226,'','g',{dash:1}),T('rsl',404,26,'NoSQL ভালো যেখানে',{c:'g',s:'sm b'})]}),
+  S('<b>ব্যাংক transfer:</b> দুই account একসাথে বদলাতে হয়, টাকা হারালে চলবে না। → <b>SQL</b> (ACID transaction)।',{add:[B('w1',36,44,318,38,'ব্যাংক transfer  (ACID দরকার)','a',{s:'sm'})]}),
+  S('<b>Order আর payment:</b> user, order, product-এর মধ্যে স্পষ্ট সম্পর্ক, অনেক JOIN আর রিপোর্ট। → <b>SQL</b>।',{add:[B('w2',36,90,318,38,'Order + payment  (সম্পর্ক, JOIN, report)','a',{s:'sm'})]}),
+  S('<b>Product catalog:</b> মোবাইলের attribute এক, জামার attribute আরেক। Schema বারবার বদলায়। → <b>NoSQL (document)</b>।',{add:[B('w3',406,44,318,38,'Product catalog  (attribute আলাদা আলাদা)','g',{s:'sm'})]}),
+  S('<b>Session, cache, leaderboard:</b> শুধু key দিয়ে অতি দ্রুত read/write। → <b>NoSQL (key-value, Redis)</b>।',{add:[B('w4',406,90,318,38,'Session / cache / leaderboard  (অতি দ্রুত)','g',{s:'sm'})]}),
+  S('<b>Social graph ও বিশাল লগ:</b> "বন্ধুর বন্ধু" খোঁজা, বা প্রতি সেকেন্ডে লক্ষ লক্ষ write। → <b>NoSQL (graph / column)</b>।',{add:[B('w5',406,136,318,38,'Social graph, বিশাল log  (scale, সম্পর্ক)','g',{s:'sm'})]}),
+  S('<b>বাস্তবে দুটোই একসাথে</b> চলে (একে polyglot persistence বলে)। আবার PostgreSQL-এর <code>JSONB</code> দিয়ে SQL-এও document রাখা যায়। তাই "কোনটা ভালো" নয়, "কোন কাজে কোনটা"।',{add:[T('nt',380,206,'নিয়ম: সম্পর্ক + নিরাপত্তা দরকার হলে SQL, scale + flexibility দরকার হলে NoSQL',{a:'middle',c:'f',s:'sm b'})]})
+];
+
+/* ===== 4. Data Model vs ER Diagram ===== */
+const LEVELS=[
+  S('<b>Data model</b> = data কীভাবে সাজানো হবে তার নকশা। এটা <b>তিন স্তরে</b> আসে, উপরে সহজ ধারণা, নিচে আসল বাস্তবায়ন। উদাহরণ: ছাত্র আর কোর্স।',{add:[B('c1',20,10,720,64,'','a',{dash:1}),B('c2',20,84,720,70,'','b',{dash:1}),B('c3',20,164,720,70,'','g',{dash:1})]}),
+  S('<b>১. Conceptual:</b> কী কী জিনিস আর তাদের সম্পর্ক, কোনো প্রযুক্তি ছাড়া। "ছাত্র কোর্সে ভর্তি হয়।" (ER diagram এই স্তরের)।',{mod:{c1:{c:'a',dash:0,hl:1,label:'Conceptual\nStudent  ─ enrolls ─  Course\n(কী আছে আর সম্পর্ক কী, প্রযুক্তি ছাড়া)'}}}),
+  S('<b>২. Logical:</b> সেটাকে একটা model-এ (যেমন relational) সাজানো: table, column, key।',{mod:{c1:{hl:0},c2:{c:'b',dash:0,hl:1,label:'Logical (relational)\nstudents(id PK, name)    courses(id PK, title)\nenrollments(student_id FK, course_id FK)'}}}),
+  S('<b>৩. Physical:</b> আসল database-এ কীভাবে: data type, index, storage। কোন DBMS-এর জন্য।',{mod:{c2:{hl:0},c3:{c:'g',dash:0,hl:1,label:'Physical\nCREATE TABLE students (id INT PRIMARY KEY, name VARCHAR(50));\nCREATE INDEX ix_name ON students(name);'}}}),
+  S('<b>সারকথা:</b> Data model হল পুরো ধারণা (তিন স্তর)। <b>ER diagram</b> হল তার মধ্যে <b>conceptual স্তর আঁকার একটা diagram</b>।',{mod:{c3:{hl:0}}})
+];
+const ERBUILD=[
+  S('<b>ER diagram:</b> conceptual data model আঁকার diagram। তিনটা জিনিস: <b>Entity</b> (বস্তু), <b>Attribute</b> (গুণ), <b>Relationship</b> (সম্পর্ক)। শুরু করি <b>Entity</b> দিয়ে।',{add:[B('st',60,100,150,56,'Student','a'),B('co',550,100,150,56,'Course','b')]}),
+  S('<b>Attribute:</b> প্রতিটা entity-র গুণ। <b>id (PK)</b> = primary key, যা দিয়ে একজনকে আলাদা করা যায়।',{add:[B('a1',30,28,90,30,'id (PK)','n',{s:'sm'}),B('a2',130,28,90,30,'name','n',{s:'sm'}),A('x1',75,60,110,98,'n'),A('x2',175,60,150,98,'n'),B('c1',520,28,90,30,'id (PK)','n',{s:'sm'}),B('c2',620,28,90,30,'title','n',{s:'sm'}),A('x3',565,60,610,98,'n'),A('x4',665,60,640,98,'n')]}),
+  S('<b>Relationship:</b> দুই entity-র সম্পর্ক, এখানে <b>Enrolls</b> (ভর্তি হয়)।',{add:[B('rel',320,102,120,52,'Enrolls','o',{dash:1}),A('r1',212,128,318,128,'n'),A('r2',442,128,548,128,'n')]}),
+  S('<b>Cardinality:</b> এক ছাত্র অনেক কোর্সে, আবার এক কোর্সে অনেক ছাত্র। তাই <b>M : N</b> (many to many)।',{add:[T('m',250,112,'M',{a:'middle',c:'r',s:'lg'}),T('n',510,112,'N',{a:'middle',c:'r',s:'lg'})]}),
+  S('সম্পর্কেরও attribute থাকতে পারে: <b>grade</b> (কোন ছাত্র কোন কোর্সে কত পেল)। এটা Student-এরও না, Course-এরও না, দুজনের সম্পর্কের।',{add:[B('g',330,184,100,30,'grade','n',{s:'sm'}),A('x5',380,182,380,156,'n',{dash:1})]})
+];
+const ERTABLES=[
+  S('ER diagram আঁকা শেষ। এবার একে <b>relational table</b>-এ বদলাই (conceptual → logical)। প্রতিটা entity একটা table।',{add:[B('st',20,60,200,110,'students\nid  (PK)\nname','a',{m:1}),B('co',540,60,200,110,'courses\nid  (PK)\ntitle','b',{m:1}),T('er',380,24,'ER: Student  M ─ Enrolls ─ N  Course',{a:'middle',c:'f',s:'sm b'})]}),
+  S('<b>M : N সম্পর্ক</b> সরাসরি দুই table-এ রাখা যায় না। তাই মাঝে একটা <b>junction table</b> লাগে: <b>enrollments</b>।',{add:[B('en',260,50,240,130,'enrollments\nstudent_id (FK)\ncourse_id  (FK)\ngrade\nPK (student_id, course_id)','o',{m:1})]}),
+  S('Junction table দুই দিকেই <b>foreign key</b> দিয়ে জোড়া: student_id → students, course_id → courses।',{add:[A('f1',258,100,222,100,'g'),A('f2',502,100,538,100,'g')]}),
+  S('<b>Relationship-এর attribute</b> (grade) এখন junction table-এর column। এক ছাত্র অনেক কোর্সে: enrollments-এ অনেক row।',{mod:{en:{hl:1,c:'g'}}}),
+  S('<b>সারকথা:</b> ER diagram (ধারণা) → relational table (logical model) → CREATE TABLE (physical)। এই তিন ধাপই data model-এর তিন স্তর।',{mod:{en:{hl:0}}})
+];
+
+
+/* ===== Cassandra ===== */
+const CASS=[
+  S('<b>Cassandra:</b> wide-column NoSQL, অনেক node নিয়ে একটা <b>ring</b>। <b>কোনো master নেই</b>, সব node সমান। বিশাল write আর সবসময় চালু থাকার জন্য বানানো।',{add:[B('cl',20,10,130,50,'Client\n(app)','a'),B('n1',330,8,120,50,'Node A','g'),B('n2',560,95,120,50,'Node B','g'),B('n3',330,182,120,50,'Node C','g'),B('n4',100,95,120,50,'Node D','g'),A('r1',452,34,560,100,'n',{dash:1}),A('r2',590,147,452,196,'n',{dash:1}),A('r3',328,206,222,146,'n',{dash:1}),A('r4',150,93,330,40,'n',{dash:1})]}),
+  S('<b>Write:</b> <code>INSERT user_id = 42</code>। Cassandra <b>partition key</b> (user_id) <b>hash</b> করে বের করে কোন node-এর দায়িত্ব। এখানে <b>Node B</b>।',{add:[A('w1',152,40,556,112,'a'),T('w1l',330,98,'hash(42) → Node B',{a:'middle',c:'a',s:'sm b'})],mod:{n2:{c:'a',hl:1}}}),
+  S('<b>Replication:</b> data আরও দুটো node-এ কপি হয় (replication factor = 3): Node C আর Node D। একটা node মরলেও data অন্যত্র আছে।',{del:['w1','w1l'],mod:{n3:{c:'o',hl:1,label:'Node C\nকপি'},n4:{c:'o',hl:1,label:'Node D\nকপি'},n2:{label:'Node B\nমূল (primary)'}}}),
+  S('<b>একটা node বন্ধ</b> (Node B crash)। তবু read/write চলে, কারণ কপি আছে Node C ও D-তে। কোনো single point of failure নেই।',{mod:{n2:{c:'r',hl:0,dash:1,label:'Node B\nবন্ধ ✗'},n3:{hl:0},n4:{hl:0}}}),
+  S('<b>Query:</b> partition key দিয়েই দ্রুত। <b>JOIN নেই</b>। তাই schema বানাতে হয় <b>query-র কথা ভেবে</b>। বদলে লক্ষ লক্ষ write/sec আর সহজ scale। Consistency সাধারণত eventual।',{add:[T('qq',380,120,'SELECT * FROM users WHERE user_id = 42;\nJOIN নেই, query অনুযায়ী table',{a:'middle',c:'f',s:'m'})]})
+];
+
+/* ===== 5. Trigger and cascading ===== */
+const TRIG=[
+  S('<b>Trigger:</b> database-এর ভেতরের কোড, যা কোনো <b>event</b> (INSERT / UPDATE / DELETE) হলে <b>নিজে থেকে চলে</b>। উদাহরণ: কারো salary বদলালে আপনা-আপনি <b>audit log</b> লেখা।',{add:[B('em',20,16,330,110,'employees\nid | name  | salary\n1  | Rahim | 50000','a',{m:1,s:'sm'}),B('au',410,16,330,110,'audit_log\nid | emp | old   | new\n(খালি)','b',{m:1,s:'sm'}),T('qq',380,170,'',{a:'middle',c:'f',s:'m b'})]}),
+  S('Application লেখে: <code>UPDATE employees SET salary = 60000 WHERE id = 1;</code>',{mod:{qq:{label:'UPDATE employees SET salary = 60000 WHERE id = 1;'},em:{label:'employees\nid | name  | salary\n1  | Rahim | 60000',c:'o',hl:1}}}),
+  S('Event ঘটল: <b>AFTER UPDATE</b>। Database-এর trigger <b>নিজে জেগে ওঠে</b>। Application কিছু ডাকেনি।',{add:[A('tg',352,70,408,70,'o'),T('tgl',380,50,'trigger',{a:'middle',c:'o',s:'sm b'})],mod:{em:{hl:0}}}),
+  S('Trigger নিজে <code>audit_log</code>-এ row লেখে: <b>old 50000 → new 60000</b>। এই কাজ যেকোনো application থেকেই আপডেট হোক, সবসময় হবে।',{mod:{au:{label:'audit_log\nid | emp | old   | new\n1  | 1   | 50000 | 60000',c:'g',hl:1}}}),
+  S('<b>সাবধান:</b> trigger লুকানো logic (কোড পড়ে বোঝা যায় না কী ঘটছে), লেখার গতি কমায়, debug কঠিন। তাই অল্প ও স্পষ্ট কাজে ব্যবহার করো (audit, simple rule)।',{del:['tg','tgl'],mod:{au:{hl:0},qq:{label:'BEFORE / AFTER  ·  row-level / statement-level',c:'n'}}})
+];
+function casScene(action){
+  const dept=[{l:'10  Sales'},{l:'20  HR'}],emp=[{l:'1  Rahim   dept=10',d:10},{l:'2  Karim   dept=20',d:20},{l:'3  Sumon   dept=10',d:10}];
+  const base=[T('dt',20,12,'departments (parent)',{c:'b',s:'sm b'}),...dept.map((r,i)=>B('d'+i,20,28+i*44,200,36,r.l,'b',{m:1,s:'sm'})),
+    T('et',300,12,'employees (child, dept FK)',{c:'a',s:'sm b'}),...emp.map((r,i)=>B('e'+i,300,28+i*44,260,36,r.l,'a',{m:1,s:'sm'})),
+    A('f1',302,46,222,46,'n',{dash:1}),A('f2',302,90,222,90,'n',{dash:1}),A('f3',302,134,222,46,'n',{dash:1}),
+    T('qq',380,190,'',{a:'middle',c:'f',s:'m b'}),T('rs',380,214,'',{a:'middle',c:'f',s:'b'})];
+  const intro={CASCADE:'<b>Foreign key action:</b> parent row মুছলে বা বদলালে child row-এর কী হবে? <b>ON DELETE CASCADE</b>: parent মুছলে child-ও <b>আপনা-আপনি মুছে যায়</b>।',SETNULL:'<b>ON DELETE SET NULL:</b> parent মুছলে child মুছে না, শুধু তার foreign key <b>NULL</b> হয়ে যায়।',RESTRICT:'<b>ON DELETE RESTRICT</b> (বা NO ACTION): child থাকলে parent <b>মোছাই যাবে না</b>, error। সবচেয়ে নিরাপদ, সাধারণত default।'}[action];
+  const sql={CASCADE:'DELETE FROM departments WHERE id = 10;   -- FK: ON DELETE CASCADE',SETNULL:'DELETE FROM departments WHERE id = 10;   -- FK: ON DELETE SET NULL',RESTRICT:'DELETE FROM departments WHERE id = 10;   -- FK: ON DELETE RESTRICT'}[action];
+  const steps=[S(intro,{add:base}),S('<b>Department 10 (Sales)</b> মুছতে চাই। Employees-এ Rahim আর Sumon এই department-এ আছে।',{mod:{qq:{label:sql},d0:{c:'r',hl:1},e0:{c:'o',hl:1},e2:{c:'o',hl:1}}})];
+  if(action==='CASCADE')steps.push(S('Cascade: Sales মুছল, সাথে <b>Rahim আর Sumon-ও মুছে গেল</b>। কেউ কোথাও দাঁড়িয়ে নেই (কোনো এতিম row নেই)। সাবধান: ভুলে parent মুছলে অনেক data উড়ে যায়।',{mod:{d0:{o:0.2,dash:1},e0:{o:0.2,dash:1},e2:{o:0.2,dash:1},f1:{o:0},f3:{o:0},rs:{label:'ফল: 1 department + 2 employee মুছল',c:'r'}}}));
+  if(action==='SETNULL')steps.push(S('Set null: Sales মুছল, কিন্তু Rahim আর Sumon <b>থাকল</b>, শুধু তাদের <code>dept</code> হল <b>NULL</b> (কোনো department নেই)। FK column NULL-able হতে হবে।',{mod:{d0:{o:0.2,dash:1},e0:{label:'1  Rahim   dept=NULL',c:'g',hl:1},e2:{label:'3  Sumon   dept=NULL',c:'g',hl:1},f1:{o:0},f3:{o:0},rs:{label:'ফল: department মুছল, employee থাকল (dept = NULL)',c:'g'}}}));
+  if(action==='RESTRICT')steps.push(S('Restrict: Database <b>প্রত্যাখ্যান</b> করে: "Sales-এ এখনো employee আছে।" কিছুই মোছা হয় না। আগে employee সরাও, তারপর department।',{mod:{d0:{c:'r',hl:1},rs:{label:'ERROR: foreign key violation, row এখনো referenced',c:'r'}}}));
+  steps.push(S({CASCADE:'<b>কখন:</b> child যার parent ছাড়া অর্থ নেই (order → order_items)। <b>ON UPDATE CASCADE</b>-ও আছে: parent-এর key বদলালে child-এ নিজে বদলায়।',SETNULL:'<b>কখন:</b> child parent ছাড়াও টিকে থাকতে পারে (যেমন employee department ছাড়াও থাকে)।',RESTRICT:'<b>কখন:</b> গুরুত্বপূর্ণ data, যেখানে ভুলে মোছা চলবে না (টাকা-পয়সা, record)। সবচেয়ে নিরাপদ।'}[action],{}));
+  return steps;
+}
+
+/* ===== 6. Views ===== */
+const VIEWS=[
+  S('<b>View:</b> একটা <b>সংরক্ষিত query</b>, যাকে virtual table-এর মতো ব্যবহার করা যায়। View-তে নিজের কোনো data থাকে না। উদাহরণ: salary লুকিয়ে শুধু name আর dept দেখানো।',{add:[B('bt',20,14,330,112,'employees  (আসল table)\nid | name  | dept  | salary\n1  | Rahim | Sales | 50000\n2  | Karim | HR    | 60000','a',{m:1,s:'sm'}),T('qq',380,170,'',{a:'middle',c:'f',s:'m b'})]}),
+  S('<b>View বানাই:</b> শুধু query মনে রাখা হয়, কোনো data কপি হয় না।',{add:[B('vw',410,14,330,112,'emp_public  (VIEW)\nশুধু query: name, dept\n(নিজের data নেই)','b',{m:1,s:'sm',dash:1})],mod:{qq:{label:'CREATE VIEW emp_public AS SELECT name, dept FROM employees;'}}}),
+  S('<b>View-তে query:</b> <code>SELECT * FROM emp_public</code>। Database ভেতরে আসল table-এর query চালায় আর শুধু name, dept ফেরত দেয়। <b>salary দেখা যায় না</b> (security)।',{add:[A('ar',352,70,408,70,'g')],mod:{qq:{label:'SELECT * FROM emp_public;   →   Rahim | Sales,  Karim | HR'},vw:{label:'emp_public  (VIEW)\nRahim | Sales\nKarim | HR\n(সদ্য চালানো query-র ফল)',c:'g',dash:0,hl:1}}}),
+  S('<b>আসল table বদলাল:</b> Karim-এর dept হল IT। View-তে <b>আপনা-আপনি নতুন মান</b> দেখায়, কারণ প্রতিবার আসল table থেকেই পড়ে। কখনো stale হয় না।',{mod:{bt:{label:'employees  (আসল table)\nid | name  | dept  | salary\n1  | Rahim | Sales | 50000\n2  | Karim | IT    | 60000',c:'o',hl:1},vw:{label:'emp_public  (VIEW)\nRahim | Sales\nKarim | IT   ← নিজে বদলাল\n(সদ্য চালানো query-র ফল)',hl:0},qq:{label:'UPDATE employees SET dept = \'IT\' WHERE id = 2;'}}}),
+  S('<b>কেন view:</b> ১) জটিল query সহজ নামে (simplify)। ২) column/row লুকিয়ে security। ৩) আসল table বদলালেও application-এর interface স্থির (abstraction)।',{mod:{bt:{hl:0}}})
+];
+const MATVIEW=[
+  S('<b>Materialized view:</b> সাধারণ view প্রতিবার query চালায়। Materialized view <b>ফলটা সত্যিই সংরক্ষণ</b> করে রাখে। ভারী query-র জন্য খুব দ্রুত, কিন্তু <b>পুরনো (stale) হতে পারে</b>।',{add:[B('bt',20,14,330,112,'orders  (আসল table)\n1000 টা order\ntotal = 52000','a',{m:1,s:'sm'}),B('mv',410,14,330,112,'daily_sales  (MATERIALIZED VIEW)\nসংরক্ষিত ফল\ntotal = 52000','g',{m:1,s:'sm'}),A('ar',352,70,408,70,'g'),T('qq',380,170,'CREATE MATERIALIZED VIEW daily_sales AS SELECT sum(total) FROM orders;',{a:'middle',c:'f',s:'m b'})]}),
+  S('<b>ফল পড়া দ্রুত:</b> আসল 1000 order আবার যোগ করতে হয় না। সংরক্ষিত 52000 সাথে সাথে পাওয়া যায়।',{mod:{mv:{hl:1}}}),
+  S('<b>আসল table বদলাল:</b> নতুন order এল, total এখন 53000। কিন্তু materialized view <b>এখনো 52000</b> দেখায়: <b>stale</b>।',{mod:{bt:{label:'orders  (আসল table)\n1001 টা order\ntotal = 53000',c:'o',hl:1},mv:{label:'daily_sales  (MATERIALIZED VIEW)\nসংরক্ষিত ফল\ntotal = 52000  (পুরনো!)',c:'r',hl:0}}}),
+  S('<b>Refresh:</b> <code>REFRESH MATERIALIZED VIEW daily_sales;</code> চালালে আবার query চলে আর সংরক্ষিত ফল নতুন হয়।',{mod:{bt:{hl:0},mv:{label:'daily_sales  (MATERIALIZED VIEW)\nসংরক্ষিত ফল\ntotal = 53000  ✓ (refresh হয়েছে)',c:'g',hl:1},qq:{label:'REFRESH MATERIALIZED VIEW daily_sales;'}}}),
+  S('<b>সারকথা:</b> সাধারণ view = সবসময় তাজা, প্রতিবার query চলে। Materialized view = দ্রুত, কিন্তু refresh না করলে পুরনো। রিপোর্ট/dashboard-এ materialized view কাজে লাগে।',{mod:{mv:{hl:0}}})
+];
+const TOPICS=[
+{p:0,q:'Different types of joins (all joins with example)',
+ ans:'<b>Join</b> দুই (বা বেশি) table-এর row একটা শর্তে জোড়া লাগায়। পাঁচ রকম মূল join: <b>INNER, LEFT, RIGHT, FULL OUTER, CROSS</b>, আর একটা table নিজের সাথে <b>SELF</b> join। একই দুটো table দিয়ে প্রতিটা tab-এ ফল আলাদা দেখো।',
+ pts:['উদাহরণের table: <b>employees</b> (Sumon-এর dept NULL, Anika-র dept 30 যা departments-এ নেই) আর <b>departments</b> (IT-তে কোনো employee নেই)।','<b>INNER:</b> দু-পাশে match থাকলেই। <b>LEFT:</b> বাঁয়ের সব। <b>RIGHT:</b> ডানের সব। <b>FULL:</b> দুই পাশের সব। <b>CROSS:</b> সব জোড়া।','<b>NULL</b> মানে "ওই পাশে match নেই"।'],
+ tabs:[
+  {n:'INNER',steps:()=>joinScene(JEMP,'INNER')},{n:'LEFT',steps:()=>joinScene(JEMP,'LEFT')},{n:'RIGHT',steps:()=>joinScene(JEMP,'RIGHT')},
+  {n:'FULL OUTER',steps:()=>joinScene(JEMP,'FULL')},{n:'CROSS',steps:()=>joinScene(JEMP,'CROSS')},{n:'SELF',steps:()=>selfScene()}
+ ]},
+
+{p:1,q:'Clustered vs non-clustered indexing (types and examples)',
+ ans:'<b>Clustered index:</b> table-এর <b>row গুলোই</b> index-এর key অনুযায়ী সাজানো, leaf-ই data। তাই <b>একটা table-এ একটাই</b>। <b>Non-clustered index:</b> table থেকে <b>আলাদা</b> structure, ভেতরে key + row-এর <b>pointer</b>। <b>অনেকগুলো</b> থাকতে পারে।',
+ pts:['<b>Clustered:</b> range query দ্রুত (পাশাপাশি row)। সাধারণত primary key-তে।','<b>Non-clustered:</b> আলাদা column-এ (email) দ্রুত খোঁজা, কিন্তু pointer ধরে table-এ যেতে বাড়তি ধাপ।','নিচের table-এ তুলনা আর SQL উদাহরণ।'],
+ extra:'<table class="cmp"><tr><th></th><th>Clustered</th><th>Non-clustered</th></tr>'
+  +'<tr><td>Data কোথায়</td><td>index-এর leaf-ই আসল row</td><td>leaf-এ শুধু key + pointer, row আলাদা table-এ</td></tr>'
+  +'<tr><td>কয়টা</td><td>table-এ একটাই</td><td>অনেকগুলো</td></tr>'
+  +'<tr><td>Lookup</td><td>সরাসরি row পায়</td><td>index → pointer → row (বাড়তি ধাপ)</td></tr>'
+  +'<tr><td>Range query</td><td>খুব দ্রুত</td><td>তুলনায় ধীর (row ছড়ানো)</td></tr>'
+  +'<tr><td>লেখার খরচ</td><td>row সাজানো রাখার খরচ</td><td>প্রতিটা index আপডেটের খরচ</td></tr></table>'
+  +'<pre>-- SQL Server\nCREATE CLUSTERED INDEX ix_users_id ON users(id);\nCREATE NONCLUSTERED INDEX ix_users_email ON users(email);\n\n-- MySQL (InnoDB): PRIMARY KEY নিজেই clustered; অন্য index-এর leaf-এ PK মান থাকে\nCREATE INDEX ix_email ON users(email);\n\n-- PostgreSQL: সব index non-clustered (heap table); CLUSTER শুধু একবার সাজিয়ে দেয়\nCREATE INDEX ix_email ON users(email);</pre>',
+ tabs:[{n:'Clustered index',steps:CLUSTERED},{n:'Non-clustered index',steps:NONCLUST}]},
+
+{p:2,q:'SQL vs NoSQL (when to use what and why)',
+ ans:'<b>SQL (relational):</b> fixed schema-র table, <b>JOIN</b>, <b>ACID</b> transaction। <b>NoSQL:</b> flexible schema, সহজে <b>horizontal scale</b>, চার ধরন (document, key-value, column, graph)। কোনটা ভালো না, <b>কাজ অনুযায়ী</b> বাছাই।',
+ pts:['<b>SQL বেছে নাও</b> যখন: স্পষ্ট সম্পর্ক, transaction (ব্যাংক, order), জটিল রিপোর্ট।','<b>NoSQL বেছে নাও</b> যখন: বিশাল scale, schema বারবার বদলায়, শুধু key দিয়ে দ্রুত read, বা সম্পর্কই মূল (graph)।','বাস্তবে দুটোই একসাথে ব্যবহার হয়।'],
+ extra:'<table class="cmp"><tr><th></th><th>SQL</th><th>NoSQL</th></tr>'
+  +'<tr><td>Schema</td><td>আগে থেকে ঠিক করা, সবার একই</td><td>flexible, document অনুযায়ী আলাদা</td></tr>'
+  +'<tr><td>Scale</td><td>সাধারণত vertical (বড় server)</td><td>সহজে horizontal (অনেক server)</td></tr>'
+  +'<tr><td>Transaction</td><td>পূর্ণ ACID</td><td>অনেক ক্ষেত্রে eventual consistency (কিছু ACID-ও দেয়)</td></tr>'
+  +'<tr><td>Query</td><td>SQL, JOIN</td><td>নিজস্ব API/query, JOIN কম</td></tr>'
+  +'<tr><td>উদাহরণ</td><td>PostgreSQL, MySQL</td><td>MongoDB, Redis, Cassandra, Neo4j</td></tr></table>',
+ tabs:[{n:'SQL',steps:SQLTAB},{n:'NoSQL (document)',steps:DOCTAB},{n:'NoSQL-এর ৪ ধরন',steps:NOSQLTYPES},{n:'Cassandra',steps:CASS},{n:'কখন কোনটা',steps:WHEN}]},
+
+{p:3,q:'Data model vs ER diagram (with example)',
+ ans:'<b>Data model</b> = data কীভাবে সাজানো হবে তার নকশা (conceptual, logical, physical তিন স্তরে)। <b>ER diagram</b> = সেই নকশার <b>conceptual স্তর আঁকার diagram</b>: entity, attribute, relationship। অর্থাৎ ER diagram হল data model প্রকাশ করার একটা উপায়।',
+ pts:['<b>Data model:</b> ধারণা। উদাহরণ: relational, document, graph model।','<b>ER diagram:</b> ছবি/টুল। conceptual model আঁকতে ব্যবহার হয়।','উদাহরণ: Student ─ Enrolls ─ Course (M : N), যা শেষে তিনটা table হয়।'],
+ extra:'<table class="cmp"><tr><th></th><th>Data model</th><th>ER diagram</th></tr>'
+  +'<tr><td>কী</td><td>data সাজানোর ধারণা/নকশা</td><td>তার conceptual রূপ আঁকার diagram</td></tr>'
+  +'<tr><td>স্তর</td><td>conceptual, logical, physical</td><td>মূলত conceptual</td></tr>'
+  +'<tr><td>উপাদান</td><td>table/document/graph, key, constraint</td><td>entity, attribute, relationship, cardinality</td></tr>'
+  +'<tr><td>উদাহরণ</td><td>students, courses, enrollments table</td><td>Student ─ M:N ─ Course আঁকা</td></tr></table>',
+ tabs:[{n:'Data model-এর ৩ স্তর',steps:LEVELS},{n:'ER diagram আঁকা',steps:ERBUILD},{n:'ER থেকে Table',steps:ERTABLES}]},
+
+{p:4,q:'Triggers and cascading',
+ ans:'<b>Trigger:</b> event (INSERT/UPDATE/DELETE) হলে database-এর ভেতরের কোড <b>নিজে থেকে চলে</b>। <b>Cascading:</b> foreign key-র নিয়ম, <b>parent row মুছলে বা বদলালে child row-এর কী হবে</b> (CASCADE, SET NULL, RESTRICT)। দুটোই database নিজে data ঠিক রাখে।',
+ pts:['<b>Trigger-এর ধরন:</b> BEFORE / AFTER, row-level / statement-level। উদাহরণ: audit log।','<b>ON DELETE CASCADE:</b> child-ও মুছে যায়। <b>SET NULL:</b> child থাকে, FK NULL। <b>RESTRICT:</b> মুছতে দেয় না।'],
+ tabs:[{n:'Trigger',steps:TRIG},{n:'ON DELETE CASCADE',steps:()=>casScene('CASCADE')},{n:'SET NULL',steps:()=>casScene('SETNULL')},{n:'RESTRICT',steps:()=>casScene('RESTRICT')}]},
+
+{p:5,q:'Views (and materialized views)',
+ ans:'<b>View</b> = একটা সংরক্ষিত query, যাকে virtual table-এর মতো ব্যবহার করা যায়। নিজের data নেই, প্রতিবার আসল table থেকে পড়ে, তাই সবসময় তাজা। <b>Materialized view</b> = ফল সত্যিই সংরক্ষিত, দ্রুত, কিন্তু refresh না করলে পুরনো।',
+ pts:['<b>কেন:</b> জটিল query সহজ করা, column লুকিয়ে security, application-কে স্থির interface।','<b>View:</b> তাজা। <b>Materialized view:</b> দ্রুত কিন্তু stale হতে পারে।'],
+ tabs:[{n:'View',steps:VIEWS},{n:'Materialized view',steps:MATVIEW}]}
+];
+
+/* ---------- build page ---------- */
+const app=document.getElementById('app'),partsNav=document.getElementById('parts');
+PARTS.forEach((pt,i)=>{const a=document.createElement('a');a.href='#s'+i;a.innerHTML=`<b>${pt[0]}</b>${pt[1]}`;partsNav.appendChild(a);});
+TOPICS.forEach((t,i)=>{
+  const card=document.createElement('article');card.className='q';card.id='s'+i;
+  card.innerHTML=`<h3><span class="num">${t.p+1}</span><span>${t.q}</span></h3><p class="ans">${t.ans}</p>${t.pts&&t.pts.length?'<ul>'+t.pts.map(x=>`<li>${x}</li>`).join('')+'</ul>':''}${t.extra?`<div class="extra">${t.extra}</div>`:''}<div class="viz"></div>`;
+  app.appendChild(card);
+  mount(card.querySelector('.viz'),t);
+});
+
+</script>
+</body>
+</html>

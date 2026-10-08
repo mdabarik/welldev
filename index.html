@@ -177,6 +177,9 @@ const TRACKS = [
     { href: "03-dbms-sql/top-50-sql/index.html", kicker: "LeetCode", title: "SQL 50 — Visual Guide",
       desc: "৫০টি problem, PostgreSQL solution আর প্রতিটি JOIN, CTE, GROUP BY, window function-এর পরের আসল table।",
       tags: ["PostgreSQL", "JOIN", "Window"], meta: [["50", "problems"], ["7", "sections"]] },
+    { href: "03-dbms-sql/dbms-basics/index.html", kicker: "DBMS · Basics", title: "DBMS Basics: ৬টি প্রশ্ন",
+      desc: "Join-এর সব ধরন, clustered বনাম non-clustered index, SQL বনাম NoSQL (Cassandra সহ), data model বনাম ER, trigger ও cascading, view: ধাপে ধাপে D3 animation-এ।",
+      tags: ["Joins", "Index", "SQL vs NoSQL", "ER", "D3.js"], meta: [["6", "questions"], ["22", "animations"]] },
     { href: "03-dbms-sql/acid/index.html", kicker: "DBMS Theory", title: "ACID Properties",
       desc: "একটা bank transfer দিয়ে Atomicity, Consistency, Isolation, Durability — PostgreSQL-এর আসল output, crash test আর C# কোড সহ।",
       tags: ["PostgreSQL", "WAL", "SAVEPOINT", "C#"], meta: [["4", "properties"], ["1", "crash test"]] },
@@ -203,9 +206,9 @@ const TRACKS = [
       tags: ["Idempotency key", "Retry", "UNIQUE", "D3.js"], meta: [["3", "solutions"], ["9", "animations"]] },
   ]},
   { id: "security", n: "04", title: "Resume Projects · Security", blurb: "Web security আর data security", color: "#f59e0b", guides: [
-    { href: "04-resume-projects/01-xss-csrf-jwt-refresh-token-access-token/index.html", kicker: "Web Security", title: "XSS, CSRF ও JWT",
-      desc: "XSS-এর ৩ ধরন, SQL injection, CSRF, আর access ও refresh token দিয়ে authentication।",
-      tags: ["XSS", "CSRF", "JWT"], meta: [["4", "diagrams"]] },
+    { href: "04-resume-projects/01-xss-csrf-jwt-refresh-token-access-token/index.html", kicker: "Web Security", title: "XSS, CSRF, JWT ও OWASP Top 10",
+      desc: "XSS-এর ৩ ধরন, SQL injection, CSRF, JWT, OWASP Top 10 (2025), Clickjacking, SSRF, IDOR, security header আর SSO (OAuth/OIDC/SAML)।",
+      tags: ["XSS", "CSRF", "JWT", "OWASP", "SSRF", "SSO"], meta: [["4", "diagrams"], ["10", "OWASP risks"]] },
     { href: "04-resume-projects/02-encoding-encryption-hashing/index.html", kicker: "Data Security", title: "Encoding, Encryption ও Hashing",
       desc: "তিনটার পার্থক্য — format বদলানো, গোপন রাখা আর verify করা; password hashing-এ salt ও cost factor।",
       tags: ["Base64", "AES / RSA", "bcrypt"], meta: [["3", "diagrams"]] },
@@ -230,7 +233,10 @@ const TRACKS = [
       desc: "PostgreSQL-এর আসল deadlock, দুই thread দুই mutex-এর animation, ৪টি Coffman condition, Banker's algorithm simulator আর multiprogramming বনাম multitasking।",
       tags: ["Coffman", "Banker's", "Mutex", "D3.js"], meta: [["4", "conditions"], ["1", "Banker's simulator"]] },
   ]},
-  { id: "net", n: "06", title: "Networking", blurb: "OSI model, web server, browser rendering", color: "#14b8a6", guides: [
+  { id: "net", n: "06", title: "Networking", blurb: "Network basics, OSI model, web server, browser rendering", color: "#14b8a6", guides: [
+    { tier: "core", href: "06-networking/network-basics/index.html", kicker: "Networking · Interview", title: "Network Basics - ১৬টি Interview প্রশ্ন",
+      desc: "IP, MAC, subnet, DHCP, NAT, port, TCP বনাম UDP, 3-way handshake, HTTP/HTTPS আর TLS - শেখার ক্রমে সাজানো প্রশ্নের তালিকা।",
+      tags: ["IP / MAC", "Subnet", "TCP / UDP", "TLS"], meta: [["16", "questions"], ["4", "parts"]] },
     { href: "06-networking/OSI/index.html", kicker: "OSI · Interactive", title: "Seq, Checksum ও CRC",
       desc: "একটা মেসেজ ৭টা লেয়ার পেরিয়ে যায় — seq নম্বর, TCP checksum আর CRC-32 কে কোন ভুল ধরে, ধাপে ধাপে অ্যানিমেশনে।",
       tags: ["OSI", "TCP", "CRC-32", "D3.js"], meta: [["19", "steps"], ["4", "scenarios"]] },
@@ -245,6 +251,11 @@ const TRACKS = [
     { href: "07-javascript/event-loop/index.html", kicker: "JavaScript · Interactive", title: "Event Loop — একটা thread, অনেক কাজ",
       desc: "Call stack, microtask, task queue আর Node.js-এর phase — Browser ও Node দুই জায়গায় event loop কীভাবে চলে, D3 animation-এ।",
       tags: ["Event loop", "Promise", "Node.js", "D3.js"], meta: [["15", "steps"], ["2", "runtimes"]] },
+  ]},
+  { id: "sd", n: "08", title: "System Design", blurb: "Client-server, reliability, availability", color: "#8b5cf6", guides: [
+    { tier: "core", href: "08-system-design/basics/index.html", kicker: "System Design · Interview", title: "System Design Basics - ৩টি Interview প্রশ্ন",
+      desc: "Client-Server architecture, Reliability আর Availability - প্রতি প্রশ্নে সংক্ষিপ্ত উত্তর আর ধাপে ধাপে D3 animation।",
+      tags: ["Client-Server", "Reliability", "Availability", "D3.js"], meta: [["3", "questions"], ["9", "animations"]] },
   ]},
 ];
 
