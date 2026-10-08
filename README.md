@@ -33,7 +33,7 @@ Software engineering interview prep — বাংলায় ব্যাখ্
 - [Normalization](03-dbms-sql/dbms/normalization/index.html) — 1NF, 2NF, 3NF, BCNF: definition, সমস্যা ও সমাধান আসল table-এ, step-through demo আর quiz
 - [Indexing](03-dbms-sql/dbms/indexing/index.html) — index কোথায় থাকে, B-tree / B+ tree animation, unique, hash, partial, GIN index, EXPLAIN
 
-## 04 · Resume Projects
+## 04 · Resume Projects + Security + System Design
 
 - [XSS, CSRF, JWT, Access ও Refresh Token](04-resume-projects/01-xss-csrf-jwt-refresh-token-access-token/index.html) — সাথে OWASP Top 10 (2025), Clickjacking, SSRF, IDOR, session/cookie, rate limiting, file upload, path traversal, command injection, open redirect, mass assignment, security header, SSO (OAuth/OIDC/SAML), CORS (simulator সহ)
 - [Encoding, Encryption ও Hashing](04-resume-projects/02-encoding-encryption-hashing/index.html)
