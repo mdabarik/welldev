@@ -311,8 +311,8 @@ const TOPICS=[
  ]},
 
 {p:3,q:'আরও দুই সমাধান: UNIQUE আর conditional update',
- ans:'সবসময় আলাদা key লাগে না। কাজের মধ্যেই যদি স্বাভাবিক identity থাকে (যেমন order_id), তাহলে <b>UNIQUE constraint</b> দিয়ে, অথবা status দেখে <b>conditional UPDATE</b> দিয়ে idempotent করা যায়।',
- pts:['<b>UNIQUE:</b> <code>UNIQUE (order_id)</code>। একই order-এর দ্বিতীয় payment insert-ই হয় না।','<b>Conditional update:</b> <code>WHERE status = \'pending\'</code>। প্রথমবার 1 row বদলায়, retry-তে 0 row।'],
+ ans:'সবসময় আলাদা key বানাতে হয় না। দুটো সহজ উপায় আছে: ডেটাবেজকে বলে রাখা "একই জিনিস দুবার ঢুকতে দেবে না" (<b>UNIQUE</b>), অথবা "আগের অবস্থায় থাকলে তবেই বদলাও" শর্ত দেওয়া (<b>conditional update</b>)।',
+ pts:['<b>UNIQUE:</b> পরীক্ষার রোল নম্বরের মতো। একই রোল নম্বরে দুজন বসতে পারে না। একই <code>order_id</code>-র দ্বিতীয় payment ডেটাবেজ ঢুকতেই দেয় না। কাজের নিজস্ব id (order_id, email) থাকলে এটা ব্যবহার করো।','<b>Conditional update:</b> "তালা বন্ধ থাকলে তবেই খোলো"। <code>WHERE status = \'pending\'</code> দিলে প্রথমবার 1 row বদলায়, retry-তে status আর pending না, তাই 0 row। যেখানে অবস্থা এক ধাপ করে এগোয় (pending → paid), সেখানে এটা ব্যবহার করো।'],
  tabs:[
   {n:'UNIQUE constraint',steps:[
     S('Table: <code>payments</code>, যেখানে <b>UNIQUE (order_id)</b>। অর্থাৎ একটা order-এর payment একটাই থাকতে পারে।',{add:[B('app',20,70,170,100,'Application','a'),B('tb',380,30,360,180,'payments\nUNIQUE (order_id)\n\n(খালি)','g',{m:1,s:'sm'})]}),
@@ -329,12 +329,12 @@ const TOPICS=[
  ]},
 
 {p:4,q:'HTTP method আর সারকথা',
- ans:'HTTP-তে কিছু method স্বভাবতই idempotent, কিছু না। <b>GET, HEAD, OPTIONS, PUT, DELETE</b> হ্যাঁ। <b>POST</b> না। <b>PATCH</b> নির্ভর করে। প্রতিটা tab-এ একই request বারবার পাঠিয়ে দেখো।',
- pts:['<b>GET, HEAD, OPTIONS:</b> হ্যাঁ (শুধু পড়ে)।','<b>PUT:</b> হ্যাঁ ("এই অবস্থায় রাখো")।','<b>DELETE:</b> হ্যাঁ (state একই, যদিও response 200 থেকে 404 হয়)।','<b>POST:</b> না। Idempotency-Key দিয়ে ঠিক করতে হয়।','<b>PATCH:</b> হ্যাঁ বা না, কী বদলাচ্ছ তার ওপর নির্ভর করে।'],
- extra:'<table class="cmp"><tr><th>কোন সমাধান কখন</th><th>ব্যবহার</th></tr>'
-  +'<tr><td>Idempotency key</td><td>client retry করতে পারে এমন API (payment, order তৈরি)। সবচেয়ে সাধারণ</td></tr>'
-  +'<tr><td>UNIQUE constraint</td><td>কাজের স্বাভাবিক identity আছে (যেমন order_id)</td></tr>'
-  +'<tr><td>Conditional update</td><td>status বদলের কাজ (pending → paid)</td></tr></table>',
+ ans:'একটাই প্রশ্ন: একই request ৩ বার পাঠালে <b>ডেটাবেজের অবস্থা (state)</b> কি ১ বারের মতোই থাকে? থাকলে idempotent। Response-এর কোড (200, 404) কী এল তা দেখার দরকার নেই, শুধু state দেখো। সূত্র: <b>"রাখো / সেট করো / মুছো"</b> = idempotent। <b>"যোগ করো / তৈরি করো"</b> = idempotent না। প্রতিটা tab-এ একই request বারবার পাঠিয়ে দেখো।',
+ pts:['<b>GET, HEAD, OPTIONS:</b> হ্যাঁ। শুধু দেখে, মেনু ১০ বার দেখলেও রেস্টুরেন্ট একই থাকে।','<b>PUT:</b> হ্যাঁ। "ছবিটা এই জায়গায় রাখো", দশবার বললেও একই জায়গায়।','<b>DELETE:</b> হ্যাঁ। ময়লা একবার ফেললে ঘর পরিষ্কার, আবার ফেলতে গেলে "ফেলার কিছু নেই" (404)। উত্তর আলাদা, অবস্থা এক।','<b>POST:</b> না। প্রতিবার নতুন একটা তৈরি হয়। Idempotency-Key দিয়ে ঠিক করতে হয়।','<b>PATCH:</b> নির্ভর করে। "ঘড়িতে ৫টা বাজাও" (সেট) = হ্যাঁ। "ঘড়ি ১ ঘণ্টা এগিয়ে দাও" (যোগ) = না।'],
+ extra:'<table class="cmp"><tr><th>কোন সমাধান</th><th>এক লাইনে</th><th>কখন</th></tr>'
+  +'<tr><td>Idempotency key</td><td>"এই টোকেন আগে দেখেছি, আবার করব না"</td><td>payment, retry হওয়া যেকোনো POST। সবচেয়ে সাধারণ</td></tr>'
+  +'<tr><td>UNIQUE constraint</td><td>"ডেটাবেজ একই জিনিস দুবার ঢুকতে দেবে না"</td><td>কাজের নিজস্ব id আছে (order_id, email)</td></tr>'
+  +'<tr><td>Conditional update</td><td>"আগের অবস্থায় থাকলে তবেই বদলাও"</td><td>status বদলের কাজ (pending → paid)</td></tr></table>',
  tabs:[
   {n:'GET, HEAD, OPTIONS: হ্যাঁ',steps:()=>httpScene({title:'User #1',start:'name = Rahim',
     intro:'এগুলো শুধু <b>পড়ে</b>, server-এর কিছু বদলায় না। তাই যতবারই পাঠাও, অবস্থা একই। User #1-এর নাম Rahim।',
@@ -357,7 +357,7 @@ const TOPICS=[
      {req:'DELETE /users/1',resp:'200 deleted',state:'নেই (মুছে গেছে)',chip:'নেই',ok:1,cap:'<b>প্রথম DELETE:</b> user মুছে গেল। Response 200।'},
      {req:'DELETE /users/1',resp:'404 not found',state:'নেই (মুছে গেছে)',chip:'নেই',ok:1,cap:'<b>আবার DELETE:</b> user আগেই নেই, তাই response <b>404</b>। Response বদলাল, কিন্তু server-এর <b>অবস্থা একই</b>: user নেই।'},
      {req:'DELETE /users/1',resp:'404 not found',state:'নেই (মুছে গেছে)',chip:'নেই',ok:1,cap:'<b>তৃতীয় বার:</b> আবার 404, অবস্থা একই।'}],
-    outro:'<b>হ্যাঁ, idempotent।</b> Idempotency মানে <b>state</b> একই থাকা, response একই থাকা না। দ্বিতীয়বার 404 এলেও user "নেই" অবস্থাতেই আছে।'})},
+    outro:'<b>হ্যাঁ, idempotent।</b> Idempotency মানে <b>অবস্থা (state)</b> একই থাকা, উত্তর একই থাকা না। প্রথমবার 200, পরে 404, কিন্তু প্রতিবারই অবস্থা "user নেই"। আর কিছু বদলায়নি।'})},
   {n:'POST: না',steps:()=>httpScene({title:'Orders',start:'orders: 0',
     intro:'<b>POST</b> মানে "নতুন কিছু তৈরি করো"। এখানে order তৈরি। শুরুতে কোনো order নেই।',
     runs:[
@@ -367,7 +367,7 @@ const TOPICS=[
      {reset:1,state:'orders: 0',cap:'<b>ঠিক করার উপায়:</b> POST-এর সাথে <code>Idempotency-Key</code> header পাঠাও। আবার শুরু থেকে (orders: 0)।'},
      {req:'POST /orders  Idempotency-Key: K1',resp:'201 order #1',state:'orders: 1',chip:'1 order',ok:1,cap:'<b>key সহ প্রথম POST:</b> order #1 তৈরি, key K1 মনে রাখা হল।'},
      {req:'POST /orders  Idempotency-Key: K1',resp:'200 order #1 (আগেরটা)',state:'orders: 1',chip:'1 order',ok:1,cap:'<b>retry, একই key K1:</b> server চেনে, নতুন order বানায় না, আগের response ফেরত দেয়। অবস্থা একই।'}],
-    outro:'<b>না, POST নিজে idempotent না।</b> কিন্তু <b>Idempotency-Key</b> দিয়ে retry নিরাপদ করা যায়।'})},
+    outro:'<b>না, POST নিজে idempotent না।</b> প্রতিবার নতুন order তৈরি হয় (#1, #2, #3)। কিন্তু <b>Idempotency-Key</b> দিয়ে retry নিরাপদ করা যায়।'})},
   {n:'PATCH: হ্যাঁ বা না',steps:()=>httpScene({title:'Account',start:'balance = 1000',
     intro:'<b>PATCH</b> মানে "আংশিক বদলাও"। এটা idempotent কি না <b>নির্ভর করে কী বদলাচ্ছ</b> তার ওপর। শুরুতে balance 1000।',
     runs:[
@@ -377,7 +377,7 @@ const TOPICS=[
      {req:'PATCH  {add: 100}',resp:'200 OK',state:'balance = 600',chip:'600',ok:1,cap:'<b>"100 যোগ করো":</b> 500 → 600।'},
      {req:'PATCH  {add: 100}',resp:'200 OK',state:'balance = 700',chip:'700',ok:0,cap:'<b>retry:</b> আবার 100 যোগ হল, 600 → 700। প্রতিবার বদলায়। এই ধরনের PATCH <b>idempotent না</b>।'},
      {req:'PATCH  {add: 100}',resp:'200 OK',state:'balance = 800',chip:'800',ok:0,cap:'<b>তৃতীয় বার:</b> 800। আবার বদলে গেল।'}],
-    outro:'<b>PATCH: হ্যাঁ বা না।</b> "মান বসাও" ধরনের হলে হ্যাঁ (<code>balance = 500</code>), "যোগ/কমাও" ধরনের হলে না (<code>balance + 100</code>)।'})}
+    outro:'<b>PATCH: হ্যাঁ বা না।</b> "মান বসাও" ধরনের হলে হ্যাঁ (<code>balance = 500</code>, ঘড়িতে ৫টা বাজাও)। "যোগ/কমাও" ধরনের হলে না (<code>balance + 100</code>, ঘড়ি এগিয়ে দাও)।'})}
  ]}
 ];
 
