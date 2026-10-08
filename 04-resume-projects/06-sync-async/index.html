@@ -318,12 +318,12 @@ const COMP=i=>({x:294+i*31,y:57}), PEND=i=>({x:294+i*31,y:202});
 const TD=(id,n,p,c,lb)=>C(id,p.x,p.y,21,lb||n,c,{s:'sm'});
 const RT=(id,n,p)=>B(id,p.x,p.y,34,28,'R'+n,'b',{s:'sm'});
 const SM=(id,n,p,c)=>B(id,p.x,p.y,28,26,'R'+n,c,{s:'sm'});          // small request object in Pending / Completion
-const BOARD=(mid)=>[
+const BOARD=(mid,two=true)=>[
   B('rqb',20,40,230,60,'','b',{dash:1}),T('rqbt',20,27,'Request Queue: আসা request',{c:'b',s:'sm'}),
   B('ipb',20,180,230,70,'','n',{dash:1}),T('ipbt',20,167,'Thread Pool: বসে আছে, কোনো কাজ ধরেনি',{c:'n',s:'sm'}),
   ...mid,
   B('co1',520,40,100,60,'','a'),T('co1t',570,27,'Core 1',{a:'middle',c:'a',s:'sm'}),
-  B('co2',640,40,100,60,'','a'),T('co2t',690,27,'Core 2',{a:'middle',c:'a',s:'sm'}),
+  ...(two?[B('co2',640,40,100,60,'','a'),T('co2t',690,27,'Core 2',{a:'middle',c:'a',s:'sm'})]:[]),
   B('dvb',520,180,220,70,'Disk / Network / DB','s')];
 const SYNC4=VH([
   S('<b>Thread Pool (sync):</b> আগে থেকে বানানো <b>4টা thread</b> নিচের Pool-এ বসে আছে। 6টা request এসেছে, মেশিনে মাত্র <b>2 core</b>। নিয়ম: একটা thread একটা request <b>পুরোটা শেষ না করা পর্যন্ত ছাড়ে না</b>।',{add:[...BOARD([
@@ -343,13 +343,19 @@ const SYNC4=VH([
 
 /* ===== Q2: Asynchronous ===== */
 const ASYNC1=VH([
-  S('<b>Asynchronous (async)</b> = কাজ শুরু করে ফল না আসা পর্যন্ত <b>দাঁড়িয়ে না থেকে</b> অন্য কাজে যাওয়া। ফল এলে তখন ফিরে এসে বাকিটা করা। নিচে একই Thread, কিন্তু এবার নিচের lane-এ <b>OS/I/O</b> অপেক্ষাটা সামলাবে।',{add:[...lanes(['Thread','I/O (R1-এর DB)','I/O (R2-এর DB)']),cur(0)]}),
-  S('<b>Request 1:</b> validate করে DB query <b>শুধু শুরু</b> করল (ছোট কাজ), তারপর অপেক্ষা <b>না করে</b> ছেড়ে দিল। অপেক্ষাটা এখন নিচের lane-এ, Thread-এর নয়।',{add:[blk('v1',0,0,10,'validate','g'),blk('s1',0,10,14,'call','a'),wt('w1',1,14,60,'DB R1 কাজ করছে')],mod:at(14)}),
-  S('<b>Thread মুক্ত!</b> তাই সে সাথে সাথে <b>Request 2</b> ধরল: validate আর DB call। সেই অপেক্ষাও নিচে চলে গেল। দুটো DB কাজ <b>একসাথে</b> চলছে, অথচ Thread একটাই।',{add:[blk('v2',0,14,24,'validate R2','g'),blk('s2',0,24,28,'call','a'),wt('w2',2,28,74,'DB R2 কাজ করছে')],mod:at(28)}),
-  S('<b>R1-এর উত্তর এল (সময় 60):</b> এবার Thread ফিরে এসে R1-এর বাকিটা (callback/continuation) চালায়: render।',{add:[blk('c1',0,60,70,'render R1','g')],mod:at(70)}),
-  S('<b>R2-এর উত্তর (74):</b> Thread আবার ফিরে R2 শেষ করল। দুটো request শেষ হল প্রায় <b>84</b>-এ। Sync-এ লেগেছিল <b>140</b>। Thread-এর অপেক্ষা প্রায় নেই।',{add:[blk('c2',0,74,84,'render R2','g')],mod:at(84)}),
-  S('<b>মূল কথা:</b> Async-এ কাজ দ্রুত হয় না, <b>অপেক্ষার সময় নষ্ট হয় না</b>। এক thread-ই হাজার request ছোট ছোট টুকরোয় সামলায়। Node.js, nginx, Redis এভাবে চলে।',{})
-],262);
+  S('<b>Non-blocking, মাত্র 1 thread, 1 core।</b> 3টা request (R1–R3) Request Queue-তে। Thread T1 Pool-এ বসে। <b>sync হলে</b> T1 R1 ধরে DB-র জন্য ঘুমাত, আর R2, R3 লাইনে পড়ে থাকত। এবার দেখো async-এ কী হয়।',{add:[...BOARD([
+      B('cqb',290,40,190,60,'','g',{dash:1}),T('cqbt',290,27,'Completion Queue: DB-র উত্তর এসেছে',{c:'g',s:'sm'}),
+      B('pdb',290,180,190,70,'','o',{dash:1}),T('pdbt',290,167,'Pending: DB চলছে (ছোট object)',{c:'o',s:'sm'})],false),
+    ...[1,2,3].map(n=>RT('q'+n,n,RQT(n-1))),TD('t1','T1',IDL(0),'n')]}),
+  S('<b>T1 R1-কে তুলে core-এ চলল</b> এবং validate করছে।',{del:['q1'],mod:{q2:RQT(0),q3:RQT(1),t1:{...CORE1,c:'g',label:'T1\nR1'}}}),
+  S('<b>R1 DB call করল, non-blocking:</b> "শুরু করো, শেষ হলে জানিও" বলে <b>সাথে সাথে return</b>। R1 <b>Pending</b>-এ গেল (ছোট object, DB তার কাজ করছে)। T1 ঘুমায়নি, তখনই R2 তুলল।',{del:['q2'],add:[SM('p1',1,PEND(0),'o')],mod:{q3:RQT(0),t1:{label:'T1\nR2'}}}),
+  S('<b>R2-ও Pending-এ।</b> T1 তুলল R3। দুটো DB কাজ <b>একসাথে</b> চলছে, অথচ thread একটাই।',{del:['q3'],add:[SM('p2',2,PEND(1),'o')],mod:{t1:{label:'T1\nR3'}}}),
+  S('<b>R3-ও Pending-এ।</b> আর কোনো কাজ নেই, তাই T1 <b>Pool-এ ফিরে</b> বসল। সে কোনো request ধরে নেই, ঘুমন্ত অপেক্ষাও করছে না কারো উত্তরের। নতুন কাজ এলেই চলবে।',{add:[SM('p3',3,PEND(2),'o')],mod:{t1:{...IDL(0),c:'n',label:'T1'}}}),
+  S('<b>DB R1-এর উত্তর দিল।</b> OS সেটা <b>Completion Queue</b>-তে রাখল, T1-কে জানাল "কাজ এসেছে"।',{mod:{p1:{...COMP(0),c:'g'}}}),
+  S('<b>T1 R1-এর বাকি অংশ তুলল</b> (callback / <code>await</code>-এর পরের লাইন) এবং core-এ চলল: render।',{del:['p1'],mod:{t1:{...CORE1,c:'g',label:'T1\nR1'}}}),
+  S('<b>R1 শেষ।</b> ইতিমধ্যে R2, R3-এর উত্তরও এসে গেছে। T1 তুলল R2-এর বাকি অংশ, R3 লাইনে।',{mod:{p2:{...COMP(0),c:'g'},p3:{...COMP(1),c:'g'}}}),
+  S('<b>সারকথা:</b> 1 thread, 3 request, thread <b>একবারও ঘুমায়নি</b>। অপেক্ষা করেছে DB আর Pending-এর ছোট object। এই ধরন = <b>non-blocking / asynchronous</b>, শেষ হলে যা চলে = <b>callback</b>, উত্তরের লাইন = <b>Completion (Event) Queue</b>। Thread বেশি হলে কী হয় তা পরের tab-এ।',{})
+],312);
 const ASYNC6=VH([
   S('<b>Thread Pool (async):</b> একই board, একই 6 request, 2 core। কিন্তু pool-এ thread মাত্র <b>2টা</b> (T1, T2), core সংখ্যার সমান। নিয়ম বদলেছে: thread request <b>আঁকড়ে ধরে না</b>। যতক্ষণ কাজ আছে ততক্ষণ চলে, DB-র অপেক্ষা এলেই ছেড়ে দেয়।',{add:[...BOARD([
       B('cqb',290,40,190,60,'','g',{dash:1}),T('cqbt',290,27,'Completion Queue: DB-র উত্তর এসেছে',{c:'g',s:'sm'}),
