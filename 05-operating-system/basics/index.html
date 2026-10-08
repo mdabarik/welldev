@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>OS Basics - Interview Cheat Sheet</title>
-<meta name="description" content="Trainee Software Engineer interview-এর জন্য OS-এর ৩৯টি প্রশ্ন - প্রতিটির সংক্ষিপ্ত উত্তর আর ক্লিক করে ধাপে ধাপে দেখার D3 animation।">
+<meta name="description" content="Trainee Software Engineer interview-এর জন্য OS-এর ৪০টি প্রশ্ন - প্রতিটির সংক্ষিপ্ত উত্তর আর ক্লিক করে ধাপে ধাপে দেখার D3 animation।">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -124,7 +124,7 @@ footer{margin-top:50px;text-align:center;color:var(--faint);font:500 13px var(--
 
   <header class="hero">
     <div class="eyebrow">Operating System · Interview</div>
-    <h1>OS Basics - ৩৯টি প্রশ্ন, সোজা উত্তর</h1>
+    <h1>OS Basics - ৪০টি প্রশ্ন, সোজা উত্তর</h1>
     <p>প্রতিটি প্রশ্নে এক লাইনের উত্তর আর একটা animation। scene-এ ক্লিক করো বা <b>Next</b> চাপো - ধাপে ধাপে দেখো।</p>
     <div class="jump" id="jump"></div>
   </header>
@@ -1290,6 +1290,42 @@ const TOPICS=[
     S('Shell সেই status দেখে ছাপে: <b>"Segmentation fault (core dumped)"</b>। তুমি terminal-এ এটাই দেখো।',{add:[T('msg',380,200,'Segmentation fault (core dumped)',{a:'middle',c:'r',s:'m b'})]}),
     S('Parent status নেওয়া মাত্র kernel <b>entry-ও মুছে ফেলে</b> (reap)। Process-এর আর কোনো চিহ্ন থাকে না।',{del:['msg'],mod:{ch:{o:0.15}}}),
     S('<b>সারকথা:</b> ভুল (CPU exception) → signal (SIGSEGV) → terminate + core dump → cleanup → parent-কে SIGCHLD → wait() → reap। এতে OS বা অন্য process-এর ক্ষতি হয় না।',{})
+  ]}
+ ]},
+
+{p:9,q:'What are overhead, virtual address and virtual memory? How do they work?',
+ ans:'<b>Overhead</b> = আসল কাজের বাইরে system-কে যে <b>বাড়তি খরচ</b> করতে হয় (সময়, CPU, memory)। <b>Virtual address</b> = process যে ঠিকানা দেখে; MMU সেটাকে আসল <b>physical address</b>-এ বদলায়। <b>Virtual memory</b> = RAM আর disk মিলিয়ে প্রতিটা process-কে <b>নিজস্ব বড় memory</b>-র ভ্রম দেওয়া।',
+ pts:['<b>Overhead-এর উদাহরণ:</b> context switch, system call, page table-র জায়গা, page fault, lock নেওয়া।','<b>Virtual address:</b> দুই process-ই <code>0x1000</code> দেখতে পারে, কিন্তু আসল জায়গা আলাদা। তাই তারা isolated।','<b>Virtual memory:</b> সব page RAM-এ থাকে না, কিছু disk-এ। দরকার হলে OS এনে দেয়। লাভ: isolation, বড় program, sharing। দাম: নিজেই একটা overhead।'],
+ tabs:[
+  {n:'1. Overhead কী',steps:[
+    S('<b>Overhead:</b> আসল কাজ নয়, কিন্তু কাজ চালাতে system-কে যা খরচ করতে হয়। যেমন <b>context switch</b>: যে সময় কোনো thread-ই কাজ করে না, শুধু register save/load চলে। নিচে CPU-র সময়ের ফালি।',{add:[T('cl',20,22,'CPU-র সময়',{c:'f',s:'b'}),B('fr',20,40,720,50,'','n',{dash:1}),T('lg1',20,110,'সবুজ = আসল কাজ',{c:'g',s:'sm b'}),T('lg2',200,110,'লাল = overhead (switch)',{c:'r',s:'sm b'})]}),
+    S('<b>বড় time slice:</b> কম switch। ৩টা বড় কাজ আর ২টা ছোট switch। Overhead প্রায় <b>৫%</b>।',{add:[B('g0',24,44,200,42,'কাজ','g'),B('o0',224,44,16,42,'','r'),B('g1',240,44,200,42,'কাজ','g'),B('o1',440,44,16,42,'','r'),B('g2',456,44,200,42,'কাজ','g'),T('p1',380,150,'overhead ≈ ৫%   (বড় slice: বেশি কাজ, কম switch)',{a:'middle',c:'g',s:'b'})]}),
+    S('<b>ছোট time slice:</b> বারবার switch। একই সময়ে ৮টা ছোট কাজ আর ৭টা switch। Overhead <b>প্রায় ৩৬%</b>, কাজ কমে গেল।',{del:['g0','o0','g1','o1','g2','p1'],add:[...[0,1,2,3,4,5,6,7].map(i=>B('sg'+i,24+i*86,44,52,42,'কাজ','g',{s:'sm'})),...[0,1,2,3,4,5,6].map(i=>B('so'+i,76+i*86,44,34,42,'','r')),T('p2',380,150,'overhead ≈ ৩৬%   (ছোট slice: switch-এ অনেক সময় যায়)',{a:'middle',c:'r',s:'b'})]}),
+    S('শুধু context switch না, আরও অনেক জিনিস overhead: <b>system call</b> (mode switch), <b>page fault</b> (disk থেকে আনা), <b>page table</b> (memory-র জায়গা), <b>lock</b> নেওয়া। সবই আসল কাজের বাইরের খরচ।',{del:['p2'],add:[B('c1',20,170,170,56,'system call\nmode switch','o'),B('c2',200,170,170,56,'page fault\ndisk থেকে আনা','o'),B('c3',390,170,170,56,'page table\nmemory-র জায়গা','o'),B('c4',580,170,160,56,'lock নেওয়া\nঅপেক্ষা','o')]}),
+    S('<b>সারকথা:</b> overhead পুরোপুরি এড়ানো যায় না, কিন্তু কমানো যায় (যেমন quantum না বেশি ছোট, না বেশি বড়)। লক্ষ্য: আসল কাজ যেন বেশি থাকে।',{})
+  ]},
+  {n:'2. Virtual address কী',steps:[
+    S('প্রতিটা process শুধু <b>virtual address</b> দেখে। এখানে Process A আর B <b>দুজনেই</b> <code>0x1000</code> ঠিকানা ব্যবহার করছে।',{add:[B('pa',20,10,200,100,'Process A\nদেখে: 0x1000','a'),B('pb',20,130,200,100,'Process B\nদেখে: 0x1000','b'),B('mmu',290,70,100,100,'MMU\n(অনুবাদ করে)','o'),B('ram',470,10,270,224,'','g',{dash:1}),T('raml',484,26,'Physical RAM (আসল ঠিকানা)',{c:'g',s:'sm b'}),B('fa',490,50,230,56,'frame 0x5000','n',{dash:1}),B('fb',490,140,230,56,'frame 0x9000','n',{dash:1})]}),
+    S('A-র <code>0x1000</code> MMU-তে যায়। Page table দেখে MMU বদলে দেয়: আসল ঠিকানা <b>0x5000</b>।',{add:[A('a1',222,60,288,100,'a'),A('a2',392,110,488,80,'a')],mod:{fa:{label:'frame 0x5000\n(A-র data)',c:'a',dash:0}}}),
+    S('B-র <code>0x1000</code>-ও MMU-তে যায়। <b>B-র page table</b> আলাদা, তাই আসল ঠিকানা <b>0x9000</b>।',{add:[A('b1',222,180,288,140,'b'),A('b2',392,130,488,166,'b')],mod:{fb:{label:'frame 0x9000\n(B-র data)',c:'b',dash:0}}}),
+    S('<b>একই virtual address, আলাদা physical address।</b> তাই A কখনো B-র memory ছুঁতে পারে না। এটাই process isolation। Virtual address শুধু process-এর নিজস্ব নাম।',{})
+  ]},
+  {n:'3. Virtual memory কীভাবে কাজ করে',steps:[
+    S('<b>Virtual memory:</b> Process মনে করে তার কাছে নিজস্ব বড় memory আছে (৬টা page: V0 থেকে V5)। কিন্তু RAM-এ জায়গা মাত্র ৩টা frame। কৌশল: <b>RAM + disk</b> মিলিয়ে।',{add:[T('vl',20,12,'Process-এর virtual page',{c:'a',s:'sm b'}),...[0,1,2,3,4,5].map(i=>B('v'+i,20,26+i*34,110,30,'V'+i,'a',{s:'sm'})),T('rl',330,12,'RAM (৩টা frame)',{c:'g',s:'sm b'}),...[0,1,2].map(i=>B('f'+i,330,26+i*50,120,42,'ফাঁকা','n',{dash:1})),T('dl',600,12,'Disk (swap)',{c:'n',s:'sm b'}),B('dk',590,26,150,200,'','n',{dash:1})]}),
+    S('সব page একসাথে RAM-এ ধরে না। <b>V0, V1, V2</b> RAM-এ আছে, <b>V3, V4, V5</b> disk-এ।',{mod:{f0:{label:'V0',c:'a',dash:0},f1:{label:'V1',c:'a',dash:0},f2:{label:'V2',c:'a',dash:0},v3:{c:'n',dash:1},v4:{c:'n',dash:1},v5:{c:'n',dash:1}},add:[B('d3',604,40,122,30,'V3','n',{s:'sm'}),B('d4',604,78,122,30,'V4','n',{s:'sm'}),B('d5',604,116,122,30,'V5','n',{s:'sm'})]}),
+    S('Process <b>V1</b> চাইল। V1 RAM-এ আছে: page table (আর TLB) দিয়ে সাথে সাথে পেল। <b>দ্রুত।</b>',{add:[A('r1',132,92,328,92,'g')],mod:{v1:{hl:1,c:'g'},f1:{hl:1,c:'g'}}}),
+    S('এবার <b>V4</b> চাইল। V4 RAM-এ নেই, disk-এ। <b>Page fault!</b> OS-কে ডাকা হল।',{del:['r1'],add:[A('r2',132,160,588,100,'r',{dash:1})],mod:{v1:{hl:0,c:'a'},f1:{hl:0,c:'a'},v4:{c:'r',hl:1,dash:0},d4:{c:'r'}}}),
+    S('OS কম দরকারি <b>V2</b>-কে disk-এ পাঠায় আর <b>V4</b>-কে RAM-এ আনে। Page table update হয়।',{del:['r2'],mod:{f2:{label:'V4',c:'g',hl:1},d4:{label:'V2',c:'n'},v4:{c:'g',hl:0},v2:{c:'n',dash:1}}}),
+    S('Process টেরই পায়নি। তার কাছে মনে হল সব memory সবসময় আছে। <b>RAM + disk মিলে বড় memory-র ভ্রম</b>, এটাই virtual memory।',{mod:{f2:{hl:0}}})
+  ]},
+  {n:'4. Virtual memory-র overhead',steps:[
+    S('Virtual memory অনেক সুবিধা দেয় (isolation, বড় program, sharing), কিন্তু এটা <b>নিজেই কিছু overhead</b> বয়ে আনে। পাঁচটা খরচ:',{add:[B('o1',20,16,230,64,'Page table\nপ্রতি process-এর জন্য memory','n',{dash:1}),B('o2',265,16,230,64,'Translation\nপ্রতি access-এ MMU/TLB','n',{dash:1}),B('o3',510,16,230,64,'TLB miss\nবাড়তি page table পড়া','n',{dash:1}),B('o4',142,100,230,64,'Page fault\ndisk থেকে আনা (ms)','n',{dash:1}),B('o5',387,100,230,64,'Context switch\nTLB ঠান্ডা, নতুন table','n',{dash:1})]}),
+    S('<b>১. Page table:</b> প্রতিটা process-এর translation table RAM-এ জায়গা নেয়। Process যত বেশি, খরচও তত।',{mod:{o1:{c:'o',dash:0,hl:1}}}),
+    S('<b>২. Translation:</b> প্রতিটা memory access-এ virtual → physical বদলাতে হয়। TLB cache থাকায় সাধারণত দ্রুত।',{mod:{o1:{hl:0},o2:{c:'o',dash:0,hl:1}}}),
+    S('<b>৩. TLB miss:</b> TLB-তে না পেলে page table পড়তে হয়: একটা বাড়তি memory access।',{mod:{o2:{hl:0},o3:{c:'o',dash:0,hl:1}}}),
+    S('<b>৪. Page fault:</b> সবচেয়ে ভারী। disk থেকে আনা ms-এর হিসাবে, RAM ns-এর তুলনায় অনেক ধীর। বেশি হলে <b>thrashing</b>।',{mod:{o3:{hl:0},o4:{c:'r',dash:0,hl:1}}}),
+    S('<b>৫. Context switch:</b> process বদলালে নতুন page table নিতে হয় আর TLB ঠান্ডা হয়ে যায়, তাই switch-এর পর কিছুক্ষণ ধীর।',{mod:{o4:{hl:0},o5:{c:'o',dash:0,hl:1}}}),
+    S('<b>সারকথা:</b> virtual memory-র লাভ অনেক বেশি, তাই সব আধুনিক OS ব্যবহার করে। কিন্তু overhead কমাতে TLB, বড় page, আর যথেষ্ট RAM লাগে।',{mod:{o5:{hl:0}}})
   ]}
  ]}
 ];

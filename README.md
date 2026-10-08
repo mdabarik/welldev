@@ -40,13 +40,11 @@ Software engineering interview prep — বাংলায় ব্যাখ্
 
 ## 05 · Operating System
 
-- ★ **Core** · [OS Basics - Interview](05-operating-system/basics/index.html) - OS-এর মূল গাইড: ৩৯টি প্রশ্ন, প্রতিটির সংক্ষিপ্ত উত্তর ও step-by-step D3 animation
+- ★ **Core** · [OS Basics - Interview](05-operating-system/basics/index.html) - OS-এর মূল গাইড: ৪০টি প্রশ্ন, প্রতিটির সংক্ষিপ্ত উত্তর ও step-by-step D3 animation
 - ◌ Optional · [OS, Kernel, Process ও Thread](05-operating-system/01-os-kernel-process-thread.html) — boot থেকে context switch পর্যন্ত, ২৫টি diagram
 - ◌ Optional · [Process & Thread Internals](05-operating-system/thread-process/index.html) — process/thread কে বানায়, user/kernel space, page table, MMU/TLB, cache, register, core, IMC, stack, PCB/TCB, context switch, driver, NIC
-- ◌ Optional · [CPU Scheduling](05-operating-system/os-scheduling-algo/index.html) — FCFS, SJF/SRTF, Priority, Round Robin; convoy effect, starvation, time quantum, Gantt chart simulator
 - ◌ Optional · [Thread Scheduling · Multi-core CPU](05-operating-system/thread/index.html) — process-এর thread কীভাবে ready queue, scheduler আর context switch পেরিয়ে multi-core CPU-তে চলে, 3D simulation
 - ◌ Optional · [Deadlock](05-operating-system/deadlock/index.html) — DB আর thread-এর উদাহরণ, ৪টি necessary condition, Banker's algorithm simulator, multiprogramming বনাম multitasking
-- ◌ Optional · [Mutex](05-operating-system/mutex/index.html) — race condition, mutex / spinlock / atomic ভেতরে কীভাবে কাজ করে, futex, D3 animation, আসল C ও Java run
 
 ## 06 · Networking
 
