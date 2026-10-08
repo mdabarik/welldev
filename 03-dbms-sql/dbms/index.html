@@ -455,7 +455,7 @@ WHERE id = 42 AND status = 'pending';   -- শর্ত: এখনো pending �
  ]},
 
 {p:5,q:'প্রশ্ন-উত্তর: retry কেন আসে, Serializable দিয়ে কেন হয় না',
- ans:'এখানে প্রশ্ন-উত্তরে তিনটা জিনিস পরিষ্কার করা হয়েছে: (ক) <b>retry কেন আসেই</b>, commit হয়ে গেলেও; (খ) <b>Unit of Work / Serializable দিয়ে কেন ঠেকানো যায় না</b>; (গ) <b>Idempotency দিয়ে কীভাবে ঠেকানো যায়</b>, আর এটা কেন শুধু retry-র জন্যই লাগে।',
+ ans:'এখানে প্রশ্ন-উত্তরে তিনটা জিনিস পরিষ্কার করা হয়েছে: (ক) <b>retry কেন আসেই</b>, commit হয়ে গেলেও; (খ) <b>Unit of Work / Serializable দিয়ে কেন ঠেকানো যায় না</b>; (গ) <b>Idempotency দিয়ে কীভাবে ঠেকানো যায়</b>, আর এটা কেন শুধু retry-র জন্যই লাগে; (ঘ) <b>কোন কাজ নিজে idempotent, কোনটায় key লাগে</b> (PUT, POST, <code>balance + 100</code>) আর POST কি retry করা যায়।',
  pts:[],
  extra:`<div class="deep-body faq">
 
@@ -519,6 +519,68 @@ Request 2 (Key K1):  K1 আগেই আছে! → টাকা কাটে �
 
 <p class="qq">প্রশ্ন ৯: সব API-তে কি idempotency key লাগে?</p>
 <p class="aa">না। <b>GET</b> শুধু পড়ে, কিছু বদলায় না, তাই retry-তে ক্ষতি নেই। <b>PUT, DELETE</b> স্বভাবতই idempotent। দরকার সেখানে, যেখানে কাজটা "নতুন কিছু তৈরি/যোগ করা" (POST, <code>balance + 100</code>) এবং ভুলে দুবার হলে ক্ষতি হয়: payment, অর্ডার তৈরি, ইমেইল/SMS পাঠানো।</p>
+<h4 class="sec">ঘ) কোনটা idempotent, কোনটা না, আর retry-safe বানাব কীভাবে?</h4>
+
+<p class="qq">প্রশ্ন ১০: কোন কাজ নিজে থেকেই idempotent, কোনটা না? মনে রাখার সহজ নিয়ম কী?</p>
+<p class="aa">একটাই প্রশ্ন করুন: <b>কাজটা কি "মান বসানো/সেট করা", নাকি "যোগ/তৈরি করা"?</b></p>
+<table class="cmp"><tr><th>কাজের ধরন</th><th>উদাহরণ</th><th>নিজে idempotent?</th></tr>
+<tr><td>শুধু দেখা</td><td><code>GET</code></td><td>✅ হ্যাঁ</td></tr>
+<tr><td>সেট করা</td><td><code>PUT {balance: 600}</code>, <code>SET balance = 600</code></td><td>✅ হ্যাঁ</td></tr>
+<tr><td>মোছা</td><td><code>DELETE /users/1</code></td><td>✅ হ্যাঁ (state একই, যদিও 200 → 404)</td></tr>
+<tr><td>যোগ/কমানো</td><td><code>balance = balance + 100</code></td><td>❌ না</td></tr>
+<tr><td>নতুন তৈরি</td><td><code>POST /orders</code></td><td>❌ না</td></tr></table>
+<p class="aa"><b>সূত্র:</b> "রাখো / সেট করো / মুছো" = idempotent। "যোগ করো / তৈরি করো" = idempotent না।</p>
+
+<p class="qq">প্রশ্ন ১১: PUT-এ key লাগে না, কিন্তু POST-এ লাগে কেন?</p>
+<p class="aa">PUT-এর কাজ "এই মানে সেট করো", তাই দ্বিতীয়বার করলেও ফল একই। Server-কে মনে রাখতে হয় না যে এটা আগে এসেছিল, কাজটার প্রকৃতিই idempotent। POST-এর কাজ "নতুন কিছু তৈরি করো", প্রতিবার সত্যিই নতুন কিছু তৈরি হয়। তাই server-কে মনে রাখতে হয় "এটা আগে করেছি" আর সেই স্মৃতিই হলো Idempotency Key।</p>
+<pre><code>PUT  {name: Karim}              → retry করলেও নাম Karim-ই। key লাগে না ✅
+POST /orders + Key: K1          → retry করলে K1 চিনে নতুন order বানায় না ✅
+POST /orders (key ছাড়া)         → retry করলে আরেকটা order ❌</code></pre>
+
+<p class="qq">প্রশ্ন ১২: PUT-এর ভেতরে <code>balance = balance + 100</code> লিখলে কী হয়?</p>
+<p class="aa">তখন সেটা আর idempotent থাকে না, retry করলে প্রতিবার ১০০ বাড়ে (600 → 700 → 800)। Method-এর নাম PUT হলেই idempotent হয় না, <b>ভেতরের কোডটাই আসল</b>। PUT-এ পাঠাতে হয় <b>চূড়ান্ত মান</b> (<code>{balance: 600}</code>), পরিবর্তনের পরিমাণ না। "১০০ যোগ করো" কাজটা দরকার হলে PUT না, <b>POST (বা PATCH) + Idempotency Key</b> ব্যবহার করুন।</p>
+
+<p class="qq">প্রশ্ন ১৩: Key থাকলে <code>balance = balance + 100</code> কি নিরাপদ? কাজ হয়ে উত্তর হারালেও?</p>
+<p class="aa"><b>হ্যাঁ, নিরাপদ।</b> কাজটা নিজে idempotent না, কিন্তু key সেটাকে <b>একবারই চলতে দেয়</b>। শুরুতে balance = 500, request: <code>POST /deposit  Idempotency-Key: K1  {amount: 100}</code></p>
+<pre><code>ক্ষেত্র ১: কাজ হয়েছে, উত্তর হারিয়েছে
+  Server: K1 নতুন → 500 + 100 = 600 → "K1 হয়েছে" লিখে রাখল → COMMIT
+  Client: retry (K1)
+  Server: K1 আগেই আছে → যোগ করে না → আগের উত্তর "OK, 600" দেয়
+  ফল: 600 ✅
+
+ক্ষেত্র ২: request-ই পৌঁছায়নি
+  Client: retry (K1)
+  Server: K1 নতুন → 500 + 100 = 600 → COMMIT
+  ফল: 600 ✅</code></pre>
+<p class="aa">দুই ক্ষেত্রেই ফল ৬০০, ৭০০ না। Client জানে না কোন ক্ষেত্র ঘটেছে, জানার দরকারও নেই। কোডে এটা <b>একই transaction-এ</b> হয়:</p>
+<pre><code>BEGIN;
+INSERT INTO idempotency_keys (key) VALUES ('K1');       -- K1 আগে থাকলে এখানেই আটকে যায়
+UPDATE accounts SET balance = balance + 100 WHERE id = 1;
+COMMIT;</code></pre>
+<table class="cmp"><tr><th>কাজ</th><th>key আছে?</th><th>retry-তে ফল</th></tr>
+<tr><td><code>balance + 100</code></td><td>না</td><td>700, 800... ❌</td></tr>
+<tr><td><code>balance + 100</code></td><td><b>হ্যাঁ</b></td><td>600 ✅</td></tr>
+<tr><td><code>balance = 600</code></td><td>লাগে না</td><td>600 ✅</td></tr></table>
+<p class="aa"><b>এক লাইনে:</b> কাজ নিজে idempotent না হলেও key থাকলে retry নিরাপদ, কারণ key-ই পাহারা দেয় যে কাজটা একবারই চলবে।</p>
+
+<p class="qq">প্রশ্ন ১৪: POST কি retry করা যায়?</p>
+<p class="aa"><b>এমনিতে না, key দিলে হ্যাঁ।</b> POST নিজে idempotent না, তাই key ছাড়া retry করলে duplicate তৈরি হতে পারে। এই কারণে অনেক HTTP library নিজে থেকে POST retry করে না (GET, PUT, DELETE করে)। POST-এ <code>Idempotency-Key</code> header দিলে retry নিরাপদ, Stripe-এর মতো payment API ঠিক এভাবেই কাজ করে।</p>
+
+<p class="qq">প্রশ্ন ১৫: PUT retry করলে কি কোনো সমস্যাই নেই?</p>
+<p class="aa">double charge-এর ধরনের সমস্যা নেই, কিন্তু একটা সূক্ষ্ম সতর্কতা আছে। Retry-র মাঝে অন্য কেউ ওই মান বদলে দিলে আপনার retry-টা তার পরিবর্তন মুছে দিতে পারে (last write wins)।</p>
+<pre><code>আপনি:    PUT {name: Karim}   (উত্তর হারাল)
+অন্য কেউ: PUT {name: Rahim}   ← এর মধ্যে বদলে দিল
+আপনি:    PUT {name: Karim}   (retry) → Rahim-এর পরিবর্তন মুছে গেল</code></pre>
+<p class="aa">এটা retry-র নয়, concurrent update-এর সমস্যা। সমাধান: <code>ETag</code> / <code>If-Match</code> বা version number দিয়ে শর্ত দেওয়া। টাকার ব্যালেন্সের মতো জায়গায় তাই সরাসরি PUT না করে "জমা/উত্তোলন" লেনদেন POST + key দিয়ে করা হয়।</p>
+
+<p class="qq">প্রশ্ন ১৬: সব মিলিয়ে সংক্ষেপে কোন কাজে কী করব?</p>
+<table class="cmp"><tr><th>কাজ</th><th>Method</th><th>retry করলে</th><th>key লাগে?</th></tr>
+<tr><td>তথ্য দেখা</td><td>GET</td><td>নিরাপদ</td><td>না</td></tr>
+<tr><td>"এই মানে সেট করো"</td><td>PUT</td><td>নিরাপদ</td><td>না</td></tr>
+<tr><td>মুছে ফেলা</td><td>DELETE</td><td>নিরাপদ (200 এর পর 404)</td><td>না</td></tr>
+<tr><td>নতুন তৈরি (order, payment)</td><td>POST</td><td>key ছাড়া ঝুঁকিপূর্ণ</td><td><b>হ্যাঁ</b></td></tr>
+<tr><td>যোগ/কমানো (<code>balance + 100</code>)</td><td>POST/PATCH</td><td>key ছাড়া ঝুঁকিপূর্ণ</td><td><b>হ্যাঁ</b></td></tr></table>
+
 
 </div>`}
 ];
