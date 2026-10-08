@@ -198,8 +198,24 @@ h1,h2,h3,h4,h5{letter-spacing:0!important}
     <p>JavaScript-এ একসাথে একটাই কাজ চলে। তাহলে <code>setTimeout</code>, <code>fetch</code> আর <code>Promise</code> একসাথে সামলায় কীভাবে? উত্তর: call stack, কিছু queue, আর একটা loop।</p>
   </header>
 
+  <section id="thread">
+    <h2><span class="num">1</span>Thread আর Call Stack আসলে কী?</h2>
+    <div class="grid2">
+      <div class="card story"><p><b>Thread</b> — একটা কাজের ধারা। CPU core হলো কাজ করার "হাত", আর thread হলো সেই হাতে দেওয়া কাজের তালিকা। এক thread = একবারে একটা কাজ করে চলা।</p></div>
+      <div class="card story"><p><b>Call Stack</b> — আলাদা কোনো যন্ত্র না। এটা ওই thread-এরই "এখন কোন function চলছে" তার হিসাব। Function ডাকলে stack-এ ওঠে, শেষ হলে নামে। শুরুতে খালি, কারণ তখনো কোনো function ডাকা হয়নি।</p></div>
+    </div>
+    <div class="how"><b>JavaScript single-threaded</b> মানে: তোমার JS কোড চালানোর জন্য <b>একটাই main thread</b> আর একটাই call stack। তাই একটা কাজ শেষ না হলে পরেরটা শুরু হয় না। (Browser/Node ভেতরে আরও thread রাখে — নেটওয়ার্ক, timer, ফাইলের জন্য — কিন্তু তোমার JS কোড চলে শুধু ওই একটায়।)</div>
+    <h3>কিছু সাধারণ প্রশ্ন</h3>
+    <div class="grid2">
+      <div class="card story"><p><b>বেশি thread থাকলে সমস্যা কী?</b> সমস্যা না, কিন্তু একই data-তে দুই thread একসাথে হাত দিলে গোলমাল হয় (race condition, lock)। JS ইচ্ছা করে এটা এড়িয়েছে — একটা thread মানে কোড সহজ আর নিরাপদ।</p></div>
+      <div class="card story"><p><b>তাহলে বাকি thread/core কী করে?</b> JS কোড না চালালেও ফাঁকা থাকে না। OS, অন্য app, ব্রাউজারের অন্য tab, rendering, নেটওয়ার্ক — সব এগুলো ব্যবহার করে। চাইলে Web Worker দিয়ে আলাদা thread-ও নেওয়া যায়।</p></div>
+      <div class="card story"><p><b>একটা core-ই কি যথেষ্ট?</b> JS-এর এক কাজের জন্য হ্যাঁ — সে একটার বেশি core ব্যবহারই করে না। কিন্তু পুরো laptop-এর জন্য না: ব্রাউজার, OS, অনেক tab একসাথে চলে, তাই বেশি core থাকলে সব মিলিয়ে মসৃণ লাগে।</p></div>
+      <div class="card story"><p><b>এক core থাকলেই কি JS fast?</b> না। গতি নির্ভর করে core-এর <b>clock speed ও কোড কতটা ভারী</b>-র উপর। এক core-এর বেশি থাকলে একটা JS কোড দ্রুত হয় না। আর ভারী loop stack আটকে রাখলে UI-ও আটকে যায়।</p></div>
+    </div>
+  </section>
+
   <section id="idea">
-    <h2><span class="num">1</span>মূল কথা</h2>
+    <h2><span class="num">2</span>মূল কথা</h2>
     <div class="grid2">
       <div class="card story"><p><b>Call Stack</b> — যে কাজ এখন চলছে। একবারে একটাই। Stack ব্যস্ত থাকলে বাকি সবাইকে অপেক্ষা করতে হয়।</p></div>
       <div class="card story"><p><b>Queue</b> — অপেক্ষার লাইন। সময় বা I/O শেষ হলে callback এখানে এসে দাঁড়ায়। দুই রকম: <b>Microtask</b> (Promise) আর <b>Task</b> (setTimeout, event)।</p></div>
@@ -213,7 +229,7 @@ h1,h2,h3,h4,h5{letter-spacing:0!important}
   </section>
 
   <section id="browser">
-    <h2><span class="num">2</span>Browser / JavaScript</h2>
+    <h2><span class="num">3</span>Browser / JavaScript</h2>
     <span class="motto">Microtask আগে, Task পরে</span>
     <div class="card lab" id="lab1">
       <div class="codebox" id="code1"></div>
@@ -233,7 +249,7 @@ h1,h2,h3,h4,h5{letter-spacing:0!important}
   </section>
 
   <section id="node">
-    <h2><span class="num">3</span>Node.js</h2>
+    <h2><span class="num">4</span>Node.js</h2>
     <span class="motto">একই ধারণা, কিন্তু loop-এ আছে phase</span>
     <p class="lead">Node-এ event loop চালায় <b>libuv</b>। Loop প্রতি ঘূর্ণনে ধাপে ধাপে phase পার হয়: <b>timers → pending → poll → check → close</b>। ফাইল, crypto-র মতো ভারী কাজ যায় <b>thread pool</b>-এ; নেটওয়ার্কের কাজ OS নিজে সামলায়। এই উদাহরণে I/O callback-এর ভেতরে চারটা জিনিস register হয় — ক্রমটা সবসময় একই।</p>
     <div class="card lab" id="lab2">
@@ -265,7 +281,7 @@ console.log('D');</pre>
   </section>
 
   <section id="diff">
-    <h2><span class="num">4</span>Browser বনাম Node</h2>
+    <h2><span class="num">5</span>Browser বনাম Node</h2>
     <div class="card tscroll">
       <table>
         <thead><tr><th></th><th>Browser</th><th>Node.js</th></tr></thead>
