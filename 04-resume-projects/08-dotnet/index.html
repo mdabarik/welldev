@@ -1,0 +1,457 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>.NET Web API &amp; MVC - Interview Cheat Sheet</title>
+<meta name="description" content=".NET Web API ও MVC: MVC, MVP, MVVM কীভাবে কাজ করে, Web API বনাম MVC, LINQ, IEnumerable ও IQueryable - সংক্ষিপ্ত উত্তর আর ধাপে ধাপে D3 animation।">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<style>
+/* One card per interview question: short answer, 2-3 bullets, and a step-by-step D3 scene.
+   Scenes are plain data (see TOPICS at the bottom): each step adds / modifies / deletes nodes by id
+   and the tiny engine animates the difference. */
+:root{
+  --bg:#f5f7fc; --surface:#ffffff; --surface-2:#f1f4fa; --fg:#0f172a; --muted:#5b6478; --faint:#94a0b8; --line:#e4e8f1;
+  --accent:#6366f1;
+  --a:#4f46e5; --b:#db2777; --g:#059669; --o:#d97706; --r:#e11d48; --s:#0284c7;
+  --hero:linear-gradient(135deg,#4f46e5 0%,#7c3aed 45%,#db2777 100%);
+  --shadow:0 1px 2px rgba(15,23,42,.04),0 10px 30px -12px rgba(15,23,42,.14);
+  --sans:"Inter","Hind Siliguri",system-ui,sans-serif; --bn:"Hind Siliguri","Inter",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0b0f1a; --surface:#121827; --surface-2:#182033; --fg:#e7ecf6; --muted:#9aa6bf; --faint:#66728c; --line:#232c42;
+  --accent:#818cf8; --a:#818cf8; --b:#f472b6; --g:#34d399; --o:#fbbf24; --r:#fb7185; --s:#38bdf8;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6);
+}}
+:root[data-theme="dark"]{
+  --bg:#0b0f1a; --surface:#121827; --surface-2:#182033; --fg:#e7ecf6; --muted:#9aa6bf; --faint:#66728c; --line:#232c42;
+  --accent:#818cf8; --a:#818cf8; --b:#f472b6; --g:#34d399; --o:#fbbf24; --r:#fb7185; --s:#38bdf8;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 var(--bn);-webkit-font-smoothing:antialiased}
+a{color:var(--accent)}
+button{font:inherit;color:inherit}
+code{font-family:var(--mono);font-size:.86em;font-weight:500;background:color-mix(in srgb,var(--accent) 10%,var(--surface));color:color-mix(in srgb,var(--accent) 72%,var(--fg));padding:.1em .4em;border-radius:6px}
+.wrap{max-width:1000px;margin:0 auto;padding:20px 18px 70px}
+
+.topnav{display:flex;align-items:center;gap:10px}
+.brand{display:flex;align-items:center;gap:10px;color:var(--fg);text-decoration:none;font:800 16px var(--sans);letter-spacing:-.02em}
+.logo{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:#fff;font:800 13px var(--mono);background:var(--hero)}
+.topnav .sp{flex:1}
+.pill{border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:6px 14px;font:600 13px var(--sans);cursor:pointer;text-decoration:none}
+.pill:hover{color:var(--fg)}
+
+.hero{margin-top:20px;border-radius:22px;padding:26px 30px;color:#fff;background:var(--hero)}
+.hero .eyebrow{font:600 12px var(--sans);letter-spacing:.1em;text-transform:uppercase;opacity:.85}
+.hero h1{margin:6px 0 8px;font:800 clamp(26px,4.2vw,38px)/1.15 var(--sans);letter-spacing:-.03em}
+.hero p{margin:0;max-width:680px;opacity:.94}
+.jump{display:flex;flex-wrap:wrap;gap:6px;margin-top:16px}
+.jump a{min-width:32px;padding:0 6px;height:32px;display:grid;place-items:center;border-radius:9px;text-decoration:none;font:700 13px var(--sans);color:#fff;background:rgba(255,255,255,.18)}
+.jump a:hover{background:rgba(255,255,255,.34)}
+
+.parts{position:sticky;top:0;z-index:5;margin:14px -18px 0;padding:10px 18px;display:flex;gap:8px;overflow-x:auto;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);scrollbar-width:none}
+.parts a{flex:none;text-decoration:none;font:600 13px var(--sans);color:var(--muted);border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 13px}
+.parts a:hover{color:var(--fg)}
+.parts a b{color:var(--accent);margin-right:4px}
+
+.part{margin-top:44px;scroll-margin-top:60px}
+.part>h2{margin:0;font:800 clamp(20px,2.6vw,25px)/1.25 var(--sans);letter-spacing:-.02em}
+.part>h2 span{color:var(--accent);margin-right:8px}
+
+.q{margin-top:16px;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:20px 22px;box-shadow:var(--shadow);scroll-margin-top:64px}
+.q h3{display:flex;gap:12px;align-items:flex-start;margin:0 0 10px;font:700 18px/1.4 var(--sans);letter-spacing:-.01em}
+.skip{display:inline-block;margin-left:8px;padding:1px 10px;border-radius:999px;font:600 12px var(--sans);font-style:normal;white-space:nowrap;color:var(--muted);background:var(--surface-2);border:1px dashed var(--faint);vertical-align:middle}
+.num{flex:none;min-width:34px;height:34px;padding:0 8px;border-radius:10px;display:grid;place-items:center;color:#fff;font:800 14px var(--sans);background:var(--hero)}
+.ans{margin:0 0 10px;padding:10px 14px;border-left:4px solid var(--accent);border-radius:0 10px 10px 0;background:color-mix(in srgb,var(--accent) 8%,var(--surface))}
+.q h3 .num.w{min-width:40px}
+.q ul{margin:0 0 12px;padding-left:20px;color:var(--muted)}
+.q li{margin:2px 0}
+.q li b,.ans b{color:var(--fg)}
+.extra{margin:0 0 12px;overflow-x:auto}
+.extra table{border-collapse:collapse;font:500 13px var(--mono)}
+.extra th,.extra td{border:1px solid var(--line);padding:3px 10px;text-align:center}
+.extra th{background:var(--surface-2)}
+.extra .cmp td,.extra .cmp th{text-align:left;vertical-align:top;font:500 13.5px/1.55 var(--bn);min-width:150px}
+.extra .cmp td:first-child{font-weight:700;white-space:nowrap;min-width:0}
+
+.viz{border:1px solid var(--line);border-radius:14px;background:var(--surface-2);overflow:hidden}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;padding:10px 12px 0}
+.tabs button{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:3px 12px;font:600 12.5px var(--sans);color:var(--muted);cursor:pointer}
+.tabs button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.stage{overflow-x:auto;padding-top:8px}
+.stage svg{display:block;width:100%;min-width:680px;height:auto;cursor:pointer;user-select:none}
+.cap{padding:10px 16px;min-height:3.4em;border-top:1px dashed var(--line);font-size:15px}
+.ctl{display:flex;align-items:center;gap:8px;padding:0 12px 12px}
+.b{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:5px 14px;font:600 13px var(--sans);cursor:pointer}
+.b:hover:not(:disabled){border-color:var(--accent)}
+.b:disabled{opacity:.4;cursor:default}
+.b.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+.cnt{margin-left:auto;font:500 12px var(--mono);color:var(--faint)}
+
+/* svg scene */
+svg text,svg tspan{white-space:pre}
+svg text{font-family:var(--sans);font-size:13px;fill:var(--fg);dominant-baseline:central}
+.c-n{--cc:var(--muted)} .c-a{--cc:var(--a)} .c-b{--cc:var(--b)} .c-g{--cc:var(--g)}
+.c-o{--cc:var(--o)} .c-r{--cc:var(--r)} .c-s{--cc:var(--s)} .c-f{--cc:var(--fg)}
+.box rect,.circ circle{fill:color-mix(in srgb,var(--cc) 14%,var(--surface));stroke:var(--cc);stroke-width:1.6;transition:fill .45s,stroke .45s}
+.dash rect,.dash circle{stroke-dasharray:6 4;fill:color-mix(in srgb,var(--cc) 4%,transparent)}
+.hl rect,.hl circle{stroke-width:3.4;filter:drop-shadow(0 0 7px color-mix(in srgb,var(--cc) 65%,transparent))}
+.text text{fill:var(--cc);transition:fill .45s}
+.text.b text,.text.lg text{font-weight:700}
+.text.lg text{font-size:15px}
+.sm text{font-size:11.5px}
+.m text{font-family:var(--mono);font-size:12px}
+.path path{fill:none;stroke:var(--cc);stroke-width:3.4;stroke-linecap:round}
+.arrow line{stroke:var(--cc);stroke-width:2.2;transition:stroke .4s}
+.arrow.dash line{stroke-dasharray:6 4}
+.arrow.hl line{stroke-width:3.4}
+footer{margin-top:50px;text-align:center;color:var(--faint);font:500 13px var(--sans)}
+/* bn-type: Bengali glyphs/digits need normal tracking */
+h1,h2,h3,h4,h5{letter-spacing:0!important}
+.hero h1,.page-head h1,.p-hero h1,.prose h1,header.top h1{line-height:1.32!important}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs id="defs"></defs></svg>
+<div class="wrap">
+  <nav class="topnav">
+    <a class="brand" href="../../index.html"><span class="logo">W</span>WellDev</a>
+    <span class="sp"></span>
+    <button class="pill" id="theme" type="button">Theme</button>
+  </nav>
+
+  <header class="hero">
+    <div class="eyebrow">.NET · Interview</div>
+    <h1>.NET Web API &amp; MVC - সোজা উত্তর</h1>
+    <p>প্রতিটি প্রশ্নে এক লাইনের উত্তর আর একটা animation। scene-এ ক্লিক করো বা <b>Next</b> চাপো - ধাপে ধাপে দেখো।</p>
+    <div class="jump" id="jump"></div>
+  </header>
+  <nav class="parts" id="parts"></nav>
+  <main id="app"></main>
+  <footer>Trainee Software Engineer · .NET basics</footer>
+</div>
+
+<script>
+/* ---------- theme ---------- */
+(function(){
+  const root=document.documentElement,btn=document.getElementById('theme');
+  try{const t=localStorage.getItem('theme');if(t)root.dataset.theme=t;}catch(e){}
+  const dark=()=>root.dataset.theme?root.dataset.theme==='dark':matchMedia('(prefers-color-scheme:dark)').matches;
+  const label=()=>btn.textContent=dark()?'Light':'Dark';
+  btn.onclick=()=>{root.dataset.theme=dark()?'light':'dark';try{localStorage.setItem('theme',root.dataset.theme);}catch(e){}label();};
+  label();
+})();
+
+/* ---------- scene engine ---------- */
+const COLORS=['n','a','b','g','o','r','s','f'];
+document.getElementById('defs').innerHTML=COLORS.map(c=>
+  `<marker id="ah-${c}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" style="fill:var(--${c==='n'?'muted':c==='f'?'fg':c})"/></marker>`).join('');
+
+const B=(id,x,y,w,h,label,c='n',o={})=>({id,k:'box',x,y,w,h,label,c,...o});
+const T=(id,x,y,label,o={})=>({id,k:'text',x,y,label,c:'n',...o});
+const A=(id,x1,y1,x2,y2,c='n',o={})=>({id,k:'arrow',x:0,y:0,x1,y1,x2,y2,c,...o});
+const C=(id,x,y,r,label,c='n',o={})=>({id,k:'circ',x,y,r,label,c,...o});
+const S=(cap,o={})=>({cap,...o});
+const P=(id,d,c='n',o={})=>({id,k:'path',x:0,y:0,d,c,...o});
+
+function stateAt(steps,i){
+  const m=new Map();
+  for(let k=0;k<=i;k++){
+    const s=steps[k];
+    (s.del||[]).forEach(id=>m.delete(id));
+    (s.add||[]).forEach(n=>m.set(n.id,{...n}));
+    Object.entries(s.mod||{}).forEach(([id,p])=>{if(m.has(id))Object.assign(m.get(id),p);});
+  }
+  return [...m.values()];
+}
+
+function setText(g,cls,str,x,y,anchor,lh=15.5){
+  let tx=g.select('text.'+cls);
+  if(tx.empty())tx=g.append('text').attr('class',cls);
+  const ls=String(str??'').split('\n');
+  tx.attr('text-anchor',anchor);
+  tx.selectAll('tspan').data(ls).join('tspan').attr('x',x).attr('y',(d,i)=>y-(ls.length-1)*lh/2+i*lh).text(d=>d);
+}
+
+function upd(g,d,t){
+  g.attr('class',`n ${d.k} c-${d.c||'n'}${d.dash?' dash':''}${d.hl?' hl':''}${d.s?' '+d.s:''}${d.m?' m':''}`);
+  if(d.k==='box'){
+    let r=g.select('rect');
+    if(r.empty())r=g.insert('rect',':first-child').attr('rx',9).attr('width',d.w).attr('height',d.h);
+    r.transition(t).attr('width',d.w).attr('height',d.h);
+    setText(g,'lb',d.label,d.w/2,d.h/2,'middle');
+  }else if(d.k==='circ'){
+    let r=g.select('circle');
+    if(r.empty())r=g.insert('circle',':first-child').attr('r',d.r);
+    r.transition(t).attr('r',d.r);
+    setText(g,'lb',d.label,0,0,'middle');
+  }else if(d.k==='text'){
+    setText(g,'lb',d.label,0,0,d.a||'start');
+  }else if(d.k==='path'){
+    let p=g.select('path');
+    if(p.empty()){p=g.append('path').attr('d',d.d);const L=p.node().getTotalLength();p.attr('stroke-dasharray',L).attr('stroke-dashoffset',L).transition(t).attr('stroke-dashoffset',0);}
+  }else if(d.k==='arrow'){
+    let l=g.select('line');
+    if(l.empty())l=g.append('line').attr('x1',d.x1).attr('y1',d.y1).attr('x2',d.x2).attr('y2',d.y2);
+    l.attr('marker-end',`url(#ah-${d.c||'n'})`).transition(t).attr('x1',d.x1).attr('y1',d.y1).attr('x2',d.x2).attr('y2',d.y2);
+  }
+}
+
+function draw(svg,nodes,dur){
+  const t=d3.transition().duration(dur).ease(d3.easeCubicInOut);
+  svg.select('.layer').selectAll('g.n').data(nodes,d=>d.id).join(
+    en=>en.append('g').attr('opacity',0).attr('transform',d=>`translate(${d.x},${d.y})`),
+    up=>up,
+    ex=>ex.transition(t).attr('opacity',0).remove()
+  ).each(function(d){upd(d3.select(this),d,t);})
+   .transition(t).attr('transform',d=>`translate(${d.x},${d.y})`).attr('opacity',d=>d.o??1);
+}
+
+function mount(host,topic){
+  const tabs=topic.tabs||[{n:'',steps:topic.steps}];
+  host.innerHTML='<div class="tabs"></div><div class="stage"><svg viewBox="0 0 760 240" role="img"><g class="layer"></g></svg></div><div class="cap"></div><div class="ctl"><button class="b prev" type="button">◀</button><button class="b pri next" type="button">Next ▶</button><span class="cnt"></span></div>';
+  const svg=d3.select(host).select('svg'),cap=host.querySelector('.cap'),cnt=host.querySelector('.cnt');
+  const prev=host.querySelector('.prev'),next=host.querySelector('.next'),tabBox=host.querySelector('.tabs');
+  let ti=0,si=0,steps;
+  function show(dur){
+    draw(svg,stateAt(steps,si),dur);
+    cap.innerHTML=steps[si].cap;
+    cnt.textContent=`${si+1} / ${steps.length}`;
+    prev.disabled=si===0;
+    next.textContent=si===steps.length-1?'↻ আবার':'Next ▶';
+  }
+  function load(i){
+    ti=i;si=0;
+    const tb=tabs[ti];steps=typeof tb.steps==='function'?tb.steps():tb.steps;
+    tabBox.querySelectorAll('button').forEach((b,k)=>b.classList.toggle('on',k===ti));
+    show(0);
+  }
+  if(tabs.length>1){
+    tabs.forEach((tb,i)=>{const b=document.createElement('button');b.type='button';b.textContent=tb.n;b.onclick=()=>load(i);tabBox.appendChild(b);});
+  }else tabBox.remove();
+  const go=()=>{si=si===steps.length-1?0:si+1;show(600);};
+  next.onclick=go;svg.on('click',go);
+  prev.onclick=()=>{if(si>0){si--;show(600);}};
+  load(0);
+}
+
+/* ---------- content ---------- */
+const PARTS=[['A','MVC, MVP, MVVM'],['B','Web API বনাম MVC'],['C','LINQ, IEnumerable ও IQueryable']];
+
+/* helper: a row of small value boxes, used by the LINQ scenes */
+const COL=i=>230+80*i;
+const VB=(id,i,y,v,c,o={})=>B(id,COL(i),y,60,34,String(v),c,o);
+
+const TOPICS=[
+{p:0,n:'1',q:'MVC কী? (Model-View-Controller)',
+ ans:'<b>MVC</b> = app-কে তিন ভাগে ভাগ করা: <b>Model</b> (data ও নিয়ম), <b>View</b> (user যা দেখে), <b>Controller</b> (request ধরে, Model ও View-কে জোড়া লাগায়)।',
+ pts:['<b>কেন?</b> সব এক জায়গায় লিখলে code জট পাকায়। ভাগ করলে প্রতিটা অংশ আলাদা করে বদলানো ও test করা যায়।','ASP.NET Core MVC-তে: <code>Product.cs</code> = Model, <code>Index.cshtml</code> = View, <code>ProductsController.cs</code> = Controller।'],
+ tabs:[
+  {n:'1. Request-এর যাত্রা',steps:[
+   S('User browser-এ <code>/products</code> খুলল। Request পাঠানো হলো।',{add:[B('u',10,90,120,60,'User\n(Browser)','n')]}),
+   S('Request প্রথমে <b>Controller</b>-এ আসে। সে ঠিক করে কী করতে হবে।',{add:[B('c',240,90,140,60,'Controller','a'),A('a1',132,120,238,120,'n'),T('t1',185,102,'GET /products',{a:'middle',s:'sm m'})]}),
+   S('Controller <b>Model</b>-এর কাছে data চায় (database, নিয়ম-কানুন)।',{add:[B('m',500,20,150,60,'Model\n(data + নিয়ম)','g'),A('a2',382,102,498,52,'n')]}),
+   S('Model data ফেরত দেয়। (Model HTML চেনে না, শুধু data জানে।)',{add:[A('a3',498,68,382,112,'g',{dash:1})]}),
+   S('Controller data নিয়ে <b>View</b>-কে দেয়। View শুধু HTML সাজায়।',{add:[B('v',500,160,150,60,'View\n(HTML page)','b'),A('a4',382,138,498,188,'b')]}),
+   S('তৈরি <b>HTML page</b> user-এর কাছে ফেরত যায়।',{add:[A('a5',498,200,132,148,'g',{dash:1})]})
+  ]},
+  {n:'2. কে কী করে',steps:[
+   S('<b>Model:</b> data আর business নিয়ম। HTML-এর কিছু জানে না।',{add:[B('m',20,20,220,110,'Model\n\nProduct class\nDatabase, দামের নিয়ম','g',{s:'sm'})]}),
+   S('<b>View:</b> শুধু দেখায়। ভেতরে business logic থাকে না।',{add:[B('v',270,20,220,110,'View\n\nIndex.cshtml (Razor)\nশুধু HTML সাজায়','b',{s:'sm'})]}),
+   S('<b>Controller:</b> মাঝের লোক। Request ধরে Model আর View-কে জোড়ে।',{add:[B('c',520,20,220,110,'Controller\n\nProductsController\nRequest ধরে, দুটোকে জোড়ে','a',{s:'sm'})]}),
+   S('নিয়ম: <b>View-তে logic নয়, Model-এ HTML নয়</b>। আলাদা থাকলেই বদলানো সহজ।',{add:[B('nt',20,160,720,50,'প্রতিটা অংশের একটাই কাজ, তাই একটা বদলালে বাকিগুলো ভাঙে না','g',{s:'sm'})]})
+  ]}
+ ]},
+
+{p:0,n:'2',q:'MVP কী? (Model-View-Presenter)',
+ ans:'<b>MVP</b> = Model + View + <b>Presenter</b>। View একদম <b>বোকা</b>: শুধু দেখায় আর click জানায়। সব সিদ্ধান্ত নেয় Presenter, আর সে হাতে View-কে বলে কী দেখাতে হবে।',
+ pts:['View আর Model-এর মধ্যে <b>সরাসরি কোনো যোগাযোগ নেই</b>। সব Presenter-এর মধ্য দিয়ে যায়।','Presenter View-কে চেনে একটা <b>interface</b> দিয়ে, তাই নকল View দিয়ে সহজে test করা যায়।','.NET-এ বেশি দেখা যায় WinForms আর পুরনো ASP.NET WebForms-এ।'],
+ tabs:[
+  {n:'1. Click থেকে screen',steps:[
+   S('তিন অংশ: <b>View</b> (বোকা), <b>Presenter</b> (মাথা), <b>Model</b> (data)।',{add:[B('v',20,60,160,80,'View\n(বোকা: শুধু দেখায়)','b'),B('p',300,60,160,80,'Presenter\n(সব সিদ্ধান্ত)','a'),B('m',580,60,160,80,'Model\n(data)','g')]}),
+   S('User click করল। View নিজে কিছু ভাবে না, শুধু Presenter-কে <b>জানায়</b>।',{add:[A('a1',182,85,298,85,'n'),T('t1',240,68,'click',{a:'middle',s:'sm'})]}),
+   S('Presenter Model-এর কাছে data চায়।',{add:[A('a2',462,85,578,85,'n')]}),
+   S('Model data ফেরত দেয়।',{add:[A('a3',578,115,462,115,'g')]}),
+   S('Presenter ঠিক করে কী দেখানো হবে, তারপর <b>হাতে</b> View-কে বলে "এই text দেখাও"।',{add:[A('a4',298,115,182,115,'g'),T('t2',240,132,'text দেখাও',{a:'middle',s:'sm'})]}),
+   S('লক্ষ করো: <b>View আর Model সরাসরি কথা বলে না</b>। মাঝে সবসময় Presenter।',{add:[P('pa','M 100 142 Q 380 235 660 142','r'),T('t3',380,200,'সরাসরি যোগাযোগ নেই ✗',{a:'middle',c:'r',s:'sm b'})]})
+  ]},
+  {n:'2. Test সহজ কেন',steps:[
+   S('Presenter View-কে চেনে একটা <b>interface (IView)</b> দিয়ে, আসল screen দিয়ে না।',{add:[B('p',290,20,180,56,'Presenter','a'),B('i',290,100,180,34,'IView (interface)','n',{m:1}),A('a1',380,78,380,98,'n')]}),
+   S('Production-এ আসল <b>View</b> (WinForms screen) বসে।',{add:[B('r',120,165,200,56,'আসল View\n(UI screen)','b'),A('a2',340,136,250,163,'n')]}),
+   S('Test-এ বসে একটা <b>নকল View</b>। Screen ছাড়াই Presenter-এর logic test করা যায়।',{add:[B('f',440,165,200,56,'নকল View\n(test-এর জন্য)','o',{dash:1}),A('a3',420,136,510,163,'o')]})
+  ]}
+ ]},
+
+{p:0,n:'3',q:'MVVM কী? (Model-View-ViewModel)',
+ ans:'<b>MVVM</b> = Model + View + <b>ViewModel</b>। View আর ViewModel <b>data binding</b>-এ বাঁধা: ViewModel-এর data বদলালে View নিজে নিজে বদলায়, আর View-তে কিছু লিখলে ViewModel-এ নিজে চলে আসে।',
+ pts:['MVP-র মতো হাতে View update করতে হয় না। Binding সেটা করে দেয়।','ViewModel View-কে চেনেই না, শুধু property আর command রাখে।','.NET-এ: <b>WPF, MAUI, Blazor</b>। Frontend-এর তুলনা: React/Angular-এ state বদলালে UI বদলানো।'],
+ tabs:[
+  {n:'1. Binding কীভাবে চলে',steps:[
+   S('তিন অংশ। <b>ViewModel</b> = View-এর জন্য বানানো data ও command।',{add:[B('v',20,60,160,80,'View\nName: [      ]','b'),B('vm',300,60,160,80,'ViewModel\nName = ""','a'),B('m',580,60,160,80,'Model\n(data)','g')]}),
+   S('View আর ViewModel <b>data binding</b>-এ বাঁধা। এক দিকে বদলালে অন্য দিকেও বদলায়।',{add:[A('b1',182,90,298,90,'o',{dash:1}),A('b2',298,112,182,112,'o',{dash:1}),T('bt',240,72,'Binding',{a:'middle',c:'o',s:'sm b'})]}),
+   S('User লিখল <b>Rahim</b>। Binding নিজেই ViewModel.Name বদলে দিল। আলাদা code লাগেনি।',{mod:{v:{label:'View\nName: [Rahim]',hl:1},vm:{label:'ViewModel\nName = "Rahim"',hl:1}}}),
+   S('Save চাপলে ViewModel Model-কে দিয়ে data save করায়।',{mod:{v:{hl:0},vm:{hl:0}},add:[A('a3',462,100,578,100,'n')]}),
+   S('ViewModel-এ কিছু বদলালে (যেমন Total = 500) <b>View নিজে নিজে update</b> হয়। হাতে বলতে হয় না।',{mod:{vm:{label:'ViewModel\nTotal = 500',hl:1},v:{label:'View\nTotal: 500',hl:1}}})
+  ]},
+  {n:'2. ছোট code',steps:[
+   S('<b>View</b> (XAML): TextBox-এর text বাঁধা আছে <code>Name</code> নামের property-তে।',{add:[B('xv',20,20,340,70,'View (XAML)\n<TextBox Text="{Binding Name}"/>','b',{m:1})]}),
+   S('<b>ViewModel</b> (C#): <code>Name</code> property। বদলালে View-কে জানানোর ব্যবস্থা আছে।',{add:[B('xm',400,20,340,100,'ViewModel (C#)\npublic string Name { get; set; }\n// বদলালে View-কে জানায়\n// (INotifyPropertyChanged)','a',{m:1})]}),
+   S('দুই দিকে নাম এক (<code>Name</code>), তাই binding তাদের জোড়া লাগায়।',{add:[B('xn',20,160,720,50,'View ViewModel-কে চেনে না, ViewModel View-কে চেনে না। শুধু binding জোড়া লাগায়','g',{s:'sm'})]})
+  ]}
+ ]},
+
+{p:0,n:'4',q:'MVC, MVP, MVVM - পার্থক্য কী?',
+ ans:'তিনটাই <b>UI আর logic আলাদা রাখার</b> নকশা। পার্থক্য একটাই: <b>মাঝের অংশ</b> View-কে কীভাবে চালায়।',
+ pts:['<b>MVC:</b> Controller View বেছে দেয়, Model পাঠায়। <b>MVP:</b> Presenter হাতে View-কে বলে। <b>MVVM:</b> binding নিজে নিজে করে।','কোনটা সেরা নয়। Platform অনুযায়ী বাছা হয়: web হলে MVC, desktop/mobile হলে MVVM।'],
+ extra:'<table class="cmp"><tr><th>Pattern</th><th>মাঝের অংশ</th><th>View কীভাবে বদলায়</th><th>View কতটা বুদ্ধিমান</th><th>.NET-এ কোথায়</th></tr>'+
+  '<tr><td>MVC</td><td>Controller</td><td>Controller View বেছে Model পাঠায়</td><td>কিছুটা (Model দেখে সাজায়)</td><td>ASP.NET Core MVC</td></tr>'+
+  '<tr><td>MVP</td><td>Presenter</td><td>Presenter হাতে View-এর method ডাকে</td><td>একদম বোকা</td><td>WinForms, WebForms</td></tr>'+
+  '<tr><td>MVVM</td><td>ViewModel</td><td>Data binding নিজে নিজে করে</td><td>Binding জানে</td><td>WPF, MAUI, Blazor</td></tr></table>',
+ tabs:[
+  {n:'তিনটা পাশাপাশি',steps:[
+   S('<b>MVC:</b> Controller ঠিক করে কোন View যাবে আর Model সহ View-কে পাঠায়। <b>একমুখী</b>।',{add:[T('l1',10,32,'MVC',{c:'a',s:'lg b'}),B('v1',90,10,110,44,'View','b'),B('c1',320,10,150,44,'Controller','a'),B('m1',610,10,120,44,'Model','g'),A('x1',318,32,202,32,'a'),T('y1',260,18,'Model পাঠায়',{a:'middle',s:'sm'}),A('x2',472,32,608,32,'n')]}),
+   S('<b>MVP:</b> View আর Presenter <b>দুই দিকে</b> কথা বলে। Presenter হাতে View-কে বলে।',{add:[T('l2',10,102,'MVP',{c:'b',s:'lg b'}),B('v2',90,80,110,44,'View','b'),B('c2',320,80,150,44,'Presenter','a'),B('m2',610,80,120,44,'Model','g'),A('x3',202,94,318,94,'n'),A('x4',318,112,202,112,'n'),T('y2',260,103,'method call',{a:'middle',s:'sm'}),A('x5',472,102,608,102,'n')]}),
+   S('<b>MVVM:</b> মাঝে কোনো হাতে-ডাকা নেই। <b>Binding</b> নিজে নিজে দুই দিকে মেলায়।',{add:[T('l3',10,172,'MVVM',{c:'o',s:'lg b'}),B('v3',90,150,110,44,'View','b'),B('c3',320,150,150,44,'ViewModel','a'),B('m3',610,150,120,44,'Model','g'),A('x6',202,164,318,164,'o',{dash:1}),A('x7',318,182,202,182,'o',{dash:1}),T('y3',260,173,'binding',{a:'middle',c:'o',s:'sm b'}),A('x8',472,172,608,172,'n')]}),
+   S('মনে রাখার সূত্র: মাঝের অংশ View-কে <b>বেছে দেয়</b> (MVC), <b>হাতে বলে</b> (MVP), বা <b>binding-এ মেলায়</b> (MVVM)।',{add:[T('sm',380,224,'পার্থক্য = মাঝের অংশ View-কে কীভাবে চালায়',{a:'middle',c:'a',s:'sm b'})]})
+  ]}
+ ]},
+
+{p:1,n:'5',q:'Web API আর MVC-র পার্থক্য কী?',
+ ans:'দুটোতেই Request আসে Controller-এ। পার্থক্য <b>Response</b>-এ: MVC <b>HTML page</b> (View) ফেরত দেয়, Web API শুধু <b>data (JSON)</b> ফেরত দেয়, কোনো View নেই।',
+ pts:['<b>Web API</b> ব্যবহার করে React, mobile app বা অন্য service। তারা নিজেরা UI বানায়, তাদের শুধু data লাগে।','ASP.NET Core-এ দুটো একই framework। API controller লেখা হয় <code>[ApiController]</code> আর <code>ControllerBase</code> দিয়ে।'],
+ extra:'<table class="cmp"><tr><th></th><th>MVC</th><th>Web API</th></tr>'+
+  '<tr><td>Response</td><td>HTML page</td><td>JSON (বা XML) data</td></tr>'+
+  '<tr><td>View</td><td>আছে (Razor .cshtml)</td><td>নেই</td></tr>'+
+  '<tr><td>Controller</td><td><code>Controller</code> class</td><td><code>ControllerBase</code> + <code>[ApiController]</code></td></tr>'+
+  '<tr><td>Client কে</td><td>সরাসরি browser</td><td>React, mobile app, অন্য service</td></tr></table>',
+ tabs:[
+  {n:'1. MVC (HTML ফেরত)',steps:[
+   S('Browser <code>/products</code> চাইল।',{add:[B('br',10,30,120,60,'Browser','n')]}),
+   S('Request Controller-এ আসে।',{add:[B('c',230,30,140,60,'Controller','a'),A('a1',132,60,228,60,'n'),T('t1',180,42,'GET /products',{a:'middle',s:'sm m'})]}),
+   S('Controller data নিয়ে <b>View</b>-কে দেয়।',{add:[B('v',470,30,140,60,'View (Razor)','b'),A('a2',372,60,468,60,'n')]}),
+   S('View data দিয়ে <b>HTML page</b> বানায়।',{add:[B('pg',640,30,100,60,'HTML\npage','g'),A('a3',612,60,638,60,'g')]}),
+   S('Browser সেই HTML page পেয়ে সরাসরি screen-এ দেখায়।',{add:[P('rp','M 690 92 L 690 160 L 70 160 L 70 92','g'),T('rt',380,182,'Response: তৈরি HTML page',{a:'middle',c:'g',s:'sm b'})]})
+  ]},
+  {n:'2. Web API (JSON ফেরত)',steps:[
+   S('React app বা mobile app <code>/api/products/5</code> চাইল।',{add:[B('cl',10,30,120,60,'React / Mobile\napp','n')]}),
+   S('Request <b>API Controller</b>-এ আসে।',{add:[B('c',230,30,140,60,'API Controller','a'),A('a1',132,60,228,60,'n'),T('t1',180,42,'GET /api/products/5',{a:'middle',s:'sm m'})]}),
+   S('<b>View নেই</b>। Controller সরাসরি data ফেরত দেয় JSON আকারে।',{add:[B('js',470,30,270,60,'{ "id": 5, "name": "Pen" }','g',{m:1}),A('a2',372,60,468,60,'g'),T('nv',300,120,'View নেই, HTML নেই',{a:'middle',c:'r',s:'sm b'})]}),
+   S('Client নিজের UI-তে ওই data সাজিয়ে দেখায়। UI বানানোর দায়িত্ব তার।',{add:[P('rp','M 605 92 L 605 160 L 70 160 L 70 92','g'),T('rt',340,182,'Response: শুধু JSON data',{a:'middle',c:'g',s:'sm b'})]})
+  ]}
+ ]},
+
+{p:2,n:'6',q:'LINQ কী?',
+ ans:'<b>LINQ (Language Integrated Query)</b> = C# code-এর ভেতরেই data <b>খোঁজা, ছাঁকা, সাজানোর</b> সহজ উপায়। List, array, database - সবখানে একই লেখা।',
+ pts:['ধরো SQL-এর মতো প্রশ্ন, কিন্তু C# code-এ। যেমন: <code>numbers.Where(n =&gt; n &gt; 5).OrderBy(n =&gt; n)</code>','<code>using System.Linq;</code> দিলেই পাওয়া যায়। প্রতিটা LINQ method একটার পর একটা জোড়া লাগানো যায় (চেইন)।'],
+ extra:'<table class="cmp"><tr><th>LINQ</th><th>কাজ</th><th>SQL-এর সমান</th></tr>'+
+  '<tr><td>Where</td><td>শর্ত দিয়ে ছাঁকা</td><td>WHERE</td></tr>'+
+  '<tr><td>Select</td><td>রূপ বদলে বা কিছু অংশ নেওয়া</td><td>SELECT</td></tr>'+
+  '<tr><td>OrderBy</td><td>সাজানো</td><td>ORDER BY</td></tr>'+
+  '<tr><td>GroupBy</td><td>দল করা</td><td>GROUP BY</td></tr>'+
+  '<tr><td>Count / Sum</td><td>গোনা / যোগ করা</td><td>COUNT / SUM</td></tr>'+
+  '<tr><td>First / Any</td><td>প্রথমটা / আছে কি না</td><td>TOP 1 / EXISTS</td></tr></table>',
+ tabs:[
+  {n:'1. চেইন: Where → Select → OrderBy',steps:[
+   S('শুরুতে একটা list: <code>numbers = {8, 3, 12, 5, 9, 1}</code>',{add:[T('l0',10,31,'numbers',{m:1,c:'f'}),...[8,3,12,5,9,1].map((v,i)=>VB('n'+i,i,14,v,'a'))]}),
+   S('<b>Where(n &gt; 5)</b>: শর্ত মেলে না এমন গুলো বাদ। বাকি থাকে 8, 12, 9।',{add:[T('l1',10,91,'.Where(n => n > 5)',{m:1,c:'b'}),VB('w0',0,74,8,'b'),VB('w2',2,74,12,'b'),VB('w4',4,74,9,'b')],mod:{n1:{o:.25},n3:{o:.25},n5:{o:.25}}}),
+   S('<b>Select(n * 2)</b>: প্রতিটাকে বদলে নতুন রূপ। সব দ্বিগুণ হলো।',{add:[T('l2',10,151,'.Select(n => n * 2)',{m:1,c:'o'}),VB('s0',0,134,16,'o'),VB('s2',2,134,24,'o'),VB('s4',4,134,18,'o')]}),
+   S('<b>OrderBy(n)</b>: ছোট থেকে বড় সাজানো। ফল: 16, 18, 24।',{add:[T('l3',10,211,'.OrderBy(n => n)',{m:1,c:'g'}),VB('o0',0,194,16,'g',{hl:1}),VB('o1',1,194,18,'g',{hl:1}),VB('o2',2,194,24,'g',{hl:1})]})
+  ]},
+  {n:'2. List আর Database একই লেখা',steps:[
+   S('একটা LINQ লাইন: <code>users.Where(u =&gt; u.Age &gt; 18)</code>',{add:[B('cd',200,10,360,40,'users.Where(u => u.Age > 18)','b',{m:1})]}),
+   S('<b>List</b>-এ চালালে memory-র item ছাঁকে।',{add:[B('ls',30,110,260,70,'List<User>\n(memory-র collection)','n'),A('a1',300,52,160,108,'n')]}),
+   S('<b>Database</b>-এ চালালে (EF Core) নিজে SQL হয়ে যায়।',{add:[B('db',470,110,260,70,'DbSet<User>\n(Database table, EF Core)','s'),A('a2',460,52,600,108,'s')]}),
+   S('লেখা একই, শুধু <b>source আলাদা</b>। এটাই LINQ-র সুবিধা।',{add:[T('nt',380,215,'একটাই ভাষা, সব data source-এর জন্য',{a:'middle',c:'g',s:'sm b'})]})
+  ]},
+  {n:'3. দুই রকম লেখা',steps:[
+   S('<b>Query syntax:</b> দেখতে SQL-এর মতো।',{add:[B('q',20,30,340,110,'Query syntax\n\nfrom n in numbers\nwhere n > 5\norderby n select n','a',{m:1})]}),
+   S('<b>Method syntax:</b> method জোড়া লাগানো। বেশিরভাগ project-এ এটাই চলে।',{add:[B('ms',400,30,340,110,'Method syntax\n\nnumbers\n.Where(n => n > 5)\n.OrderBy(n => n)','g',{m:1})]}),
+   S('দুটোর <b>ফল একই</b>। যেটা পড়তে সহজ লাগে সেটা ব্যবহার করো।',{add:[T('nt',380,185,'দুটো একই জিনিস, শুধু লেখার ধরন আলাদা',{a:'middle',c:'a',s:'sm b'})]})
+  ]}
+ ]},
+
+{p:2,n:'7',q:'IEnumerable কী? কীভাবে কাজ করে?',
+ ans:'<b>IEnumerable&lt;T&gt;</b> = item-এর এমন একটা সারি যার উপর <b>foreach</b> চালানো যায়। এটা item <b>এক এক করে</b> দেয়। List, array সবই IEnumerable।',
+ pts:['ভেতরে দুটো জিনিস: <code>Current</code> (এখনকার item) আর <code>MoveNext()</code> (পরেরটায় যাও)। foreach এগুলোই ডাকে।','শুধু <b>সামনে</b> যায়, পেছনে ফেরে না।','Data <b>memory-তে</b> থাকে, তাই এর উপর LINQ চললে ছাঁকা-সাজানো app-এর memory-তেই হয়।'],
+ tabs:[
+  {n:'foreach যেভাবে চলে',steps:[
+   S('একটা <b>IEnumerable</b>: পাঁচটা item-এর সারি।',{add:[T('hd',30,30,'IEnumerable<int> numbers',{m:1,c:'f'}),...[10,20,30,40,50].map((v,i)=>B('e'+i,30+140*i,110,110,50,String(v),'a'))]}),
+   S('<code>foreach</code> শুরু: <b>Current</b> প্রথম item (10)।',{add:[A('p',85,80,85,108,'r'),T('pl',85,66,'Current',{a:'middle',c:'r',s:'sm b'})],mod:{e0:{hl:1}}}),
+   S('<code>MoveNext()</code>: পরের item-এ গেল। Current = 20।',{mod:{p:{x1:225,x2:225},pl:{x:225},e0:{hl:0},e1:{hl:1}}}),
+   S('এভাবে এক এক করে শেষ item পর্যন্ত। শেষ হলে loop থামে।',{mod:{p:{x1:645,x2:645},pl:{x:645},e1:{hl:0},e4:{hl:1}}}),
+   S('সব item আগে থেকেই <b>memory-তে</b> আছে। তাই এখানে ছাঁকা-সাজানো memory-তেই হয়।',{mod:{e4:{hl:0}},add:[B('mem',20,185,720,40,'সব item RAM-এ আছে, filter/sort app-এর memory-তে চলে','n',{s:'sm',dash:1})]})
+  ]}
+ ]},
+
+{p:2,n:'8',q:'IQueryable কী? কীভাবে কাজ করে?',
+ ans:'<b>IQueryable&lt;T&gt;</b> দেখতে IEnumerable-এর মতো, কিন্তু শর্তগুলো <b>জমিয়ে রাখে</b> আর শেষে সব মিলিয়ে <b>একটা SQL</b> বানিয়ে database-কেই কাজটা করতে দেয়।',
+ pts:['<code>Where</code>, <code>OrderBy</code> লিখলে কিছু চলে না, শুধু query লেখা হয় (<b>deferred execution</b>)।','<code>ToList()</code>, <code>foreach</code>, <code>Count()</code>, <code>First()</code> ডাকলে তখনই SQL চলে।','EF Core-এর <code>DbSet</code> একটা IQueryable। আর IQueryable নিজেও একটা IEnumerable।'],
+ tabs:[
+  {n:'1. জমে, শেষে SQL',steps:[
+   S('<code>db.Users</code>: Users table-কে প্রতিনিধিত্ব করা একটা <b>IQueryable</b>।',{add:[B('b1',10,20,130,42,'db.Users','a',{m:1})]}),
+   S('<code>Where</code> যোগ হলো। DB-তে এখনো কিছু যায়নি, শুধু শর্ত <b>জমা</b> হলো।',{add:[B('b2',170,20,170,42,'.Where(Age > 18)','b',{m:1}),A('k1',142,41,168,41,'n'),T('nt',380,92,'এখনো শুধু query জমছে, DB-তে কিছু যায়নি',{a:'middle',c:'o',s:'sm b'})]}),
+   S('<code>OrderBy</code> যোগ হলো। এখনো শুধু জমা।',{add:[B('b3',370,20,170,42,'.OrderBy(Name)','b',{m:1}),A('k2',342,41,368,41,'n')]}),
+   S('<code>ToList()</code> ডাকা হলো। <b>এখন চালানোর সময়।</b>',{del:['nt'],add:[B('b4',570,20,170,42,'.ToList()','o',{m:1,hl:1}),A('k3',542,41,568,41,'n')]}),
+   S('জমানো সব শর্ত মিলিয়ে <b>একটা SQL</b> তৈরি হলো।',{add:[B('sq',20,110,340,70,'SELECT * FROM Users\nWHERE Age > 18\nORDER BY Name','a',{m:1}),A('k4',650,64,300,108,'o')]}),
+   S('SQL <b>Database</b>-এ গিয়ে চলল। ছাঁকা-সাজানো DB নিজেই করল।',{add:[B('db',420,110,140,70,'Database','s'),A('k5',362,145,418,145,'n')]}),
+   S('শুধু যা লাগবে সেটুকুই ফিরল।',{add:[B('rs',610,110,130,70,'১২টা row\nমাত্র','g',{hl:1}),A('k6',562,145,608,145,'g')]})
+  ]},
+  {n:'2. কখন চলে, কখন চলে না',steps:[
+   S('এগুলো শুধু <b>query জমা</b> করে। DB-তে কিছু পাঠায় না।',{add:[B('l',20,30,340,130,'শুধু জমা করে\n\nWhere\nSelect\nOrderBy\nGroupBy','a')]}),
+   S('এগুলো ডাকলে <b>SQL চলে</b> আর ফল আসে।',{add:[B('r',400,30,340,130,'চালায় (SQL যায়)\n\nToList() · ToArray()\nforeach\nFirst() · Any()\nCount()','o')]}),
+   S('তাই <code>ToList()</code> যত <b>পরে</b> দেবে, ততো ভালো।',{add:[B('nt',20,180,720,40,'আগে সব শর্ত লেখো, ToList() দাও একদম শেষে','g',{s:'sm'})]})
+  ]}
+ ]},
+
+{p:2,n:'9',q:'IEnumerable বনাম IQueryable',
+ ans:'একই লেখা <code>Where(u =&gt; u.Age &gt; 18)</code>। <b>IEnumerable</b> হলে আগে পুরো table app-এ এনে তারপর ছাঁকে। <b>IQueryable</b> হলে ছাঁকা DB-তেই হয়, শুধু দরকারি row আসে।',
+ pts:['বড় table-এ IQueryable অনেক <b>দ্রুত</b> আর কম memory নেয়।','<code>ToList()</code> বা <code>AsEnumerable()</code> দিলেই IEnumerable হয়ে যায়। তারপরের LINQ memory-তে চলে।','<b>নিয়ম:</b> filter আগে, <code>ToList()</code> সবার শেষে।'],
+ extra:'<table class="cmp"><tr><th></th><th>IEnumerable</th><th>IQueryable</th></tr>'+
+  '<tr><td>কোথায় চলে</td><td>Memory (app)</td><td>Database</td></tr>'+
+  '<tr><td>Filter কীভাবে</td><td>C# code দিয়ে</td><td>SQL-এ রূপান্তর হয়ে</td></tr>'+
+  '<tr><td>Data আসে</td><td>আগে সব row</td><td>শুধু যা লাগবে</td></tr>'+
+  '<tr><td>কখন ভালো</td><td>List, array, memory-র collection</td><td>Database query (EF Core)</td></tr></table>',
+ tabs:[
+  {n:'1. IEnumerable: সব এনে ছাঁকে',steps:[
+   S('Users table-এ <b>১০ লাখ row</b>। আমরা Age &gt; 18 ওয়ালা চাই।',{add:[T('cd',10,28,'db.Users.AsEnumerable().Where(u => u.Age > 18)',{m:1,c:'f'}),B('db',10,80,150,110,'Database\nUsers table\n১০,০০,০০০ row','s'),B('ap',330,80,200,110,'Application\n(memory)','a')]}),
+   S('LINQ memory-তে চলে, তাই আগে <b>সব row</b> DB থেকে app-এ চলে আসে।',{add:[A('a1',162,135,328,135,'r',{hl:1}),T('t1',245,108,'SELECT * FROM Users',{a:'middle',m:1,s:'sm',c:'r'})],mod:{ap:{label:'Application\nmemory-তে\n১০ লাখ row',c:'r',hl:1}}}),
+   S('এখন app নিজে ১০ লাখ row ঘেঁটে ছাঁকে। <b>ধীর, memory-ও বেশি লাগে।</b>',{add:[B('rs',590,80,150,110,'ফল\n৫,০০০ row','g'),A('a2',532,135,588,135,'g')],mod:{ap:{label:'Application\nC# Where চলছে'}}})
+  ]},
+  {n:'2. IQueryable: DB-তেই ছাঁকে',steps:[
+   S('একই table, একই শর্ত। এবার IQueryable।',{add:[T('cd',10,28,'db.Users.Where(u => u.Age > 18)',{m:1,c:'f'}),B('db',10,80,150,110,'Database\nUsers table\n১০,০০,০০০ row','s'),B('ap',330,80,200,110,'Application\n(memory)','a')]}),
+   S('শর্তটা <b>SQL হয়ে</b> DB-কে পাঠানো হয়।',{add:[A('a1',328,128,162,128,'a'),T('t1',245,102,'SELECT * FROM Users\nWHERE Age > 18',{a:'middle',m:1,s:'sm',c:'a'})]}),
+   S('ছাঁকার কাজ <b>DB নিজে</b> করে। DB এতে দক্ষ, index-ও কাজে লাগে।',{mod:{db:{label:'Database\nনিজেই ছাঁকে',hl:1}}}),
+   S('শুধু দরকারি <b>৫,০০০ row</b> app-এ আসে। দ্রুত, কম memory।',{add:[A('a2',162,165,328,165,'g'),B('rs',590,80,150,110,'ফল\n৫,০০০ row','g')],mod:{db:{hl:0},ap:{label:'Application\nমাত্র ৫,০০০ row',c:'g',hl:1}}})
+  ]},
+  {n:'3. ToList() কোথায় দেব',steps:[
+   S('<b>ভুল:</b> ToList() আগে দিলে সব row এসে যায়, তারপর memory-তে ছাঁকা।',{add:[B('x',20,20,720,40,'db.Users.ToList().Where(u => u.Age > 18)','r',{m:1}),T('xn',380,80,'✗ ১০ লাখ row app-এ এসে তবে ছাঁকে',{a:'middle',c:'r',s:'sm b'})]}),
+   S('<b>ঠিক:</b> Where আগে। DB ছেঁকে শুধু দরকারি row পাঠায়।',{add:[B('y',20,120,720,40,'db.Users.Where(u => u.Age > 18).ToList()','g',{m:1}),T('yn',380,180,'✓ শুধু দরকারি row আসে',{a:'middle',c:'g',s:'sm b'})]}),
+   S('মনে রাখো: <b>filter আগে, ToList() সবার শেষে।</b>',{add:[T('rule',380,220,'filter আগে, ToList() শেষে',{a:'middle',c:'a',s:'lg b'})]})
+  ]}
+ ]}
+];
+
+/* ---------- build page ---------- */
+const app=document.getElementById('app'),jump=document.getElementById('jump'),partsNav=document.getElementById('parts');
+PARTS.forEach((pt,pi)=>{
+  const a=document.createElement('a');a.href='#part'+pi;a.innerHTML=`<b>${pt[0]}</b>${pt[1]}`;partsNav.appendChild(a);
+  const sec=document.createElement('section');sec.className='part';sec.id='part'+pi;
+  sec.innerHTML=`<h2><span>${pt[0]}</span>${pt[1]}</h2>`;app.appendChild(sec);
+});
+TOPICS.forEach((t,i)=>{
+  const n=t.n;
+  const j=document.createElement('a');j.href='#q'+n;j.textContent=n;j.title=t.q;jump.appendChild(j);
+  const card=document.createElement('article');card.className='q';card.id='q'+n;
+  card.innerHTML=`<h3><span class="num${n.length>1?' w':''}">${n}</span><span>${t.q}</span></h3><p class="ans">${t.ans}</p><ul>${t.pts.map(x=>`<li>${x}</li>`).join('')}</ul>${t.extra?`<div class="extra">${t.extra}</div>`:''}<div class="viz"></div>`;
+  document.getElementById('part'+t.p).appendChild(card);
+  mount(card.querySelector('.viz'),t);
+});
+</script>
+</body>
+</html>

@@ -43,10 +43,11 @@ Software engineering interview prep — বাংলায় ব্যাখ্
 - ★ **Core** · [SDLC ও SDLC Model](04-resume-projects/05-sdlc/index.html) - SDLC কী, ৭টি ধাপ, Waterfall / Agile / Iterative / Incremental: সংক্ষিপ্ত উত্তর, তুলনার table ও step-by-step D3 animation
 - [Synchronous বনাম Asynchronous](04-resume-projects/06-sync-async/index.html) - দুটো কীভাবে কাজ করে: thread timeline, blocking / non-blocking, callback / Promise / async-await, Event Loop; ধাপে ধাপে D3 animation
 - [React Hooks: State ও useEffect](04-resume-projects/07-reactjs/index.html) - render চক্র, useState, Hooks-এর নিয়ম, useEffect (deps, cleanup, infinite loop); ধাপে ধাপে D3 animation
+- [.NET Web API & MVC](04-resume-projects/08-dotnet/index.html) - MVC, MVP, MVVM, Web API বনাম MVC, LINQ, IEnumerable বনাম IQueryable; ধাপে ধাপে D3 animation
 
 ## 05 · Operating System
 
-- ★ **Core** · [OS Basics - Interview](05-operating-system/basics/index.html) - OS-এর মূল গাইড: ৪০টি প্রশ্ন, প্রতিটির সংক্ষিপ্ত উত্তর ও step-by-step D3 animation
+- ★ **Core** · [OS Basics - Interview](05-operating-system/basics/index.html) - OS-এর মূল গাইড: ৪১টি প্রশ্ন, প্রতিটির সংক্ষিপ্ত উত্তর ও step-by-step D3 animation
 - ◌ Optional · [OS, Kernel, Process ও Thread](05-operating-system/01-os-kernel-process-thread.html) — boot থেকে context switch পর্যন্ত, ২৫টি diagram
 - ◌ Optional · [Process & Thread Internals](05-operating-system/thread-process/index.html) — process/thread কে বানায়, user/kernel space, page table, MMU/TLB, cache, register, core, IMC, stack, PCB/TCB, context switch, driver, NIC
 - ◌ Optional · [Thread Scheduling · Multi-core CPU](05-operating-system/thread/index.html) — process-এর thread কীভাবে ready queue, scheduler আর context switch পেরিয়ে multi-core CPU-তে চলে, 3D simulation
