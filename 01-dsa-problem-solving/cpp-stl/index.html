@@ -9,85 +9,43 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#f5f7fc;--surface:#fff;--surface-2:#f1f4fa;--fg:#0f172a;--muted:#5b6478;--faint:#94a0b8;--line:#e4e8f1;--accent:#0ea5e9;
---e:#059669;--m:#d97706;--h:#e11d48;--hero:linear-gradient(135deg,#0ea5e9 0%,#6366f1 55%,#8b5cf6 100%);
---shadow:0 1px 2px rgba(15,23,42,.04),0 10px 30px -12px rgba(15,23,42,.14);
+:root{--bg:#fafafa;--surface:#fff;--fg:#1f2430;--muted:#6b7280;--line:#e5e7eb;--accent:#2563eb;
+--code-bg:#fff;--tk:#0000ff;--tk2:#af00db;--tt:#267f99;--tf:#795e26;--ts:#a31515;--tn:#098658;--tc:#008000;--tv:#001080;--tconst:#0070c1;
 --sans:"Inter","Hind Siliguri",system-ui,sans-serif;--bn:"Hind Siliguri","Inter",system-ui,sans-serif;--mono:"JetBrains Mono",ui-monospace,Menlo,monospace}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0b0f1a;--surface:#121827;--surface-2:#182033;--fg:#e7ecf6;--muted:#9aa6bf;--faint:#66728c;--line:#232c42;--accent:#38bdf8;--e:#34d399;--m:#fbbf24;--h:#fb7185;--shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6)}}
-:root[data-theme="dark"]{--bg:#0b0f1a;--surface:#121827;--surface-2:#182033;--fg:#e7ecf6;--muted:#9aa6bf;--faint:#66728c;--line:#232c42;--accent:#38bdf8;--e:#34d399;--m:#fbbf24;--h:#fb7185;--shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1115;--surface:#171a21;--fg:#e6e9ef;--muted:#9aa3b2;--line:#262b36;--accent:#60a5fa;--code-bg:#1e1e1e;--tk:#569cd6;--tk2:#c586c0;--tt:#4ec9b0;--tf:#dcdcaa;--ts:#ce9178;--tn:#b5cea8;--tc:#6a9955;--tv:#9cdcfe;--tconst:#4fc1ff}}
+:root[data-theme="dark"]{--bg:#0f1115;--surface:#171a21;--fg:#e6e9ef;--muted:#9aa3b2;--line:#262b36;--accent:#60a5fa;--code-bg:#1e1e1e;--tk:#569cd6;--tk2:#c586c0;--tt:#4ec9b0;--tf:#dcdcaa;--ts:#ce9178;--tn:#b5cea8;--tc:#6a9955;--tv:#9cdcfe;--tconst:#4fc1ff}
 *{box-sizing:border-box}html{scroll-behavior:smooth}
-body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 var(--bn);-webkit-font-smoothing:antialiased}
-a{color:inherit;text-decoration:none}button,input{font:inherit;color:inherit}
-code{font-family:var(--mono);font-size:.86em}
-.wrap{max-width:1000px;margin:0 auto;padding:20px 18px 70px}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.65 var(--bn);-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}button{font:inherit;color:inherit}
+.wrap{max-width:860px;margin:0 auto;padding:18px 16px 60px}
 .topnav{display:flex;align-items:center;gap:10px}
-.brand{display:flex;align-items:center;gap:10px;font:800 16px var(--sans);letter-spacing:-.02em}
-.logo{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:#fff;font:800 13px var(--mono);background:var(--hero)}
+.brand{display:flex;align-items:center;gap:8px;font:800 15px var(--sans)}
+.logo{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;color:#fff;font:800 12px var(--mono);background:var(--accent)}
 .sp{flex:1}
-.pill{border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:6px 14px;font:600 13px var(--sans);cursor:pointer}
-.pill:hover{color:var(--fg)}
-.hero{margin-top:20px;border-radius:22px;padding:26px 30px;color:#fff;background:var(--hero)}
-.hero .eyebrow{font:600 12px var(--sans);letter-spacing:.1em;text-transform:uppercase;opacity:.85}
-.hero h1{margin:6px 0 8px;font:800 clamp(26px,4.2vw,38px)/1.15 var(--sans);letter-spacing:-.03em}
-.hero p{margin:0;max-width:700px;opacity:.94}
-.stats{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
-.stat{background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.26);border-radius:12px;padding:6px 14px;font:600 13px var(--sans)}
-.stat b{font-size:18px;margin-right:4px}
-.bar{position:sticky;top:0;z-index:5;margin:14px -18px 0;padding:10px 18px;background:color-mix(in srgb,var(--bg) 90%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
-.bar input{width:100%;padding:9px 14px;border-radius:12px;border:1px solid var(--line);background:var(--surface);font:500 14px var(--sans);outline:none}
-.bar input:focus{border-color:var(--accent)}
-.chips{display:flex;gap:6px;overflow-x:auto;margin-top:8px;scrollbar-width:none}
-.chip{flex:none;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:3px 12px;font:600 12.5px var(--sans);color:var(--muted);cursor:pointer}
-.chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
-.chip i{font-style:normal;opacity:.7;margin-left:4px}
-.cat{margin-top:34px;scroll-margin-top:110px}
-.cat>h2{display:flex;align-items:baseline;gap:10px;margin:0 0 12px;font:800 22px/1.25 var(--sans);letter-spacing:-.02em}
-.cat>h2 small{font:600 13px var(--sans);color:var(--faint)}
-.dif{display:inline-block;font:700 11px var(--sans);padding:2px 9px;border-radius:999px;border:1px solid currentColor}
-.dif.E{color:var(--e)}.dif.M{color:var(--m)}.dif.H{color:var(--h)}
-.prem{font:700 10.5px var(--sans);padding:2px 8px;border-radius:999px;background:var(--surface-2);color:var(--muted);border:1px dashed var(--faint)}
-.empty{display:none;text-align:center;color:var(--muted);margin-top:30px}
-footer{margin-top:50px;text-align:center;color:var(--faint);font:500 13px var(--sans)}
-
-.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:22px}
-@media (max-width:700px){.grid{grid-template-columns:1fr}}
-.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px 20px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:8px}
-.card .top{display:flex;align-items:center;gap:10px}
-.no{flex:none;width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:#fff;font:800 14px var(--sans);background:var(--hero)}
-.card h3{margin:0;font:700 17px/1.3 var(--sans)}
-.card p{margin:0;color:var(--muted);font:400 15px/1.6 var(--sans)}
-.kind{align-self:flex-start;font:700 11px var(--sans);padding:2px 10px;border-radius:999px;background:var(--surface-2);color:var(--accent)}
-.cx{margin-top:auto;font:600 12.5px var(--mono);color:var(--fg)}
-.cx span{color:var(--faint);font-family:var(--sans)}
-.note{margin-top:22px;border:1px dashed var(--faint);border-radius:14px;padding:12px 16px;color:var(--muted);font:500 14px var(--sans)}
-/* bn-type: Bengali glyphs/digits need normal tracking */
-h1,h2,h3,h4,h5{letter-spacing:0!important}
-.hero h1,.page-head h1,.p-hero h1,.prose h1,header.top h1{line-height:1.32!important}
-
-pre{margin:0;background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:12px 14px;overflow-x:auto;font:500 13px/1.6 var(--mono);color:var(--fg)}
-.cat{margin-top:34px;scroll-margin-top:90px}
-.cards{display:grid;grid-template-columns:1fr;gap:14px}
-.card h3 small{font:600 12px var(--sans);color:var(--faint);margin-left:6px}
-.tip{color:var(--muted);font:400 14px/1.6 var(--bn)}
-.toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:18px}
-
-:root{--code-bg:#ffffff;--tk:#0000ff;--tk2:#af00db;--tt:#267f99;--tf:#795e26;--ts:#a31515;--tn:#098658;--tc:#008000;--tv:#001080;--tconst:#0070c1}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--code-bg:#1e1e1e;--tk:#569cd6;--tk2:#c586c0;--tt:#4ec9b0;--tf:#dcdcaa;--ts:#ce9178;--tn:#b5cea8;--tc:#6a9955;--tv:#9cdcfe;--tconst:#4fc1ff}}
-:root[data-theme="dark"]{--code-bg:#1e1e1e;--tk:#569cd6;--tk2:#c586c0;--tt:#4ec9b0;--tf:#dcdcaa;--ts:#ce9178;--tn:#b5cea8;--tc:#6a9955;--tv:#9cdcfe;--tconst:#4fc1ff}
-pre{background:var(--code-bg)!important;color:var(--tv)}
+.pill{border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:4px 12px;font:600 12.5px var(--sans);cursor:pointer}
+h1{margin:22px 0 4px;font:800 28px/1.3 var(--sans);letter-spacing:0}
+.sub{margin:0;color:var(--muted)}
+.toc{position:sticky;top:0;z-index:5;display:flex;gap:6px;overflow-x:auto;margin:16px -16px 0;padding:8px 16px;background:var(--bg);border-bottom:1px solid var(--line);scrollbar-width:none}
+.chip{flex:none;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:2px 11px;font:600 12.5px var(--sans);color:var(--muted)}
+.chip:hover{color:var(--accent);border-color:var(--accent)}
+.cat{margin-top:30px;scroll-margin-top:56px}
+.cat>h2{margin:0 0 10px;font:800 19px/1.3 var(--sans);letter-spacing:0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:10px}
+.card h3{margin:0 0 2px;font:700 14.5px/1.4 var(--sans);letter-spacing:0}
+.card p{margin:0 0 8px;color:var(--muted);font-size:14px}
+.tag{font:700 10.5px var(--sans);padding:1px 8px;border-radius:999px;margin-left:6px;vertical-align:middle;border:1px solid currentColor}
+.tag.hot{color:#16a34a}.tag.rare{color:var(--muted)}
+pre{margin:0;background:var(--code-bg);border:1px solid var(--line);border-radius:8px;padding:10px 12px;overflow-x:auto;font:500 12.5px/1.6 var(--mono);color:var(--tv)}
 pre code{font-family:var(--mono)}
 .tk{color:var(--tk)}.tk2{color:var(--tk2)}.tt{color:var(--tt)}.tf{color:var(--tf)}.ts{color:var(--ts)}.tn{color:var(--tn)}.tc{color:var(--tc);font-style:italic}.tv{color:var(--tv)}.tconst{color:var(--tconst)}
+footer{margin-top:40px;text-align:center;color:var(--muted);font:500 12.5px var(--sans)}
 </style>
 </head>
 <body>
 <div class="wrap">
   <nav class="topnav"><a class="brand" href="../../index.html"><span class="logo">W</span>WellDev</a><span class="sp"></span><button class="pill" id="theme" type="button">Theme</button></nav>
-  <header class="hero">
-    <div class="eyebrow">DSA · C++ STL</div>
-    <h1>C++ STL Cheat Sheet</h1>
-    <p>LeetCode problem solving-এ যে STL method গুলো বারবার লাগে: stack, queue, deque, string, vector sort ও custom comparator, priority_queue (min heap, max heap, struct comparator)।</p>
-    <div class="stats" id="stats"></div>
-  </header>
+  <h1>C++ STL Cheat Sheet</h1>
+  <p class="sub">LeetCode-এ যা বেশি লাগে সেটা উপরে, কম লাগে সেটা নিচে। <span class="tag hot">বেশি লাগে</span> <span class="tag rare">কম লাগে</span></p>
   <div class="toc" id="toc"></div>
   <main id="app"></main>
   <footer>C++ STL · আরও যোগ হবে</footer>
@@ -125,613 +83,415 @@ function hl(code){
   return out;
 }
 const SEC=[
-{id:'setup',t:'0. শুরুর template',cards:[
-{h:'সব জায়গায় এই দুই লাইন',s:'bits/stdc++.h একটাতেই সব STL header (vector, string, algorithm, cctype, climits, numeric...) চলে আসে, তাই আলাদা #include লিখতে হয় না। LeetCode-এ এটা আগে থেকেই থাকে, শুধু contest বা নিজের মেশিনে লাগে। এই পেজের কোনো code-এ আলাদা include নেই, সব এই template ধরে নেওয়া।',c:`#include <bits/stdc++.h>
+{id:'setup',t:'Template',cards:[
+{h:'শুরুর template',f:'hot',s:'bits/stdc++.h-এ সব STL header আছে, তাই এই পেজের কোথাও আলাদা #include নেই।',c:`#include <bits/stdc++.h>
 using namespace std;
 
 int main(){
-    ios::sync_with_stdio(false);  cin.tie(nullptr);
-    // code
+    ios::sync_with_stdio(false); cin.tie(nullptr);
     return 0;
 }`}]},
-{id:'stack',t:'1. stack',cards:[
-{h:'Common methods',s:'LIFO. Top element-ই শুধু access করা যায়। সব O(1)। pop() কিছু return করে না, তাই আগে top() নাও।',c:`stack<int> st;
-st.push(5);          // top-এ বসায়
-st.emplace(7);       // in-place push
-int x = st.top();    // top দেখো (pop করে না)
-st.pop();            // top ফেলে দেয়, return করে না
-st.empty();          // খালি কিনা
-st.size();
 
-// usage pattern
-while(!st.empty()){ int t = st.top(); st.pop(); }
-// valid parentheses / monotonic stack / DFS iterative-এ লাগে`}]},
-{id:'queue',t:'2. queue',cards:[
-{h:'Common methods',s:'FIFO। BFS, level order, sliding window-তে সবচেয়ে বেশি। সব O(1)।',c:`queue<int> q;
-q.push(1);           // back-এ ঢোকে
-q.emplace(2);
-int f = q.front();   // সামনের element
-int b = q.back();    // শেষের element
-q.pop();             // front ফেলে দেয়
-q.empty(); q.size();
+{id:'vector',t:'1. vector',cards:[
+{h:'বানানো, push, pop, access',f:'hot',c:`vector<int> v;                       // খালি
+vector<int> a(n, 0);                 // n টা 0
+vector<int> b = {1, 2, 3};
+vector<vector<int>> g(n, vector<int>(m, 0));    // 2D
 
-// BFS level order
-queue<TreeNode*> q; q.push(root);
-while(!q.empty()){
-    int sz = q.size();           // এই level-এ কয়টা node
-    for(int i=0;i<sz;i++){
-        auto n = q.front(); q.pop();
-        if(n->left)  q.push(n->left);
-        if(n->right) q.push(n->right);
-    }
-}`}]},
-{id:'deque',t:'3. deque',cards:[
-{h:'Common methods',s:'দুই মাথা থেকেই push/pop O(1) + index access O(1)। Sliding window maximum, monotonic deque, 0-1 BFS-এ লাগে।',c:`deque<int> dq;
-dq.push_back(1);  dq.push_front(0);
-dq.pop_back();    dq.pop_front();
-dq.front();       dq.back();
-dq[i];            // random access
-dq.size(); dq.empty(); dq.clear();
-dq.insert(dq.begin()+1, 9);   // middle insert O(n)
+v.push_back(x);   v.emplace_back(x);
+v.pop_back();
+v.size();  v.empty();
+v.front();  v.back();  v[i];
+v.clear();
+v.resize(n);
 
-// Sliding window maximum (monotonic decreasing deque of indices)
-deque<int> d; vector<int> res;
-for(int i=0;i<n;i++){
-    if(!d.empty() && d.front() <= i-k) d.pop_front();     // window-এর বাইরে
-    while(!d.empty() && nums[d.back()] <= nums[i]) d.pop_back();
-    d.push_back(i);
-    if(i >= k-1) res.push_back(nums[d.front()]);
-}`}]},
-{id:'string',t:'4. string',cards:[
-{h:'reverse, sort, front/back remove',s:'string-ও vector-এর মতো। ',c:`string s = "hello";
+v.insert(v.begin() + i, x);          // O(n)
+v.erase(v.begin() + i);              // O(n)
+v.erase(v.begin() + l, v.begin() + r);   // [l, r)
 
-// reverse
-reverse(s.begin(), s.end());          // "olleh"
-string r(s.rbegin(), s.rend());       // reversed copy
+for(int x : v) {}                    // value
+for(int& x : v) x *= 2;              // বদলাতে চাইলে &`},
+{h:'sort ও custom comparator',f:'hot',s:'cmp(a,b) true দিলে a আগে বসে। সবসময় < বা > দাও, <= দিলে crash হতে পারে।',c:`sort(v.begin(), v.end());                    // ascending
+sort(v.begin(), v.end(), greater<int>());    // descending
+sort(v.rbegin(), v.rend());                  // descending (আরেকভাবে)
 
-// sort (characters)
-sort(s.begin(), s.end());                           // ascending
-sort(s.begin(), s.end(), greater<char>());          // descending
-// anagram key: sort(key.begin(), key.end());
+vector<vector<int>> a = {{1,5,3}, {2,2,9}, {1,3,4}};
+vector<pair<int,int>> p = {{1,5}, {2,2}, {1,3}};
 
-// remove from end / front
-s.pop_back();                  // শেষ char মুছে
-s.erase(s.begin());            // প্রথম char মুছে  O(n)
-s.erase(0, 1);                 // প্রথম 1 char মুছে
-s.erase(s.size()-1);           // শেষ char মুছে
-s.erase(s.begin()+2, s.begin()+5);   // [2,5) range মুছে
-s.erase(0, k);                 // প্রথম k char মুছে`},
-{h:'আরও common string method',s:'প্রায় প্রতিটা string problem-এ লাগে।',c:`s.size(); s.length(); s.empty();
-s.front(); s.back(); s[i];
-s.push_back('a');  s += "xyz";  s.append("abc");
-s.substr(pos, len);            // substr(2,3) = index 2 থেকে 3 char
-s.find("lo");                  // index, না পেলে string::npos
-s.find('l', 3);                // 3 থেকে খোঁজা শুরু
-s.rfind('l');
-s.insert(1, "ab");
-s.compare(t);                  // 0 হলে সমান
-s.clear();
-to_string(123);                // int -> string
-stoi("123"); stoll("123"); stod("1.5");   // string -> number
-isalpha(c); isdigit(c); isalnum(c); islower(c); isupper(c);
-tolower(c); toupper(c);
-// split by space
-stringstream ss(s); string w; while(ss >> w){ /* word */ }`},
-{h:'substr() কীভাবে কাজ করে',s:'s.substr(pos, len): pos index থেকে শুরু করে len টা char-এর নতুন string return করে। len না দিলে শেষ পর্যন্ত। pos > size হলে exception (out_of_range), pos == size হলে empty string। Original string বদলায় না। দুই argument হলো (শুরু, দৈর্ঘ্য), (শুরু, শেষ) নয়!',c:`string s = "abcdefgh";
-s.substr(2);        // "cdefgh"   index 2 থেকে শেষ
-s.substr(2, 3);     // "cde"      index 2 থেকে 3 টা char
-s.substr(0, 4);     // "abcd"     প্রথম 4 char (prefix)
-s.substr(s.size()-3);   // "fgh"  শেষ 3 char (suffix)
-s.substr(5, 100);   // "fgh"      len বেশি হলে শেষ পর্যন্ত নেয়, error নয়
-s.substr(8);        // ""         pos == size ঠিক আছে
-// s.substr(9);     // out_of_range exception!
-
-// [l, r] inclusive substring: len = r - l + 1
-s.substr(l, r - l + 1);
-// time O(len), প্রতি call-এ নতুন string copy হয়
-// palindrome check / sliding window: substr বারবার না ডেকে index দিয়ে কাজ করো`},
-{h:'find() কীভাবে কাজ করে',s:'s.find(x) প্রথম যেখানে x (char বা string) পাওয়া যায় সেই index return করে। না পেলে string::npos (বিশাল unsigned সংখ্যা, -1 নয় তাই int-এ নেওয়ার সময় সাবধান)। দ্বিতীয় argument দিলে সেই index থেকে খোঁজা শুরু। rfind() পিছন থেকে খোঁজে।',c:`string s = "hello world";
-s.find('o');            // 4
-s.find("wor");          // 6
-s.find('o', 5);         // 7   index 5 থেকে খুঁজছে
-s.find("xyz");          // string::npos  (পাওয়া যায়নি)
-s.rfind('o');           // 7   শেষ occurrence
-
-// পাওয়া গেছে কিনা check
-if(s.find("lo") != string::npos) { /* আছে */ }
-size_t pos = s.find("lo");
-if(pos != string::npos) cout << pos;
-
-// সব occurrence বের করা
-size_t p = s.find('o');
-while(p != string::npos){ cout << p << " "; p = s.find('o', p + 1); }
-
-// অন্য helper
-s.find_first_of("aeiou");        // যেকোনো একটা vowel-এর প্রথম index
-s.find_first_not_of(" ");        // প্রথম non-space (trim-এ কাজে লাগে)
-s.find_last_of("aeiou");
-// s.starts_with("he"), s.ends_with("ld")  -> C++20
-// time O(n*m) worst, সাধারণত দ্রুত`},
-{h:'char function: tolower, toupper, isdigit, isalpha, isalnum',s:'argument int/char নেয়। is... function গুলো true/false (আসলে non-zero/0 int) দেয়। tolower/toupper নতুন char return করে, original বদলায় না। string পুরো বদলাতে transform লাগে।',c:`char c = 'a';
-isalpha(c);     // letter (a-z, A-Z)
-isdigit(c);     // '0'-'9'
-isalnum(c);     // letter বা digit   (palindrome valid check)
-islower(c);     // 'a'-'z'
-isupper(c);     // 'A'-'Z'
-isspace(c);     // space, tab, newline
-ispunct(c);     // punctuation
-tolower('A');   // 'a'
-toupper('a');   // 'A'
-
-// পুরো string lowercase / uppercase
-transform(s.begin(), s.end(), s.begin(), ::tolower);
-transform(s.begin(), s.end(), s.begin(), ::toupper);
-for(char& ch : s) ch = tolower(ch);     // loop দিয়েও হয়
-
-// valid palindrome: শুধু alnum, case ignore
-string t;
-for(char ch : s) if(isalnum(ch)) t += tolower(ch);
-
-// char <-> number
-int d = c - '0';                 // '7' -> 7
-char ch = '0' + 7;               // 7 -> '7'
-int idx = c - 'a';               // 'a'->0 ... 'z'->25 (freq array[26])
-char nx = 'a' + 3;               // 'd'
-// সতর্কতা: negative char-এ isalpha(unsigned char(c)) ব্যবহার করো`},
-{h:'string <-> number: stoi, stoll, to_string',s:'stoi("123") string থেকে int। শুরুতে space skip করে, সংখ্যা যেখানে শেষ সেখানে থামে ("12ab" -> 12)। সংখ্যা একদম না থাকলে invalid_argument, বেশি বড় হলে out_of_range exception। Atoi problem-এ নিজে parse করা হয়, কিন্তু সাধারণ কাজে stoi।',c:`stoi("123");        // 123        int
-stoi("-45");        // -45
-stoi("12ab");       // 12         সংখ্যা যতটুকু
-stoll("9999999999");// long long
-stoul("42");        // unsigned long
-stod("3.14");       // double
-stoi("101", nullptr, 2);   // 5   base 2 (binary) থেকে
-stoi("ff", nullptr, 16);   // 255 hex
-
-to_string(123);     // "123"
-to_string(3.5);     // "3.500000"
-
-// দুই string যোগ হিসাবে সংখ্যা: string r = to_string(a) + to_string(b);
-// stringstream দিয়ে convert
-stringstream ss(s); int x; ss >> x;
-
-// binary string বানানো
-bitset<8>(5).to_string();   // "00000101"`},
-{h:'আরও common string operation',s:'',c:`// compare / equality
-s == t;  s < t;  s.compare(t);       // lexicographic
-
-// replace
-s.replace(pos, len, "new");          // pos থেকে len char বদলে "new"
-// সব occurrence replace করতে find + replace loop
-
-// insert
-s.insert(pos, "abc");   s.insert(s.begin(), 'x');
-
-// repeat / fill
-string r(5, 'a');                    // "aaaaa"
-string z = string(3, '0') + s;       // leading zero
-
-// char array (c-string)
-s.c_str();                           // const char*
-
-// count char
-count(s.begin(), s.end(), 'a');
-
-// freq array
-int f[26] = {0};
-for(char c : s) f[c - 'a']++;
-
-// min / max char
-*max_element(s.begin(), s.end());
-
-// getline (space সহ line input)
-getline(cin, s);
-
-// swap
-swap(s, t);   swap(s[i], s[j]);
-
-// rotate (left by k)
-rotate(s.begin(), s.begin() + k, s.end());
-
-// check palindrome
-string r2(s.rbegin(), s.rend());  bool pal = (s == r2);
-// is_sorted, is_permutation(a.begin(), a.end(), b.begin()) -> anagram check
-
-// split by delimiter
-stringstream ss2(s); string tok;
-while(getline(ss2, tok, ',')) { /* tok */ }`}]},
-{id:'vector',t:'5. vector sorting & custom comparator',cards:[
-{h:'Basic sort',s:'sort() O(n log n)। Default ascending।',c:`vector<int> v = {5,2,9,1};
-sort(v.begin(), v.end());                     // ascending
-sort(v.begin(), v.end(), greater<int>());     // descending
-sort(v.rbegin(), v.rend());                   // descending (reverse iterator)
-reverse(v.begin(), v.end());
-// partial: sort(v.begin(), v.begin()+k);
-stable_sort(v.begin(), v.end(), cmp);         // equal element-এর order ঠিক রাখে`},
-{h:'Custom comparator (lambda)',s:'cmp(a,b) true দিলে a আগে বসবে। Strict ordering দাও (<, >), কখনো <= নয়, নাহলে crash/UB হতে পারে।',c:`// vector<vector<int>> / vector<pair<int,int>> sort
-vector<vector<int>> a = {{1,5,3},{2,2,9},{1,3,4}};
-
-// 1st index ascending
+// 1st value ascending
 sort(a.begin(), a.end(), [](auto& x, auto& y){ return x[0] < y[0]; });
-
-// 2nd index descending
+// 2nd value descending
 sort(a.begin(), a.end(), [](auto& x, auto& y){ return x[1] > y[1]; });
+// 3rd value ascending
+sort(a.begin(), a.end(), [](auto& x, auto& y){ return x[2] < y[2]; });
 
-// 1st asc, tie হলে 2nd desc, tie হলে 3rd asc
+// 1st asc, সমান হলে 2nd desc, সমান হলে 3rd asc
 sort(a.begin(), a.end(), [](auto& x, auto& y){
     if(x[0] != y[0]) return x[0] < y[0];
     if(x[1] != y[1]) return x[1] > y[1];
     return x[2] < y[2];
 });
 
-// tuple / pair trick: lexicographic compare
-sort(a.begin(), a.end(), [](auto& x, auto& y){
-    return make_tuple(x[0], -x[1], x[2]) < make_tuple(y[0], -y[1], y[2]);
-});
-
-// intervals: start অনুযায়ী (merge intervals)
-sort(intervals.begin(), intervals.end());     // vector default lexicographic
-
-// string length, তারপর lexicographic
-sort(words.begin(), words.end(), [](const string& a, const string& b){
-    return a.size() != b.size() ? a.size() < b.size() : a < b;
-});`},
-{h:'Common vector method',s:'',c:`v.push_back(x); v.emplace_back(x); v.pop_back();
-v.size(); v.empty(); v.front(); v.back(); v.clear();
-v.insert(v.begin()+i, x);  v.erase(v.begin()+i);  v.erase(v.begin()+l, v.begin()+r);
-v.resize(n, 0);  v.assign(n, 0);   vector<int> v(n, 0);
-vector<vector<int>> g(n, vector<int>(m, 0));     // 2D
-*max_element(v.begin(), v.end());  *min_element(v.begin(), v.end());
-accumulate(v.begin(), v.end(), 0);               // sum
-lower_bound(v.begin(), v.end(), x);   // প্রথম element >= x  (sorted)
-upper_bound(v.begin(), v.end(), x);   // প্রথম element > x
+sort(p.begin(), p.end());                    // pair: first, তারপর second
+sort(a.begin(), a.end());                    // vector: lexicographic (intervals)
+stable_sort(a.begin(), a.end(), cmp);        // সমান element-এর order ঠিক থাকে`},
+{h:'vector-এর উপর common function',f:'rare',c:`*max_element(v.begin(), v.end());   *min_element(v.begin(), v.end());
+accumulate(v.begin(), v.end(), 0);           // sum (long long হলে 0LL)
+reverse(v.begin(), v.end());
+count(v.begin(), v.end(), x);
+find(v.begin(), v.end(), x) != v.end();      // আছে কিনা
+lower_bound(v.begin(), v.end(), x);          // sorted: প্রথম >= x
+upper_bound(v.begin(), v.end(), x);          // sorted: প্রথম > x
 binary_search(v.begin(), v.end(), x);
-unique(v.begin(), v.end());           // sorted হলে duplicate সরায়; erase সহ:
-v.erase(unique(v.begin(), v.end()), v.end());
-count(v.begin(), v.end(), x);  find(v.begin(), v.end(), x);
-next_permutation(v.begin(), v.end());`}]},
-{id:'pq',t:'6. priority_queue (heap)',cards:[
-{h:'Max heap (default) ও Min heap',s:'Default max heap: top() সবচেয়ে বড়। Min heap-এর জন্য greater<> দাও। push/pop O(log n), top O(1)।',c:`priority_queue<int> maxH;                                  // max heap
+v.erase(unique(v.begin(), v.end()), v.end());   // sorted হলে duplicate বাদ
+fill(v.begin(), v.end(), -1);
+iota(v.begin(), v.end(), 0);                 // 0,1,2,...
+partial_sum(v.begin(), v.end(), pre.begin());   // prefix sum
+next_permutation(v.begin(), v.end());
+rotate(v.begin(), v.begin() + k, v.end());
+// index বের করা: it - v.begin()`}]},
+
+{id:'string',t:'2. string',cards:[
+{h:'find() আর npos: string আছে কিনা check',f:'hot',s:'find() index দেয়। না পেলে string::npos দেয় (-1 নয়)। তাই "আছে কিনা" মানে != string::npos।',c:`string s = "hello world";
+
+s.find("lo");            // 3
+s.find('o');             // 4
+s.find("xyz");           // string::npos  (নেই)
+s.find('o', 5);          // 7   index 5 থেকে খোঁজা শুরু
+s.rfind('o');            // 7   পিছন থেকে
+
+// আছে কিনা
+if(s.find("lo") != string::npos) { /* আছে */ }
+if(s.find("xyz") == string::npos) { /* নেই */ }
+
+// index দরকার হলে
+size_t pos = s.find("wor");
+if(pos != string::npos) cout << pos;         // 6
+
+// সব occurrence
+for(size_t p = s.find('o'); p != string::npos; p = s.find('o', p + 1))
+    cout << p << " ";
+
+s.find_first_of("aeiou");                    // যেকোনো vowel-এর প্রথম index
+// s.starts_with("he"), s.ends_with("ld")    // C++20`},
+{h:'substr(pos, len)',f:'hot',s:'pos থেকে len টা char নেয় (শেষ index নয়, দৈর্ঘ্য)। len বেশি হলে শেষ পর্যন্ত। pos > size হলে exception।',c:`string s = "abcdefgh";
+s.substr(2);             // "cdefgh"   2 থেকে শেষ
+s.substr(2, 3);          // "cde"      2 থেকে 3 টা
+s.substr(0, 4);          // "abcd"     prefix
+s.substr(s.size() - 3);  // "fgh"      suffix
+s.substr(l, r - l + 1);  // [l, r] inclusive`},
+{h:'সবচেয়ে common string operation',f:'hot',c:`s.size();  s.empty();  s[i];  s.front();  s.back();
+s.push_back('a');   s += "xyz";   s += 'c';
+s.pop_back();                         // শেষ char মোছে
+s.erase(s.begin());                   // প্রথম char মোছে
+s.erase(0, k);                        // প্রথম k char মোছে
+s.erase(s.size() - k);                // শেষ k char মোছে
+s.erase(i, len);                      // i থেকে len টা মোছে
+s.insert(i, "ab");
+s.clear();
+s == t;  s < t;  s != t;              // lexicographic তুলনা
+
+reverse(s.begin(), s.end());
+sort(s.begin(), s.end());                         // ascending
+sort(s.begin(), s.end(), greater<char>());        // descending
+string r(s.rbegin(), s.rend());                   // reversed copy
+bool pal = (s == r);
+
+string t(5, 'a');                     // "aaaaa"
+count(s.begin(), s.end(), 'a');
+
+int f[26] = {};
+for(char c : s) f[c - 'a']++;         // frequency array`},
+{h:'char function: isalpha, isdigit, isalnum, tolower, toupper',f:'hot',s:'নতুন char return করে, original বদলায় না। পুরো string বদলাতে transform বা loop।',c:`isalpha(c);   isdigit(c);   isalnum(c);
+islower(c);   isupper(c);   isspace(c);   ispunct(c);
+tolower(c);   toupper(c);
+
+transform(s.begin(), s.end(), s.begin(), ::tolower);   // পুরো lowercase
+transform(s.begin(), s.end(), s.begin(), ::toupper);
+for(char& ch : s) ch = tolower(ch);                    // loop দিয়েও হয়
+
+// valid palindrome: শুধু letter/digit, case ignore
+string t;
+for(char ch : s) if(isalnum(ch)) t += tolower(ch);
+
+int d = c - '0';          // '7' -> 7
+char ch = '0' + 7;        // 7 -> '7'
+int idx = c - 'a';        // 'a' -> 0, 'z' -> 25
+char nx = 'a' + 3;        // 'd'`},
+{h:'string <-> number: stoi, to_string',f:'hot',s:'stoi শুরুর space বাদ দেয়, সংখ্যা যেখানে শেষ সেখানে থামে ("12ab" -> 12)। সংখ্যা না থাকলে invalid_argument, বেশি বড় হলে out_of_range।',c:`stoi("123");              // 123
+stoi("-45");              // -45
+stoll("9999999999");      // long long
+stod("3.14");             // double
+stoi("101", nullptr, 2);  // 5     binary থেকে
+stoi("ff", nullptr, 16);  // 255   hex থেকে
+
+to_string(123);           // "123"
+to_string(3.5);           // "3.500000"
+string r = to_string(a) + to_string(b);`},
+{h:'কম লাগে: replace, split, getline, rotate',f:'rare',c:`s.replace(pos, len, "new");          // pos থেকে len টা বদলে "new"
+s.compare(t);                        // 0 হলে সমান
+s.c_str();
+swap(s, t);
+rotate(s.begin(), s.begin() + k, s.end());     // left rotate k
+is_permutation(a.begin(), a.end(), b.begin()); // anagram check
+
+getline(cin, s);                     // space সহ পুরো line
+
+// delimiter দিয়ে split
+stringstream ss(s); string tok;
+while(getline(ss, tok, ',')) { }     // ' ' দিলে word আলাদা
+while(ss >> tok) { }                 // space দিয়ে word`}]},
+
+{id:'map',t:'3. map, unordered_map',cards:[
+{h:'কোনটা কখন',f:'hot',s:'map = sorted (tree), O(log n)। unordered_map = hash, average O(1), order নেই। frequency আর lookup-এ unordered_map, sorted order বা lower_bound লাগলে map।',c:`unordered_map<int,int> um;    // frequency, two sum, lookup
+map<int,int> mp;              // sorted key, lower_bound
+// set<int>           : শুধু key, unique, sorted
+// unordered_set<int> : শুধু key, unique, O(1) check
+// multimap / multiset: duplicate key চলে`},
+{h:'insert, access, find, count, erase',f:'hot',s:'find() iterator দেয়, না পেলে end()। it->first = key, it->second = value। m[key] নতুন entry বানিয়ে ফেলে, শুধু দেখার জন্য count() বা find() ব্যবহার করো।',c:`unordered_map<string,int> m;          // map-এও হুবহু একই
+
+m["a"] = 5;                  // নেই হলে বসে, আছে হলে overwrite
+m["b"]++;                    // frequency count
+m.insert({"c", 1});          // আছে হলে কিছু করে না
+m.emplace("d", 4);
+
+// আছে কিনা
+if(m.count("a")) { }         // 0 বা 1
+if(m.find("a") != m.end()) { }
+
+auto it = m.find("a");
+if(it != m.end()) { it->first;  it->second; }
+
+m.erase("a");                // key দিয়ে
+m.erase(it);                 // iterator দিয়ে
+m.size();  m.empty();  m.clear();
+
+for(auto& [k, v] : m) { }    // C++17
+for(auto& p : m) { p.first; p.second; }
+
+// ফাঁদ
+m["zzz"];                    // নেই হলে বানিয়ে 0 বসায়
+m.at("zzz");                 // নেই হলে exception
+
+// pattern
+for(int x : nums) um[x]++;                    // frequency
+if(--um[x] == 0) um.erase(x);                 // count 0 হলে মোছা
+um.insert_or_assign("a", 9);                  // C++17 overwrite`},
+{h:'শুধু map-এ: sorted সুবিধা',f:'rare',c:`map<int,string> mp = {{10,"a"}, {20,"b"}, {30,"c"}};
+mp.begin()->first;               // 10 সবচেয়ে ছোট key
+mp.rbegin()->first;              // 30 সবচেয়ে বড় key
+mp.lower_bound(20)->first;       // 20 প্রথম key >= 20
+mp.upper_bound(20)->first;       // 30 প্রথম key >  20
+mp.erase(mp.begin());            // সবচেয়ে ছোট মোছে
+mp.erase(prev(mp.end()));        // সবচেয়ে বড় মোছে
+map<int,int,greater<int>> desc;  // বড় থেকে ছোট
+map<pair<int,int>, int> grid;    // pair key চলে (unordered-এ চলে না)
+
+// iterate করতে করতে erase
+for(auto it = m.begin(); it != m.end(); ){
+    if(it->second == 0) it = m.erase(it);   // erase পরের iterator দেয়
+    else ++it;
+}`}]},
+
+{id:'set',t:'4. set, unordered_set',cards:[
+{h:'insert, find, count, erase',f:'hot',s:'insert() একটা pair দেয়, .second false মানে আগে থেকেই ছিল (duplicate detect)। set sorted, unordered_set না।',c:`set<int> st;                          // unordered_set<int>-এও একই
+set<int> a = {5, 1, 3, 3};            // {1, 3, 5}
+set<int> u(v.begin(), v.end());       // vector থেকে unique + sorted
+
+st.insert(10);
+st.insert(10).second;                 // false: আগেই ছিল
+st.emplace(20);
+
+if(st.count(10)) { }                  // আছে কিনা
+auto it = st.find(10);
+if(it != st.end()) cout << *it;
+
+st.erase(10);                         // value দিয়ে
+st.erase(it);                         // iterator দিয়ে
+st.size();  st.empty();  st.clear();
+
+for(int x : st) { }                   // set: sorted order
+
+// contains duplicate
+for(int x : nums) if(!st.insert(x).second) return true;
+// longest consecutive: us.count(x-1) না থাকলে x sequence-এর শুরু`},
+{h:'শুধু set-এ (sorted) ও multiset',f:'rare',s:'multiset-এ erase(value) সব copy মোছে, একটা মুছতে erase(find(value))।',c:`*st.begin();                 // সবচেয়ে ছোট
+*st.rbegin();                // সবচেয়ে বড়
+st.lower_bound(x);           // প্রথম >= x
+st.upper_bound(x);           // প্রথম >  x
+st.erase(st.begin());        // ছোটটা মোছে
+st.erase(prev(st.end()));    // বড়টা মোছে
+set<int, greater<int>> d;    // descending
+
+multiset<int> ms = {2, 5, 5};
+ms.count(5);                 // 2
+ms.erase(ms.find(5));        // একটা 5 মোছে
+ms.erase(5);                 // সব 5 মোছে`}]},
+
+{id:'stack',t:'5. stack, queue, deque',cards:[
+{h:'stack (LIFO)',f:'hot',s:'pop() কিছু return করে না, আগে top() নাও।',c:`stack<int> st;
+st.push(x);   st.emplace(x);
+st.top();                       // দেখো
+st.pop();                       // ফেলো (return করে না)
+st.empty();  st.size();
+
+while(!st.empty()){ int t = st.top(); st.pop(); }`},
+{h:'queue (FIFO)',f:'hot',c:`queue<int> q;
+q.push(x);   q.emplace(x);
+q.front();   q.back();
+q.pop();                        // front ফেলে, return করে না
+q.empty();  q.size();
+
+// BFS level order
+queue<TreeNode*> q;  q.push(root);
+while(!q.empty()){
+    int sz = q.size();          // এই level-এ কয়টা node
+    for(int i = 0; i < sz; i++){
+        auto n = q.front(); q.pop();
+        if(n->left)  q.push(n->left);
+        if(n->right) q.push(n->right);
+    }
+}`},
+{h:'deque (দুই মাথা থেকে push/pop)',f:'hot',c:`deque<int> dq;
+dq.push_back(x);   dq.push_front(x);
+dq.pop_back();     dq.pop_front();
+dq.front();        dq.back();
+dq[i];             dq.size();   dq.empty();   dq.clear();
+
+// sliding window maximum (index-এর monotonic deque)
+deque<int> d; vector<int> res;
+for(int i = 0; i < n; i++){
+    if(!d.empty() && d.front() <= i - k) d.pop_front();
+    while(!d.empty() && nums[d.back()] <= nums[i]) d.pop_back();
+    d.push_back(i);
+    if(i >= k - 1) res.push_back(nums[d.front()]);
+}`}]},
+
+{id:'pq',t:'6. priority_queue',cards:[
+{h:'max heap, min heap',f:'hot',s:'default max heap (top = সবচেয়ে বড়)। min heap-এর জন্য greater<> দাও। push/pop O(log n), top O(1)। iterate করা যায় না।',c:`priority_queue<int> maxH;                                  // max heap
 priority_queue<int, vector<int>, greater<int>> minH;       // min heap
 
-maxH.push(5); maxH.push(9);
-maxH.top();     // 9
-maxH.pop();
-maxH.empty(); maxH.size();
-maxH.emplace(3);
+maxH.push(5);   maxH.emplace(9);
+maxH.top();     maxH.pop();
+maxH.size();    maxH.empty();
 
-// pair: first দিয়ে compare, tie হলে second
-priority_queue<pair<int,int>> pm;                                      // max
-priority_queue<pair<int,int>, vector<pair<int,int>>, greater<pair<int,int>>> pn; // min
-// Dijkstra: pn.push({dist, node});
+// pair: first দিয়ে compare, সমান হলে second
+priority_queue<pair<int,int>> pm;                          // max
+priority_queue<pair<int,int>, vector<pair<int,int>>, greater<pair<int,int>>> pn;   // min
+pn.push({dist, node});                                     // Dijkstra
 
-// vector থেকে heap বানানো
-vector<int> v = {4,1,7};
-priority_queue<int> h(v.begin(), v.end());                 // max heap
-priority_queue<int, vector<int>, greater<int>> h2(v.begin(), v.end());  // min heap
+// vector থেকে heap
+priority_queue<int> h1(v.begin(), v.end());
+priority_queue<int, vector<int>, greater<int>> h2(v.begin(), v.end());
 
-// trick: min heap = max heap-এ negative দিয়ে
-maxH.push(-x);  int val = -maxH.top();`},
-{h:'Struct + operator diye comparator',s:'priority_queue-তে operator< ঠিক উল্টো ভাবে কাজ করে: যে "ছোট" সে নিচে যায়, "বড়" সে top-এ। তাই return a.x < b.x দিলে max heap, a.x > b.x দিলে min heap।',c:`struct Node{
-    int a, b, c;
-    // max heap on a   (বড় a আগে)
-    bool operator<(const Node& o) const { return a < o.a; }
-};
-priority_queue<Node> pq;
+maxH.push(-x);  int val = -maxH.top();                     // min heap-এর shortcut
+pq = priority_queue<int>();                                // clear`},
+{h:'vector (3 element) heap: 1st / 2nd / 3rd value ধরে',f:'hot',s:'priority_queue-তে comparator sort-এর উল্টো: cmp(x,y) true মানে x নিচে যায়। তাই x[i] > y[i] দিলে min heap, x[i] < y[i] দিলে max heap।',c:`struct cmpMin1{  bool operator()(const vector<int>& x, const vector<int>& y) const { return x[0] > y[0]; } };  // 1st min
+struct cmpMax1{  bool operator()(const vector<int>& x, const vector<int>& y) const { return x[0] < y[0]; } };  // 1st max
+struct cmpMin2{  bool operator()(const vector<int>& x, const vector<int>& y) const { return x[1] > y[1]; } };  // 2nd min
+struct cmpMax2{  bool operator()(const vector<int>& x, const vector<int>& y) const { return x[1] < y[1]; } };  // 2nd max
+struct cmpMin3{  bool operator()(const vector<int>& x, const vector<int>& y) const { return x[2] > y[2]; } };  // 3rd min
+struct cmpMax3{  bool operator()(const vector<int>& x, const vector<int>& y) const { return x[2] < y[2]; } };  // 3rd max
 
-struct Node2{
-    int a, b, c;
-    // min heap on a   (ছোট a আগে)
-    bool operator<(const Node2& o) const { return a > o.a; }   // উল্টো!
-};
-priority_queue<Node2> pq2;
-
-// multi-key: a min, tie হলে b max, tie হলে c min
-struct N3{
-    int a, b, c;
-    bool operator<(const N3& o) const {
-        if(a != o.a) return a > o.a;     // a ছোট আগে
-        if(b != o.b) return b < o.b;     // b বড় আগে
-        return c > o.c;                  // c ছোট আগে
-    }
-};`},
-{h:'Separate comparator struct / lambda',s:'এখানে cmp(x,y) true মানে x এর priority y এর চেয়ে কম (x নিচে যাবে)। Sort-এর উল্টো মনে রাখো।',c:`// comparator struct
-struct cmp{
-    bool operator()(const vector<int>& x, const vector<int>& y) const {
-        return x[1] > y[1];     // x[1] ছোট হলে আগে  -> min heap by index 1
-    }
-};
-priority_queue<vector<int>, vector<vector<int>>, cmp> pq;
+priority_queue<vector<int>, vector<vector<int>>, cmpMin2> pq;
 pq.push({1, 5, 3});  pq.push({2, 2, 9});
-pq.top();   // {2,2,9}
+pq.top();                          // {2, 2, 9}  (2nd value সবচেয়ে ছোট)
 
-// max heap by index 2 (3rd value)
-struct cmpMax{
-    bool operator()(const vector<int>& x, const vector<int>& y) const {
-        return x[2] < y[2];
-    }
-};
-priority_queue<vector<int>, vector<vector<int>>, cmpMax> pq3;
-
-// 1st asc, tie হলে 2nd desc  (min heap by [0], then max by [1])
-struct cmp2{
+// multi-key: 1st min, সমান হলে 2nd max, সমান হলে 3rd min
+struct cmpMulti{
     bool operator()(const vector<int>& x, const vector<int>& y) const {
         if(x[0] != y[0]) return x[0] > y[0];
-        return x[1] < y[1];
+        if(x[1] != y[1]) return x[1] < y[1];
+        return x[2] > y[2];
     }
 };
 
 // lambda version
-auto cmpL = [](const vector<int>& x, const vector<int>& y){ return x[0] > y[0]; };
-priority_queue<vector<int>, vector<vector<int>>, decltype(cmpL)> pq4(cmpL);`},
-{h:'Common method & trick',s:'priority_queue-তে iterate করা যায় না, শুধু top/pop। Top-K problem-এ size k রাখো।',c:`pq.push(x); pq.emplace(...); pq.pop(); pq.top(); pq.size(); pq.empty();
-// clear করার সরাসরি method নেই:
-pq = priority_queue<int>();
+auto cmp = [](const vector<int>& x, const vector<int>& y){ return x[0] > y[0]; };
+priority_queue<vector<int>, vector<vector<int>>, decltype(cmp)> pq2(cmp);`},
+{h:'struct + operator< দিয়ে heap',f:'hot',s:'struct-এর ভিতরে operator< লিখলে comparator আলাদা দিতে হয় না। এখানেও উল্টো: a < o.a দিলে max heap, a > o.a দিলে min heap।',c:`struct Node{
+    int a, b, c;
+    bool operator<(const Node& o) const { return a < o.a; }   // a বড় আগে (max heap)
+};
+priority_queue<Node> pq;
+pq.push({1, 2, 3});
 
-// K-th largest -> size k-এর MIN heap
+struct Node2{
+    int a, b, c;
+    bool operator<(const Node2& o) const { return a > o.a; }  // a ছোট আগে (min heap)
+};
+
+// multi-key: a min, সমান হলে b max, সমান হলে c min
+struct Node3{
+    int a, b, c;
+    bool operator<(const Node3& o) const {
+        if(a != o.a) return a > o.a;
+        if(b != o.b) return b < o.b;
+        return c > o.c;
+    }
+};`},
+{h:'Top-K pattern',f:'rare',c:`// K-th largest  -> size k-এর MIN heap
 priority_queue<int, vector<int>, greater<int>> h;
-for(int x: nums){ h.push(x); if(h.size() > k) h.pop(); }
+for(int x : nums){ h.push(x); if(h.size() > k) h.pop(); }
 int kth = h.top();
 
 // K-th smallest -> size k-এর MAX heap
-// Merge K sorted lists -> min heap of {val, listIdx}
-// Task scheduler / Reorganize string -> max heap of {count, char}
-// Median of stream -> maxHeap (নিচের অর্ধেক) + minHeap (উপরের অর্ধেক)`}]}
-,{id:'map',t:'7. map, unordered_map, set, unordered_set',cards:[
-{h:'কোনটা কখন: চার container-এর পার্থক্য',s:'map আর set নিজে নিজে sorted থাকে (tree), তাই প্রতিটা কাজ O(log n)। unordered_map আর unordered_set হলো hash table, order নেই কিন্তু average O(1)। map/unordered_map-এ key সহ value থাকে, set/unordered_set-এ শুধু key (unique value)। Sorted order, lower_bound, ছোট-বড় element লাগলে ordered, শুধু আছে কিনা বা frequency লাগলে unordered নাও।',c:`//               key-value?   sorted?   time        duplicate key
-// map            হ্যাঁ         হ্যাঁ       O(log n)    না
-// unordered_map  হ্যাঁ         না        O(1) avg    না
-// set            না (শুধু key) হ্যাঁ       O(log n)    না
-// unordered_set  না (শুধু key) না        O(1) avg    না
-// multimap/multiset: sorted, duplicate key চলে
+// Merge K sorted lists   -> min heap of {val, listIdx}
+// Task scheduler         -> max heap of {count, char}
+// Median of stream       -> maxHeap (নিচের অর্ধেক) + minHeap (উপরের অর্ধেক)`}]},
 
-map<string,int> m;            // key string, value int
-unordered_map<int,int> um;    // frequency count-এ সবচেয়ে বেশি
-set<int> st;                  // unique + sorted
-unordered_set<int> us;        // unique, শুধু দ্রুত আছে-কিনা check
-
-// কোন কাজে কোনটা
-// frequency / two sum / lookup      -> unordered_map
-// sorted key লাগবে / floor, ceil    -> map / set
-// duplicate remove, exists check    -> unordered_set
-// sorted + unique বের করা           -> set
-// pair বা vector key                -> map / set (unordered-এ hash লাগে)`},
-{h:'map / unordered_map: insert করার সব উপায়',s:'চারটা উপায় আছে কিন্তু আচরণ আলাদা। সবচেয়ে বড় ফাঁদ: m[key] কিছু না থাকলে নিজে একটা entry বানিয়ে ফেলে (value 0 দিয়ে)। শুধু দেখার জন্য m[key] ব্যবহার করলে map ফুলে যায় আর পরে count ভুল দেখায়। insert() আগে থেকে key থাকলে কিছুই করে না (পুরনো value থাকে), আর [] সবসময় overwrite করে।',c:`unordered_map<string,int> m;     // map-এও হুবহু একই syntax
-
-// 1) [] দিয়ে: নেই হলে বানায়, আছে হলে overwrite
-m["a"] = 5;
-m["a"] = 9;                  // এখন a -> 9
-m["b"]++;                    // নেই হলে 0 ধরে ++ => 1  (frequency)
-
-// 2) insert: আছে হলে কিছু করে না
-m.insert({"c", 1});
-m.insert(make_pair("c", 100));   // c আগে থেকেই আছে, তাই value 1-ই থাকবে
-auto res = m.insert({"d", 4});
-res.second;                  // true হলে নতুন বসেছে, false হলে আগে ছিল
-res.first->second;           // ওই key-র value (iterator)
-
-// 3) emplace: সরাসরি বানায়, insert-এর মতোই আচরণ
-m.emplace("e", 5);
-
-// 4) insert_or_assign (C++17): নেই হলে বসায়, আছে হলে overwrite
-m.insert_or_assign("a", 77);
-
-// initial value সহ বানানো
-map<int,string> mp = {{1,"one"}, {2,"two"}, {3,"three"}};
-
-// vector থেকে frequency map
-for(int x : nums) um[x]++;`},
-{h:'map / unordered_map: find, count, access, erase',s:'find() iterator return করে: পেলে সেই element-এর iterator, না পেলে m.end()। iterator-এ ->first হলো key, ->second হলো value। count() শুধু 0 বা 1 দেয় (আছে কিনা)। at() না থাকলে exception ছোড়ে, কিন্তু [] নতুন entry বানায়। erase(key) key দিয়ে মুছে আর কয়টা মুছলো সেই সংখ্যা দেয়, erase(iterator) iterator দিয়ে মুছে।',c:`unordered_map<string,int> m = {{"a",1},{"b",2},{"c",3}};
-
-// FIND
-auto it = m.find("b");
-if(it != m.end()){
-    it->first;                // "b"  key
-    it->second;               // 2    value
-    it->second = 20;          // value বদলানো যায়
-}
-if(m.find("z") == m.end()) { /* নেই */ }
-
-// COUNT: আছে কিনা (সবচেয়ে ছোট উপায়)
-if(m.count("a")) { /* আছে */ }
-// m.contains("a")            // C++20
-
-// ACCESS
-m["a"];                       // আছে 1; না থাকলে বানিয়ে 0 দেয় (সাবধান!)
-m.at("a");                    // না থাকলে out_of_range exception
-
-// ERASE
-m.erase("a");                 // key দিয়ে (1 বা 0 return)
-m.erase(m.find("b"));         // iterator দিয়ে (find end() হলে crash, আগে check করো)
-m.erase(m.begin(), m.end());  // range
-m.clear();                    // সব মুছে
-
-m.size(); m.empty();
-
-// ITERATE
-for(auto& [k, v] : m) cout << k << " " << v << "\n";    // C++17
-for(auto& p : m) cout << p.first << " " << p.second;    // পুরনো style
-for(auto it = m.begin(); it != m.end(); ++it) { }
-
-// map-এ iterate করলে key ছোট থেকে বড় sorted order-এ আসে
-// unordered_map-এ order যা-তা`},
-{h:'map: sorted সুবিধা (শুধু map/set-এ)',s:'map আর set sorted, তাই সবচেয়ে ছোট/বড় key আর lower_bound/upper_bound পাওয়া যায়। unordered_map/unordered_set-এ এগুলো নেই।',c:`map<int,string> mp = {{10,"a"},{20,"b"},{30,"c"}};
-
-mp.begin()->first;            // 10  সবচেয়ে ছোট key
-mp.rbegin()->first;           // 30  সবচেয়ে বড় key
-prev(mp.end())->first;        // 30  (আরেকভাবে)
-
-mp.lower_bound(20)->first;    // 20  প্রথম key >= 20
-mp.upper_bound(20)->first;    // 30  প্রথম key >  20
-// না পেলে end() দেয়, deref করার আগে check করো:
-auto it = mp.lower_bound(25);
-if(it != mp.end()) cout << it->first;       // 30
-
-// floor (<= x এর মধ্যে সবচেয়ে বড়)
-auto f = mp.upper_bound(25);
-if(f != mp.begin()) { --f; cout << f->first; }   // 20
-
-// সবচেয়ে ছোট key মুছে ফেলা
-mp.erase(mp.begin());
-// সবচেয়ে বড় key মুছে
-mp.erase(prev(mp.end()));
-
-// reverse order-এ iterate
-for(auto it = mp.rbegin(); it != mp.rend(); ++it) { }
-// descending map
-map<int,int,greater<int>> desc;`},
-{h:'set / unordered_set: insert, find, erase',s:'set-এ শুধু key থাকে, duplicate নেয় না। insert() একটা pair দেয়: second true মানে নতুন বসেছে, false মানে আগে থেকেই ছিল। এই true/false দিয়ে duplicate detect করা যায়। find() iterator দেয়, *it দিয়ে value পাও। set sorted, unordered_set না।',c:`set<int> st;                       // unordered_set<int>-এও একই (শুধু sorted নেই)
-set<int> init = {5, 1, 3, 3};      // {1, 3, 5}  duplicate বাদ, sorted
-set<int> fromVec(v.begin(), v.end());     // vector থেকে unique + sorted
-set<int, greater<int>> desc;       // বড় থেকে ছোট
-
-// INSERT
-st.insert(10);
-auto r = st.insert(10);
-r.second;                          // false  (10 আগেই ছিল)
-st.emplace(20);
-
-// duplicate detect
-for(int x : nums){
-    if(!st.insert(x).second) return true;     // আগে ছিল => duplicate
-}
-
-// FIND / COUNT
-auto it = st.find(10);
-if(it != st.end()) cout << *it;
-if(st.count(10)) { /* আছে */ }
-// st.contains(10)                 // C++20
-
-// ERASE
-st.erase(10);                      // value দিয়ে (1 বা 0 return)
-st.erase(st.find(10));             // iterator দিয়ে (আগে end() check)
-st.erase(st.begin());              // সবচেয়ে ছোট মুছে
-st.erase(prev(st.end()));          // সবচেয়ে বড় মুছে
-st.clear();
-
-// শুধু set-এ (sorted)
-*st.begin();                       // সবচেয়ে ছোট
-*st.rbegin();                      // সবচেয়ে বড়
-st.lower_bound(x);                 // প্রথম >= x
-st.upper_bound(x);                 // প্রথম >  x
-
-// ITERATE (set: sorted order)
-for(int x : st) cout << x << " ";
-for(auto it = st.begin(); it != st.end(); ++it) cout << *it;
-
-st.size(); st.empty();`},
-{h:'multiset, ও iterate করার সময় erase',s:'multiset-এ duplicate থাকতে পারে। erase(value) দিলে ওই value-র সবগুলো মুছে যায়, একটা মুছতে চাইলে erase(find(value))। Loop চালাতে চালাতে map/set থেকে মোছার সময় erase() নতুন iterator return করে, সেটা ধরতে হবে, নাহলে crash।',c:`multiset<int> ms;
-ms.insert(5); ms.insert(5); ms.insert(2);     // {2, 5, 5}
-ms.count(5);                       // 2
-ms.erase(5);                       // সব 5 মুছে => {2}
-ms.insert(5); ms.insert(5);
-ms.erase(ms.find(5));              // মাত্র একটা 5 মুছলো
-*ms.begin(); *ms.rbegin();         // min, max (sliding window median / max-এ কাজে লাগে)
-
-// loop-এর মধ্যে erase: ঠিক উপায়
-for(auto it = m.begin(); it != m.end(); ){
-    if(it->second == 0) it = m.erase(it);   // erase পরের iterator দেয়
-    else ++it;
-}
-// ভুল: m.erase(it); ++it;   // it বাতিল হয়ে গেছে, crash/UB
-
-// কাজের pattern
-// frequency map থেকে count 0 হলে মোছা: if(--m[x] == 0) m.erase(x);
-// max frequency: for(auto& [k,v] : m) best = max(best, v);
-// pair key: map<pair<int,int>,int> (unordered_map-এ pair key সরাসরি চলে না)
-map<pair<int,int>, int> grid;
-grid[{1,2}] = 5;`}]},
-{id:'pairtuple',t:'8. pair, tuple, auto, swap',cards:[
-{h:'pair: initialize করার সব উপায়',s:'pair দুইটা value একসাথে রাখে (প্রথম .first, দ্বিতীয় .second), দুইটার type আলাদা হতে পারে। নিচের সব উপায়ই একই কাজ করে, নিজের পছন্দ বেছে নাও। {} দিয়ে সবচেয়ে ছোট লেখা যায়।',c:`pair<int,int> p1;                      // default: (0, 0)
-pair<int,int> p2(1, 2);                // constructor
-pair<int,int> p3 = {1, 2};             // brace (সবচেয়ে বেশি ব্যবহৃত)
-pair<int,int> p4{1, 2};                // brace, = ছাড়া
-pair<int,int> p5 = make_pair(1, 2);    // make_pair (type নিজে বোঝে)
-auto p6 = make_pair(1, "abc");         // pair<int,const char*>
-pair p7(3, 4.5);                       // C++17: type নিজে বোঝে (pair<int,double>)
-pair<int,int> p8 = p3;                 // copy
-
-// আলাদা type
+{id:'pair',t:'7. pair, tuple',cards:[
+{h:'pair বানানোর সব উপায়',f:'hot',s:'.first আর .second। দুইটার type আলাদা হতে পারে। তুলনায় আগে first, সমান হলে second।',c:`pair<int,int> p1;                      // (0, 0)
+pair<int,int> p2(1, 2);
+pair<int,int> p3 = {1, 2};             // সবচেয়ে চেনা
+pair<int,int> p4{1, 2};
+pair<int,int> p5 = make_pair(1, 2);
+auto p6 = make_pair(1, "abc");
+pair p7(3, 4.5);                       // C++17: type নিজে বোঝে
 pair<string,int> sp = {"ali", 20};
-pair<int, pair<int,int>> np = {1, {2, 3}};     // nested
-np.second.first;                       // 2
+pair<int, pair<int,int>> np = {1, {2, 3}};     // nested: np.second.first
 
-// ACCESS
 p3.first;  p3.second;
-p3.first = 10;                         // বদলানো যায়
-auto [a, b] = p3;                      // structured binding (C++17)
-int x, y; tie(x, y) = p3;              // আগের style-এ unpack
+auto [a, b] = p3;                      // C++17
+int x, y;  tie(x, y) = p3;
 
-// তুলনা: আগে first, সমান হলে second দেখে
-(1,5) < (2,0);   // true
-(1,5) < (1,7);   // true
-p1 == p2;        // দুইটাই সমান কিনা
-
-// vector / array of pair
 vector<pair<int,int>> v1;
-vector<pair<int,int>> v2 = {{1,2}, {3,4}, {5,6}};
-vector<pair<int,int>> v3(5, {0, 0});          // 5 টা (0,0)
-pair<int,int> arr[3] = {{1,2}, {3,4}, {5,6}};
-v1.push_back({1, 2});                  // সবচেয়ে চেনা
-v1.push_back(make_pair(1, 2));
-v1.emplace_back(1, 2);                 // সবচেয়ে দ্রুত, {} লাগে না
-sort(v2.begin(), v2.end());            // first, তারপর second দিয়ে sort
-sort(v2.begin(), v2.end(), [](auto& a, auto& b){ return a.second > b.second; });
+vector<pair<int,int>> v2 = {{1,2}, {3,4}};
+vector<pair<int,int>> v3(5, {0, 0});
+v1.push_back({1, 2});
+v1.emplace_back(1, 2);
 
-// priority_queue / queue / map-এ
-priority_queue<pair<int,int>> pq;  pq.push({5, 1});   // Dijkstra
 queue<pair<int,int>> q;  q.push({0, 0});  auto [r, c] = q.front();   // grid BFS
-map<int,int> mp;  for(auto& p : mp) { p.first; p.second; }   // map-এর element আসলে pair`},
-{h:'pair / tuple / structured binding',s:'',c:`pair<int,int> p = {1, 2};   p.first; p.second;
-make_pair(1, 2);
-vector<pair<int,int>> v;  v.push_back({1,2});  v.emplace_back(1,2);
-sort(v.begin(), v.end());                       // first, তারপর second দিয়ে sort
-auto [a, b] = p;                                // C++17
-
-tuple<int,int,int> t = {1,2,3};
+map<int,int> mp;  for(auto& p : mp) { p.first; p.second; }          // map-এর element-ও pair`},
+{h:'tuple',f:'rare',c:`tuple<int,int,int> t = {1, 2, 3};
 get<0>(t);   get<1>(t);
 auto [x, y, z] = t;
-tie(x, y, z) = t;                               // unpack
-swap(a, b);                                     // swap
-INT_MAX; INT_MIN; LLONG_MAX;                    // INT_MAX ইত্যাদি
-min(a, b); max(a, b); abs(x);
-min({a, b, c});                                 // একাধিক`}]},
-{id:'algo',t:'9. algorithm ও numeric common function',cards:[
-{h:'প্রতিদিনের common function',s:'',c:`sort(v.begin(), v.end());           reverse(v.begin(), v.end());
-*max_element(v.begin(), v.end());   *min_element(v.begin(), v.end());
-accumulate(v.begin(), v.end(), 0);  // sum (long long হলে 0LL)
-iota(v.begin(), v.end(), 0);        // 0,1,2,... দিয়ে fill
-fill(v.begin(), v.end(), -1);       memset(arr, -1, sizeof arr);   // memset শুধু 0/-1
-count(v.begin(), v.end(), x);       count_if(v.begin(), v.end(), pred);
-find(v.begin(), v.end(), x);        // iterator, না পেলে end()
-binary_search(v.begin(), v.end(), x);
-lower_bound(...); upper_bound(...); // sorted range
-unique(v.begin(), v.end());         // consecutive duplicate সরায়
-next_permutation(v.begin(), v.end());   prev_permutation(...);
-rotate(v.begin(), v.begin()+k, v.end());
-swap(v[i], v[j]);
-all_of(...); any_of(...); none_of(...);
-is_sorted(v.begin(), v.end());
-partial_sum(v.begin(), v.end(), pre.begin());   // prefix sum
-nth_element(v.begin(), v.begin()+k, v.end());   // k-th element O(n)
-__builtin_popcount(x);              // set bit count
-// gcd(a, b), lcm(a, b)  (C++17)
-// pow(a, b) double return করে, integer power নিজে loop/fast exponent
-// sqrt(x); ceil(x); floor(x);
-// ceil of int division: (a + b - 1) / b
-// iterator index: it - v.begin()`},
-{h:'Fast IO ও common template',s:'',c:`ios::sync_with_stdio(false);  cin.tie(nullptr);   // fast input/output
-#define ll long long
+tie(x, y, z) = t;
+make_tuple(1, 2, 3);
+// tuple comparison: lexicographic
+sort(a.begin(), a.end(), [](auto& p, auto& q){
+    return make_tuple(p[0], -p[1]) < make_tuple(q[0], -q[1]);
+});`}]},
+
+{id:'misc',t:'8. Misc',cards:[
+{h:'min, max, swap, limits, math',f:'hot',c:`min(a, b);  max(a, b);  min({a, b, c});
+swap(a, b);   abs(x);
+INT_MAX;  INT_MIN;  LLONG_MAX;
+const int INF = 1e9;                  // INT_MAX-এ +1 করলে overflow
 const int MOD = 1e9 + 7;
-const int INF = 1e9;   // INT_MAX-এ +1 করলে overflow, তাই 1e9
-// 2D direction (grid BFS/DFS)
-int dx[4] = {1,-1,0,0}, dy[4] = {0,0,1,-1};
-vector<vector<bool>> vis(n, vector<bool>(m, false));
-// vector<bool> আলাদা ধরনের, reference নেওয়া যায় না`}]}
+gcd(a, b);   lcm(a, b);               // C++17
+(a + b - 1) / b;                      // ceil division
+pow(a, b);  sqrt(x);  ceil(x);  floor(x);   // double return করে
+__builtin_popcount(x);                // set bit count`},
+{h:'grid direction',f:'hot',c:`int dx[4] = {1, -1, 0, 0}, dy[4] = {0, 0, 1, -1};
+for(int d = 0; d < 4; d++){
+    int nx = x + dx[d], ny = y + dy[d];
+    if(nx < 0 || ny < 0 || nx >= n || ny >= m) continue;
+}
+vector<vector<bool>> vis(n, vector<bool>(m, false));`}]}
 ];
-let total=0;
 document.getElementById('toc').innerHTML=SEC.map(s=>`<a class="chip" href="#${s.id}">${esc(s.t)}</a>`).join('');
-document.getElementById('app').innerHTML=SEC.map(s=>{total+=s.cards.length;return `<section class="cat" id="${s.id}"><h2>${esc(s.t)}</h2><div class="cards">`+s.cards.map(c=>`<article class="card"><h3>${esc(c.h)}</h3>${c.s?`<p class="tip">${esc(c.s)}</p>`:''}<pre><code>${hl(c.c)}</code></pre></article>`).join('')+'</div></section>';}).join('');
-document.getElementById('stats').innerHTML=[[SEC.length,'topics'],[total,'cards']].map(([v,l])=>`<div class="stat"><b>${v}</b>${l}</div>`).join('');
+document.getElementById('app').innerHTML=SEC.map(s=>`<section class="cat" id="${s.id}"><h2>${esc(s.t)}</h2>`+s.cards.map(c=>`<article class="card"><h3>${esc(c.h)}<span class="tag ${c.f}">${c.f==='hot'?'বেশি লাগে':'কম লাগে'}</span></h3>${c.s?`<p>${esc(c.s)}</p>`:''}<pre><code>${hl(c.c)}</code></pre></article>`).join('')+'</section>').join('');
 </script>
 </body>
 </html>
