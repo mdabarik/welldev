@@ -476,49 +476,211 @@ int kth = h.top();
 // Merge K sorted lists -> min heap of {val, listIdx}
 // Task scheduler / Reorganize string -> max heap of {count, char}
 // Median of stream -> maxHeap (নিচের অর্ধেক) + minHeap (উপরের অর্ধেক)`}]}
-,{id:'map',t:'7. map, unordered_map, set',cards:[
-{h:'unordered_map / map',s:'unordered_map average O(1) (hash), map sorted key সহ O(log n)। Frequency count, two sum, group anagrams-এ সবচেয়ে বেশি লাগে।',c:`unordered_map<int,int> m;           // key -> value
-m[5]++;                             // না থাকলে 0 থেকে শুরু (frequency)
-m[3] = 10;
-m.count(5);                         // 0 বা 1  (আছে কিনা)
-m.find(5) != m.end();               // আছে কিনা
-m.erase(5);
-m.size(); m.empty(); m.clear();
-for(auto& [k, v] : m) { /* k, v */ }          // structured binding (C++17)
-for(auto& p : m) { p.first; p.second; }
-m.at(5);                            // না থাকলে exception, [] insert করে ফেলে
-m.insert({1, 2});  m.emplace(1, 2);
+,{id:'map',t:'7. map, unordered_map, set, unordered_set',cards:[
+{h:'কোনটা কখন: চার container-এর পার্থক্য',s:'map আর set নিজে নিজে sorted থাকে (tree), তাই প্রতিটা কাজ O(log n)। unordered_map আর unordered_set হলো hash table, order নেই কিন্তু average O(1)। map/unordered_map-এ key সহ value থাকে, set/unordered_set-এ শুধু key (unique value)। Sorted order, lower_bound, ছোট-বড় element লাগলে ordered, শুধু আছে কিনা বা frequency লাগলে unordered নাও।',c:`//               key-value?   sorted?   time        duplicate key
+// map            হ্যাঁ         হ্যাঁ       O(log n)    না
+// unordered_map  হ্যাঁ         না        O(1) avg    না
+// set            না (শুধু key) হ্যাঁ       O(log n)    না
+// unordered_set  না (শুধু key) না        O(1) avg    না
+// multimap/multiset: sorted, duplicate key চলে
 
-// map (sorted): begin() = সবচেয়ে ছোট key, rbegin() = সবচেয়ে বড়
-map<int,int> mp;
-mp.begin()->first;   mp.rbegin()->first;
-mp.lower_bound(x);   mp.upper_bound(x);
+map<string,int> m;            // key string, value int
+unordered_map<int,int> um;    // frequency count-এ সবচেয়ে বেশি
+set<int> st;                  // unique + sorted
+unordered_set<int> us;        // unique, শুধু দ্রুত আছে-কিনা check
 
-// two sum pattern
-unordered_map<int,int> seen;
-for(int i=0;i<n;i++){
-    if(seen.count(target - a[i])) return {seen[target - a[i]], i};
-    seen[a[i]] = i;
+// কোন কাজে কোনটা
+// frequency / two sum / lookup      -> unordered_map
+// sorted key লাগবে / floor, ceil    -> map / set
+// duplicate remove, exists check    -> unordered_set
+// sorted + unique বের করা           -> set
+// pair বা vector key                -> map / set (unordered-এ hash লাগে)`},
+{h:'map / unordered_map: insert করার সব উপায়',s:'চারটা উপায় আছে কিন্তু আচরণ আলাদা। সবচেয়ে বড় ফাঁদ: m[key] কিছু না থাকলে নিজে একটা entry বানিয়ে ফেলে (value 0 দিয়ে)। শুধু দেখার জন্য m[key] ব্যবহার করলে map ফুলে যায় আর পরে count ভুল দেখায়। insert() আগে থেকে key থাকলে কিছুই করে না (পুরনো value থাকে), আর [] সবসময় overwrite করে।',c:`unordered_map<string,int> m;     // map-এও হুবহু একই syntax
+
+// 1) [] দিয়ে: নেই হলে বানায়, আছে হলে overwrite
+m["a"] = 5;
+m["a"] = 9;                  // এখন a -> 9
+m["b"]++;                    // নেই হলে 0 ধরে ++ => 1  (frequency)
+
+// 2) insert: আছে হলে কিছু করে না
+m.insert({"c", 1});
+m.insert(make_pair("c", 100));   // c আগে থেকেই আছে, তাই value 1-ই থাকবে
+auto res = m.insert({"d", 4});
+res.second;                  // true হলে নতুন বসেছে, false হলে আগে ছিল
+res.first->second;           // ওই key-র value (iterator)
+
+// 3) emplace: সরাসরি বানায়, insert-এর মতোই আচরণ
+m.emplace("e", 5);
+
+// 4) insert_or_assign (C++17): নেই হলে বসায়, আছে হলে overwrite
+m.insert_or_assign("a", 77);
+
+// initial value সহ বানানো
+map<int,string> mp = {{1,"one"}, {2,"two"}, {3,"three"}};
+
+// vector থেকে frequency map
+for(int x : nums) um[x]++;`},
+{h:'map / unordered_map: find, count, access, erase',s:'find() iterator return করে: পেলে সেই element-এর iterator, না পেলে m.end()। iterator-এ ->first হলো key, ->second হলো value। count() শুধু 0 বা 1 দেয় (আছে কিনা)। at() না থাকলে exception ছোড়ে, কিন্তু [] নতুন entry বানায়। erase(key) key দিয়ে মুছে আর কয়টা মুছলো সেই সংখ্যা দেয়, erase(iterator) iterator দিয়ে মুছে।',c:`unordered_map<string,int> m = {{"a",1},{"b",2},{"c",3}};
+
+// FIND
+auto it = m.find("b");
+if(it != m.end()){
+    it->first;                // "b"  key
+    it->second;               // 2    value
+    it->second = 20;          // value বদলানো যায়
 }
-// group anagrams: unordered_map<string, vector<string>> (key = sorted string)`},
-{h:'set / unordered_set / multiset',s:'set: unique + sorted O(log n)। unordered_set: unique, O(1) average। multiset: duplicate allowed + sorted।',c:`set<int> st;
-st.insert(3);  st.erase(3);  st.count(3);  st.find(3) != st.end();
-*st.begin();            // সবচেয়ে ছোট
-*st.rbegin();           // সবচেয়ে বড়
-st.lower_bound(x);      // প্রথম element >= x
-st.upper_bound(x);      // প্রথম element > x
-st.size(); st.empty();
-for(int x : st) { /* sorted order */ }
+if(m.find("z") == m.end()) { /* নেই */ }
 
-unordered_set<int> us(nums.begin(), nums.end());   // duplicate check / O(1) lookup
-// contains duplicate: us.size() != nums.size()
-// longest consecutive sequence: us.count(x-1) না থাকলে x একটা sequence-এর শুরু
+// COUNT: আছে কিনা (সবচেয়ে ছোট উপায়)
+if(m.count("a")) { /* আছে */ }
+// m.contains("a")            // C++20
 
-multiset<int> ms;
-ms.insert(3); ms.insert(3);
-ms.erase(ms.find(3));   // একটা মাত্র মোছে (ms.erase(3) সব 3 মুছে ফেলে)
-ms.count(3);`}]},
+// ACCESS
+m["a"];                       // আছে 1; না থাকলে বানিয়ে 0 দেয় (সাবধান!)
+m.at("a");                    // না থাকলে out_of_range exception
+
+// ERASE
+m.erase("a");                 // key দিয়ে (1 বা 0 return)
+m.erase(m.find("b"));         // iterator দিয়ে (find end() হলে crash, আগে check করো)
+m.erase(m.begin(), m.end());  // range
+m.clear();                    // সব মুছে
+
+m.size(); m.empty();
+
+// ITERATE
+for(auto& [k, v] : m) cout << k << " " << v << "\n";    // C++17
+for(auto& p : m) cout << p.first << " " << p.second;    // পুরনো style
+for(auto it = m.begin(); it != m.end(); ++it) { }
+
+// map-এ iterate করলে key ছোট থেকে বড় sorted order-এ আসে
+// unordered_map-এ order যা-তা`},
+{h:'map: sorted সুবিধা (শুধু map/set-এ)',s:'map আর set sorted, তাই সবচেয়ে ছোট/বড় key আর lower_bound/upper_bound পাওয়া যায়। unordered_map/unordered_set-এ এগুলো নেই।',c:`map<int,string> mp = {{10,"a"},{20,"b"},{30,"c"}};
+
+mp.begin()->first;            // 10  সবচেয়ে ছোট key
+mp.rbegin()->first;           // 30  সবচেয়ে বড় key
+prev(mp.end())->first;        // 30  (আরেকভাবে)
+
+mp.lower_bound(20)->first;    // 20  প্রথম key >= 20
+mp.upper_bound(20)->first;    // 30  প্রথম key >  20
+// না পেলে end() দেয়, deref করার আগে check করো:
+auto it = mp.lower_bound(25);
+if(it != mp.end()) cout << it->first;       // 30
+
+// floor (<= x এর মধ্যে সবচেয়ে বড়)
+auto f = mp.upper_bound(25);
+if(f != mp.begin()) { --f; cout << f->first; }   // 20
+
+// সবচেয়ে ছোট key মুছে ফেলা
+mp.erase(mp.begin());
+// সবচেয়ে বড় key মুছে
+mp.erase(prev(mp.end()));
+
+// reverse order-এ iterate
+for(auto it = mp.rbegin(); it != mp.rend(); ++it) { }
+// descending map
+map<int,int,greater<int>> desc;`},
+{h:'set / unordered_set: insert, find, erase',s:'set-এ শুধু key থাকে, duplicate নেয় না। insert() একটা pair দেয়: second true মানে নতুন বসেছে, false মানে আগে থেকেই ছিল। এই true/false দিয়ে duplicate detect করা যায়। find() iterator দেয়, *it দিয়ে value পাও। set sorted, unordered_set না।',c:`set<int> st;                       // unordered_set<int>-এও একই (শুধু sorted নেই)
+set<int> init = {5, 1, 3, 3};      // {1, 3, 5}  duplicate বাদ, sorted
+set<int> fromVec(v.begin(), v.end());     // vector থেকে unique + sorted
+set<int, greater<int>> desc;       // বড় থেকে ছোট
+
+// INSERT
+st.insert(10);
+auto r = st.insert(10);
+r.second;                          // false  (10 আগেই ছিল)
+st.emplace(20);
+
+// duplicate detect
+for(int x : nums){
+    if(!st.insert(x).second) return true;     // আগে ছিল => duplicate
+}
+
+// FIND / COUNT
+auto it = st.find(10);
+if(it != st.end()) cout << *it;
+if(st.count(10)) { /* আছে */ }
+// st.contains(10)                 // C++20
+
+// ERASE
+st.erase(10);                      // value দিয়ে (1 বা 0 return)
+st.erase(st.find(10));             // iterator দিয়ে (আগে end() check)
+st.erase(st.begin());              // সবচেয়ে ছোট মুছে
+st.erase(prev(st.end()));          // সবচেয়ে বড় মুছে
+st.clear();
+
+// শুধু set-এ (sorted)
+*st.begin();                       // সবচেয়ে ছোট
+*st.rbegin();                      // সবচেয়ে বড়
+st.lower_bound(x);                 // প্রথম >= x
+st.upper_bound(x);                 // প্রথম >  x
+
+// ITERATE (set: sorted order)
+for(int x : st) cout << x << " ";
+for(auto it = st.begin(); it != st.end(); ++it) cout << *it;
+
+st.size(); st.empty();`},
+{h:'multiset, ও iterate করার সময় erase',s:'multiset-এ duplicate থাকতে পারে। erase(value) দিলে ওই value-র সবগুলো মুছে যায়, একটা মুছতে চাইলে erase(find(value))। Loop চালাতে চালাতে map/set থেকে মোছার সময় erase() নতুন iterator return করে, সেটা ধরতে হবে, নাহলে crash।',c:`multiset<int> ms;
+ms.insert(5); ms.insert(5); ms.insert(2);     // {2, 5, 5}
+ms.count(5);                       // 2
+ms.erase(5);                       // সব 5 মুছে => {2}
+ms.insert(5); ms.insert(5);
+ms.erase(ms.find(5));              // মাত্র একটা 5 মুছলো
+*ms.begin(); *ms.rbegin();         // min, max (sliding window median / max-এ কাজে লাগে)
+
+// loop-এর মধ্যে erase: ঠিক উপায়
+for(auto it = m.begin(); it != m.end(); ){
+    if(it->second == 0) it = m.erase(it);   // erase পরের iterator দেয়
+    else ++it;
+}
+// ভুল: m.erase(it); ++it;   // it বাতিল হয়ে গেছে, crash/UB
+
+// কাজের pattern
+// frequency map থেকে count 0 হলে মোছা: if(--m[x] == 0) m.erase(x);
+// max frequency: for(auto& [k,v] : m) best = max(best, v);
+// pair key: map<pair<int,int>,int> (unordered_map-এ pair key সরাসরি চলে না)
+map<pair<int,int>, int> grid;
+grid[{1,2}] = 5;`}]},
 {id:'pairtuple',t:'8. pair, tuple, auto, swap',cards:[
+{h:'pair: initialize করার সব উপায়',s:'pair দুইটা value একসাথে রাখে (প্রথম .first, দ্বিতীয় .second), দুইটার type আলাদা হতে পারে। নিচের সব উপায়ই একই কাজ করে, নিজের পছন্দ বেছে নাও। {} দিয়ে সবচেয়ে ছোট লেখা যায়।',c:`pair<int,int> p1;                      // default: (0, 0)
+pair<int,int> p2(1, 2);                // constructor
+pair<int,int> p3 = {1, 2};             // brace (সবচেয়ে বেশি ব্যবহৃত)
+pair<int,int> p4{1, 2};                // brace, = ছাড়া
+pair<int,int> p5 = make_pair(1, 2);    // make_pair (type নিজে বোঝে)
+auto p6 = make_pair(1, "abc");         // pair<int,const char*>
+pair p7(3, 4.5);                       // C++17: type নিজে বোঝে (pair<int,double>)
+pair<int,int> p8 = p3;                 // copy
+
+// আলাদা type
+pair<string,int> sp = {"ali", 20};
+pair<int, pair<int,int>> np = {1, {2, 3}};     // nested
+np.second.first;                       // 2
+
+// ACCESS
+p3.first;  p3.second;
+p3.first = 10;                         // বদলানো যায়
+auto [a, b] = p3;                      // structured binding (C++17)
+int x, y; tie(x, y) = p3;              // আগের style-এ unpack
+
+// তুলনা: আগে first, সমান হলে second দেখে
+(1,5) < (2,0);   // true
+(1,5) < (1,7);   // true
+p1 == p2;        // দুইটাই সমান কিনা
+
+// vector / array of pair
+vector<pair<int,int>> v1;
+vector<pair<int,int>> v2 = {{1,2}, {3,4}, {5,6}};
+vector<pair<int,int>> v3(5, {0, 0});          // 5 টা (0,0)
+pair<int,int> arr[3] = {{1,2}, {3,4}, {5,6}};
+v1.push_back({1, 2});                  // সবচেয়ে চেনা
+v1.push_back(make_pair(1, 2));
+v1.emplace_back(1, 2);                 // সবচেয়ে দ্রুত, {} লাগে না
+sort(v2.begin(), v2.end());            // first, তারপর second দিয়ে sort
+sort(v2.begin(), v2.end(), [](auto& a, auto& b){ return a.second > b.second; });
+
+// priority_queue / queue / map-এ
+priority_queue<pair<int,int>> pq;  pq.push({5, 1});   // Dijkstra
+queue<pair<int,int>> q;  q.push({0, 0});  auto [r, c] = q.front();   // grid BFS
+map<int,int> mp;  for(auto& p : mp) { p.first; p.second; }   // map-এর element আসলে pair`},
 {h:'pair / tuple / structured binding',s:'',c:`pair<int,int> p = {1, 2};   p.first; p.second;
 make_pair(1, 2);
 vector<pair<int,int>> v;  v.push_back({1,2});  v.emplace_back(1,2);
