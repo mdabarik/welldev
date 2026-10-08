@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>System Design Basics - Interview Cheat Sheet</title>
-<meta name="description" content="Trainee Software Engineer interview-এর জন্য System Design-এর ১৩টি প্রশ্ন - প্রতিটির সংক্ষিপ্ত উত্তর আর ক্লিক করে ধাপে ধাপে দেখার D3 animation।">
+<meta name="description" content="Trainee Software Engineer interview-এর জন্য System Design-এর ১৪টি প্রশ্ন - প্রতিটির সংক্ষিপ্ত উত্তর আর ক্লিক করে ধাপে ধাপে দেখার D3 animation।">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -111,6 +111,9 @@ svg text{font-family:var(--sans);font-size:13px;fill:var(--fg);dominant-baseline
 .arrow.dash line{stroke-dasharray:6 4}
 .arrow.hl line{stroke-width:3.4}
 footer{margin-top:50px;text-align:center;color:var(--faint);font:500 13px var(--sans)}
+/* bn-type: Bengali glyphs/digits need normal tracking */
+h1,h2,h3,h4,h5{letter-spacing:0!important}
+.hero h1,.page-head h1,.p-hero h1,.prose h1,header.top h1{line-height:1.32!important}
 </style>
 </head>
 <body>
@@ -124,7 +127,7 @@ footer{margin-top:50px;text-align:center;color:var(--faint);font:500 13px var(--
 
   <header class="hero">
     <div class="eyebrow">System Design · Interview</div>
-    <h1>System Design Basics - ১৩টি প্রশ্ন, সোজা উত্তর</h1>
+    <h1>System Design Basics - ১৪টি প্রশ্ন, সোজা উত্তর</h1>
     <p>প্রতিটি প্রশ্নে এক লাইনের উত্তর আর একটা animation। scene-এ ক্লিক করো বা <b>Next</b> চাপো - ধাপে ধাপে দেখো।</p>
     <div class="jump" id="jump"></div>
   </header>
@@ -264,7 +267,7 @@ function mount(host,topic){
 }
 
 /* ---------- content ---------- */
-const PARTS=[['A','মৌলিক ধারণা'],['B','Performance: Latency · Bandwidth · Throughput'],['C','Scaling'],['D','Reliability · Availability · SPOF · Maintainability'],['E','Distributed system: Partition · CAP']];
+const PARTS=[['A','মৌলিক ধারণা'],['B','Performance: Latency · Bandwidth · Throughput'],['C','Scaling'],['D','Reliability · Availability · SPOF · Maintainability'],['E','Distributed system: Partition · CAP'],['F','Content Delivery: CDN']];
 
 /* shared setup for the CP / AP tabs of the CAP question */
 function capSteps(kind){
@@ -523,8 +526,46 @@ const TOPICS=[
    S('<b>AP:</b> Availability আগে। পুরনো data হলেও উত্তর দেয়, পরে মিলিয়ে নেয়।',{add:[B('ap',400,24,330,160,'AP: Availability আগে\n\nSocial feed · like count\nCassandra · DynamoDB · CouchDB\n\nপুরনো data হলেও উত্তর দাও','g')]}),
    S('বাস্তবে এটা সাদা-কালো নয়: অনেক database-এ consistency level বেছে নেওয়া যায়।',{add:[B('tn',30,198,700,34,'কোন data-র জন্য কোনটা: টাকার হিসাব = CP, like সংখ্যা = AP','o',{s:'sm',hl:1})]})
   ]}
- ]}
+ ]},
 
+{p:5,q:'CDN কী ও কীভাবে কাজ করে?',
+ ans:'<b>CDN</b> (Content Delivery Network) হলো পৃথিবীর নানা শহরে বসানো অনেক <b>edge server</b>-এর জাল, যেখানে website-এর ছবি, video, CSS/JS-এর <b>কপি</b> আগে থেকে রাখা থাকে। User-এর request দূরের মূল server-এ না গিয়ে <b>সবচেয়ে কাছের edge server</b> থেকেই উত্তর পায়। যেমন একটা বড় গুদামের বদলে প্রতি এলাকায় একটা করে দোকান।',
+ pts:['<b>কেন:</b> দূরত্ব কমলে latency কমে, আর মূল (origin) server-এ চাপও কমে।','<b>Cache hit</b> = edge-এ কপি আছে, সাথে সাথে উত্তর। <b>Cache miss</b> = নেই, তাই edge origin থেকে এনে কপি রেখে দেয়, পরের জন সহজেই পায়।','<b>কী রাখে:</b> ছবি, video, CSS, JS, font (সবার জন্য একই জিনিস)। উদাহরণ: Cloudflare, Akamai, AWS CloudFront।'],
+ tabs:[
+  {n:'1. CDN ছাড়া বনাম CDN সহ',steps:[
+   S('<b>CDN ছাড়া:</b> ঢাকার user-এর প্রতিটা request (ছবি, video, CSS) সাগর পেরিয়ে আমেরিকার মূল server-এ যায়। দূরত্ব বেশি, তাই ধীর: প্রায় <b>250 ms</b>।',{add:[T('h',380,22,'CDN ছাড়া',{a:'middle',c:'r',s:'lg'}),B('u',30,90,110,60,'User\nঢাকা','a'),B('o',590,90,140,60,'Origin server\nআমেরিকা','g'),A('far',144,120,586,120,'r'),T('fl',365,102,'≈ 250 ms',{a:'middle',c:'r',s:'sm b'})],fly:[F(144,120,586,120,'r',{n:2,gap:800,dur:2400,per:3600})]}),
+   S('হাজার হাজার user একসাথে এলে সবার request একই মূল server-এ গিয়ে জমে। Server-এ <b>চাপ</b> বেড়ে যায়।',{mod:{o:{c:'r',label:'Origin server\n💥 চাপ বেশি',hl:1}},fly:[F(144,120,586,120,'r',{n:6,gap:260,dur:2000,per:3200,r:5})]}),
+   S('<b>CDN সহ:</b> ঢাকাতেই একটা <b>edge server</b> (এলাকার দোকান) বসানো হলো। User এখন কাছের edge-এর সাথে কথা বলে: প্রায় <b>20 ms</b>।',{del:['far','fl'],mod:{h:{label:'CDN সহ',c:'g'},o:{c:'g',label:'Origin server\nআমেরিকা',hl:0}},add:[B('e',280,90,150,60,'CDN edge\nঢাকা','g'),A('n1',144,120,278,120,'g'),A('n2',432,120,586,120,'n',{dash:1}),T('nl',211,102,'≈ 20 ms',{a:'middle',c:'g',s:'sm b'})],fly:[F(144,120,278,120,'g',{n:3,gap:350,dur:700,per:1700})]}),
+   S('বেশিরভাগ request edge থেকেই মিটে যায়। মূল server-এ যায় শুধু সেটাই, যা edge-এর কাছে নেই। ফল: <b>দ্রুত</b> আর মূল server-এ <b>চাপ কম</b>।',{mod:{e:{hl:1}},add:[T('ok',380,200,'দ্রুত  +  মূল server-এ চাপ কম',{a:'middle',c:'g',s:'b'})],fly:[F(144,120,278,120,'g',{n:3,gap:350,dur:700,per:1700})]})
+  ]},
+  {n:'2. বিশ্বজুড়ে edge',steps:[
+   S('মূল server আমেরিকায়। CDN পৃথিবীর নানা শহরে নিজের <b>edge server</b> বসায়: ঢাকা, লন্ডন, টোকিও। প্রতিটা একটা এলাকার দোকানের মতো।',{add:[B('o',310,12,140,46,'Origin server\nআমেরিকা','g'),B('e1',45,100,130,46,'Edge\nঢাকা','b'),B('e2',315,100,130,46,'Edge\nলন্ডন','b'),B('e3',585,100,130,46,'Edge\nটোকিও','b'),A('c1',350,60,150,98,'n',{dash:1}),A('c2',380,60,380,98,'n',{dash:1}),A('c3',410,60,610,98,'n',{dash:1})]}),
+   S('প্রতিটা user নিজের <b>সবচেয়ে কাছের edge</b> থেকে content নেয়: ঢাকার user ঢাকা থেকে, লন্ডনের user লন্ডন থেকে।',{add:[B('u1',60,190,100,40,'User ঢাকা','a',{s:'sm'}),B('u2',330,190,100,40,'User লন্ডন','a',{s:'sm'}),B('u3',600,190,100,40,'User টোকিও','a',{s:'sm'}),A('d1',110,188,110,148,'g'),A('d2',380,188,380,148,'g'),A('d3',650,188,650,148,'g')],fly:[F(110,188,110,148,'g',{n:2,gap:500,dur:600,per:1500}),F(380,188,380,148,'g',{n:2,gap:500,dur:600,per:1500,d0:300}),F(650,188,650,148,'g',{n:2,gap:500,dur:600,per:1500,d0:600})]}),
+   S('Edge-এর কাছে content <b>না থাকলে</b> তবেই সে পেছনের মূল server-কে জিজ্ঞেস করে (ছোট ধূসর দাগ)। বেশিরভাগ সময় এটা লাগেই না।',{mod:{c1:{c:'o',dash:0},c2:{c:'o',dash:0},c3:{c:'o',dash:0}},fly:[F(110,188,110,148,'g',{n:2,gap:500,dur:600,per:1500}),F(380,188,380,148,'g',{n:2,gap:500,dur:600,per:1500,d0:300}),F(650,188,650,148,'g',{n:2,gap:500,dur:600,per:1500,d0:600}),F(150,98,350,60,'o',{n:1,dur:1400,per:4200,d0:900}),F(610,98,410,60,'o',{n:1,dur:1400,per:4200,d0:2300})]}),
+   S('<b>ফল:</b> সবাই কাছের server থেকে পায়। দেরি কম (প্রায় 20 ms), আর মূল server একা সব user সামলাতে হয় না।',{add:[T('l1',122,168,'≈ 20 ms',{c:'g',s:'sm b'}),T('l2',392,168,'≈ 20 ms',{c:'g',s:'sm b'}),T('l3',662,168,'≈ 20 ms',{c:'g',s:'sm b'})]})
+  ]},
+  {n:'3. Cache miss → hit',steps:[
+   S('তিনজন: User, <b>CDN edge</b> (এখনো cache খালি), আর মূল <b>origin server</b>।',{add:[B('u',20,90,100,60,'User','a'),B('e',300,60,170,110,'CDN edge\nCache:\n(খালি)','g'),B('o',620,90,120,60,'Origin\nserver','n'),A('ue',122,120,298,120,'n'),A('eo',472,120,618,120,'n')]}),
+   S('User <code>logo.png</code> চাইল। Request আগে <b>edge-এ</b> যায়।',{add:[T('r1',210,102,'logo.png?',{a:'middle',c:'a',s:'sm b'})],mod:{u:{hl:1},ue:{c:'a'}},fly:[F(122,120,298,120,'a',{n:1,dur:900,per:5200})]}),
+   S('<b>Cache miss:</b> edge-এ ফাইলটা নেই। তাই সে মূল server-কে জিজ্ঞেস করে।',{mod:{u:{hl:0},e:{c:'o',label:'CDN edge\nCache: খালি\n✗ miss',hl:1},eo:{c:'o'}},fly:[F(472,120,618,120,'o',{n:1,dur:900,per:5200})]}),
+   S('Origin ফাইল পাঠায়। Edge এক <b>কপি নিজের কাছে রেখে</b> User-কে দেয়।',{del:['r1'],mod:{e:{c:'g',label:'CDN edge\nCache:\nlogo.png ✓',hl:1},eo:{c:'g'},ue:{c:'g'}},fly:[F(618,120,472,120,'g',{n:1,dur:900,per:5200,d0:300}),F(298,120,122,120,'g',{n:1,dur:900,per:5200,d0:1500})]}),
+   S('<b>পরের user</b> একই ফাইল চাইল। <b>Cache hit:</b> edge-এ কপি আছে, সাথে সাথে উত্তর। মূল server-এ যেতেই হয়নি।',{mod:{u:{label:'পরের user'},e:{label:'CDN edge\nCache:\nlogo.png ✓ hit',hl:1},eo:{c:'n',dash:1}},fly:[F(122,120,298,120,'a',{n:1,dur:500,per:2600}),F(298,132,122,132,'g',{n:1,dur:500,per:2600,d0:700})]}),
+   S('কপি চিরকাল থাকে না। <b>TTL</b> (যেমন ১ ঘণ্টা) শেষ হলে edge আবার origin থেকে নতুন কপি আনে, যাতে পুরনো ফাইল না থেকে যায়।',{mod:{e:{c:'o',label:'CDN edge\nCache:\n⏱ TTL শেষ',hl:0},eo:{c:'o',dash:0}},add:[T('ttl',380,208,'TTL শেষ → আবার origin থেকে নতুন কপি',{a:'middle',c:'o',s:'b'})],fly:[F(472,120,618,120,'o',{n:1,dur:900,per:2800})]})
+  ]},
+  {n:'4. কোন edge-এ যাবে?',steps:[
+   S('User <code>cdn.example.com</code> খুলতে চায়। কিন্তু পৃথিবীর এত edge-এর মধ্যে কোনটায় যাবে? এটা ঠিক করে দেয় <b>CDN-এর DNS</b>।',{add:[B('u',20,100,110,60,'User\n(ঢাকা)','a'),B('dns',300,20,170,50,'CDN-এর DNS','b'),B('e1',600,60,130,50,'Edge\nঢাকা','g'),B('e2',600,150,130,50,'Edge\nলন্ডন','n')]}),
+   S('User DNS-কে জিজ্ঞেস করে: <b>"cdn.example.com-এর IP কী?"</b>',{add:[A('q',132,105,298,52,'a'),T('qt',170,64,'IP কী?',{c:'a',s:'sm b'})],mod:{u:{hl:1}},fly:[F(132,105,298,52,'a',{n:1,dur:1000,per:4000})]}),
+   S('DNS দেখে user কোথা থেকে এসেছে (তার IP থেকে বোঝা যায়): ঢাকা। তাই <b>সবচেয়ে কাছের edge</b> বাছে।',{mod:{dns:{hl:1},u:{hl:0},e1:{hl:1}}}),
+   S('DNS user-কে <b>ঢাকার edge-এর IP</b> দেয়। User সোজা ঢাকার edge-এ যায়, লন্ডনে নয়।',{add:[A('an',298,64,132,118,'b'),A('g1',132,130,598,85,'g'),A('g2',132,145,598,175,'n',{dash:1}),T('no',380,170,'যায় না',{a:'middle',c:'n',s:'sm'})],mod:{dns:{hl:0}},fly:[F(298,64,132,118,'b',{n:1,dur:900,per:4500}),F(132,130,598,85,'g',{n:2,gap:700,dur:1400,per:4500,d0:1400})]}),
+   S('অনেক CDN এই কাজ <b>Anycast</b> দিয়েও করে: একই IP বহু শহরে ঘোষণা করা থাকে, আর network নিজেই user-কে সবচেয়ে কাছেরটায় পৌঁছে দেয়।',{fly:[F(132,130,598,85,'g',{n:2,gap:700,dur:1400,per:3000})]})
+  ]},
+  {n:'5. কী রাখে, কী রাখে না',steps:[
+   S('<b>Static content:</b> যে জিনিস সব user-এর জন্য একই: ছবি, video, CSS, JS, font, PDF। এগুলো CDN-এ রাখা যায়।',{add:[B('s',30,24,330,130,'CDN-এ রাখা যায়\n\nছবি · video · CSS · JS\nfont · PDF\n\nসবার জন্য একই','g')]}),
+   S('<b>Dynamic / ব্যক্তিগত content:</b> প্রতি user-এর জন্য আলাদা: তোমার account, cart, ব্যক্তিগত API উত্তর। এগুলো সাধারণত origin থেকেই আসে।',{add:[B('d',400,24,330,130,'সাধারণত origin থেকে\n\naccount পাতা · cart\nব্যক্তিগত API\n\nপ্রতি user আলাদা','o')]}),
+   S('নতুন logo দিলে edge-এ পুরনোটা থেকে যেতে পারে। তখন CDN-কে বলা হয় <b>purge</b> (পুরনো কপি মুছে ফেলো)। তারপর edge নতুনটা আনে।',{add:[B('pg',30,172,700,44,'নতুন ফাইল দিলে → purge / invalidate → edge পুরনো কপি মুছে নতুন আনে','b',{s:'sm'})]}),
+   S('<b>বাড়তি সুবিধা:</b> হঠাৎ ভিড় (traffic spike) edge-গুলো ভাগ করে সামলায়, আক্রমণের (DDoS) ঝাপটা মূল server-এ পৌঁছানোর আগেই আটকায়।',{del:['s','d','pg'],add:[B('x1',30,50,220,100,'দ্রুত\nকম latency','g'),B('x2',270,50,220,100,'মূল server-এ\nচাপ কম','a'),B('x3',510,50,220,100,'ভিড় ও আক্রমণ\nসামলানো','o')]})
+  ]}
+ ]}
 ];
 
 /* ---------- build page ---------- */

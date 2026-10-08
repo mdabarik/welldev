@@ -7,7 +7,7 @@
 <meta name="description" content="Software engineering interview prep — OOP, design, SQL, security, OS — বাংলায়, ছবি আর কোড সহ।">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
 <style>
 :root{
   --bg:#f5f7fc; --surface:#ffffff; --surface-2:#f1f4fa; --text:#0f172a; --muted:#5b6478; --faint:#94a0b8; --line:#e4e8f1;
@@ -111,6 +111,9 @@ footer a:hover{color:var(--text)}
   .grid{grid-template-columns:1fr}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+/* bn-type: Bengali glyphs/digits need normal tracking */
+h1,h2,h3,h4,h5{letter-spacing:0!important}
+.hero h1,.page-head h1,.p-hero h1,.prose h1,header.top h1{line-height:1.32!important}
 </style>
 </head>
 <body>
