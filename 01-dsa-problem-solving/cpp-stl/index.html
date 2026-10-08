@@ -142,7 +142,8 @@ fill(v.begin(), v.end(), -1);
 iota(v.begin(), v.end(), 0);
 partial_sum(v.begin(), v.end(), pre.begin());
 next_permutation(v.begin(), v.end());
-rotate(v.begin(), v.begin() + k, v.end());`}]},
+rotate(v.begin(), v.begin() + k, v.end());
+`}]},
 
 {id:'string',t:'2. string',cards:[
 {h:'find() আর npos: string আছে কিনা check',f:'hot',s:'find() index দেয়। না পেলে string::npos দেয় (-1 নয়)। তাই "আছে কিনা" মানে != string::npos।',c:`string s = "hello world";
@@ -163,6 +164,7 @@ for(size_t p = s.find('o'); p != string::npos; p = s.find('o', p + 1))
     cout << p << " ";
 
 s.find_first_of("aeiou");
+`},
 {h:'substr(pos, len)',f:'hot',s:'pos থেকে len টা char নেয় (শেষ index নয়, দৈর্ঘ্য)। len বেশি হলে শেষ পর্যন্ত। pos > size হলে exception।',c:`string s = "abcdefgh";
 s.substr(2);
 s.substr(2, 3);
@@ -232,6 +234,7 @@ while(ss >> tok) { }`}]},
 {id:'map',t:'3. map, unordered_map',cards:[
 {h:'কোনটা কখন',f:'hot',s:'map = sorted (tree), O(log n)। unordered_map = hash, average O(1), order নেই। frequency আর lookup-এ unordered_map, sorted order বা lower_bound লাগলে map।',c:`unordered_map<int,int> um;
 map<int,int> mp;
+`},
 {h:'insert, access, find, count, erase',f:'hot',s:'find() iterator দেয়, না পেলে end()। it->first = key, it->second = value। m[key] নতুন entry বানিয়ে ফেলে, শুধু দেখার জন্য count() বা find() ব্যবহার করো।',c:`unordered_map<string,int> m;
 
 m["a"] = 5;
@@ -291,6 +294,7 @@ st.size();  st.empty();  st.clear();
 for(int x : st) { }
 
 for(int x : nums) if(!st.insert(x).second) return true;
+`},
 {h:'শুধু set-এ (sorted) ও multiset',f:'rare',s:'multiset-এ erase(value) সব copy মোছে, একটা মুছতে erase(find(value))।',c:`*st.begin();
 *st.rbegin();
 st.lower_bound(x);
@@ -399,9 +403,11 @@ struct Node3{
         return c > o.c;
     }
 };`},
-{h:'Top-K pattern',f:'rare',c:`priority_queue<int, vector<int>, greater<int>> h;
+{h:'Top-K pattern',f:'rare',c:`
+priority_queue<int, vector<int>, greater<int>> h;
 for(int x : nums){ h.push(x); if(h.size() > k) h.pop(); }
 int kth = h.top();
+`}]},
 
 {id:'pair',t:'7. pair, tuple',cards:[
 {h:'pair বানানোর সব উপায়',f:'hot',s:'.first আর .second। দুইটার type আলাদা হতে পারে। তুলনায় আগে first, সমান হলে second।',c:`pair<int,int> p1;
