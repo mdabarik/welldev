@@ -1,0 +1,511 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>React Hooks: State ও useEffect</title>
+<meta name="description" content="React-এ render কীভাবে হয়, useState, Hooks-এর নিয়ম, useEffect (deps, cleanup) কীভাবে কাজ করে; ধাপে ধাপে D3 animation-এ।">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<style>
+/* One card per interview question: short answer, 2-3 bullets, and a step-by-step D3 scene.
+   Scenes are plain data (see TOPICS at the bottom): each step adds / modifies / deletes nodes by id
+   and the tiny engine animates the difference. */
+:root{
+  --bg:#f5f7fc; --surface:#ffffff; --surface-2:#f1f4fa; --fg:#0f172a; --muted:#5b6478; --faint:#94a0b8; --line:#e4e8f1;
+  --accent:#6366f1;
+  --a:#4f46e5; --b:#db2777; --g:#059669; --o:#d97706; --r:#e11d48; --s:#0284c7;
+  --hero:linear-gradient(135deg,#4f46e5 0%,#7c3aed 45%,#db2777 100%);
+  --shadow:0 1px 2px rgba(15,23,42,.04),0 10px 30px -12px rgba(15,23,42,.14);
+  --sans:"Inter","Hind Siliguri",system-ui,sans-serif; --bn:"Hind Siliguri","Inter",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0b0f1a; --surface:#121827; --surface-2:#182033; --fg:#e7ecf6; --muted:#9aa6bf; --faint:#66728c; --line:#232c42;
+  --accent:#818cf8; --a:#818cf8; --b:#f472b6; --g:#34d399; --o:#fbbf24; --r:#fb7185; --s:#38bdf8;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6);
+}}
+:root[data-theme="dark"]{
+  --bg:#0b0f1a; --surface:#121827; --surface-2:#182033; --fg:#e7ecf6; --muted:#9aa6bf; --faint:#66728c; --line:#232c42;
+  --accent:#818cf8; --a:#818cf8; --b:#f472b6; --g:#34d399; --o:#fbbf24; --r:#fb7185; --s:#38bdf8;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 var(--bn);-webkit-font-smoothing:antialiased}
+a{color:var(--accent)}
+button{font:inherit;color:inherit}
+code{font-family:var(--mono);font-size:.86em;font-weight:500;background:color-mix(in srgb,var(--accent) 10%,var(--surface));color:color-mix(in srgb,var(--accent) 72%,var(--fg));padding:.1em .4em;border-radius:6px}
+.wrap{max-width:1000px;margin:0 auto;padding:20px 18px 70px}
+
+.topnav{display:flex;align-items:center;gap:10px}
+.brand{display:flex;align-items:center;gap:10px;color:var(--fg);text-decoration:none;font:800 16px var(--sans);letter-spacing:-.02em}
+.logo{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:#fff;font:800 13px var(--mono);background:var(--hero)}
+.topnav .sp{flex:1}
+.pill{border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:6px 14px;font:600 13px var(--sans);cursor:pointer;text-decoration:none}
+.pill:hover{color:var(--fg)}
+
+.hero{margin-top:20px;border-radius:22px;padding:26px 30px;color:#fff;background:var(--hero)}
+.hero .eyebrow{font:600 12px var(--sans);letter-spacing:.1em;text-transform:uppercase;opacity:.85}
+.hero h1{margin:6px 0 8px;font:800 clamp(26px,4.2vw,38px)/1.15 var(--sans);letter-spacing:-.03em}
+.hero p{margin:0;max-width:680px;opacity:.94}
+.jump{display:flex;flex-wrap:wrap;gap:6px;margin-top:16px}
+.jump a{min-width:32px;padding:0 6px;height:32px;display:grid;place-items:center;border-radius:9px;text-decoration:none;font:700 13px var(--sans);color:#fff;background:rgba(255,255,255,.18)}
+.jump a:hover{background:rgba(255,255,255,.34)}
+
+.parts{position:sticky;top:0;z-index:5;margin:14px -18px 0;padding:10px 18px;display:flex;gap:8px;overflow-x:auto;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);scrollbar-width:none}
+.parts a{flex:none;text-decoration:none;font:600 13px var(--sans);color:var(--muted);border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 13px}
+.parts a:hover{color:var(--fg)}
+.parts a b{color:var(--accent);margin-right:4px}
+
+.part{margin-top:44px;scroll-margin-top:60px}
+.part>h2{margin:0;font:800 clamp(20px,2.6vw,25px)/1.25 var(--sans);letter-spacing:-.02em}
+.part>h2 span{color:var(--accent);margin-right:8px}
+
+.q{margin-top:16px;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:20px 22px;box-shadow:var(--shadow);scroll-margin-top:64px}
+.q h3{display:flex;gap:12px;align-items:flex-start;margin:0 0 10px;font:700 18px/1.4 var(--sans);letter-spacing:-.01em}
+.skip{display:inline-block;margin-left:8px;padding:1px 10px;border-radius:999px;font:600 12px var(--sans);font-style:normal;white-space:nowrap;color:var(--muted);background:var(--surface-2);border:1px dashed var(--faint);vertical-align:middle}
+.num{flex:none;min-width:34px;height:34px;padding:0 8px;border-radius:10px;display:grid;place-items:center;color:#fff;font:800 14px var(--sans);background:var(--hero)}
+.ans{margin:0 0 10px;padding:10px 14px;border-left:4px solid var(--accent);border-radius:0 10px 10px 0;background:color-mix(in srgb,var(--accent) 8%,var(--surface))}
+.q ul{margin:0 0 12px;padding-left:20px;color:var(--muted)}
+.q li{margin:2px 0}
+.q li b,.ans b{color:var(--fg)}
+.extra{margin:0 0 12px;overflow-x:auto}
+.extra table{border-collapse:collapse;font:500 13px var(--mono)}
+.extra th,.extra td{border:1px solid var(--line);padding:3px 10px;text-align:center}
+.extra th{background:var(--surface-2)}
+.extra .cmp td,.extra .cmp th{text-align:left;vertical-align:top;font:500 13.5px/1.55 var(--bn);min-width:150px}
+.extra .cmp td:first-child{font-weight:700;white-space:nowrap;min-width:0}
+
+.viz{border:1px solid var(--line);border-radius:14px;background:var(--surface-2);overflow:hidden}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;padding:10px 12px 0}
+.tabs button{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:3px 12px;font:600 12.5px var(--sans);color:var(--muted);cursor:pointer}
+.tabs button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.stage{overflow-x:auto;padding-top:8px}
+.stage svg{display:block;width:100%;min-width:680px;height:auto;cursor:pointer;user-select:none}
+.cap{padding:10px 16px;min-height:3.4em;border-top:1px dashed var(--line);font-size:15px}
+.ctl{display:flex;align-items:center;gap:8px;padding:0 12px 12px}
+.b{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:5px 14px;font:600 13px var(--sans);cursor:pointer}
+.b:hover:not(:disabled){border-color:var(--accent)}
+.b:disabled{opacity:.4;cursor:default}
+.b.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+.cnt{margin-left:auto;font:500 12px var(--mono);color:var(--faint)}
+
+/* svg scene */
+svg text,svg tspan{white-space:pre}
+svg text{font-family:var(--sans);font-size:13px;fill:var(--fg);dominant-baseline:central}
+.c-n{--cc:var(--muted)} .c-a{--cc:var(--a)} .c-b{--cc:var(--b)} .c-g{--cc:var(--g)}
+.c-o{--cc:var(--o)} .c-r{--cc:var(--r)} .c-s{--cc:var(--s)} .c-f{--cc:var(--fg)}
+.box rect,.circ circle{fill:color-mix(in srgb,var(--cc) 14%,var(--surface));stroke:var(--cc);stroke-width:1.6;transition:fill .45s,stroke .45s}
+.dash rect,.dash circle{stroke-dasharray:6 4;fill:color-mix(in srgb,var(--cc) 4%,transparent)}
+.hl rect,.hl circle{stroke-width:3.4;filter:drop-shadow(0 0 7px color-mix(in srgb,var(--cc) 65%,transparent))}
+.text text{fill:var(--cc);transition:fill .45s}
+.text.b text,.text.lg text{font-weight:700}
+.text.lg text{font-size:15px}
+.sm text{font-size:11.5px}
+.box.hd rect{fill:color-mix(in srgb,var(--cc) 28%,var(--surface))}
+.hd text{font-weight:700}
+.box.on rect{fill:color-mix(in srgb,var(--cc) 30%,var(--surface));stroke-width:2.2}
+.m text{font-family:var(--mono);font-size:12px}
+.path path{fill:none;stroke:var(--cc);stroke-width:3.4;stroke-linecap:round}
+.arrow line{stroke:var(--cc);stroke-width:2.2;transition:stroke .4s}
+.arrow.dash line{stroke-dasharray:6 4}
+.arrow.hl line{stroke-width:3.4}
+footer{margin-top:50px;text-align:center;color:var(--faint);font:500 13px var(--sans)}
+
+.q .ans code,.q li code{white-space:nowrap}
+.hero{background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 45%,#db2777 100%)}
+.path.thin path{stroke-width:2.2}
+.part{margin-top:44px;scroll-margin-top:60px}
+.extra .cmp td code,.extra .cmp td{font-size:13px}
+.extra .lbl{margin:14px 0 0;font:700 13px var(--bn);color:var(--muted)}
+.extra pre{margin:10px 0 0;padding:10px 14px;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;font:500 12.5px/1.6 var(--mono);overflow-x:auto;white-space:pre-wrap}
+/* bn-type: Bengali glyphs/digits need normal tracking */
+h1,h2,h3,h4,h5{letter-spacing:0!important}
+.hero h1,.page-head h1,.p-hero h1,.prose h1,header.top h1{line-height:1.32!important}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs id="defs"></defs></svg>
+<div class="wrap">
+  <nav class="topnav">
+    <a class="brand" href="../../index.html"><span class="logo">W</span>WellDev</a>
+    <span class="sp"></span>
+    <button class="pill" id="theme" type="button">Theme</button>
+  </nav>
+  <header class="hero">
+    <div class="eyebrow">Resume Projects · React</div>
+    <h1>React Hooks: State ও useEffect কীভাবে কাজ করে</h1>
+    <p>Render থেকে useState, Hooks-এর নিয়ম আর useEffect, প্রতিটা ধাপে ধাপে ছবিতে। scene-এ ক্লিক করো বা <b>Next</b> চাপো।</p>
+  </header>
+  <nav class="parts" id="parts"></nav>
+  <main id="app"></main>
+  <footer>Resume Projects · React</footer>
+</div>
+<script>
+/* ---------- theme ---------- */
+(function(){
+  const root=document.documentElement,btn=document.getElementById('theme');
+  try{const t=localStorage.getItem('theme');if(t)root.dataset.theme=t;}catch(e){}
+  const dark=()=>root.dataset.theme?root.dataset.theme==='dark':matchMedia('(prefers-color-scheme:dark)').matches;
+  const label=()=>btn.textContent=dark()?'Light':'Dark';
+  btn.onclick=()=>{root.dataset.theme=dark()?'light':'dark';try{localStorage.setItem('theme',root.dataset.theme);}catch(e){}label();};
+  label();
+})();
+
+/* ---------- scene engine ---------- */
+const COLORS=['n','a','b','g','o','r','s','f'];
+document.getElementById('defs').innerHTML=COLORS.map(c=>
+  `<marker id="ah-${c}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" style="fill:var(--${c==='n'?'muted':c==='f'?'fg':c})"/></marker>`).join('');
+
+const B=(id,x,y,w,h,label,c='n',o={})=>({id,k:'box',x,y,w,h,label,c,...o});
+const T=(id,x,y,label,o={})=>({id,k:'text',x,y,label,c:'n',...o});
+const A=(id,x1,y1,x2,y2,c='n',o={})=>({id,k:'arrow',x:0,y:0,x1,y1,x2,y2,c,...o});
+const C=(id,x,y,r,label,c='n',o={})=>({id,k:'circ',x,y,r,label,c,...o});
+const S=(cap,o={})=>({cap,...o});
+const F=(x1,y1,x2,y2,c='a',o={})=>({x1,y1,x2,y2,c,...o});
+const P=(id,d,c='n',o={})=>({id,k:'path',x:0,y:0,d,c,...o});
+
+function stateAt(steps,i){
+  const m=new Map();
+  for(let k=0;k<=i;k++){
+    const s=steps[k];
+    (s.del||[]).forEach(id=>m.delete(id));
+    (s.add||[]).forEach(n=>m.set(n.id,{...n}));
+    Object.entries(s.mod||{}).forEach(([id,p])=>{if(m.has(id))Object.assign(m.get(id),p);});
+  }
+  return [...m.values()];
+}
+
+function setText(g,cls,str,x,y,anchor,lh=15.5){
+  let tx=g.select('text.'+cls);
+  if(tx.empty())tx=g.append('text').attr('class',cls);
+  const ls=String(str??'').split('\n');
+  tx.attr('text-anchor',anchor);
+  tx.selectAll('tspan').data(ls).join('tspan').attr('x',x).attr('y',(d,i)=>y-(ls.length-1)*lh/2+i*lh).text(d=>d);
+}
+
+function upd(g,d,t){
+  g.attr('class',`n ${d.k} c-${d.c||'n'}${d.dash?' dash':''}${d.hl?' hl':''}${d.s?' '+d.s:''}${d.m?' m':''}`);
+  if(d.k==='box'){
+    let r=g.select('rect');
+    if(r.empty())r=g.insert('rect',':first-child').attr('rx',d.rx??9).attr('width',d.w).attr('height',d.h);
+    r.transition(t).attr('width',d.w).attr('height',d.h);
+    setText(g,'lb',d.label,d.w/2,d.h/2,'middle');
+  }else if(d.k==='circ'){
+    let r=g.select('circle');
+    if(r.empty())r=g.insert('circle',':first-child').attr('r',d.r);
+    r.transition(t).attr('r',d.r);
+    setText(g,'lb',d.label,0,0,'middle');
+  }else if(d.k==='text'){
+    setText(g,'lb',d.label,0,0,d.a||'start');
+  }else if(d.k==='path'){
+    let p=g.select('path');
+    if(p.empty()){p=g.append('path').attr('d',d.d);const L=p.node().getTotalLength();p.attr('stroke-dasharray',L).attr('stroke-dashoffset',L).transition(t).attr('stroke-dashoffset',0);}
+  }else if(d.k==='arrow'){
+    let l=g.select('line');
+    if(l.empty())l=g.append('line').attr('x1',d.x1).attr('y1',d.y1).attr('x2',d.x2).attr('y2',d.y2);
+    l.attr('marker-end',`url(#ah-${d.c||'n'})`).transition(t).attr('x1',d.x1).attr('y1',d.y1).attr('x2',d.x2).attr('y2',d.y2);
+  }
+}
+
+function draw(svg,nodes,dur){
+  const t=d3.transition().duration(dur).ease(d3.easeCubicInOut);
+  svg.select('.layer').selectAll('g.n').data(nodes,d=>d.id).join(
+    en=>en.append('g').attr('opacity',0).attr('transform',d=>`translate(${d.x},${d.y})`),
+    up=>up,
+    ex=>ex.transition(t).attr('opacity',0).remove()
+  ).each(function(d){upd(d3.select(this),d,t);})
+   .transition(t).attr('transform',d=>`translate(${d.x},${d.y})`).attr('opacity',d=>d.o??1);
+}
+
+/* moving dots: step.fly = [F(x1,y1,x2,y2,colour,{n,gap,dur,r,d0,per,once})], they loop until the step changes */
+let flyGen=0;
+function flyRun(svg,list){
+  const my=++flyGen,fx=svg.select('.fx');
+  fx.selectAll('circle').interrupt().remove();
+  (list||[]).forEach(f=>{
+    const n=f.n??3,gap=f.gap??380,dur=f.dur??1200,per=f.per??Math.max(n*gap+300,dur+300),r=f.r??6;
+    const col=f.c==='n'?'muted':f.c==='f'?'fg':(f.c||'a');
+    for(let i=0;i<n;i++){
+      const dot=fx.append('circle').attr('r',r).attr('cx',f.x1).attr('cy',f.y1).attr('opacity',0)
+        .style('fill',`var(--${col})`).style('stroke','var(--surface)').style('stroke-width',1.5);
+      const go=delay=>{
+        if(my!==flyGen)return;
+        dot.attr('cx',f.x1).attr('cy',f.y1).attr('opacity',0)
+          .transition().delay(delay).duration(0).attr('opacity',1)
+          .transition().duration(dur).ease(d3.easeLinear).attr('cx',f.x2).attr('cy',f.y2)
+          .transition().duration(0).attr('opacity',0)
+          .on('end',()=>{if(!f.once)go(per-dur);});
+      };
+      go((f.d0??500)+i*gap);
+    }
+  });
+}
+
+function mount(host,topic){
+  const tabs=topic.tabs||[{n:'',steps:topic.steps}];
+  host.innerHTML='<div class="tabs"></div><div class="stage"><svg viewBox="0 0 760 240" role="img"><g class="layer"></g><g class="fx"></g></svg></div><div class="cap"></div><div class="ctl"><button class="b prev" type="button">◀</button><button class="b pri next" type="button">Next ▶</button><span class="cnt"></span></div>';
+  const svg=d3.select(host).select('svg'),cap=host.querySelector('.cap'),cnt=host.querySelector('.cnt');
+  const prev=host.querySelector('.prev'),next=host.querySelector('.next'),tabBox=host.querySelector('.tabs');
+  let ti=0,si=0,steps;
+  function show(dur){
+    draw(svg,stateAt(steps,si),dur);
+    flyRun(svg,steps[si].fly);
+    cap.innerHTML=steps[si].cap;
+    svg.attr('viewBox','0 0 760 '+(steps.vh||240));
+    cnt.textContent=`${si+1} / ${steps.length}`;
+    prev.disabled=si===0;
+    next.textContent=si===steps.length-1?'↻ আবার':'Next ▶';
+  }
+  function load(i){
+    ti=i;si=0;
+    const tb=tabs[ti];steps=typeof tb.steps==='function'?tb.steps():tb.steps;
+    tabBox.querySelectorAll('button').forEach((b,k)=>b.classList.toggle('on',k===ti));
+    svg.select('.layer').selectAll('*').interrupt().remove(); /* fresh canvas: old tab's lines (same ids) must not leak into the new one */
+    show(0);
+  }
+  if(tabs.length>1){
+    tabs.forEach((tb,i)=>{const b=document.createElement('button');b.type='button';b.textContent=tb.n;b.onclick=()=>load(i);tabBox.appendChild(b);});
+  }else tabBox.remove();
+  const go=()=>{si=si===steps.length-1?0:si+1;show(600);};
+  next.onclick=go;svg.on('click',go);
+  prev.onclick=()=>{if(si>0){si--;show(600);}};
+  load(0);
+}
+
+
+/* ---------- helpers ---------- */
+const VH=(arr,h)=>{arr.vh=h;return arr;};
+/* code block: dashed box + left-aligned monospace text */
+const CODE=(id,x,y,w,h,txt,c='n')=>[B(id,x,y,w,h,'',c,{dash:1}),T(id+'t',x+12,y+h/2,txt,{m:1,c:'f',a:'start'})];
+const H=(id,x,y,label,c='n')=>T(id,x,y,label,{c,s:'sm'});          // ছোট শিরোনাম লেখা
+
+/* ===== Q1: React কীভাবে render করে ===== */
+const R_PIPE=VH([
+  S('<b>Component</b> = একটা সাধারণ JavaScript function যা <b>JSX return করে</b>। <code>count</code> যা, UI সেটাই। নিচে ধাপে ধাপে দেখো এই function থেকে স্ক্রিনে কীভাবে পৌঁছায়।',
+    {add:[...CODE('cd',20,60,150,110,'function App() {\n  return (\n    <h1>\n      {count}\n    </h1>\n  );\n}','a'),H('cdl',20,45,'Component (function)','a')]}),
+  S('<b>ধাপ ১: Render</b>: React function-টা <b>ডাকে</b>। JSX আসলে JS object-এ বদলে যায়। একে বলে <b>React element</b> (Virtual DOM-এর টুকরো)। এটা শুধু মেমোরির object, DOM নয়, তাই খুব সস্তা।',
+    {add:[B('ve',210,75,135,80,'React element\n{ type: "h1",\n  children: 0 }','b',{s:'sm',m:1}),A('a1',172,115,208,115,'b')]}),
+  S('<b>ধাপ ২: Diff (reconciliation)</b>: React <b>আগের</b> Virtual DOM tree-র সাথে <b>নতুনটা</b> মিলিয়ে দেখে ঠিক কোনটুকু আলাদা। পুরো page আবার আঁকে না।',
+    {add:[B('df',385,75,125,80,'Diff\nআগের tree-র সাথে\nতুলনা','o'),A('a2',347,115,383,115,'o')]}),
+  S('<b>ধাপ ৩: Commit</b>: শুধু যেটুকু বদলেছে (এখানে <code>h1</code>-এর text) <b>Real DOM</b>-এ লেখা হয়। ব্রাউজার এরপর স্ক্রিনে আঁকে (paint)।',
+    {add:[B('dm',550,75,190,80,'Real DOM\n<h1>0</h1>  →  <h1>1</h1>\nশুধু text বদলাল','g',{s:'sm'}),A('a3',512,115,548,115,'g')]}),
+  S('<b>আবার শুরু কখন?</b> যখনই <b>state বদলায়</b> (বা props/parent বদলায়), React <b>function-টা আবার ডাকে</b>। তখন ধাপ ১ থেকে ৩ আবার ঘটে। এটাই React-এর মূল ধারণা: <b>UI = f(state)</b>।',
+    {add:[B('st',20,200,150,40,'state বদলাল','r'),A('a4',95,198,95,172,'r',{dash:1})],mod:{cd:{hl:1}}}),
+],262);
+
+const CYC=[['১  Event','click / input'],['২  setState','queue-তে পড়ল'],['৩  Render','function আবার ডাকা'],['৪  Diff','পুরনো বনাম নতুন'],['৫  Commit','DOM-এ লেখা'],['৬  Effect','paint-এর পরে']];
+const CYX=i=>10+i*125;
+const R_CYCLE=VH([
+  S('<b>পুরো চক্রটা এক নজরে।</b> Counter-এ বাটন চাপলে যা যা ঘটে, ক্রমে। প্রতিটা ধাপ দেখতে <b>Next</b> চাপো।',
+    {add:[...CYC.map((c,i)=>B('c'+i,CYX(i),60,110,70,c[0]+'\n'+c[1],'n',{s:'sm'})),
+          ...CYC.slice(1).map((c,i)=>A('ca'+i,CYX(i)+111,95,CYX(i+1)-1,95,'n')),
+          T('ex',20,185,'onClick={() => setCount(count + 1)}',{m:1,c:'f',a:'start'})]}),
+  S('<b>১ Event:</b> ব্যবহারকারী বাটন চাপল, তোমার <code>onClick</code> handler চলল।',{mod:{c0:{c:'a',hl:1}}}),
+  S('<b>২ setState:</b> <code>setCount</code> সাথে সাথে স্ক্রিন বদলায় না। React নতুন মান <b>জমা রাখে</b> আর "re-render দরকার" বলে চিহ্ন দেয়। একই event-এর কয়েকটা setState একসাথে <b>batch</b> হয়।',
+    {mod:{c0:{c:'n',hl:0},c1:{c:'b',hl:1},ex:{label:'setCount(1)  →  React: "নতুন মান 1, re-render করো"'}}}),
+  S('<b>৩ Render:</b> React <code>Counter()</code> function <b>আবার ডাকে</b>। এবার <code>useState</code> store থেকে নতুন মান 1 পায়, নতুন JSX বানায়।',
+    {mod:{c1:{c:'n',hl:0},c2:{c:'a',hl:1},ex:{label:'Counter()  →  const [count] = useState(0)  // এবার 1 দেয়'}}}),
+  S('<b>৪ Diff:</b> আগের tree (<code>0</code>) আর নতুন tree (<code>1</code>) তুলনা। আলাদা শুধু text।',
+    {mod:{c2:{c:'n',hl:0},c3:{c:'o',hl:1},ex:{label:'<h1>0</h1>  বনাম  <h1>1</h1>  →  শুধু text আলাদা'}}}),
+  S('<b>৫ Commit:</b> শুধু ওই text node DOM-এ বদলানো হয়। এই ধাপেই <b>একমাত্র DOM লেখা</b> হয়। ব্রাউজার paint করে, ব্যবহারকারী 1 দেখে।',
+    {mod:{c3:{c:'n',hl:0},c4:{c:'g',hl:1},ex:{label:'DOM: h1.textContent = "1"'}}}),
+  S('<b>৬ Effect:</b> paint-এর <b>পরে</b> <code>useEffect</code>-গুলো দেখা হয়। dependency বদলালে তবেই চলে। এরপর আবার কেউ state বদলালে চক্র ১ থেকে।',
+    {add:[A('loop',690,150,60,150,'n',{dash:1}),H('looptx',375,165,'আবার state বদলালে পুরো চক্র নতুন করে','n')],mod:{c4:{c:'n',hl:0},c5:{c:'s',hl:1},ex:{label:'useEffect(() => { document.title = count }, [count])'}}}),
+],230);
+
+/* ===== Q2: useState ===== */
+const U_BASIC=VH([
+  S('<b>একটা Counter।</b> প্রশ্ন: function তো প্রতিবার নতুন করে চলে, তাহলে <code>n</code>-এর মান মনে থাকে কোথায়? উত্তর: <b>function-এর বাইরে, React-এর ভেতরে।</b>',
+    {add:[...CODE('cd',20,40,330,140,'function Counter() {\n  const [n, setN] = useState(0);\n  return (\n    <button onClick={() => setN(n + 1)}>\n      {n}\n    </button>\n  );\n}','a'),H('cdl',20,28,'তোমার component','a')]}),
+  S('<b>প্রথম render:</b> <code>useState(0)</code> React-এর store-এ একটা <b>slot</b> বানায়, <code>0</code> রাখে। ফেরত দেয় <code>[0, setN]</code>। Store থাকে <b>function-এর বাইরে</b>, তাই function শেষ হলেও মান হারায় না।',
+    {add:[B('stb',395,40,150,140,'','o',{dash:1}),H('stbt',395,28,'React-এর store','o'),B('s0',410,95,120,40,'slot 0 = 0','o',{m:1}),A('a1',352,115,393,115,'o')]}),
+  S('function <b>JSX return করে</b>, React সেটা DOM-এ বসায়। স্ক্রিনে এখন <code>0</code>।',
+    {add:[B('ui',395,205,150,45,'স্ক্রিন: [ 0 ]','g'),A('a2',200,182,395,228,'g')]}),
+  S('<b>ব্যবহারকারী click করল</b> → handler চলে <code>setN(0 + 1)</code>। <code>n</code> এই render-এ <code>0</code>, তাই <code>0 + 1</code>।',
+    {add:[B('call',590,205,150,45,'setN(0 + 1)','r',{m:1}),A('a3',547,228,588,228,'r')],mod:{ui:{hl:1}}}),
+  S('<b>setN</b> store-এর slot-এ <code>1</code> লিখল আর React-কে বলল "re-render করো"। কিন্তু <b>এই function-এর <code>n</code> এখনও 0</b> (এটা <code>const</code>), স্ক্রিনও এখনও 0।',
+    {add:[A('a4',665,203,500,137,'r')],mod:{s0:{label:'slot 0 = 1',c:'r',hl:1},ui:{hl:0}}}),
+  S('<b>Re-render:</b> React <code>Counter()</code> <b>আবার ডাকে</b>। <code>useState(0)</code>-এ এবার slot আগে থেকেই আছে, তাই React <b>initial <code>0</code> উপেক্ষা</b> করে store-এর <code>1</code> ফেরত দেয়।',
+    {add:[A('a5',393,75,352,75,'a')],mod:{cd:{c:'a',hl:1},s0:{c:'o',hl:1}}}),
+  S('নতুন JSX → diff → DOM। স্ক্রিনে <code>1</code>। <b>সারকথা:</b> state = store-এর slot। <code>setN</code> slot বদলায় আর function আবার চালায়; প্রতিটা render-এর <code>n</code> আলাদা একটা ছবি (snapshot)।',
+    {del:['call','a3','a4','a5'],mod:{ui:{label:'স্ক্রিন: [ 1 ]',hl:1},cd:{hl:0},s0:{hl:0}}}),
+],265);
+
+const U_SNAP=VH([
+  S('<b>একই render-এ <code>n</code> একটা স্থির মান।</b> ধরো এই render-এ <code>n = 0</code>। নিচের তিনটা লাইন চললে কত হবে? অনেকে ভাবে ৩। আসলে...',
+    {add:[...CODE('cd',20,45,320,80,'// এই render-এ n = 0\nsetN(n + 1);\nsetN(n + 1);\nsetN(n + 1);','a'),H('cdl',20,33,'event handler','a')]}),
+  S('<b>প্রথম call:</b> React update queue-তে "<code>n</code>-কে <code>0 + 1</code> করো" রাখল।',
+    {add:[B('qb',395,45,345,60,'','o',{dash:1}),H('qbt',395,33,'React-এর update queue','o'),B('q1',407,60,100,30,'→ 0 + 1','b',{s:'sm',m:1})]}),
+  S('<b>দ্বিতীয়, তৃতীয় call:</b> তিনটাই <code>n</code> (=0) পড়ে, তাই তিনটাই "<code>0 + 1</code>"। কেউ আগের call-এর ফল দেখেনি।',
+    {add:[B('q2',517,60,100,30,'→ 0 + 1','b',{s:'sm',m:1}),B('q3',627,60,100,30,'→ 0 + 1','b',{s:'sm',m:1})]}),
+  S('<b>Batching:</b> React তিনটা update একসাথে চালায়, শেষেরটা জেতে। ফল: <code>n = 1</code>, <b>৩ নয়</b>।',
+    {add:[B('res',395,125,345,50,'পরের render-এ n = 1  (৩ নয়!)','r')]}),
+  S('<b>সমাধান: functional update।</b> <code>setN(p =&gt; p + 1)</code> লিখলে প্রতিটা update <b>আগের update-এর ফল</b> পায়: 0→1→2→3। আগের মানের উপর নির্ভর করলে সবসময় এটাই লেখো।',
+    {add:[...CODE('fx',20,160,320,80,'setN(p => p + 1);\nsetN(p => p + 1);\nsetN(p => p + 1);','g'),H('fxl',20,148,'✅ functional update','g')],
+     mod:{q1:{label:'p → p + 1',c:'g'},q2:{label:'p → p + 1',c:'g'},q3:{label:'p → p + 1',c:'g'},res:{label:'পরের render-এ n = 3  ✓',c:'g',hl:1}}}),
+],262);
+
+const U_REF=VH([
+  S('<b>Object state mutate করলে কেন কাজ করে না?</b> React নতুন বনাম পুরনো state মেলায় <b>reference</b> দিয়ে (<code>Object.is</code>), ভেতরের মান দিয়ে নয়। নিচের কোডে ভুলটা দেখো।',
+    {add:[...CODE('cd',20,45,360,80,'const [user, setUser] = useState({ a: 1 });\nuser.a = 2;      // ❌ সরাসরি বদলানো\nsetUser(user);   // একই reference','r'),
+          B('ref',430,45,190,60,'state: user → 0x01\n{ a: 1 }','o'),B('ui',430,175,190,50,'স্ক্রিন: a = 1','g')]}),
+  S('<b>mutate:</b> object-এর <b>ভেতরে</b> <code>a</code> বদলাল (2), কিন্তু object-এর ঠিকানা একই <code>0x01</code>। React জানেই না কিছু হয়েছে।',
+    {mod:{ref:{label:'state: user → 0x01\n{ a: 2 }',hl:1}}}),
+  S('<code>setUser(user)</code>: React পুরনো আর নতুন মান <code>Object.is</code>-এ মেলায়: ঠিকানা একই → <b>true</b> → "কিছু বদলায়নি", <b>re-render skip</b>। স্ক্রিন পুরনোই থাকল।',
+    {add:[B('chk',655,45,95,60,'Object.is\n(0x01,0x01)\n= true','r',{s:'sm'}),A('a1',622,75,653,75,'r')],mod:{ref:{hl:0}}}),
+  S('<b>ঠিক উপায়:</b> সবসময় <b>নতুন object</b> বানাও (spread)। ঠিকানা বদলায় (<code>0x02</code>) → <code>Object.is</code> false → re-render → স্ক্রিনে <code>a = 2</code>। Array-তেও একই নিয়ম: <code>[...arr, x]</code>, <code>.map</code>, <code>.filter</code>।',
+    {add:[...CODE('fx',20,160,360,50,'setUser({ ...user, a: 2 });  // ✅ নতুন object','g')],
+     mod:{ref:{label:'state: user → 0x02\n{ a: 2 }',c:'g',hl:1},chk:{label:'Object.is\n(0x01,0x02)\n= false',c:'g'},a1:{c:'g'},ui:{label:'স্ক্রিন: a = 2',hl:1}}}),
+],262);
+
+/* ===== Q3: Hooks কীভাবে মনে রাখে ===== */
+const H_CODE=['function Profile() {\n  const [name, setName] = useState("Rana");  // #0\n  const [age, setAge]   = useState(20);      // #1\n  useEffect(() => { ... }, [name]);          // #2\n}'];
+const H_ORDER=VH([
+  S('<b>React hook-কে নাম দিয়ে চেনে না</b>, চেনে <b>ডাকার ক্রম</b> দিয়ে। প্রতিটা component-এর জন্য React-এর কাছে একটা <b>list</b> থাকে। নিচের তিনটা hook ক্রমে #0, #1, #2।',
+    {add:[...CODE('cd',20,40,420,110,H_CODE[0],'a'),H('cdl',20,28,'Profile component','a')]}),
+  S('<b>প্রথম render:</b> <code>useState("Rana")</code> ডাকা হল, React list-এ <b>slot 0</b> বানিয়ে <code>"Rana"</code> রাখল।',
+    {add:[H('hl0',480,28,'React-এর hook list','o'),B('s0',480,55,265,38,'slot 0 → "Rana"','o',{m:1}),A('a0',442,80,478,74,'o')]}),
+  S('<code>useState(20)</code> → <b>slot 1</b>।',{add:[B('s1',480,103,265,38,'slot 1 → 20','o',{m:1}),A('a1',442,95,478,122,'o')]}),
+  S('<code>useEffect</code> → <b>slot 2</b>: effect function + deps <code>[name]</code> মনে রাখে (পরের render-এ তুলনার জন্য)।',
+    {add:[B('s2',480,151,265,38,'slot 2 → effect, deps [name]','s',{m:1}),A('a2',442,110,478,170,'s')]}),
+  S('<b>দ্বিতীয় render:</b> React একটা <b>counter</b> (0,1,2…) চালায়। প্রথম hook call → slot 0 পড়ো। তাই <code>name</code> = <code>"Rana"</code>।',
+    {del:['a0','a1','a2'],add:[A('r0',478,74,442,80,'g')],mod:{s0:{hl:1,c:'g'}}}),
+  S('দ্বিতীয় call → slot 1, তাই <code>age = 20</code>। তৃতীয় call → slot 2, React আগের deps <code>["Rana"]</code> এর সাথে নতুন deps মেলায়।',
+    {add:[A('r1',478,122,442,95,'g'),A('r2',478,170,442,110,'s')],mod:{s0:{hl:0,c:'o'},s1:{hl:1,c:'g'},s2:{hl:1}}}),
+  S('<b>মূল কথা:</b> hook-এর পরিচয় = কততম call। তাই প্রতি render-এ <b>একই ক্রমে, একই সংখ্যায়</b> hook ডাকতে হবে। ক্রম বদলালে slot মিলবে না। পরের tab-এ দেখো কী ভাঙে।',
+    {mod:{s1:{hl:0,c:'o'},s2:{hl:0}}}),
+],240);
+
+const H_BREAK=VH([
+  S('<b>Rules of Hooks:</b> hook শুধু component-এর <b>একদম উপরের স্তরে</b> ডাকো। <code>if</code>, loop, nested function, early <code>return</code>-এর ভেতরে নয়। কেন? নিচের ভুল কোডটা চালিয়ে দেখো।',
+    {add:[...CODE('cd',20,40,380,125,'function Profile({ show }) {\n  if (show) {\n    const [name] = useState("Rana"); // ❌\n  }\n  const [age] = useState(20);\n}','r'),H('cdl',20,28,'শর্তের ভেতরে hook','r'),H('hl0',470,28,'React-এর hook list','o')]}),
+  S('<b>Render 1, <code>show = true</code>:</b> প্রথম hook → slot 0 = <code>"Rana"</code>, দ্বিতীয় hook → slot 1 = <code>20</code>। এখন পর্যন্ত ঠিক।',
+    {add:[B('s0',470,55,275,38,'slot 0 → "Rana"','o',{m:1}),B('s1',470,103,275,38,'slot 1 → 20','o',{m:1}),A('a0',402,92,468,74,'o'),A('a1',402,123,468,122,'o')]}),
+  S('<b>Render 2, <code>show = false</code>:</b> <code>if</code>-এর hook <b>ডাকাই হল না</b>। এখন <code>age</code>-এর <code>useState(20)</code> হল <b>প্রথম</b> hook call। React counter 0 → <b>slot 0</b> পড়ে!',
+    {del:['a0','a1'],add:[A('r0',468,70,402,123,'r')],mod:{s0:{c:'r',hl:1}}}),
+  S('ফল: <code>age = "Rana"</code>। ভুল slot, নিঃশব্দে ভুল ডেটা। এই কারণেই React নিয়ম বেঁধে দিয়েছে। (ESLint-এর <code>react-hooks/rules-of-hooks</code> এটা ধরে দেয়।)',
+    {add:[B('bad',20,185,380,40,'age = "Rana"   ← ভুল! 20 হওয়ার কথা','r')]}),
+  S('<b>ঠিক উপায়:</b> hook সবসময় উপরে ডাকো, <b>শর্তটা hook-এর ভেতরে বা পরে</b> রাখো। এতে প্রতি render-এ একই ক্রম।',
+    {del:['bad','r0'],add:[...CODE('fx',20,185,380,60,'const [name] = useState("Rana");  // সবসময় ডাকো\nconst [age]  = useState(20);\nif (!show) return null;           // ✅ hook-এর পরে','g')],mod:{s0:{c:'o',hl:0},cd:{c:'n'}}}),
+],262);
+
+/* ===== Q4: useEffect ===== */
+const E_TIME=VH([
+  S('<b>useEffect = "স্ক্রিনে আঁকা হয়ে গেলে এই কাজটা করো"।</b> Fetch, subscribe, timer, <code>document.title</code>: যা render-এর হিসাবের অংশ নয় (side effect), তা এখানে। নিচের effect <code>count</code> বদলালে title বদলায়।',
+    {add:[...CODE('cd',20,195,470,36,'useEffect(() => { document.title = count; }, [count]);','s')]}),
+  S('<b>ধাপ ১: Render</b>। React component ডাকে, JSX বানায়। এখানে effect <b>চলে না</b>। render শুধু হিসাব, কোনো side effect থাকবে না।',
+    {add:[B('e1',20,50,165,70,'১ Render\nJSX বানানো','a')]}),
+  S('<b>ধাপ ২: Commit।</b> React DOM-এ পরিবর্তন লেখে।',
+    {add:[B('e2',205,50,165,70,'২ Commit\nDOM আপডেট','b'),A('x1',186,85,203,85,'b')]}),
+  S('<b>ধাপ ৩: Paint।</b> ব্রাউজার স্ক্রিনে আঁকে, ব্যবহারকারী নতুন UI দেখে ফেলে।',
+    {add:[B('e3',390,50,165,70,'৩ Paint\nস্ক্রিনে দেখা','o'),A('x2',371,85,388,85,'o')]}),
+  S('<b>ধাপ ৪: useEffect চলে</b>, paint-এর <b>পরে</b>। তাই effect ধীর হলেও পর্দা আটকায় না। শর্ত: deps (<code>[count]</code>) আগের render-এর চেয়ে বদলেছে।',
+    {add:[B('e4',575,50,165,70,'৪ useEffect\nচলে (deps বদলালে)','g',{hl:1}),A('x3',556,85,573,85,'g')]}),
+  S('<b>ব্যতিক্রম: <code>useLayoutEffect</code></b> চলে Commit-এর পরেই, <b>Paint-এর আগে</b>, sync ভাবে। শুধু DOM মাপ (width/height) পড়ে স্ক্রিন ঝিলিক ছাড়া ঠিক করতে লাগলে। বাকি সব কাজে <code>useEffect</code>।',
+    {add:[A('x4',290,160,290,122,'r',{dash:1}),H('x4t',300,148,'useLayoutEffect এখানে (Paint-এর আগে)','r')],mod:{e4:{hl:0}}}),
+],250);
+
+const DEPS_R=['Render 1\nid = 1','Render 2\nid = 1','Render 3\nid = 2','Render 4\nid = 2'];
+const DX=i=>190+i*135, DY=r=>95+r*55;
+const dcell=(id,r,i,run)=>B(id,DX(i),DY(r),110,36,run?'চলে ✓':'skip',run?'g':'n',{s:'sm',dash:run?0:1});
+const E_DEPS=VH([
+  S('<b>Dependency array ঠিক করে effect কখন চলবে।</b> ধরো component ৪ বার render হল আর <code>id</code> হল 1, 1, 2, 2। তিন রকম deps-এ effect কখন চলে দেখো।',
+    {add:[...DEPS_R.map((t,i)=>T('h'+i,DX(i)+55,50,t,{a:'middle',c:'f',s:'sm b'})),
+          T('l0',14,DY(0)+18,'useEffect(fn)',{m:1,c:'a',s:'sm'}),T('l1',14,DY(1)+18,'..., [ ]',{m:1,c:'b',s:'sm'}),T('l2',14,DY(2)+18,'..., [id]',{m:1,c:'g',s:'sm'})]}),
+  S('<b>deps দিলেই না</b> (<code>useEffect(fn)</code>): <b>প্রতি render-এর পর</b> চলে। সাবধান: ভেতরে setState থাকলে infinite loop (শেষ tab)।',
+    {add:[0,1,2,3].map(i=>dcell('a'+i,0,i,1))}),
+  S('<b>খালি array <code>[ ]</code>:</b> শুধু <b>mount হওয়ার পর একবার</b>। পরে যত render হোক, চলে না। এক-বারের কাজ: প্রথমবার data fetch, event listener বসানো।',
+    {add:[0,1,2,3].map(i=>dcell('b'+i,1,i,i===0))}),
+  S('<b><code>[id]</code>:</b> React প্রতি render-এ আগের deps-এর সাথে <code>Object.is</code>-এ মেলায়। Render 2: 1 = 1 → skip। Render 3: 1 ≠ 2 → <b>চলে</b>। Render 4: 2 = 2 → skip। মানে effect <code>id</code>-এর সাথে <b>sync</b> থাকে।',
+    {add:[0,1,2,3].map(i=>dcell('c'+i,2,i,i===0||i===2))}),
+  S('<b>নিয়ম:</b> effect-এর ভেতরে যা যা পড়ো (state, props, function) সব deps-এ লেখো। লিখতে না চাইলে বুঝবে কোড ঠিক ভাবে সাজানো হয়নি। ESLint-এর <code>exhaustive-deps</code> এটা মনে করিয়ে দেয়।',{}),
+],262);
+
+const E_CLEAN=VH([
+  S('<b>Cleanup function:</b> effect <b>function return করলে</b> সেটাই cleanup। "পুরনোটা গুছিয়ে ফেলো": unsubscribe, <code>clearInterval</code>, connection বন্ধ। না করলে leak আর পুরনো ডেটা। উদাহরণ: chat room-এর connection।',
+    {add:[...CODE('cd',20,165,320,80,'useEffect(() => {\n  const c = connect(roomId);\n  return () => c.disconnect();  // cleanup\n}, [roomId]);','s')]}),
+  S('<b>Mount, <code>roomId = "A"</code>:</b> effect চলে, room A-র সাথে connect।',
+    {add:[B('k1',20,50,165,70,'Mount\nroomId = "A"\nconnect(A)','g')]}),
+  S('<b><code>roomId</code> বদলে "B":</b> React নতুন render করে, কিন্তু effect <b>এখনই</b> চালায় না। আগে পুরনোটা গোছানো দরকার।',
+    {add:[B('k2',205,50,165,70,'roomId → "B"\nনতুন render\n(effect এখনও না)','b'),A('y1',186,85,203,85,'b')]}),
+  S('<b>আগে cleanup:</b> React <b>পুরনো</b> render-এর cleanup চালায় (<code>roomId = "A"</code>-এর closure): <code>disconnect(A)</code>। দুই room-এ একসাথে connect থাকে না।',
+    {add:[B('k3',390,50,165,70,'আগে cleanup\n(পুরনো A-র)\ndisconnect(A)','r'),A('y2',371,85,388,85,'r')]}),
+  S('<b>তারপর নতুন effect:</b> <code>connect(B)</code>। ক্রম মনে রাখো: <b>নতুন render → পুরনো cleanup → নতুন effect।</b>',
+    {add:[B('k4',575,50,165,70,'তারপর effect\nconnect(B)','g'),A('y3',556,85,573,85,'g')]}),
+  S('<b>Unmount:</b> component স্ক্রিন থেকে সরলে শেষ cleanup চলে: <code>disconnect(B)</code>। এভাবে timer, listener, connection কিছু পড়ে থাকে না।',
+    {add:[B('k5',575,140,165,70,'Unmount হলে\ncleanup\ndisconnect(B)','r'),A('y4',657,122,657,138,'r')]}),
+],262);
+
+const E_STRICT=VH([
+  S('<b>Dev-এ effect দুইবার চলে কেন?</b> <code>&lt;StrictMode&gt;</code> (development-এ) ইচ্ছে করেই mount-এর সময় effect <b>→ cleanup → effect</b> চালায়। কারণ: cleanup ঠিকমতো লেখা আছে কিনা পরীক্ষা করা।',
+    {add:[B('d1',20,60,210,70,'Mount\neffect চলে','g')]}),
+  S('<b>React নিজেই cleanup চালায়</b> (যেন component একবার unmount হয়ে গেল)। cleanup ঠিক থাকলে এতে কিছু ভাঙে না।',
+    {add:[B('d2',275,60,210,70,'dev-এ React\ncleanup চালায়','r'),A('z1',231,95,273,95,'r')]}),
+  S('<b>আবার effect চলে।</b> cleanup না লিখলে এখানে দুটো subscription/duplicate fetch পাবে, মানে bug ধরা পড়ল। <b>Production-এ এমন হয় না</b>, শুধু একবার। তাই "দুইবার চলছে" দেখে ঘাবড়ানোর কিছু নেই, cleanup ঠিক করো।',
+    {add:[B('d3',530,60,210,70,'আবার effect\nচলে','g'),A('z2',486,95,528,95,'g')]}),
+],190);
+
+const E_LOOP=VH([
+  S('<b>Infinite loop:</b> deps ছাড়া effect-এর ভেতরে state বদলালে কী হয়? এই কোডটা ভাবো।',
+    {add:[...CODE('cd',20,15,260,60,'useEffect(() => {\n  setCount(c => c + 1);\n});   // ❌ deps নেই','r'),B('lr',295,100,180,50,'Render','a')]}),
+  S('<b>Render</b> শেষ → paint-এর পর effect চলে।',
+    {add:[B('le',520,185,200,50,'useEffect চলে','s'),A('l1',445,150,575,183,'s')]}),
+  S('effect ভেতরে <b>setCount</b> ডাকে → state বদলাল।',
+    {add:[B('ls',40,185,200,50,'setCount(c + 1)','b',{m:1}),A('l2',518,210,242,210,'b')]}),
+  S('state বদলালে <b>আবার render</b> → আবার effect → আবার setState → <b>অনন্ত চক্র</b>, ব্রাউজার hang। deps না থাকায় প্রতি render-এর পর effect চলে।',
+    {add:[A('l3',150,183,330,152,'r')],mod:{lr:{c:'r',hl:1},le:{c:'r'},ls:{c:'r'},l1:{c:'r'},l2:{c:'r'}}}),
+  S('<b>সমাধান:</b> সঠিক deps দাও (<code>[]</code> বা প্রকৃত dependency), অথবা state-এর বদলে render-এর সময়ই মানটা হিসাব করো (derived value)। effect লাগেই না এমন অনেক জায়গায় আমরা effect বসাই।',
+    {del:['l1','l2','l3','ls','le'],add:[...CODE('fx',360,15,380,60,'useEffect(() => {\n  setCount(1);\n}, []);   // ✅ শুধু mount-এ একবার','g')],mod:{lr:{c:'g',hl:0},cd:{c:'n'}}}),
+],262);
+
+/* ===== Q5: অন্যান্য hook ===== */
+const TBL_HOOKS='<table class="cmp"><tr><th>Hook</th><th>কাজ</th><th>বদলালে re-render?</th></tr>'
+ +'<tr><td>useState</td><td>component-এর state রাখে: <code>[value, setValue]</code></td><td>হ্যাঁ</td></tr>'
+ +'<tr><td>useReducer</td><td>জটিল state, <code>dispatch(action)</code> দিয়ে বদলায়</td><td>হ্যাঁ</td></tr>'
+ +'<tr><td>useEffect</td><td>render-এর পর side effect (fetch, subscribe, timer)</td><td>না (নিজে কিছু রাখে না)</td></tr>'
+ +'<tr><td>useRef</td><td>re-render ছাড়াই বদলানো যায় এমন বাক্স; DOM element ধরতেও লাগে</td><td><b>না</b></td></tr>'
+ +'<tr><td>useMemo</td><td>দামি হিসাবের ফল মনে রাখে, deps না বদলালে আবার করে না</td><td>না</td></tr>'
+ +'<tr><td>useCallback</td><td>function-এর reference একই রাখে (<code>memo</code>-করা child-এর জন্য)</td><td>না</td></tr>'
+ +'<tr><td>useContext</td><td>props না দিয়ে উপর থেকে নিচে ডেটা পৌঁছায়</td><td>হ্যাঁ (context বদলালে)</td></tr></table>';
+const CODE_HOOKS='<div class="lbl">ছোট উদাহরণ</div><pre>const inputRef = useRef(null);                 // render-এর মধ্যে মান টিকে থাকে, বদলালে re-render হয় না\n&lt;input ref={inputRef} /&gt;;  inputRef.current.focus();\n\nconst total = useMemo(() => items.reduce(sum), [items]);   // items না বদলালে আবার হিসাব না\n\nconst onSave = useCallback(() => save(id), [id]);          // id না বদলালে একই function reference</pre>'
+ +'<div class="lbl">Custom hook = নিজের hook বানানো (নাম <code>use</code> দিয়ে শুরু)</div><pre>function useOnline() {\n  const [online, setOnline] = useState(navigator.onLine);\n  useEffect(() => {\n    const on = () => setOnline(true), off = () => setOnline(false);\n    addEventListener("online", on); addEventListener("offline", off);\n    return () => { removeEventListener("online", on); removeEventListener("offline", off); };\n  }, []);\n  return online;\n}</pre>';
+
+const PARTS=[['1','Render চক্র'],['2','useState'],['3','Hooks-এর নিয়ম'],['4','useEffect'],['5','অন্য Hooks']];
+const TOPICS=[
+{q:'React কীভাবে UI আঁকে? (Component → Virtual DOM → DOM)',
+ ans:'React-এ <b>UI = f(state)</b>। Component একটা function, state দিলে সে JSX (UI-র বিবরণ) ফেরত দেয়। state বদলালে React function <b>আবার ডাকে</b>, নতুন বিবরণ আগেরটার সাথে <b>মেলায় (diff)</b>, আর DOM-এ <b>শুধু বদলানো অংশটুকু</b> লেখে।',
+ pts:['<b>Render</b> = function ডাকা (শুধু হিসাব, DOM ছোঁয় না)। <b>Commit</b> = DOM-এ লেখা।','<b>Virtual DOM</b> = মেমোরিতে JS object-এর tree। DOM-এর চেয়ে সস্তা, তাই আগে এটার সাথে diff।','এই চক্রের তিনটা ধাপ: <b>state বদলাও → render → commit</b>, এরপর paint-এর পরে effect।'],
+ tabs:[{n:'Render → Diff → Commit',steps:R_PIPE},{n:'একটা click-এর পুরো চক্র',steps:R_CYCLE}]},
+{q:'useState কীভাবে কাজ করে?',
+ ans:'<code>useState(init)</code> React-এর ভেতরে (function-এর <b>বাইরে</b>) একটা <b>slot</b> বানায় আর <code>[মান, setter]</code> ফেরত দেয়। <code>setter</code> ডাকলে slot-এ নতুন মান যায় আর React component <b>আবার render করে</b>। তাই function বারবার চললেও মান মনে থাকে।',
+ pts:['প্রতিটা render-এর <code>state</code> একটা <b>স্থির snapshot</b> (<code>const</code>)। setter ডাকলে সেই render-এর মান বদলায় না, <b>পরের render-এ</b> নতুন মান আসে।','আগের মানের উপর নির্ভর করলে <b>functional update</b>: <code>setN(p =&gt; p + 1)</code>।','<b>Object/array কখনো mutate নয়</b>, নতুন copy বানাও। React reference মেলায়, ভেতরের মান নয়।'],
+ tabs:[{n:'setState → re-render',steps:U_BASIC},{n:'Snapshot ও batching',steps:U_SNAP},{n:'Object mutate না করা',steps:U_REF}]},
+{q:'Hooks কীভাবে মনে রাখে? Rules of Hooks কেন?',
+ ans:'React প্রতিটা component-এর জন্য একটা <b>hook list</b> রাখে। প্রতি render-এ hook-গুলো <b>যে ক্রমে ডাকা হয়</b> সেই ক্রমে list-এর slot পড়ে (0, 1, 2…)। hook-এর নাম নেই, <b>ক্রমই পরিচয়</b>। তাই hook <b>প্রতি render-এ একই ক্রমে</b> ডাকতেই হবে।',
+ pts:['নিয়ম ১: শুধু <b>component বা custom hook-এর উপরের স্তরে</b> ডাকো। <code>if</code>/loop/nested function-এ নয়।','নিয়ম ২: শুধু React function-এ ডাকো (সাধারণ JS function-এ নয়)।','ভাঙলে slot মিলে যায় ভুল ডেটার সাথে, নিঃশব্দে। ESLint plugin এটা ধরে দেয়।'],
+ tabs:[{n:'ক্রম দিয়ে slot',steps:H_ORDER},{n:'শর্তে hook দিলে কী ভাঙে',steps:H_BREAK}]},
+{q:'useEffect কীভাবে কাজ করে? (deps, cleanup)',
+ ans:'<code>useEffect(fn, deps)</code> বলে: "render ও commit হয়ে স্ক্রিনে আঁকার <b>পরে</b> <code>fn</code> চালাও, কিন্তু শুধু যদি <code>deps</code> আগের render-এর চেয়ে বদলায়।" <code>fn</code> কোনো function return করলে সেটা <b>cleanup</b>: পরের effect-এর আগে আর unmount-এ চলে।',
+ pts:['<b>deps না দিলে</b> প্রতি render-এর পর, <b>[ ]</b> হলে শুধু mount-এ একবার, <b>[a, b]</b> হলে a বা b বদলালে।','ক্রম: <b>নতুন render → পুরনো cleanup → নতুন effect</b>।','Effect-এর কাজ: React-এর <b>বাইরের</b> জগতের সাথে sync (fetch, subscription, timer, DOM)। শুধু state থেকে মান বের করতে effect লাগে না, render-এর সময়ই হিসাব করো।'],
+ tabs:[{n:'কখন চলে (timeline)',steps:E_TIME},{n:'Dependency array',steps:E_DEPS},{n:'Cleanup',steps:E_CLEAN},{n:'Dev-এ দুইবার চলা',steps:E_STRICT},{n:'Infinite loop',steps:E_LOOP}]},
+{q:'বাকি গুরুত্বপূর্ণ Hooks: useRef, useMemo, useCallback, useContext, useReducer',
+ ans:'হুক সব একই নিয়মে চলে (React-এর hook list, ক্রম দিয়ে)। পার্থক্য কী মনে রাখে আর <b>বদলালে re-render হয় কিনা</b>। interview-এ সবচেয়ে বেশি আসে: <b>useRef বনাম useState</b> আর <b>useMemo/useCallback কখন দরকার</b>।',
+ pts:['<b>useRef</b>: <code>.current</code> বদলালে re-render <b>হয় না</b>। DOM element ধরতে বা timer id রাখতে।','<b>useMemo / useCallback</b> শুধু optimization। সত্যিকারের ধীর হিসাব বা <code>memo</code>-করা child না থাকলে বসানোর দরকার নেই।','নিজের logic-কে <b>custom hook</b>-এ বের করলে একই state + effect একাধিক component-এ চলে।'],
+ extra:TBL_HOOKS+CODE_HOOKS}
+];
+
+const app=document.getElementById('app'),partsNav=document.getElementById('parts');
+TOPICS.forEach((t,i)=>{
+  const a=document.createElement('a');a.href='#q'+(i+1);a.innerHTML=`<b>${i+1}</b>${PARTS[i][1]}`;partsNav.appendChild(a);
+  const card=document.createElement('article');card.className='q';card.id='q'+(i+1);
+  card.innerHTML=`<h3><span class="num">${i+1}</span><span>${t.q}</span></h3><p class="ans">${t.ans}</p>${t.pts&&t.pts.length?'<ul>'+t.pts.map(x=>`<li>${x}</li>`).join('')+'</ul>':''}${t.extra?`<div class="extra">${t.extra}</div>`:''}${t.tabs?'<div class="viz"></div>':''}`;
+  app.appendChild(card);
+  if(t.tabs)mount(card.querySelector('.viz'),t);
+});
+</script>
+</body>
+</html>

@@ -42,6 +42,7 @@ Software engineering interview prep — বাংলায় ব্যাখ্
 - ★ **Core** · [System Design Basics](04-resume-projects/04-system-design/index.html) - ১৪টি প্রশ্ন (Client-Server, Functional vs Non-functional, Latency, Bandwidth, Throughput, Scalability, Vertical/Horizontal, Reliability, Availability, SPOF, Maintainability, Partition Tolerance, CAP, CDN): প্রতিটির সংক্ষিপ্ত উত্তর ও step-by-step D3 animation
 - ★ **Core** · [SDLC ও SDLC Model](04-resume-projects/05-sdlc/index.html) - SDLC কী, ৭টি ধাপ, Waterfall / Agile / Iterative / Incremental: সংক্ষিপ্ত উত্তর, তুলনার table ও step-by-step D3 animation
 - [Synchronous বনাম Asynchronous](04-resume-projects/06-sync-async/index.html) - দুটো কীভাবে কাজ করে: thread timeline, blocking / non-blocking, callback / Promise / async-await, Event Loop; ধাপে ধাপে D3 animation
+- [React Hooks: State ও useEffect](04-resume-projects/07-reactjs/index.html) - render চক্র, useState, Hooks-এর নিয়ম, useEffect (deps, cleanup, infinite loop); ধাপে ধাপে D3 animation
 
 ## 05 · Operating System
 
