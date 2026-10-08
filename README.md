@@ -27,7 +27,7 @@ Software engineering interview prep — বাংলায় ব্যাখ্
 - [Transaction Isolation Levels](03-dbms-sql/transactions/index.html) — ৪টি level, D3 playground-এ A/B session চালিয়ে দেখা, দুইটা psql session পাশাপাশি ([transaction-A.sql](03-dbms-sql/transaction-A.sql) · [transaction-B.sql](03-dbms-sql/transaction-B.sql))
 - [Optimistic vs Pessimistic Locking](03-dbms-sql/optimistic-pessimistic/index.html) — lost update, FOR UPDATE / NOWAIT / SKIP LOCKED আর version column, A/B animation সহ
 - [N+1, Race Condition ও Deadlock](03-dbms-sql/dbms-theory/index.html) - তিনটা পরিচিত DB সমস্যা: সমস্যা ও সমাধান, ধাপে ধাপে D3 animation
-- [Idempotency](03-dbms-sql/dbms/index.html) — retry-তে duplicate charge ঠেকানো: idempotency key, ON CONFLICT, UNIQUE, conditional update, D3 simulation
+- [Idempotency](03-dbms-sql/dbms/index.html) - retry-তে duplicate charge ঠেকানো: idempotency key, UNIQUE, conditional update; ধাপে ধাপে D3 animation
 - [DBMS Keys](03-dbms-sql/dbms/keys/index.html) — super, candidate, primary, alternate, composite, unique, foreign, surrogate key; interactive key checker
 - [Normalization](03-dbms-sql/dbms/normalization/index.html) — 1NF, 2NF, 3NF, BCNF: definition, সমস্যা ও সমাধান আসল table-এ, step-through demo আর quiz
 - [Indexing](03-dbms-sql/dbms/indexing/index.html) — index কোথায় থাকে, B-tree / B+ tree animation, unique, hash, partial, GIN index, EXPLAIN
