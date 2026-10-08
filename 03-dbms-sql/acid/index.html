@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ACID Properties</title>
 <meta name="description" content="Atomicity, Consistency, Isolation, Durability — একটা bank transfer দিয়ে, PostgreSQL কোড, আসল output আর C# উদাহরণ সহ।">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -147,6 +148,35 @@ details p{margin:8px 0 0 24px;color:var(--muted);font-size:15px}
 footer{margin-top:56px;padding-top:16px;border-top:1px solid var(--line);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;font-size:13px;color:var(--faint)}
 @media (max-width:640px){.hero{padding:24px 20px;border-radius:18px}}
 @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+
+/* ---- step-by-step D3 transaction animations (scoped under .dxv) ---- */
+.dxv{border:1px solid var(--line);border-radius:14px;background:var(--surface-2);overflow:hidden;margin:14px 0 18px}
+.dxv .dtabs{display:flex;gap:6px;flex-wrap:wrap;padding:10px 12px 0}
+.dxv .dtabs button{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:3px 12px;font:600 12.5px var(--sans);color:var(--muted);cursor:pointer}
+.dxv .dtabs button.on{background:var(--c,var(--accent));border-color:var(--c,var(--accent));color:#fff}
+.dxv .dstage{overflow-x:auto;padding-top:8px}
+.dxv .dstage svg{display:block;width:100%;min-width:680px;height:auto;cursor:pointer;user-select:none}
+.dxv .dcap{padding:10px 16px;min-height:3.4em;border-top:1px dashed var(--line);font-size:15px}
+.dxv .dctl{display:flex;align-items:center;gap:8px;padding:0 12px 12px}
+.dxv .db{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:5px 14px;font:600 13px var(--sans);cursor:pointer}
+.dxv .db:hover:not(:disabled){border-color:var(--c,var(--accent))}
+.dxv .db:disabled{opacity:.4;cursor:default}
+.dxv .db.pri{background:var(--c,var(--accent));border-color:var(--c,var(--accent));color:#fff}
+.dxv .dcnt{margin-left:auto;font:500 12px var(--mono);color:var(--faint)}
+.dxv svg text{font-family:var(--sans);font-size:13px;fill:var(--fg);dominant-baseline:central;white-space:pre}
+.dxv svg tspan{white-space:pre}
+.dxv .c-n{--cc:var(--muted)}.dxv .c-a{--cc:var(--sa)}.dxv .c-b{--cc:var(--sb)}.dxv .c-g{--cc:var(--ok)}
+.dxv .c-o{--cc:var(--warn)}.dxv .c-r{--cc:var(--bad)}.dxv .c-s{--cc:var(--pi)}.dxv .c-f{--cc:var(--fg)}
+.dxv g.box rect,.dxv g.circ circle{fill:color-mix(in srgb,var(--cc) 14%,var(--surface));stroke:var(--cc);stroke-width:1.6;transition:fill .45s,stroke .45s}
+.dxv g.dash rect,.dxv g.dash circle{stroke-dasharray:6 4;fill:color-mix(in srgb,var(--cc) 4%,transparent)}
+.dxv g.hl rect,.dxv g.hl circle{stroke-width:3.4;filter:drop-shadow(0 0 7px color-mix(in srgb,var(--cc) 65%,transparent))}
+.dxv g.text text{fill:var(--cc);transition:fill .45s}
+.dxv g.b text{font-weight:700}
+.dxv g.lg text{font-weight:700;font-size:15px}
+.dxv g.sm text{font-size:11.5px}
+.dxv g.m text{font-family:var(--mono);font-size:12px}
+.dxv g.arrow line{stroke:var(--cc);stroke-width:2.2;transition:stroke .4s}
+.dxv g.arrow.dash line{stroke-dasharray:6 4}
 </style>
 </head>
 <body>
@@ -189,6 +219,9 @@ INSERT INTO accounts VALUES (1, 'Rahim', 1000), (2, 'Karim', 500);</pre>
     <span class="motto">All or nothing — transaction ভাঙা যায় না</span>
     <p class="lead">একটা transaction-এর ভেতরের সব statement মিলে একটা <b>একক কাজ</b>। একটাও fail করলে আগের গুলোও মুছে যায় — database এমন অবস্থায় ফেরে যেন transaction শুরুই হয়নি।</p>
     <div class="card story"><p><b>বাস্তবে:</b> bKash-এ টাকা পাঠালে — তোমার account থেকে কাটল, কিন্তু network চলে যাওয়ায় বন্ধুর account-এ পৌঁছাল না। Atomicity না থাকলে টাকাটা মাঝপথে হাওয়া হয়ে যেত।</p></div>
+
+    <h3>ধাপে ধাপে দেখো: transaction commit বনাম rollback (Next চাপো)</h3>
+    <div class="dxv" data-scene="atomic" style="--c:var(--pa)"></div>
 
     <h3>Karim-এর আছে 500, সে 2000 পাঠাতে চায়</h3>
     <div class="file" style="--dot:var(--pa)"><i></i>psql<span class="r" style="--tc:var(--bad)">fail → সব বাতিল</span></div>
@@ -271,6 +304,9 @@ catch
     <p class="lead">Transaction শুরুর আগে database যদি সব নিয়ম মেনে চলে, শেষেও মেনে চলবে। নিয়ম ভাঙে এমন কোনো লেখা database নিজেই ফিরিয়ে দেয় — app-এ bug থাকলেও।</p>
     <div class="card story"><p><b>বাস্তবে:</b> ব্যাংকের নিয়ম — balance কখনো negative হবে না, একই account number দুবার থাকবে না, আর transfer-এর আগে-পরে মোট টাকা একই থাকবে।</p></div>
 
+    <h3>ধাপে ধাপে দেখো: নিয়ম ভাঙলে কী হয় (Next চাপো)</h3>
+    <div class="dxv" data-scene="consistency" style="--c:var(--pc)"></div>
+
     <h3>Database-এর নিয়ম ভাঙার চেষ্টা</h3>
     <div class="grid2">
 <pre class="code" data-lang="sql">UPDATE accounts SET balance = -50 WHERE id = 1;
@@ -306,6 +342,9 @@ SELECT sum(balance) FROM accounts;   <span class="o">-- 1500</span> <span class=
     <h2><span class="num">I</span>Isolation</h2>
     <span class="motto">একসাথে চললেও যেন একা চলছে</span>
     <p class="lead">একাধিক transaction একই সময়ে চললে কেউ কারো <b>অর্ধেক-শেষ কাজ</b> দেখবে না। নিচে A টাকা পাঠাচ্ছে, আর একই মুহূর্তে B (ধরো, অডিট report) মোট টাকা গুনছে।</p>
+    <h3>ধাপে ধাপে দেখো: দুটো session একসাথে (Next চাপো)</h3>
+    <div class="dxv" data-scene="isolation" style="--c:var(--pi)"></div>
+
     <div class="card tl" data-tl="iso"></div>
     <div class="how"><b>Isolation না থাকলে:</b> <code>t3</code>-এ B দেখত Rahim থেকে 300 কাটা কিন্তু Karim-এ যোগ হয়নি — মোট 1200, অডিট বলত 300 টাকা উধাও। PostgreSQL-এ MVCC-র কারণে B শুধু commit হওয়া data দেখে, আর reader কখনো writer-এর জন্য অপেক্ষা করে না।</div>
 
@@ -330,6 +369,9 @@ SELECT sum(balance) FROM accounts;   <span class="o">-- 1500</span> <span class=
     <span class="motto">COMMIT একবার হলে আর হারাবে না</span>
     <p class="lead"><code>COMMIT</code> সফল বললে সেই data <b>disk-এ নিরাপদ</b> — পরের মুহূর্তে বিদ্যুৎ চলে গেলেও, server crash করলেও। আর যেটা commit হয়নি, restart-এর পর সেটার কোনো চিহ্ন থাকবে না।</p>
     <div class="card story"><p><b>বাস্তবে:</b> ATM "Transaction successful" দেখানোর পর ব্যাংকের server reboot হলো। টাকা তো তুমি হাতে পেয়েছ — balance থেকেও অবশ্যই কাটা থাকতে হবে।</p></div>
+
+    <h3>ধাপে ধাপে দেখো: COMMIT থেকে crash, তারপর recovery (Next চাপো)</h3>
+    <div class="dxv" data-scene="durability" style="--c:var(--pd)"></div>
 
     <h3>Crash test — commit-এর পর হঠাৎ server বন্ধ</h3>
     <div class="card tl" data-tl="dur"></div>
@@ -458,6 +500,122 @@ document.getElementById("theme").addEventListener("click", () => {
   root.dataset.theme = dark ? "light" : "dark";
   try { localStorage.setItem("welldev-theme", root.dataset.theme); } catch (e) {}
 });
+</script>
+
+<script>
+/* Step-by-step D3 scenes. Each step adds / modifies / deletes nodes by id; the engine animates the difference. */
+(function(){
+const MK={n:'--muted',a:'--sa',b:'--sb',g:'--ok',o:'--warn',r:'--bad',s:'--pi',f:'--fg'};
+const defs=document.createElementNS('http://www.w3.org/2000/svg','svg');defs.setAttribute('width',0);defs.setAttribute('height',0);defs.style.position='absolute';
+defs.innerHTML='<defs>'+Object.entries(MK).map(([k,v])=>`<marker id="dxah-${k}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" style="fill:var(${v})"/></marker>`).join('')+'</defs>';
+document.body.appendChild(defs);
+const B=(id,x,y,w,h,label,c='n',o={})=>({id,k:'box',x,y,w,h,label,c,...o});
+const T=(id,x,y,label,o={})=>({id,k:'text',x,y,label,c:'n',...o});
+const A=(id,x1,y1,x2,y2,c='n',o={})=>({id,k:'arrow',x:0,y:0,x1,y1,x2,y2,c,...o});
+const S=(cap,o={})=>({cap,...o});
+function stateAt(steps,i){const m=new Map();for(let k=0;k<=i;k++){const s=steps[k];(s.del||[]).forEach(id=>m.delete(id));(s.add||[]).forEach(n=>m.set(n.id,{...n}));Object.entries(s.mod||{}).forEach(([id,p])=>{if(m.has(id))Object.assign(m.get(id),p);});}return [...m.values()];}
+function setText(g,str,x,y,anchor,lh=15.5){let tx=g.select('text.lb');if(tx.empty())tx=g.append('text').attr('class','lb');const ls=String(str??'').split('\n');tx.attr('text-anchor',anchor);tx.selectAll('tspan').data(ls).join('tspan').attr('x',x).attr('y',(d,i)=>y-(ls.length-1)*lh/2+i*lh).text(d=>d);}
+function upd(g,d,t){
+  g.attr('class',`n ${d.k} c-${d.c||'n'}${d.dash?' dash':''}${d.hl?' hl':''}${d.s?' '+d.s:''}${d.m?' m':''}`);
+  if(d.k==='box'){let r=g.select('rect');if(r.empty())r=g.insert('rect',':first-child').attr('rx',9).attr('width',d.w).attr('height',d.h);r.transition(t).attr('width',d.w).attr('height',d.h);setText(g,d.label,d.w/2,d.h/2,'middle');}
+  else if(d.k==='text'){setText(g,d.label,0,0,d.a||'start');}
+  else if(d.k==='arrow'){let l=g.select('line');if(l.empty())l=g.append('line').attr('x1',d.x1).attr('y1',d.y1).attr('x2',d.x2).attr('y2',d.y2);l.attr('marker-end',`url(#dxah-${d.c||'n'})`).transition(t).attr('x1',d.x1).attr('y1',d.y1).attr('x2',d.x2).attr('y2',d.y2);}
+}
+function draw(svg,nodes,dur){
+  const t=d3.transition().duration(dur).ease(d3.easeCubicInOut);
+  svg.select('.layer').selectAll('g.n').data(nodes,d=>d.id).join(
+    en=>en.append('g').attr('opacity',0).attr('transform',d=>`translate(${d.x},${d.y})`),up=>up,ex=>ex.transition(t).attr('opacity',0).remove()
+  ).each(function(d){upd(d3.select(this),d,t);}).transition(t).attr('transform',d=>`translate(${d.x},${d.y})`).attr('opacity',d=>d.o??1);
+}
+function mount(host,tabs){
+  host.innerHTML='<div class="dtabs"></div><div class="dstage"><svg viewBox="0 0 760 240" role="img"><g class="layer"></g></svg></div><div class="dcap"></div><div class="dctl"><button class="db dprev" type="button">◀</button><button class="db pri dnext" type="button">Next ▶</button><span class="dcnt"></span></div>';
+  const svg=d3.select(host).select('svg'),cap=host.querySelector('.dcap'),cnt=host.querySelector('.dcnt'),prev=host.querySelector('.dprev'),next=host.querySelector('.dnext'),tb=host.querySelector('.dtabs');
+  let ti=0,si=0,steps;
+  function show(dur){draw(svg,stateAt(steps,si),dur);cap.innerHTML=steps[si].cap;cnt.textContent=`${si+1} / ${steps.length}`;prev.disabled=si===0;next.textContent=si===steps.length-1?'↻ আবার':'Next ▶';}
+  function load(i){ti=i;si=0;steps=tabs[i].steps;tb.querySelectorAll('button').forEach((b,k)=>b.classList.toggle('on',k===ti));show(0);}
+  if(tabs.length>1)tabs.forEach((t,i)=>{const b=document.createElement('button');b.type='button';b.textContent=t.n;b.onclick=()=>load(i);tb.appendChild(b);});else tb.remove();
+  const go=()=>{si=si===steps.length-1?0:si+1;show(600);};
+  next.onclick=go;svg.on('click',go);prev.onclick=()=>{if(si>0){si--;show(600);}};load(0);
+}
+
+/* ---------- scenes ---------- */
+// Atomicity: transaction panel (left) and the accounts table (right)
+function atomBase(l1,l2,l3){return [
+  B('tp',20,8,300,224,'','n',{dash:1}),T('tpl',34,22,'Transaction',{c:'n',s:'sm b'}),
+  B('s0',36,38,268,34,'BEGIN;','n',{m:1,s:'sm'}),B('s1',36,80,268,34,l1,'n',{m:1,s:'sm'}),B('s2',36,122,268,34,l2,'n',{m:1,s:'sm'}),B('s3',36,164,268,34,l3,'n',{m:1,s:'sm'}),
+  B('dp',380,8,360,224,'','g',{dash:1}),T('dpl',394,22,'Database: accounts',{c:'g',s:'sm b'}),
+  B('r1',400,40,320,56,'Rahim    1000','a'),B('r2',400,106,320,56,'Karim    500','b'),T('tot',560,196,'মোট = 1500',{a:'middle',c:'f',s:'b'})];}
+const ATOMIC=[
+ {n:'Commit: সব সফল',steps:[
+  S('শুরুতে Rahim 1000, Karim 500, মোট <b>1500</b>। Rahim 300 পাঠাবে Karim-কে: দুটো <code>UPDATE</code> মিলে একটা transaction।',{add:atomBase('UPDATE Rahim: balance - 300','UPDATE Karim: balance + 300','COMMIT;')}),
+  S('<b>BEGIN:</b> transaction শুরু। এখন থেকে সব পরিবর্তন <b>অস্থায়ী</b>, যতক্ষণ না COMMIT হয়।',{mod:{s0:{c:'a',hl:1}}}),
+  S('<b>UPDATE ১:</b> Rahim থেকে 300 কাটা। পরিবর্তনটা <b>অস্থায়ী</b> (কমলা বক্স)। মাঝপথের এই অবস্থায় মোট দেখায় 1200, কিন্তু আর কেউ এটা দেখছে না।',{mod:{s0:{hl:0,c:'n'},s1:{c:'g',hl:1},r1:{label:'Rahim    1000  →  700   (অস্থায়ী)',c:'o',dash:1},tot:{label:'মোট = 1200 (শুধু transaction-এর ভেতরে)',c:'o'}}}),
+  S('<b>UPDATE ২:</b> Karim-এ 300 যোগ। এখন দুটো পরিবর্তন মিলে হিসাব আবার মিলেছে: 700 + 800 = 1500।',{mod:{s1:{hl:0},s2:{c:'g',hl:1},r2:{label:'Karim    500  →  800   (অস্থায়ী)',c:'o',dash:1},tot:{label:'মোট = 1500 (transaction-এর ভেতরে)',c:'g'}}}),
+  S('<b>COMMIT:</b> দুটো পরিবর্তন <b>একসাথে</b> স্থায়ী হল। Rahim 700, Karim 800, মোট 1500। হয় দুটোই হল, নয় কোনোটাই না।',{mod:{s2:{hl:0},s3:{c:'g',hl:1},r1:{label:'Rahim    700',c:'g',dash:0},r2:{label:'Karim    800',c:'g',dash:0},tot:{label:'মোট = 1500 ✓',c:'g'}}})
+ ]},
+ {n:'Rollback: মাঝপথে error',steps:[
+  S('এবার Karim (500) চায় Rahim-কে <b>2000</b> পাঠাতে। দুটো <code>UPDATE</code>, কিন্তু Karim-এর balance ঋণাত্মক হয়ে যাবে। Table-এ নিয়ম আছে <code>CHECK (balance >= 0)</code>।',{add:atomBase('UPDATE Rahim: balance + 2000','UPDATE Karim: balance - 2000','COMMIT;')}),
+  S('<b>BEGIN:</b> transaction শুরু।',{mod:{s0:{c:'a',hl:1}}}),
+  S('<b>UPDATE ১:</b> Rahim-এ 2000 যোগ। এখনো অস্থায়ী। এই মুহূর্তে মোট 3500, যা ভুল সংখ্যা।',{mod:{s0:{hl:0,c:'n'},s1:{c:'g',hl:1},r1:{label:'Rahim    1000  →  3000   (অস্থায়ী)',c:'o',dash:1},tot:{label:'মোট = 3500 (অস্থায়ী, ভুল)',c:'o'}}}),
+  S('<b>UPDATE ২:</b> Karim থেকে 2000 কাটতে গেলে balance হত <b>-1500</b>। <code>CHECK</code> ভাঙে, <b>ERROR!</b> transaction ব্যর্থ।',{mod:{s1:{hl:0},s2:{c:'r',hl:1,label:'ERROR: CHECK balance >= 0'},r2:{label:'Karim    500  →  -1500   ✗',c:'r',dash:1},tot:{label:'transaction ব্যর্থ',c:'r'}}}),
+  S('<b>ROLLBACK:</b> Rahim-এর +2000-ও <b>মুছে যায়</b>। যেন transaction কখনো শুরুই হয়নি। Rahim 1000, Karim 500, মোট 1500।',{mod:{s2:{hl:0,c:'n',label:'(বাতিল)'},s3:{c:'r',hl:1,label:'ROLLBACK;'},r1:{label:'Rahim    1000',c:'a',dash:0},r2:{label:'Karim    500',c:'b',dash:0},tot:{label:'মোট = 1500 ✓ (আগের মতোই)',c:'g'}}})
+ ]}
+];
+
+// Consistency: a statement tries to enter; the constraint gate decides
+function consBase(){return [
+  T('stl',20,50,'চেষ্টা করা statement',{c:'n',s:'sm b'}),B('st',20,66,250,84,'','n',{m:1,s:'sm'}),
+  B('gate',300,20,200,200,'Constraints (নিয়ম)\n\nCHECK balance >= 0\nPRIMARY KEY (id)\nNOT NULL (name)','o'),
+  B('tb',540,66,200,84,'accounts\nRahim   1000\nKarim   500','g',{m:1,s:'sm'}),T('vd',500,210,'',{a:'middle',c:'f',s:'b'})];}
+const CONS=[{n:'নিয়ম ভাঙলে',steps:[
+  S('Table-এর নিয়ম আছে। যে statement ঢোকার চেষ্টা করবে, নিয়ম মানলে ঢুকবে, নইলে <b>প্রত্যাখ্যান</b>। Data কখনো নিয়ম-ভাঙা অবস্থায় থাকে না।',{add:consBase()}),
+  S('<b>চেষ্টা ১:</b> Karim-এর balance -200 করা। <code>CHECK (balance >= 0)</code> ভাঙে।',{add:[A('ar',272,108,298,108,'r')],mod:{st:{label:'UPDATE accounts\nSET balance = -200\nWHERE id = 2;',c:'a'},gate:{c:'r',hl:1},vd:{label:'✗ প্রত্যাখ্যাত: CHECK violation',c:'r'}}}),
+  S('<b>চেষ্টা ২:</b> আগে থেকে থাকা <code>id = 1</code> আবার insert। <code>PRIMARY KEY</code> duplicate সহ্য করে না।',{mod:{st:{label:"INSERT INTO accounts\nVALUES (1, 'Fake', 50);"},gate:{c:'r',hl:1},vd:{label:'✗ প্রত্যাখ্যাত: duplicate key'}}}),
+  S('<b>চেষ্টা ৩:</b> <code>name</code> ছাড়া (NULL) insert। <code>NOT NULL</code> ভাঙে।',{mod:{st:{label:'INSERT INTO accounts\nVALUES (3, NULL, 50);'},vd:{label:'✗ প্রত্যাখ্যাত: NOT NULL violation'}}}),
+  S('<b>বৈধ transfer:</b> Rahim -300, Karim +300। সব নিয়ম মানে, তাই <b>ঢুকল</b>। মোট এখনো 1500।',{mod:{st:{label:'transfer 300\n(Rahim -300, Karim +300)'},gate:{c:'g',hl:1},ar:{c:'g'},vd:{label:'✓ গৃহীত: সব নিয়ম মানা হয়েছে',c:'g'},tb:{label:'accounts\nRahim   700\nKarim   800'}}})
+]}];
+
+// Isolation: two sessions, committed data in the middle, A's private workspace
+function isoBase(){return [
+  B('ta',20,12,190,92,'Session A\ntransfer 300','a'),B('tb',20,128,190,92,'Session B\nঅডিট: sum(balance)','b'),
+  B('dp',290,12,230,208,'','g',{dash:1}),T('dpl',304,26,'Database (committed)',{c:'g',s:'sm b'}),
+  B('d1',306,44,198,56,'Rahim    1000','a'),B('d2',306,110,198,56,'Karim    500','b'),T('dsum',405,194,'committed মোট = 1500',{a:'middle',c:'f',s:'sm b'}),
+  B('w',550,12,190,108,'A-র নিজস্ব কাজ\n(uncommitted)\n\n-','o',{dash:1}),B('rb',550,136,190,84,'B-র ফল\n-','n')];}
+const ISO=[
+ {n:'Isolation আছে (PostgreSQL)',steps:[
+  S('Rahim 1000, Karim 500। Session A 300 transfer করছে। Session B একই সময়ে <code>sum(balance)</code> দেখছে। A-র কাজ শেষ হয়নি।',{add:isoBase()}),
+  S('<b>A:</b> <code>BEGIN; UPDATE Rahim - 300</code>। পরিবর্তনটা শুধু <b>A-র নিজস্ব জায়গায়</b> (uncommitted)। Database-এ Rahim এখনো <b>1000</b>।',{mod:{ta:{hl:1},w:{label:'A-র নিজস্ব কাজ\n(uncommitted)\n\nRahim 1000 → 700',c:'o'}}}),
+  S('<b>B:</b> <code>SELECT sum(balance)</code>। B শুধু <b>committed</b> data দেখে: 1000 + 500 = <b>1500</b>। A-র অর্ধেক কাজ দেখেনি।',{add:[A('rd',212,174,288,120,'b')],mod:{ta:{hl:0},tb:{hl:1},rb:{label:'B-র ফল\nsum = 1500 ✓\n(অর্ধেক কাজ দেখেনি)',c:'g'}}}),
+  S('<b>A:</b> <code>UPDATE Karim + 300</code>। এটাও এখনো A-র নিজস্ব জায়গায়।',{del:['rd'],mod:{tb:{hl:0},ta:{hl:1},w:{label:'A-র নিজস্ব কাজ\n(uncommitted)\n\nRahim 700\nKarim 800'}}}),
+  S('<b>A:</b> <code>COMMIT</code>। এবার দুটো পরিবর্তন <b>একসাথে</b> database-এ আসে: Rahim 700, Karim 800।',{mod:{d1:{label:'Rahim    700',c:'g'},d2:{label:'Karim    800',c:'g'},dsum:{label:'committed মোট = 1500'},w:{label:'A-র নিজস্ব কাজ\n(uncommitted)\n\n- (commit হয়ে গেছে)',c:'n'}}}),
+  S('<b>B:</b> আবার <code>SELECT sum</code>: 700 + 800 = <b>1500</b>। কোনো মুহূর্তেই ভুল সংখ্যা দেখেনি। এটাই Isolation।',{add:[A('rd2',212,174,288,120,'b')],mod:{ta:{hl:0},tb:{hl:1},rb:{label:'B-র ফল\nsum = 1500 ✓\n(সবসময় ঠিক)',c:'g'}}})
+ ]},
+ {n:'Isolation না থাকলে (কাল্পনিক)',steps:[
+  S('এবার কল্পনা করো <b>কোনো isolation নেই</b>: B অন্যের uncommitted কাজও দেখতে পারে (একে dirty read বলে)। PostgreSQL এটা আসলে হতে দেয় না।',{add:isoBase()}),
+  S('<b>A:</b> <code>BEGIN; UPDATE Rahim - 300</code>। commit হয়নি, কিন্তু পরিবর্তনটা সবার সামনে পড়ে গেছে।',{mod:{ta:{hl:1},d1:{label:'Rahim    700  (uncommitted!)',c:'o',dash:1},w:{label:'A-র নিজস্ব কাজ\n(uncommitted)\n\nRahim 1000 → 700'}}}),
+  S('<b>B:</b> <code>SELECT sum</code>। B অর্ধেক কাজ দেখে ফেলে: 700 + 500 = <b>1200</b>। Karim-এ 300 যোগ হয়নি, তাই 300 টাকা "হারিয়ে গেছে"।',{add:[A('rd',212,174,288,120,'r')],mod:{ta:{hl:0},tb:{hl:1},rb:{label:'B-র ফল\nsum = 1200 ✗\n(ভুল!)',c:'r'},dsum:{label:'মোট = 1200 ✗',c:'r'}}}),
+  S('A-র কাজ ব্যর্থ হয়ে <b>ROLLBACK</b> হল। Rahim ফিরে 1000। কিন্তু B এমন একটা সংখ্যা (1200) দেখেছে যা database-এ <b>কখনো সত্যিই ছিল না</b>।',{del:['rd'],mod:{d1:{label:'Rahim    1000',c:'a',dash:0},dsum:{label:'মোট = 1500',c:'f'},w:{label:'A-র নিজস্ব কাজ\n\nROLLBACK (বাতিল)',c:'r'},tb:{hl:0},rb:{label:'B-র ফল\nsum = 1200\n(ভুয়া data)',c:'r'}}}),
+  S('<b>শিক্ষা:</b> Isolation থাকলে B শুধু committed data দেখে, তাই এমন ভুল হয় না। PostgreSQL-এ কখনো dirty read নেই।',{})
+ ]}
+];
+
+// Durability: memory, WAL file, data file; crash and recovery
+function durBase(){return [
+  B('mz',20,8,320,112,'','a',{dash:1}),T('mzl',34,22,'Memory (RAM)',{c:'a',s:'sm b'}),B('buf',36,40,288,64,'shared buffer\nRahim    1000','a'),
+  B('cl',20,136,320,88,'Client (app)\n-','n'),
+  B('dz',380,8,360,216,'','n',{dash:1}),T('dzl',394,22,'Disk',{c:'n',s:'sm b'}),B('wal',396,40,328,76,'WAL file (বদলের log)\n(এখনো খালি)','o'),B('df',396,132,328,76,'Data file\nRahim    1000','b')];}
+const DUR=[{n:'Commit থেকে crash',steps:[
+  S('শুরুতে Rahim 1000, memory আর disk দুজায়গাতেই। Rahim-এ <b>+100</b> জমা করব, তারপর server crash করবে।',{add:durBase()}),
+  S('<b>UPDATE:</b> প্রথমে শুধু <b>memory-র buffer</b> বদলায়: 1100। Disk-এর data file এখনো 1000।',{mod:{buf:{label:'shared buffer\nRahim    1100   (dirty)',c:'o',dash:1}}}),
+  S('<b>COMMIT:</b> DB আগে বদলের রেকর্ড <b>WAL file-এ লিখে <code>fsync</code></b> করে disk-এ নিশ্চিত করে। তারপরই client-কে বলে "COMMIT OK"। Data file এখনো পুরনো।',{add:[A('w1',326,76,394,76,'g')],mod:{wal:{label:'WAL file (বদলের log)\nRahim 1000 → 1100  ✓ fsync',c:'g',hl:1},cl:{label:'Client (app)\nCOMMIT OK ✓',c:'g'}}}),
+  S('<b>Crash!</b> বিদ্যুৎ চলে গেল। Memory-র সব মুছে গেল, buffer-ও। কিন্তু <b>WAL file disk-এ টিকে আছে</b>, আর তাতে commit-করা বদল লেখা।',{del:['w1'],mod:{buf:{label:'memory মুছে গেছে\n(Rahim-এর 1100 হারিয়ে গেছে)',c:'r',dash:1,hl:0},mz:{c:'r'},wal:{hl:0},cl:{label:'Client (app)\nconnection কেটে গেছে',c:'r'}}}),
+  S('<b>Restart:</b> PostgreSQL চালু হয়ে <b>recovery</b> চালায়। WAL file পড়ে commit-করা কাজটা data file-এ <b>আবার করে</b>।',{add:[A('w2',560,118,560,130,'g')],mod:{mz:{c:'a'},wal:{hl:1,c:'g'},df:{hl:1}}}),
+  S('Data file এখন Rahim <b>1100</b>। COMMIT-করা data <b>হারায়নি</b>। এটাই Durability: commit-এর আগে log disk-এ, তাই crash-এও টিকে থাকে।',{del:['w2'],mod:{df:{label:'Data file\nRahim    1100 ✓',c:'g',hl:0},wal:{hl:0},buf:{label:'shared buffer\nRahim    1100',c:'g',dash:0},cl:{label:'Client (app)\nআবার সংযুক্ত, data ঠিক ✓',c:'g'}}})
+]}];
+
+const SC={atomic:ATOMIC,consistency:CONS,isolation:ISO,durability:DUR};
+document.querySelectorAll('.dxv[data-scene]').forEach(h=>mount(h,SC[h.dataset.scene]));
+})();
 </script>
 </body>
 </html>
