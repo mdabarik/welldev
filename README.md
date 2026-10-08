@@ -38,6 +38,7 @@ Software engineering interview prep — বাংলায় ব্যাখ্
 - [XSS, CSRF, JWT, Access ও Refresh Token](04-resume-projects/01-xss-csrf-jwt-refresh-token-access-token/index.html) — সাথে OWASP Top 10 (2025), Clickjacking, SSRF, IDOR, session/cookie, rate limiting, file upload, path traversal, command injection, open redirect, mass assignment, security header, SSO (OAuth/OIDC/SAML), CORS (simulator সহ)
 - [Encoding, Encryption ও Hashing](04-resume-projects/02-encoding-encryption-hashing/index.html)
 - [Event Loop — Browser ও Node.js Interactive](04-resume-projects/03-event-loop/index.html) — call stack, microtask, task queue, Node-এর phase, D3 animation-এ
+- ★ **Core** · [System Design Basics](04-resume-projects/04-system-design/index.html) - Client-Server architecture, Reliability, Availability: প্রতিটির সংক্ষিপ্ত উত্তর ও step-by-step D3 animation
 
 ## 05 · Operating System
 
@@ -53,7 +54,3 @@ Software engineering interview prep — বাংলায় ব্যাখ্
 - [Seq, Checksum ও CRC — OSI Interactive](06-networking/OSI/index.html) — একটা মেসেজের যাত্রা, seq / checksum / CRC-32 কে কোন ভুল ধরে, D3 অ্যানিমেশনে
 - [একটা Request-এর যাত্রা — Web Server Interactive](06-networking/web-server/index.html) — DNS → TCP → TLS → Nginx → app → Redis → database → response, আর Nginx বনাম Apache
 - [URL থেকে Pixel — Browser Rendering Interactive](06-networking/browser/index.html) ([live](https://mdabarik.github.io/welldev/06-networking/browser/)) — DOM, CSSOM, layout, paint, আর `<link>`, `<script>`, async, defer, module কখন চলে, timeline অ্যানিমেশনে
-
-## 08 · System Design
-
-- ★ **Core** · [System Design Basics](08-system-design/basics/index.html) - Client-Server architecture, Reliability, Availability: প্রতিটির সংক্ষিপ্ত উত্তর ও step-by-step D3 animation
