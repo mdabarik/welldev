@@ -50,7 +50,7 @@ Software engineering interview prep — বাংলায় ব্যাখ্
 
 ## 06 · Networking
 
-- [Network Basics](06-networking/network-basics/index.html) - ১৬টি interview প্রশ্ন, শেখার ক্রমে সাজানো (উত্তর পরের ধাপে)
+- [Network Basics](06-networking/network-basics/index.html) - ১৮টি interview প্রশ্ন, শেখার ক্রমে সাজানো, উত্তর ও ধাপে ধাপে D3 animation সহ
 - [Seq, Checksum ও CRC — OSI Interactive](06-networking/OSI/index.html) — একটা মেসেজের যাত্রা, seq / checksum / CRC-32 কে কোন ভুল ধরে, D3 অ্যানিমেশনে
 - [একটা Request-এর যাত্রা — Web Server Interactive](06-networking/web-server/index.html) — DNS → TCP → TLS → Nginx → app → Redis → database → response, আর Nginx বনাম Apache
 - [URL থেকে Pixel — Browser Rendering Interactive](06-networking/browser/index.html) ([live](https://mdabarik.github.io/welldev/06-networking/browser/)) — DOM, CSSOM, layout, paint, আর `<link>`, `<script>`, async, defer, module কখন চলে, timeline অ্যানিমেশনে

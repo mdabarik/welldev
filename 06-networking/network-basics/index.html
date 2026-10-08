@@ -4,42 +4,750 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Network Basics - Interview Cheat Sheet</title>
-<meta name="description" content="Trainee Software Engineer interview-এর জন্য Networking-এর 16টি প্রশ্ন, শেখার ক্রমে সাজানো।">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
+<meta name="description" content="Trainee Software Engineer interview-এর জন্য Networking-এর ১৮টি প্রশ্ন: উত্তর, ছবি ও ধাপে ধাপে D3 animation সহ।">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
 <style>
-:root{--bg:#f5f7fc;--surface:#fff;--surface-2:#f1f4fa;--fg:#0f172a;--muted:#5b6478;--line:#e4e8f1;--accent:#0d9488;--hero:linear-gradient(135deg,#0d9488,#0284c7 55%,#6366f1);--sans:"Inter","Hind Siliguri",system-ui,sans-serif;--bn:"Hind Siliguri","Inter",system-ui,sans-serif}
-@media (prefers-color-scheme:dark){:root{--bg:#0b0f1a;--surface:#121827;--surface-2:#182033;--fg:#e7ecf6;--muted:#9aa6bf;--line:#232c42;--accent:#2dd4bf}}
+/* One card per interview question: short answer, 2-3 bullets, and a step-by-step D3 scene.
+   Scenes are plain data (see TOPICS at the bottom): each step adds / modifies / deletes nodes by id
+   and the tiny engine animates the difference. */
+:root{
+  --bg:#f5f7fc; --surface:#ffffff; --surface-2:#f1f4fa; --fg:#0f172a; --muted:#5b6478; --faint:#94a0b8; --line:#e4e8f1;
+  --accent:#6366f1;
+  --a:#4f46e5; --b:#db2777; --g:#059669; --o:#d97706; --r:#e11d48; --s:#0284c7;
+  --hero:linear-gradient(135deg,#4f46e5 0%,#7c3aed 45%,#db2777 100%);
+  --shadow:0 1px 2px rgba(15,23,42,.04),0 10px 30px -12px rgba(15,23,42,.14);
+  --sans:"Inter","Hind Siliguri",system-ui,sans-serif; --bn:"Hind Siliguri","Inter",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0b0f1a; --surface:#121827; --surface-2:#182033; --fg:#e7ecf6; --muted:#9aa6bf; --faint:#66728c; --line:#232c42;
+  --accent:#818cf8; --a:#818cf8; --b:#f472b6; --g:#34d399; --o:#fbbf24; --r:#fb7185; --s:#38bdf8;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6);
+}}
+:root[data-theme="dark"]{
+  --bg:#0b0f1a; --surface:#121827; --surface-2:#182033; --fg:#e7ecf6; --muted:#9aa6bf; --faint:#66728c; --line:#232c42;
+  --accent:#818cf8; --a:#818cf8; --b:#f472b6; --g:#34d399; --o:#fbbf24; --r:#fb7185; --s:#38bdf8;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6);
+}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 var(--bn)}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 var(--bn);-webkit-font-smoothing:antialiased}
+a{color:var(--accent)}
+button{font:inherit;color:inherit}
+code{font-family:var(--mono);font-size:.86em;font-weight:500;background:color-mix(in srgb,var(--accent) 10%,var(--surface));color:color-mix(in srgb,var(--accent) 72%,var(--fg));padding:.1em .4em;border-radius:6px}
 .wrap{max-width:1000px;margin:0 auto;padding:20px 18px 70px}
-.back{color:var(--muted);font:600 13px var(--sans);text-decoration:none}
-.hero{margin-top:14px;border-radius:22px;padding:26px 30px;color:#fff;background:var(--hero)}
-.hero h1{margin:0 0 8px;font:800 clamp(26px,4.2vw,38px)/1.15 var(--sans)}
-.hero p{margin:0;opacity:.94}
-.parts{position:sticky;top:0;z-index:5;margin:14px -18px 0;padding:10px 18px;display:flex;gap:8px;overflow-x:auto;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+
+.topnav{display:flex;align-items:center;gap:10px}
+.brand{display:flex;align-items:center;gap:10px;color:var(--fg);text-decoration:none;font:800 16px var(--sans);letter-spacing:-.02em}
+.logo{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:#fff;font:800 13px var(--mono);background:var(--hero)}
+.topnav .sp{flex:1}
+.pill{border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:6px 14px;font:600 13px var(--sans);cursor:pointer;text-decoration:none}
+.pill:hover{color:var(--fg)}
+
+.hero{margin-top:20px;border-radius:22px;padding:26px 30px;color:#fff;background:var(--hero)}
+.hero .eyebrow{font:600 12px var(--sans);letter-spacing:.1em;text-transform:uppercase;opacity:.85}
+.hero h1{margin:6px 0 8px;font:800 clamp(26px,4.2vw,38px)/1.15 var(--sans);letter-spacing:-.03em}
+.hero p{margin:0;max-width:680px;opacity:.94}
+.jump{display:flex;flex-wrap:wrap;gap:6px;margin-top:16px}
+.jump a{min-width:32px;padding:0 6px;height:32px;display:grid;place-items:center;border-radius:9px;text-decoration:none;font:700 13px var(--sans);color:#fff;background:rgba(255,255,255,.18)}
+.jump a:hover{background:rgba(255,255,255,.34)}
+
+.parts{position:sticky;top:0;z-index:5;margin:14px -18px 0;padding:10px 18px;display:flex;gap:8px;overflow-x:auto;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);scrollbar-width:none}
 .parts a{flex:none;text-decoration:none;font:600 13px var(--sans);color:var(--muted);border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 13px}
+.parts a:hover{color:var(--fg)}
 .parts a b{color:var(--accent);margin-right:4px}
-.part{margin-top:40px;scroll-margin-top:60px}
-.part>h2{margin:0;font:800 24px/1.25 var(--sans)}
+
+.part{margin-top:44px;scroll-margin-top:60px}
+.part>h2{margin:0;font:800 clamp(20px,2.6vw,25px)/1.25 var(--sans);letter-spacing:-.02em}
 .part>h2 span{color:var(--accent);margin-right:8px}
-.q{margin-top:14px;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:18px 22px}
-.q h3{display:flex;gap:12px;align-items:flex-start;margin:0 0 8px;font:700 18px/1.4 var(--sans)}
+
+.q{margin-top:16px;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:20px 22px;box-shadow:var(--shadow);scroll-margin-top:64px}
+.q h3{display:flex;gap:12px;align-items:flex-start;margin:0 0 10px;font:700 18px/1.4 var(--sans);letter-spacing:-.01em}
+.skip{display:inline-block;margin-left:8px;padding:1px 10px;border-radius:999px;font:600 12px var(--sans);font-style:normal;white-space:nowrap;color:var(--muted);background:var(--surface-2);border:1px dashed var(--faint);vertical-align:middle}
 .num{flex:none;min-width:34px;height:34px;padding:0 8px;border-radius:10px;display:grid;place-items:center;color:#fff;font:800 14px var(--sans);background:var(--hero)}
-.q ul{margin:0 0 8px;padding-left:20px;color:var(--muted)}
-.soon{margin:0;font:500 13px var(--sans);color:var(--muted)}
-.sd{border-style:dashed}
-.note{margin-top:44px;padding:14px 18px;border-radius:14px;background:var(--surface-2);color:var(--muted);font-size:14.5px}
+.ans{margin:0 0 10px;padding:10px 14px;border-left:4px solid var(--accent);border-radius:0 10px 10px 0;background:color-mix(in srgb,var(--accent) 8%,var(--surface))}
+.q ul{margin:0 0 12px;padding-left:20px;color:var(--muted)}
+.q li{margin:2px 0}
+.q li b,.ans b{color:var(--fg)}
+.extra{margin:0 0 12px;overflow-x:auto}
+.extra table{border-collapse:collapse;font:500 13px var(--mono)}
+.extra th,.extra td{border:1px solid var(--line);padding:3px 10px;text-align:center}
+.extra th{background:var(--surface-2)}
+.extra .cmp td,.extra .cmp th{text-align:left;vertical-align:top;font:500 13.5px/1.55 var(--bn);min-width:150px}
+.extra .cmp td:first-child{font-weight:700;white-space:nowrap;min-width:0}
+
+.viz{border:1px solid var(--line);border-radius:14px;background:var(--surface-2);overflow:hidden}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;padding:10px 12px 0}
+.tabs button{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:3px 12px;font:600 12.5px var(--sans);color:var(--muted);cursor:pointer}
+.tabs button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.stage{overflow-x:auto;padding-top:8px}
+.stage svg{display:block;width:100%;min-width:680px;height:auto;cursor:pointer;user-select:none}
+.cap{padding:10px 16px;min-height:3.4em;border-top:1px dashed var(--line);font-size:15px}
+.ctl{display:flex;align-items:center;gap:8px;padding:0 12px 12px}
+.b{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:5px 14px;font:600 13px var(--sans);cursor:pointer}
+.b:hover:not(:disabled){border-color:var(--accent)}
+.b:disabled{opacity:.4;cursor:default}
+.b.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+.cnt{margin-left:auto;font:500 12px var(--mono);color:var(--faint)}
+
+/* svg scene */
+svg text,svg tspan{white-space:pre}
+svg text{font-family:var(--sans);font-size:13px;fill:var(--fg);dominant-baseline:central}
+.c-n{--cc:var(--muted)} .c-a{--cc:var(--a)} .c-b{--cc:var(--b)} .c-g{--cc:var(--g)}
+.c-o{--cc:var(--o)} .c-r{--cc:var(--r)} .c-s{--cc:var(--s)} .c-f{--cc:var(--fg)}
+.box rect,.circ circle{fill:color-mix(in srgb,var(--cc) 14%,var(--surface));stroke:var(--cc);stroke-width:1.6;transition:fill .45s,stroke .45s}
+.dash rect,.dash circle{stroke-dasharray:6 4;fill:color-mix(in srgb,var(--cc) 4%,transparent)}
+.hl rect,.hl circle{stroke-width:3.4;filter:drop-shadow(0 0 7px color-mix(in srgb,var(--cc) 65%,transparent))}
+.text text{fill:var(--cc);transition:fill .45s}
+.text.b text,.text.lg text{font-weight:700}
+.text.lg text{font-size:15px}
+.sm text{font-size:11.5px}
+.box.hd rect{fill:color-mix(in srgb,var(--cc) 28%,var(--surface))}
+.hd text{font-weight:700}
+.box.on rect{fill:color-mix(in srgb,var(--cc) 30%,var(--surface));stroke-width:2.2}
+.m text{font-family:var(--mono);font-size:12px}
+.path path{fill:none;stroke:var(--cc);stroke-width:3.4;stroke-linecap:round}
+.arrow line{stroke:var(--cc);stroke-width:2.2;transition:stroke .4s}
+.arrow.dash line{stroke-dasharray:6 4}
+.arrow.hl line{stroke-width:3.4}
+footer{margin-top:50px;text-align:center;color:var(--faint);font:500 13px var(--sans)}
+
+.q .ans code,.q li code{white-space:nowrap}
+.hero{background:linear-gradient(135deg,#0d9488,#0284c7 55%,#6366f1)}
+.path.thin path{stroke-width:2.2}
+.part{margin-top:44px;scroll-margin-top:60px}
+.extra .cmp td code,.extra .cmp td{font-size:13px}
+.extra pre{margin:10px 0 0;padding:10px 14px;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;font:500 12.5px/1.6 var(--mono);overflow-x:auto;white-space:pre-wrap}
 </style>
 </head>
 <body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs id="defs"></defs></svg>
 <div class="wrap">
-<a class="back" href="../../index.html">← Home</a>
-<header class="hero"><h1>Network Basics</h1><p>16টি প্রশ্ন, শেখার ক্রমে সাজানো: network থেকে addressing, তারপর transport, শেষে web ও security।</p></header>
-<nav class="parts"><a href="#p1"><b>1</b>Network Fundamentals</a><a href="#p2"><b>2</b>Addressing</a><a href="#p3"><b>3</b>Transport</a><a href="#p4"><b>4</b>Web ও Security</a></nav>
-<section class="part" id="p1"><h2><span>1</span>Network Fundamentals</h2><div class="q" id="q1"><h3><span class="num">1</span>Network কী, Network-এর ধরন (LAN, MAN, WAN, PAN) আর Topology (Bus, Star, Ring, Mesh, Tree)</h3><ul><li>Network, LAN / MAN / WAN / PAN</li><li>Bus, Star, Ring, Mesh, Tree topology</li></ul><p class="soon">উত্তর ও animation পরের ধাপে আসছে</p></div><div class="q" id="q2"><h3><span class="num">2</span>Bandwidth, Throughput আর Latency</h3><ul><li>Bandwidth বনাম throughput</li><li>Latency (RTT) কী, কীসে বাড়ে</li></ul><p class="soon">উত্তর ও animation পরের ধাপে আসছে</p></div><div class="q" id="q3"><h3><span class="num">3</span>Hub, Switch ও Router</h3><ul><li>তিনটার কাজ ও OSI layer</li><li>Collision domain, broadcast domain</li></ul><p class="soon">উত্তর ও animation পরের ধাপে আসছে</p></div></section><section class="part" id="p2"><h2><span>2</span>Addressing</h2><div class="q" id="q4"><h3><span class="num">4</span>MAC address কী, data কীভাবে send ও receive হয়</h3><ul><li>MAC format, ARP</li><li>Frame-এ destination MAC দেখে switch/NIC কী করে</li></ul><p class="soon">উত্তর ও animation পরের ধাপে আসছে</p></div><div class="q" id="q5"><h3><span class="num">5</span>IP address কী; Public, Private, Static ও Dynamic IP</h3><ul><li>Private range (10.x, 172.16–31.x, 192.168.x)</li><li>Static বনাম dynamic কখন কোনটা</li></ul><p class="soon">উত্তর ও animation পরের ধাপে আসছে</p></div><div class="q" id="q6"><h3><span class="num">6</span>IPv4 বনাম IPv6</h3><ul><li>32-bit বনাম 128-bit</li><li>কেন IPv6 লাগল</li></ul><p class="soon">উত্তর ও animation পরের ধাপে আসছে</p></div><div class="q" id="q7"><h3><span class="num">7</span>Subnet mask; Class A, B, C; Classful বনাম Classless (CIDR)</h3><ul><li>Network ID বনাম host ID</li><li>/24 মানে কী, কয়টা host</li></ul><p class="soon">উত্তর ও animation পরের ধাপে আসছে</p></div><div class="q" id="q8"><h3><span class="num">8</span>DHCP কী ও কীভাবে কাজ করে</h3><ul><li>DORA: Discover, Offer, Request, Ack</li></ul><p class="soon">উত্তর ও animation পরের ধাপে আসছে</p></div><div class="q" id="q9"><h3><span class="num">9</span>NAT ও NAT table</h3><ul><li>Private IP থেকে public IP, port translation</li></ul><p class="soon">উত্তর ও animation পরের ধাপে আসছে</p></div><div class="q" id="q10"><h3><span class="num">10</span>DSCP (QoS marking)</h3><ul><li>Packet-এর priority, voice/video বনাম bulk</li></ul><p class="soon">উত্তর ও animation পরের ধাপে আসছে</p></div></section><section class="part" id="p3"><h2><span>3</span>Transport</h2><div class="q" id="q11"><h3><span class="num">11</span>Default port: HTTP 80, HTTPS 443, FTP 20/21, DNS 53, SMTP 25</h3><ul><li>Well-known port, socket = IP + port</li></ul><p class="soon">উত্তর ও animation পরের ধাপে আসছে</p></div><div class="q" id="q12"><h3><span class="num">12</span>TCP বনাম UDP</h3><ul><li>Reliable বনাম fast, কখন কোনটা</li></ul><p class="soon">উত্তর ও animation পরের ধাপে আসছে</p></div><div class="q" id="q13"><h3><span class="num">13</span>TCP 3-way handshake</h3><ul><li>SYN, SYN-ACK, ACK</li></ul><p class="soon">উত্তর ও animation পরের ধাপে আসছে</p></div></section><section class="part" id="p4"><h2><span>4</span>Web ও Security</h2><div class="q" id="q14"><h3><span class="num">14</span>HTTP বনাম HTTPS</h3><ul><li>Request/response, method, status</li><li>HTTPS = HTTP + TLS</li></ul><p class="soon">উত্তর ও animation পরের ধাপে আসছে</p></div><div class="q" id="q15"><h3><span class="num">15</span>SSL বনাম TLS</h3><ul><li>ইতিহাস ও version, কেন SSL বন্ধ</li></ul><p class="soon">উত্তর ও animation পরের ধাপে আসছে</p></div><div class="q" id="q16"><h3><span class="num">16</span>TLS handshake</h3><ul><li>Certificate, key exchange, session key</li></ul><p class="soon">উত্তর ও animation পরের ধাপে আসছে</p></div></section>
-<section class="part"><h2>System Design-এ আলাদা করা</h2>
-<p class="note">এগুলো networking-এর চেয়ে system design-এর topic, তাই এই পাতায় নেই। Bandwidth, throughput, latency networking-এ রাখা হয়েছে।</p>
-<div class="q sd"><h3>Client-Server architecture</h3><p class="soon">Request/response, thin vs thick client, 2-tier / 3-tier</p></div><div class="q sd"><h3>Reliability</h3><p class="soon">System fail করলেও ঠিকমতো কাজ করা</p></div><div class="q sd"><h3>Availability</h3><p class="soon">Uptime, “nine”s (99.9%), redundancy</p></div></section>
+  <nav class="topnav">
+    <a class="brand" href="../../index.html"><span class="logo">W</span>WellDev</a>
+    <span class="sp"></span>
+    <button class="pill" id="theme" type="button">Theme</button>
+  </nav>
+  <header class="hero">
+    <div class="eyebrow">Networking · Basics</div>
+    <h1>Network Basics: ১৮টি প্রশ্ন</h1>
+    <p>Network থেকে addressing, তারপর transport, শেষে web ও security, শেখার ক্রমে। প্রতিটা ধাপে animation, scene-এ ক্লিক করো বা <b>Next</b> চাপো।</p>
+  </header>
+  <nav class="parts" id="parts"></nav>
+  <main id="app"></main>
+  <footer>Networking · Basics</footer>
 </div>
+<script>
+/* ---------- theme ---------- */
+(function(){
+  const root=document.documentElement,btn=document.getElementById('theme');
+  try{const t=localStorage.getItem('theme');if(t)root.dataset.theme=t;}catch(e){}
+  const dark=()=>root.dataset.theme?root.dataset.theme==='dark':matchMedia('(prefers-color-scheme:dark)').matches;
+  const label=()=>btn.textContent=dark()?'Light':'Dark';
+  btn.onclick=()=>{root.dataset.theme=dark()?'light':'dark';try{localStorage.setItem('theme',root.dataset.theme);}catch(e){}label();};
+  label();
+})();
+
+/* ---------- scene engine ---------- */
+const COLORS=['n','a','b','g','o','r','s','f'];
+document.getElementById('defs').innerHTML=COLORS.map(c=>
+  `<marker id="ah-${c}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" style="fill:var(--${c==='n'?'muted':c==='f'?'fg':c})"/></marker>`).join('');
+
+const B=(id,x,y,w,h,label,c='n',o={})=>({id,k:'box',x,y,w,h,label,c,...o});
+const T=(id,x,y,label,o={})=>({id,k:'text',x,y,label,c:'n',...o});
+const A=(id,x1,y1,x2,y2,c='n',o={})=>({id,k:'arrow',x:0,y:0,x1,y1,x2,y2,c,...o});
+const C=(id,x,y,r,label,c='n',o={})=>({id,k:'circ',x,y,r,label,c,...o});
+const S=(cap,o={})=>({cap,...o});
+const P=(id,d,c='n',o={})=>({id,k:'path',x:0,y:0,d,c,...o});
+
+function stateAt(steps,i){
+  const m=new Map();
+  for(let k=0;k<=i;k++){
+    const s=steps[k];
+    (s.del||[]).forEach(id=>m.delete(id));
+    (s.add||[]).forEach(n=>m.set(n.id,{...n}));
+    Object.entries(s.mod||{}).forEach(([id,p])=>{if(m.has(id))Object.assign(m.get(id),p);});
+  }
+  return [...m.values()];
+}
+
+function setText(g,cls,str,x,y,anchor,lh=15.5){
+  let tx=g.select('text.'+cls);
+  if(tx.empty())tx=g.append('text').attr('class',cls);
+  const ls=String(str??'').split('\n');
+  tx.attr('text-anchor',anchor);
+  tx.selectAll('tspan').data(ls).join('tspan').attr('x',x).attr('y',(d,i)=>y-(ls.length-1)*lh/2+i*lh).text(d=>d);
+}
+
+function upd(g,d,t){
+  g.attr('class',`n ${d.k} c-${d.c||'n'}${d.dash?' dash':''}${d.hl?' hl':''}${d.s?' '+d.s:''}${d.m?' m':''}`);
+  if(d.k==='box'){
+    let r=g.select('rect');
+    if(r.empty())r=g.insert('rect',':first-child').attr('rx',d.rx??9).attr('width',d.w).attr('height',d.h);
+    r.transition(t).attr('width',d.w).attr('height',d.h);
+    setText(g,'lb',d.label,d.w/2,d.h/2,'middle');
+  }else if(d.k==='circ'){
+    let r=g.select('circle');
+    if(r.empty())r=g.insert('circle',':first-child').attr('r',d.r);
+    r.transition(t).attr('r',d.r);
+    setText(g,'lb',d.label,0,0,'middle');
+  }else if(d.k==='text'){
+    setText(g,'lb',d.label,0,0,d.a||'start');
+  }else if(d.k==='path'){
+    let p=g.select('path');
+    if(p.empty()){p=g.append('path').attr('d',d.d);const L=p.node().getTotalLength();p.attr('stroke-dasharray',L).attr('stroke-dashoffset',L).transition(t).attr('stroke-dashoffset',0);}
+  }else if(d.k==='arrow'){
+    let l=g.select('line');
+    if(l.empty())l=g.append('line').attr('x1',d.x1).attr('y1',d.y1).attr('x2',d.x2).attr('y2',d.y2);
+    l.attr('marker-end',`url(#ah-${d.c||'n'})`).transition(t).attr('x1',d.x1).attr('y1',d.y1).attr('x2',d.x2).attr('y2',d.y2);
+  }
+}
+
+function draw(svg,nodes,dur){
+  const t=d3.transition().duration(dur).ease(d3.easeCubicInOut);
+  svg.select('.layer').selectAll('g.n').data(nodes,d=>d.id).join(
+    en=>en.append('g').attr('opacity',0).attr('transform',d=>`translate(${d.x},${d.y})`),
+    up=>up,
+    ex=>ex.transition(t).attr('opacity',0).remove()
+  ).each(function(d){upd(d3.select(this),d,t);})
+   .transition(t).attr('transform',d=>`translate(${d.x},${d.y})`).attr('opacity',d=>d.o??1);
+}
+
+function mount(host,topic){
+  const tabs=topic.tabs||[{n:'',steps:topic.steps}];
+  host.innerHTML='<div class="tabs"></div><div class="stage"><svg viewBox="0 0 760 240" role="img"><g class="layer"></g></svg></div><div class="cap"></div><div class="ctl"><button class="b prev" type="button">◀</button><button class="b pri next" type="button">Next ▶</button><span class="cnt"></span></div>';
+  const svg=d3.select(host).select('svg'),cap=host.querySelector('.cap'),cnt=host.querySelector('.cnt');
+  const prev=host.querySelector('.prev'),next=host.querySelector('.next'),tabBox=host.querySelector('.tabs');
+  let ti=0,si=0,steps;
+  function show(dur){
+    draw(svg,stateAt(steps,si),dur);
+    cap.innerHTML=steps[si].cap;
+    svg.attr('viewBox','0 0 760 '+(steps.vh||240));
+    cnt.textContent=`${si+1} / ${steps.length}`;
+    prev.disabled=si===0;
+    next.textContent=si===steps.length-1?'↻ আবার':'Next ▶';
+  }
+  function load(i){
+    ti=i;si=0;
+    const tb=tabs[ti];steps=typeof tb.steps==='function'?tb.steps():tb.steps;
+    tabBox.querySelectorAll('button').forEach((b,k)=>b.classList.toggle('on',k===ti));
+    show(0);
+  }
+  if(tabs.length>1){
+    tabs.forEach((tb,i)=>{const b=document.createElement('button');b.type='button';b.textContent=tb.n;b.onclick=()=>load(i);tabBox.appendChild(b);});
+  }else tabBox.remove();
+  const go=()=>{si=si===steps.length-1?0:si+1;show(600);};
+  next.onclick=go;svg.on('click',go);
+  prev.onclick=()=>{if(si>0){si--;show(600);}};
+  load(0);
+}
+
+
+/* ---------- helpers ---------- */
+const N=(id,cx,cy,label,c='a',o={})=>B(id,cx-26,cy-15,52,30,label,c,{s:'sm',...o});
+const L=(id,x1,y1,x2,y2,c='n')=>P(id,`M${x1} ${y1}L${x2} ${y2}`,c,{s:'thin'});
+const PK=(id,x,y,label,c='o')=>B(id,x,y,38,20,label,c,{s:'sm',rx:5});
+const VH=(arr,h)=>{arr.vh=h;return arr;};
+
+/* ===== 1. Network কী ===== */
+const WHATNET=VH([
+  S('একটা computer একা: ফাইল বা message অন্য computer-এ পাঠানোর কোনো উপায় নেই।',{add:[B('a',60,95,110,50,'Computer A','a'),B('b',590,95,110,50,'Computer B','b')]}),
+  S('<b>Network</b> = দুই বা বেশি device (<b>node</b>) যখন একটা <b>link</b> (তার, fibre বা Wi-Fi) দিয়ে জোড়া লেগে data আদান-প্রদান করে।',{add:[L('l',170,120,590,120,'g'),T('t1',380,150,'link (তার / Wi-Fi)',{a:'middle',c:'g'})]}),
+  S('Data যায় ছোট ছোট টুকরো <b>packet</b> হয়ে। শুরুতে packet A-তে।',{add:[PK('pk',190,110,'hi')]}),
+  S('Packet link ধরে B-তে পৌঁছাল। <b>Protocol</b> (নিয়মের সেট, যেমন TCP/IP, HTTP) ঠিক করে কে কীভাবে কথা বলবে, না হলে দু-পক্ষ একে অপরকে বুঝত না।',{mod:{pk:{x:532},b:{hl:1}}}),
+  S('<b>Internet</b> হল আলাদা আলাদা অসংখ্য network-এর জোড়া লাগা রূপ: <b>network of networks</b>। বাড়ির network, office network, ISP network সব router দিয়ে জোড়া।',{del:['a','b','l','t1','pk'],add:[C('n1',150,120,52,'Home\nLAN','a'),C('n2',380,120,52,'ISP','g'),C('n3',610,120,52,'Office\nLAN','b'),L('i1',202,120,328,120,'n'),L('i2',432,120,558,120,'n'),T('t2',380,205,'Internet = network of networks',{a:'middle',c:'f',s:'b'})]})
+],250);
+
+/* ===== 2. Types & Topology ===== */
+const NETTYPES=VH([
+  S('<b>PAN</b> (Personal Area Network): একজন মানুষের চারপাশে, প্রায় ১-১০ মিটার। যেমন phone ↔ earbuds (Bluetooth)।',{add:[B('pan',14,60,172,130,'PAN\nPersonal Area\n~1–10 m\nphone ↔ earbuds','a',{hl:1})]}),
+  S('<b>LAN</b> (Local Area Network): একটা বাড়ি/office/ক্যাম্পাস। Wi-Fi বা Ethernet, দ্রুত আর সস্তা। যেমন office-এর সব PC আর printer।',{add:[B('lan',198,60,172,130,'LAN\nLocal Area\nএকটা building\nOffice Wi-Fi / Ethernet','g',{hl:1})],mod:{pan:{hl:0}}}),
+  S('<b>MAN</b> (Metropolitan Area Network): একটা শহর জুড়ে। যেমন শহরের ব্যাংকের শাখাগুলো বা cable TV network।',{add:[B('man',382,60,172,130,'MAN\nMetropolitan Area\nএকটা শহর (~50 km)\nশহরজুড়ে fibre ring','o',{hl:1})],mod:{lan:{hl:0}}}),
+  S('<b>WAN</b> (Wide Area Network): দেশ বা মহাদেশ জুড়ে, সাধারণত ISP-র লাইন ভাড়া নিয়ে। <b>Internet</b> সবচেয়ে বড় WAN।',{add:[B('wan',566,60,172,130,'WAN\nWide Area\nদেশ / পৃথিবী\nInternet, কোম্পানির branch-সংযোগ','b',{hl:1})],mod:{man:{hl:0}}}),
+  S('<b>মনে রাখার উপায়:</b> আকার PAN &lt; LAN &lt; MAN &lt; WAN। যত বড়, তত ধীর আর খরচ বেশি, আর বেশিরভাগই অন্যের (ISP-র) লাইন।',{mod:{wan:{hl:0}}})
+],250);
+
+function topoScene(cfg){
+  const pos=e=>Array.isArray(e)?e:[cfg.nodes[e][0],cfg.nodes[e][1]];
+  const adds=[];
+  cfg.links.forEach(([a,b,id],i)=>{const [x1,y1]=pos(a),[x2,y2]=pos(b);adds.push(L(id||'l'+i,x1,y1,x2,y2,'n'));});
+  Object.entries(cfg.nodes).forEach(([id,q])=>adds.push(N(id,q[0],q[1],q[2],q[3]||'a')));
+  const steps=[S(cfg.c1,{add:adds})];
+  const [sx,sy]=pos(cfg.msg[0]);
+  steps.push(S(cfg.c2,{add:[PK('pk',sx-19,sy-10,'data')],mod:{[cfg.msg[0]]:{hl:1}}}));
+  cfg.msg.slice(1).forEach((e,i)=>{
+    const [x,y]=pos(e),prev=cfg.msg[i],m={pk:{x:x-19,y:y-10}};
+    if(typeof e==='string')m[e]={hl:1};
+    if(typeof prev==='string')m[prev]={hl:0};
+    steps.push(S(cfg.hop[i]||'Packet পরের ধাপে যায়।',{mod:m}));
+  });
+  steps.push(S(cfg.fail,{mod:cfg.failMod}));
+  (cfg.extra||[]).forEach(x=>steps.push(x));
+  steps.push(S(cfg.pc,{}));
+  return VH(steps,250);
+}
+const hex=(n,cx,cy,rx,ry,off=-90)=>{const o={};for(let i=0;i<n;i++){const a=(off+i*360/n)*Math.PI/180;o['p'+(i+1)]=[Math.round(cx+rx*Math.cos(a)),Math.round(cy+ry*Math.sin(a)),'PC'+(i+1)];}return o;};
+const TOPO={
+ bus:()=>topoScene({
+  nodes:{p1:[110,45,'PC1'],p2:[250,200,'PC2'],p3:[390,45,'PC3'],p4:[530,200,'PC4'],p5:[670,45,'PC5']},
+  links:[[[40,122],[720,122],'bb'],['p1',[110,122]],['p2',[250,122]],['p3',[390,122]],['p4',[530,122]],['p5',[670,122]]],
+  c1:'<b>Bus:</b> সবাই <b>একটা মূল তার</b> (backbone) থেকে ঝুলে থাকে। সবচেয়ে সস্তা, কম তার লাগে।',
+  c2:'PC1 PC4-কে data পাঠাচ্ছে। Data উঠল backbone-এ।',msg:['p1',[110,122],[530,122],'p4'],
+  hop:['Data পুরো backbone-এ ছড়ায়, সবাই শুনতে পায়।','PC4-এর ঠিকানার জায়গায় পৌঁছাল।','শুধু PC4 নেয়, বাকিরা উপেক্ষা করে।'],
+  fail:'<b>সমস্যা:</b> backbone কেটে গেলে বা ছিঁড়লে <b>পুরো network বন্ধ</b>। একসাথে একজনই কথা বলতে পারে (collision), আর সমস্যা খোঁজা কঠিন।',failMod:{bb:{c:'r'},pk:{c:'r'}},
+  pc:'<b>সারকথা:</b> সস্তা ও সরল, কিন্তু ধীর, collision হয়, আর backbone একটাই point of failure। আজকাল প্রায় ব্যবহার হয় না।'}),
+ star:()=>topoScene({
+  nodes:{...{sw:[380,120,'Switch','g']},p1:[130,45,'PC1'],p2:[130,195,'PC2'],p3:[630,45,'PC3'],p4:[630,195,'PC4'],p5:[380,205,'PC5']},
+  links:[['p1','sw'],['p2','sw'],['p3','sw'],['p4','sw'],['p5','sw']],
+  c1:'<b>Star:</b> প্রতিটা device আলাদা তারে মাঝখানের <b>switch/hub</b>-এ জোড়া। আজকের LAN সবই star।',
+  c2:'PC1 PC3-কে data পাঠাচ্ছে।',msg:['p1','sw','p3'],hop:['Switch data পেল।','Switch শুধু PC3-কে পাঠাল, বাকিদের নয়।'],
+  fail:'<b>সমস্যা:</b> মাঝের switch নষ্ট হলে <b>সবাই বন্ধ</b> (single point of failure)। কিন্তু একটা PC-র তার কাটলে শুধু সেই PC বন্ধ।',failMod:{sw:{c:'r'},pk:{c:'r'}},
+  pc:'<b>সারকথা:</b> নতুন device জোড়া সহজ, একজনের সমস্যা অন্যকে ছোঁয় না, সমস্যা খুঁজতে সহজ। খরচ: বেশি তার আর switch।'}),
+ ring:()=>{const nd=hex(6,380,122,230,82);return topoScene({
+  nodes:nd,links:[['p1','p2'],['p2','p3'],['p3','p4'],['p4','p5'],['p5','p6'],['p6','p1']],
+  c1:'<b>Ring:</b> প্রতিটা device ঠিক <b>পাশের দুজনের সাথে</b> জোড়া, মিলে একটা বৃত্ত। Data একদিকে ঘোরে।',
+  c2:'PC1 PC4-কে data পাঠাচ্ছে।',msg:['p1','p2','p3','p4'],hop:['পাশের PC2 পেল, নিজের নয় তাই আরেক ধাপ এগিয়ে দিল।','PC3 একইভাবে এগিয়ে দিল।','PC4 নিজের data পেয়ে নিল।'],
+  fail:'<b>সমস্যা:</b> একটা তার বা device নষ্ট হলে (single ring-এ) <b>বৃত্ত ভেঙে যায়</b>, data আটকে যায়। দুই-ring (dual ring) দিয়ে এটা ঠেকানো হয়।',failMod:{l2:{c:'r'},pk:{c:'r'}},
+  pc:'<b>সারকথা:</b> ঠিকঠাক বারি-ভিত্তিক (token) চলে বলে collision নেই, কিন্তু নতুন device যোগ করা ও ভাঙলে ধরা কঠিন। Token Ring, FDDI-তে ছিল।'});},
+ mesh:()=>{const nd=hex(5,380,125,200,92);return topoScene({
+  nodes:nd,links:[['p1','p2'],['p2','p3'],['p3','p4'],['p4','p5'],['p5','p1'],['p1','p3','x13'],['p1','p4'],['p2','p4'],['p2','p5'],['p3','p5']],
+  c1:'<b>Mesh:</b> প্রতিটা device <b>প্রায় সবার সাথে সরাসরি</b> জোড়া। এখানে full mesh: ৫টা device-এ ১০টা link।',
+  c2:'PC1 PC3-কে data পাঠাচ্ছে, সোজা link ধরে।',msg:['p1','p3'],hop:['এক ধাপেই পৌঁছাল।'],
+  fail:'<b>Link ছিঁড়ল:</b> PC1–PC3 সোজা link গেছে।',failMod:{x13:{c:'r'}},
+  extra:[S('Data <b>অন্য পথে</b> (PC4 হয়ে) ঘুরে গেল, কেউ টের পেল না।',{mod:{pk:{x:nd.p4[0]-19,y:nd.p4[1]-10,c:'g'},p4:{hl:1}}}),S('PC4 থেকে PC3-তে পৌঁছাল। <b>এই redundancy</b> mesh-এর বড় শক্তি।',{mod:{pk:{x:nd.p3[0]-19,y:nd.p3[1]-10},p4:{hl:0},p3:{hl:1}}})],
+  pc:'<b>সারকথা:</b> সবচেয়ে নির্ভরযোগ্য (একটা link গেলেও চলে), কিন্তু তার আর খরচ অনেক: n টা device-এ n(n−1)/2 টা link। Internet আংশিক mesh।'});},
+ tree:()=>topoScene({
+  nodes:{r:[380,30,'Root','g'],m1:[220,112,'SW1','g'],m2:[540,112,'SW2','g'],a:[130,200,'PC1'],b:[310,200,'PC2'],c:[450,200,'PC3'],d:[630,200,'PC4']},
+  links:[['r','m1'],['r','m2'],['m1','a'],['m1','b'],['m2','c'],['m2','d']],
+  c1:'<b>Tree:</b> star-গুলোকে গাছের মতো সাজানো: উপরে root, নিচে ধাপে ধাপে শাখা। বড় office-এ (floor-wise switch) দেখা যায়।',
+  c2:'PC1 PC3-কে data পাঠাচ্ছে (দুই শাখার মধ্যে)।',msg:['a','m1','r','m2','c'],hop:['নিজের শাখার switch-এ গেল।','Root-এ উঠল।','অন্য শাখার switch-এ নামল।','PC3 পেল।'],
+  fail:'<b>সমস্যা:</b> একটা শাখার switch (SW1) নষ্ট হলে <b>তার নিচের সবাই</b> (PC1, PC2) বিচ্ছিন্ন। Root নষ্ট হলে দুই শাখা আলাদা।',failMod:{m1:{c:'r'},a:{dash:1,c:'r'},b:{dash:1,c:'r'},pk:{c:'r'}},
+  pc:'<b>সারকথা:</b> বড় network সহজে বাড়ে আর সাজানো থাকে, কিন্তু উপরের node নষ্ট হলে নিচের পুরো শাখা বন্ধ।'})
+};
+
+/* ===== 3. Bandwidth, Throughput, Latency ===== */
+const BW=VH([
+  S('<b>Bandwidth</b> = link-এর <b>সর্বোচ্চ</b> ক্ষমতা: প্রতি সেকেন্ডে কত bit পাঠানো সম্ভব। যেমন 100 Mbps। পাইপের <b>প্রস্থ</b>।',{add:[B('pipe',30,70,700,70,'Link: 100 Mbps (bandwidth, সম্ভাব্য সর্বোচ্চ)','a',{dash:1})]}),
+  S('<b>Throughput</b> = <b>আসলে</b> প্রতি সেকেন্ডে কত data পৌঁছাচ্ছে। এখানে 60 Mbps। পাইপ দিয়ে আসলে যে পানি বইছে।',{add:[B('flow',30,86,420,38,'আসলে বইছে: 60 Mbps (throughput)','g',{hl:1})]}),
+  S('<b>Throughput কেন কম:</b> congestion, packet loss ও resend, protocol overhead (header), server-এর ধীর গতি, Wi-Fi সংকেত দুর্বল।',{add:[B('r1',30,170,160,44,'Congestion','r',{s:'sm'}),B('r2',210,170,160,44,'Packet loss / resend','r',{s:'sm'}),B('r3',390,170,160,44,'Header overhead','r',{s:'sm'}),B('r4',570,170,160,44,'ধীর server / Wi-Fi','r',{s:'sm'})]}),
+  S('<b>একক:</b> bandwidth হয় <b>bit</b>-এ (Mbps), file size <b>byte</b>-এ (MB)। 8 bit = 1 byte, তাই 100 Mbps ≈ 12.5 MB/s। Throughput কখনো bandwidth ছাড়ায় না।',{del:['r1','r2','r3','r4'],add:[T('u',380,190,'100 Mbps ÷ 8 = 12.5 MB/s (সর্বোচ্চ)',{a:'middle',c:'f',s:'b'})]})
+],250);
+const LAT=VH([
+  S('<b>Latency</b> = একটা packet পাঠাতে <b>কত সময় লাগে</b> (ms)। গতির নয়, <b>দেরির</b> মাপ। শুরু: client ও server।',{add:[B('cl',30,90,110,60,'Client\n(ঢাকা)','a'),B('sv',620,90,110,60,'Server\n(Singapore)','g'),L('ln',140,120,620,120,'n')]}),
+  S('Request গেল। এক দিকের সময় ≈ <b>30 ms</b>।',{add:[PK('pk',150,110,'ping')],mod:{pk:{x:150}}}),
+  S('Packet server-এ পৌঁছাল: <b>30 ms</b> গেছে।',{mod:{pk:{x:572,c:'o'},sv:{hl:1}}}),
+  S('উত্তর ফিরে এল। মোট যাওয়া-আসা = <b>RTT</b> (Round Trip Time) ≈ <b>60 ms</b>। <code>ping</code> এই RTT-ই দেখায়।',{mod:{pk:{x:150,c:'g'},sv:{hl:0},cl:{hl:1}},add:[T('rt',380,190,'RTT = 30 + 30 = 60 ms',{a:'middle',c:'f',s:'b'})]}),
+  S('<b>Latency বাড়ে যে কারণে:</b> দূরত্ব (আলোর গতি সীমা), মাঝের router-এর সংখ্যা (hop), congestion-এ queue, wireless/satellite। কমানোর উপায়: কাছের server বা CDN।',{mod:{cl:{hl:0}},add:[T('rs',380,215,'দূরত্ব · hop · queue · medium',{a:'middle',c:'r'})]})
+],250);
+const BWLAT=VH([
+  S('<b>Fibre (ঢাকা ↔ Singapore):</b> bandwidth <b>বেশি</b> (10 Gbps), latency <b>কম</b> (≈ 40 ms)। চওড়া ও ছোট রাস্তা।',{add:[B('f1',30,40,700,50,'Fibre: 10 Gbps  |  40 ms','g')]}),
+  S('<b>Satellite:</b> bandwidth মোটামুটি (100 Mbps) কিন্তু latency <b>অনেক বেশি</b> (≈ 600 ms), কারণ signal মহাকাশ পর্যন্ত ওঠানামা করে।',{add:[B('f2',30,110,700,50,'Satellite: 100 Mbps  |  600 ms','r')]}),
+  S('<b>কোনটা কখন জরুরি:</b> বড় file download / video stream-এ <b>bandwidth</b>। Online game, video call, SSH-এ <b>latency</b>। দুটো আলাদা জিনিস।',{add:[B('g1',30,180,340,44,'Download, streaming → bandwidth','a',{s:'sm'}),B('g2',390,180,340,44,'Gaming, call, trading → latency','b',{s:'sm'})]})
+],250);
+
+/* ===== 4. Hub, Switch, Router ===== */
+const HUB=VH([
+  S('<b>Hub</b> (Layer 1, physical): বোকা repeater। যে port-এ signal আসে, <b>বাকি সব port-এ</b> কপি করে ছড়ায়। এখানে A, B, C, D একই hub-এ।',{add:[B('hub',330,95,100,50,'Hub','o'),L('la',130,60,330,110,'n'),L('lb',130,180,330,130,'n'),L('lc',630,60,430,110,'n'),L('ld',630,180,430,130,'n'),B('a',50,40,80,40,'A','a'),B('b',50,160,80,40,'B','a'),B('c',630,40,80,40,'C','a'),B('d',630,160,80,40,'D','a')]}),
+  S('A → C পাঠাচ্ছে। Frame প্রথমে hub-এ আসে।',{add:[PK('pk',100,56,'A→C')],mod:{pk:{x:140,y:70},a:{hl:1}}}),
+  S('Hub চিনে না কে কোথায়। Frame <b>সবাইকে</b> পাঠায়: B, C, D তিনজনই পায়।',{add:[PK('p2',330,60,'A→C','o'),PK('p3',330,170,'A→C','o')],mod:{pk:{x:332,y:100},a:{hl:0},p2:{x:595,y:62},p3:{x:595,y:152}}}),
+  S('শুধু C নেয়, B ও D <b>ফেলে দেয়</b>। কিন্তু সবাই শুনতে পেয়েছে (privacy নেই)।',{mod:{c:{hl:1},b:{c:'n'},d:{c:'n'}}}),
+  S('<b>সমস্যা:</b> সব port একই <b>collision domain</b>, দুজন একসাথে পাঠালে collision, bandwidth ভাগ হয়। তাই hub এখন প্রায় বাতিল, switch এসেছে।',{mod:{hub:{c:'r',hl:1},c:{hl:0}}})
+],250);
+const SWI=VH([
+  S('<b>Switch</b> (Layer 2, data link): frame-এর <b>MAC address</b> দেখে। নিজের <b>MAC table</b> বানায় (কোন MAC কোন port-এ)। শুরুতে table খালি।',{add:[B('sw',320,85,120,70,'Switch\nMAC table:\n(খালি)','g',{s:'sm'}),L('la',130,50,320,100,'n'),L('lb',130,190,320,140,'n'),L('lc',630,50,440,100,'n'),L('ld',630,190,440,140,'n'),B('a',50,30,80,40,'A\nMAC:AA','a',{s:'sm'}),B('b',50,170,80,40,'B\nMAC:BB','a',{s:'sm'}),B('c',630,30,80,40,'C\nMAC:CC','a',{s:'sm'}),B('d',630,170,80,40,'D\nMAC:DD','a',{s:'sm'})]}),
+  S('A → C পাঠাল। Switch <b>শিখল:</b> "AA আছে port 1-এ" (source MAC দেখে)। কিন্তু CC কোথায় জানে না।',{add:[PK('pk',150,55,'A→C')],mod:{pk:{x:300,y:84},sw:{label:'Switch\nMAC table:\nAA → port1',hl:1},a:{hl:1}}}),
+  S('অজানা তাই একবার <b>flood</b>: সব port-এ (যেদিক থেকে এল সেটা বাদে) পাঠাল।',{add:[PK('p2',330,60,'A→C'),PK('p3',330,170,'A→C')],mod:{pk:{x:410,y:60},p2:{x:595,y:42},p3:{x:595,y:172},a:{hl:0}}}),
+  S('C উত্তর দিল (C → A)। Switch শিখল <b>CC → port 3</b>। এই উত্তর সোজা A-র port-এই গেল।',{del:['p2','p3','pk'],mod:{sw:{label:'Switch\nMAC table:\nAA → port1\nCC → port3'},c:{hl:1}},add:[PK('r1',595,52,'C→A','g')]}),
+  S('এবার A → C আবার: Switch table দেখে <b>শুধু port 3</b>-এ পাঠাল। B, D কিছুই পেল না। প্রতি port আলাদা collision domain।',{del:['r1'],add:[PK('q1',140,52,'A→C')],mod:{q1:{x:595,y:42},c:{hl:1},sw:{hl:1}}})
+],250);
+const ROU=VH([
+  S('<b>Router</b> (Layer 3, network): <b>IP address</b> দেখে আর <b>আলাদা network</b>-কে জোড়ে। প্রতি port আলাদা network-এর gateway। এখানে বাঁয়ে LAN 192.168.1.0/24, ডানে 10.0.0.0/24।',{add:[B('rt',320,85,120,70,'Router\nroute table','b',{s:'sm'}),B('lan1',20,40,160,160,'LAN 1\n192.168.1.0/24\n\nPC A\n192.168.1.10','a',{s:'sm',dash:1}),B('lan2',580,40,160,160,'LAN 2\n10.0.0.0/24\n\nServer S\n10.0.0.5','g',{s:'sm',dash:1}),L('l1',180,120,320,120,'n'),L('l2',440,120,580,120,'n')]}),
+  S('A server S (10.0.0.5)-কে পাঠাতে চায়। S অন্য network-এ, তাই A frame পাঠাল <b>default gateway</b> (router)-কে।',{add:[PK('pk',190,110,'IP→S')],mod:{pk:{x:285}}}),
+  S('Router <b>destination IP</b> দেখে routing table ঘাঁটে: "10.0.0.0/24 → ডান port"। Frame-এর MAC নতুন করে বানায়, <b>IP একই থাকে</b>।',{mod:{rt:{hl:1,label:'Router\n10.0.0.0/24\n→ ডান port'}}}),
+  S('Packet S-এ পৌঁছাল। Router <b>broadcast আটকায়</b> (প্রতি port আলাদা broadcast domain), তাই বড় network ছোট ভাগে ভাঙা যায়।',{mod:{pk:{x:545,c:'g'},rt:{hl:0},lan2:{hl:1}}})
+],250);
+const NETDEV_CMP='<table class="cmp"><tr><th></th><th>Hub</th><th>Switch</th><th>Router</th></tr>'
+ +'<tr><td>OSI layer</td><td>1 (Physical)</td><td>2 (Data Link)</td><td>3 (Network)</td></tr>'
+ +'<tr><td>ঠিকানা</td><td>কিছুই দেখে না</td><td>MAC address</td><td>IP address</td></tr>'
+ +'<tr><td>Data পাঠায়</td><td>সব port-এ</td><td>শুধু ঠিক port-এ</td><td>ঠিক network-এ</td></tr>'
+ +'<tr><td>Collision domain</td><td>সব port মিলে একটা</td><td>প্রতি port একটা</td><td>প্রতি port একটা</td></tr>'
+ +'<tr><td>Broadcast domain</td><td>একটা</td><td>একটা (VLAN ছাড়া)</td><td>প্রতি port আলাদা</td></tr>'
+ +'<tr><td>কাজ</td><td>signal ছড়ানো</td><td>LAN-এর ভেতরে সংযোগ</td><td>network-এ network জোড়া, Internet</td></tr></table>';
+
+/* ===== 5. MAC, ARP, frame ===== */
+const MACS=VH([
+  S('<b>MAC address</b> = network card (NIC)-এর <b>৪৮-bit physical ঠিকানা</b>, কারখানায় বসানো। লেখা হয় ৬টা hex জোড়ায়।',{add:[B('m0',20,60,100,50,'3C','a'),B('m1',130,60,100,50,'22','a'),B('m2',240,60,100,50,'FB','a'),B('m3',380,60,100,50,'9A','g'),B('m4',490,60,100,50,'4D','g'),B('m5',600,60,100,50,'E1','g')]}),
+  S('প্রথম ৩ byte = <b>OUI</b> (প্রস্তুতকারক, যেমন Apple, Intel)। শেষ ৩ byte = ওই কোম্পানির দেওয়া <b>device নম্বর</b>। তাই MAC সাধারণত বিশ্বে অনন্য।',{add:[T('o1',180,135,'OUI (কে বানাল)',{a:'middle',c:'a',s:'b'}),T('o2',540,135,'Device ID',{a:'middle',c:'g',s:'b'}),T('o3',380,185,'3C:22:FB:9A:4D:E1   (৪৮ bit = ৬ byte)',{a:'middle',c:'f',s:'b m'})]}),
+  S('<b>MAC বনাম IP:</b> MAC হল device-এর <b>পরিচয়</b> (একই LAN-এর ভেতরে কাজ করে)। IP হল <b>অবস্থান</b> (network বদলালে বদলায়)। MAC router পার হয় না, প্রতি hop-এ নতুন হয়।',{mod:{o3:{label:'MAC → LAN-এর ভেতরে    |    IP → network পেরিয়ে'}}})
+],250);
+const ARPS=VH([
+  S('A (192.168.1.10) B (192.168.1.20)-কে পাঠাতে চায়। A শুধু B-র <b>IP</b> জানে, frame বানাতে লাগে <b>MAC</b>। MAC আনে <b>ARP</b> (Address Resolution Protocol)।',{add:[B('a',30,90,130,60,'A\n192.168.1.10','a',{s:'sm'}),B('b',600,40,130,60,'B\n192.168.1.20','g',{s:'sm'}),B('c',600,140,130,60,'C\n192.168.1.30','n',{s:'sm'}),B('sw',330,95,100,50,'Switch','n')]}),
+  S('<b>ARP request (broadcast):</b> "192.168.1.20 কার? তোমার MAC বলো।" Destination MAC <code>FF:FF:FF:FF:FF:FF</code>, তাই LAN-এর সবাই পায়।',{add:[PK('q1',170,105,'who?'),PK('q2',170,125,'who?')],mod:{q1:{x:560,y:48},q2:{x:560,y:158},a:{hl:1}}}),
+  S('B দেখল IP তার, তাই উত্তর দিল। C বুঝল তার নয়, চুপ করে গেল।',{del:['q1','q2'],mod:{b:{hl:1},a:{hl:0}},add:[PK('rp',595,60,'me!','g')]}),
+  S('<b>ARP reply (unicast):</b> "আমি 192.168.1.20, MAC = BB:BB…"। A এটা <b>ARP cache</b>-এ রাখে, পরেরবার আর জিজ্ঞেস করে না।',{mod:{rp:{x:170,y:110},a:{hl:1},b:{hl:0}}}),
+  S('এবার A destination MAC বসিয়ে <b>frame</b> পাঠায়। ARP শুধু একই LAN-এ। অন্য network-এর জন্য router-এর (gateway-র) MAC-ই জানা লাগে।',{del:['rp'],add:[PK('f',170,105,'frame','o')],mod:{f:{x:560,y:60},b:{hl:1}}})
+],250);
+const FRAME=VH([
+  S('Data যাওয়ার আগে নিচের layer-এ <b>frame</b>-এ মোড়ানো হয়। Frame-এ সবার আগে থাকে <b>destination MAC</b>।',{add:[B('d',20,30,170,50,'Dest MAC\n(কাকে)','a',{s:'sm'}),B('s',200,30,170,50,'Src MAC\n(কে পাঠাল)','b',{s:'sm'}),B('t',380,30,100,50,'Type\n(IPv4)','o',{s:'sm'}),B('p',490,30,190,50,'Payload\n(IP packet)','g',{s:'sm'}),B('fc',690,30,60,50,'FCS','r',{s:'sm'})]}),
+  S('<b>Send:</b> A frame বানিয়ে তারে signal হিসেবে পাঠায়। <b>FCS</b> (checksum) দিয়ে পরে ভুল ধরা যায়।',{add:[B('a',20,130,100,60,'A\n(Sender)','a',{s:'sm'}),B('sw',330,130,100,60,'Switch','g',{s:'sm'}),B('b',640,130,100,60,'B\nMAC=BB','g',{s:'sm'}),L('l1',120,160,330,160,'n'),L('l2',430,160,640,160,'n'),PK('pk',140,150,'frame')],mod:{a:{hl:1}}}),
+  S('<b>Switch:</b> Dest MAC দেখে MAC table থেকে port বের করে <b>শুধু B-র port-এ</b> frame ছাড়ে।',{mod:{pk:{x:350},sw:{hl:1},a:{hl:0}}}),
+  S('<b>Receive:</b> B-র NIC ১) FCS ঠিক কিনা, ২) <b>Dest MAC তার নিজের (বা broadcast) কিনা</b> দেখে। মিললে header খুলে IP packet উপরের layer-কে দেয়।',{mod:{pk:{x:600,c:'g'},sw:{hl:0},b:{hl:1}}}),
+  S('নিজের নয়, এমন frame NIC <b>নিঃশব্দে ফেলে দেয়</b>। ভুল FCS থাকলেও ফেলে। (শুধু promiscuous mode-এ NIC সব শোনে, Wireshark তাই করে।)',{mod:{pk:{label:'drop',c:'r'}}})
+],250);
+
+/* ===== 6. IP address ===== */
+const IPWHAT=VH([
+  S('<b>IP address</b> = network-এ প্রতিটা device-এর <b>logical ঠিকানা</b>। IPv4 মানে ৩২ bit, চার ভাগে (<b>octet</b>), প্রতিটা 0–255, মাঝে dot।',{add:[B('o1',60,60,140,50,'192','a'),B('o2',210,60,140,50,'168','a'),B('o3',360,60,140,50,'1','g'),B('o4',510,60,140,50,'10','g'),T('d',380,135,'প্রতিটা octet = ৮ bit, মোট ৩২ bit ≈ 4.3 বিলিয়ন ঠিকানা',{a:'middle',c:'f'})]}),
+  S('ঠিকানার দুই অংশ: বাঁয়ের <b>network part</b> (কোন network) আর ডানের <b>host part</b> (ওই network-এর কোন device)। কতটা কোনটা, সেটা ঠিক করে <b>subnet mask</b>।',{add:[T('np',280,175,'Network part (192.168.1)',{a:'middle',c:'a',s:'b'}),T('hp',580,175,'Host part (10)',{a:'middle',c:'g',s:'b'})]}),
+  S('সাথে binary: <code>11000000.10101000.00000001.00001010</code>। কম্পিউটার এটাই বোঝে।',{add:[T('bn',380,215,'11000000 . 10101000 . 00000001 . 00001010',{a:'middle',c:'f',s:'m b'})]})
+],250);
+const PUBPRIV=VH([
+  S('বাড়ির সব device-এর <b>Private IP</b>: শুধু ভেতরের network-এ চলে, Internet-এ route হয় না। অনেক বাড়িতে একই 192.168.1.x থাকতে পারে।',{add:[B('lan',20,30,300,180,'বাড়ির network','n',{dash:1,s:'sm'}),B('p1',40,70,120,44,'Phone\n192.168.1.5','a',{s:'sm'}),B('p2',40,140,120,44,'Laptop\n192.168.1.6','a',{s:'sm'}),B('r',200,100,100,50,'Router','g')]}),
+  S('Router-এর ISP-র দিকের ঠিকানা <b>Public IP</b> (যেমন 103.12.4.7): Internet-এ <b>অনন্য</b>, ISP বরাদ্দ করে। বাইরের দুনিয়া এই ঠিকানাই দেখে।',{add:[B('pub',400,100,150,50,'Router\nPublic 103.12.4.7','o',{s:'sm'}),L('l1',300,125,400,125,'n'),B('web',620,100,120,50,'Internet\n(Google…)','b',{s:'sm'}),L('l2',550,125,620,125,'n')]}),
+  S('একটা public IP ভাগ করে সব private device চলে: এটা করে <b>NAT</b> (পরের কয়েকটা প্রশ্নে)।',{mod:{pub:{hl:1},r:{hl:1}}})
+],250);
+const STATDYN=VH([
+  S('<b>Dynamic IP:</b> DHCP server থেকে <b>নির্দিষ্ট সময়ের জন্য ধার</b> নেওয়া। সংযোগ বদলালে বা lease শেষে বদলাতে পারে। ফোন, laptop, সাধারণ বাড়ির সংযোগ।',{add:[B('d1',20,40,340,150,'Dynamic\n\nআজ 192.168.1.23\nকাল 192.168.1.41\nDHCP নিজে বাছে, কোনো কাজ নেই','g',{s:'sm'})]}),
+  S('<b>Static IP:</b> হাতে (বা DHCP reservation-এ) <b>স্থির</b> বসানো, বদলায় না। যেখানে সবাই খুঁজে পাওয়া লাগে: server, printer, router, CCTV, DNS।',{add:[B('s1',400,40,340,150,'Static\n\nসবসময় 192.168.1.50\nহাতে বসাতে হয়\nভুলে দুই জায়গায় দিলে conflict','a',{s:'sm'})]}),
+  S('<b>কখন কোনটা:</b> সাধারণ user device → dynamic (সহজ, conflict নেই)। যাকে অন্যরা সবসময় IP দিয়ে ডাকে → static। Public server-এর জন্য ISP-র কাছ থেকে static public IP (প্রায়ই বাড়তি টাকায়)।',{mod:{d1:{hl:1},s1:{hl:1}}})
+],250);
+const PRIV_TBL='<table class="cmp"><tr><th>Private range</th><th>CIDR</th><th>সংখ্যা</th></tr>'
+ +'<tr><td>10.0.0.0 – 10.255.255.255</td><td>10.0.0.0/8</td><td>≈ 16.7 মিলিয়ন (বড় কোম্পানি)</td></tr>'
+ +'<tr><td>172.16.0.0 – 172.31.255.255</td><td>172.16.0.0/12</td><td>≈ 1 মিলিয়ন</td></tr>'
+ +'<tr><td>192.168.0.0 – 192.168.255.255</td><td>192.168.0.0/16</td><td>≈ 65 হাজার (বাড়ি/ছোট office)</td></tr>'
+ +'<tr><td>127.0.0.1</td><td>127.0.0.0/8</td><td>Loopback (নিজেই নিজের কাছে, localhost)</td></tr></table>';
+
+/* ===== 7. IPv4 vs IPv6 ===== */
+const V4V6=VH([
+  S('<b>IPv4:</b> ৩২ bit, dotted decimal। সর্বোচ্চ 2³² ≈ <b>৪৩০ কোটি</b> ঠিকানা।',{add:[B('v4',30,30,700,50,'192.168.1.10   (32 bit, 4 octet)','a')]}),
+  S('<b>IPv6:</b> ১২৮ bit, hex, আটটা group, মাঝে colon। 2¹²⁸ ≈ <b>৩.৪ × 10³⁸</b> ঠিকানা, পৃথিবীর প্রতিটা বালুকণার জন্যও যথেষ্ট।',{add:[B('v6',30,100,700,50,'2001:0db8:0000:0000:0000:ff00:0042:8329   (128 bit)','g',{s:'sm'})]}),
+  S('<b>ছোট করে লেখার নিয়ম:</b> ১) group-এর শুরুর 0 বাদ। ২) পরপর সব-শূন্য group একবার <code>::</code>। উপরেরটা হয়ে যায় <code>2001:db8::ff00:42:8329</code>।',{add:[B('v6s',30,170,700,46,'2001:db8::ff00:42:8329   (সংক্ষিপ্ত রূপ)','o',{hl:1})]})
+],250);
+const V6WHY=VH([
+  S('<b>সমস্যা:</b> ইন্টারনেট ছড়াল, ৪৩০ কোটি IPv4 ঠিকানা ২০১১-র দিকেই (IANA-র) <b>ফুরিয়ে এল</b>। মোবাইল, IoT, laptop সব মিলে ঠিকানার চাহিদা বিশাল।',{add:[B('pool',30,50,300,120,'IPv4 pool\n≈ 4.3 বিলিয়ন\n(প্রায় শেষ)','r',{s:'sm'}),B('dem',430,50,300,120,'চাহিদা\nফোন + laptop + IoT +…\n(বিলিয়ন ছাড়িয়েছে)','o',{s:'sm'})]}),
+  S('<b>তাৎক্ষণিক সমাধান:</b> <b>NAT</b> + private IP, একটা public IP-তে অনেক device। কাজ চলে, কিন্তু end-to-end সংযোগ ভাঙে, জটিলতা বাড়ে।',{add:[B('nat',130,190,500,40,'NAT / private IP = জোড়াতালি','n',{s:'sm',dash:1})]}),
+  S('<b>স্থায়ী সমাধান:</b> <b>IPv6</b>: বিশাল ঠিকানা, NAT ছাড়াই প্রতিটা device-এর নিজস্ব ঠিকানা। সাথে সরল header, built-in IPsec সমর্থন, auto-configuration (SLAAC), broadcast-এর বদলে multicast।',{del:['nat'],mod:{pool:{c:'g',label:'IPv6 pool\n3.4 × 10³⁸\n(কার্যত অসীম)'}}})
+],250);
+const V46_TBL='<table class="cmp"><tr><th></th><th>IPv4</th><th>IPv6</th></tr>'
+ +'<tr><td>আকার</td><td>32 bit</td><td>128 bit</td></tr>'
+ +'<tr><td>লেখা</td><td>192.168.1.10 (decimal)</td><td>2001:db8::1 (hex)</td></tr>'
+ +'<tr><td>মোট ঠিকানা</td><td>≈ 4.3 বিলিয়ন</td><td>≈ 3.4 × 10³⁸</td></tr>'
+ +'<tr><td>NAT</td><td>প্রায় সবসময় লাগে</td><td>দরকার নেই</td></tr>'
+ +'<tr><td>Header</td><td>পরিবর্তনশীল (options সহ)</td><td>স্থির 40 byte, সরল</td></tr>'
+ +'<tr><td>Broadcast</td><td>আছে</td><td>নেই, multicast / anycast</td></tr>'
+ +'<tr><td>Config</td><td>DHCP বা হাতে</td><td>SLAAC বা DHCPv6</td></tr></table>';
+
+/* ===== 8. Subnet, classes, CIDR ===== */
+function bitBar(n){ // n = prefix length; ids b0..b31
+  const out=[];
+  for(let i=0;i<32;i++)out.push(B('b'+i,20+i*22,70,20,28,i<n?'1':'0',i<n?'a':'g',{s:'sm',rx:4}));
+  return out;
+}
+const SUBNET=VH([
+  S('<b>Subnet mask</b> ঠিক করে IP-র কত bit <b>network</b>, কত bit <b>host</b>। 255.255.255.0 মানে প্রথম ২৪ bit (সব 1) network, বাকি ৮ bit host।',{add:[B('ip',30,20,330,34,'IP:   192.168.1.10','a',{m:1}),B('mk',400,20,330,34,'Mask: 255.255.255.0','b',{m:1}),...bitBar(24),T('l1',250,125,'২৪ bit network (1)',{a:'middle',c:'a',s:'b'}),T('l2',640,125,'৮ bit host (0)',{a:'middle',c:'g',s:'b'})]}),
+  S('<b>AND করে network ID:</b> IP AND mask = <code>192.168.1.0</code>। শেষ ৮ bit-এর বাঁ দিকের অংশ (host) 0 হয়ে গেল, <b>এটাই network-এর নাম</b>।',{add:[T('r1',380,170,'192.168.1.10  AND  255.255.255.0  =  192.168.1.0',{a:'middle',c:'f',s:'b m'}),T('r2',380,200,'Network ID = 192.168.1.0    Host ID = 10',{a:'middle',c:'g'})]}),
+  S('<b>একই network কিনা</b> বের করতে দুই IP-তে একই mask AND করে মেলানো হয়। মিললে সোজা পাঠায়, না মিললে <b>gateway (router)</b>-এ।',{mod:{r2:{label:'192.168.1.77 → 192.168.1.0 (একই)   |   10.0.0.5 → 10.0.0.0 (আলাদা, gateway-এ)'}}})
+],250);
+const CLASSES_TBL='<table class="cmp"><tr><th>Class</th><th>প্রথম octet</th><th>Default mask</th><th>Network × Host</th><th>ব্যবহার</th></tr>'
+ +'<tr><td>A</td><td>1 – 126</td><td>255.0.0.0 (/8)</td><td>126 × ≈ 16.7 মিলিয়ন</td><td>বিশাল network</td></tr>'
+ +'<tr><td>B</td><td>128 – 191</td><td>255.255.0.0 (/16)</td><td>≈ 16 হাজার × ≈ 65 হাজার</td><td>মাঝারি</td></tr>'
+ +'<tr><td>C</td><td>192 – 223</td><td>255.255.255.0 (/24)</td><td>≈ 2 মিলিয়ন × 254</td><td>ছোট</td></tr>'
+ +'<tr><td>D</td><td>224 – 239</td><td>–</td><td>–</td><td>Multicast</td></tr>'
+ +'<tr><td>E</td><td>240 – 255</td><td>–</td><td>–</td><td>গবেষণার জন্য সংরক্ষিত</td></tr></table>';
+const CLASSFUL=VH([
+  S('<b>Classful</b> (পুরনো পদ্ধতি): IP-র <b>প্রথম octet দেখেই</b> class, আর class দেখেই mask নির্ধারিত, কোনো নমনীয়তা নেই। A, B, C ঠিক হল ৮, ১৬, ২৪ bit network দিয়ে।',{add:[B('a',20,40,220,60,'Class A\n1–126  | /8\n২৪ bit host','a',{s:'sm'}),B('b',270,40,220,60,'Class B\n128–191 | /16\n১৬ bit host','g',{s:'sm'}),B('c',520,40,220,60,'Class C\n192–223 | /24\n৮ bit host','o',{s:'sm'})]}),
+  S('<b>সমস্যা:</b> মাঝামাঝি দরকারে বিপদ। ৩০০ device-এর জন্য Class C (254) কম, তাই Class B নিতে হত: ৬৫ হাজার ঠিকানা, ৬৫,০০০ নষ্ট। ঠিকানা অপচয়।',{add:[B('w',20,130,720,60,'৩০০ device দরকার → Class C (254) কম  →  Class B (65,534)  ⇒ প্রায় সবই অপচয়','r',{s:'sm'})]}),
+  S('<b>Classless (CIDR, ১৯৯৩):</b> class বাদ। mask যেকোনো দৈর্ঘ্যের (/23 = 510 host, ঠিক ৩০০-র জন্য)। ঠিকানা সঞ্চয় আর routing table-ও ছোট (summarization)।',{mod:{w:{c:'g',label:'৩০০ device → /23 (510 host)  ⇒ প্রায় ঠিকঠাক, অপচয় কম'}}})
+],250);
+const CIDR=VH([
+  S('<b>CIDR notation:</b> IP-র পরে <code>/n</code> = প্রথম n bit network। <b>/24</b> = ২৪ bit network, ৮ bit host।',{add:[T('h',380,20,'192.168.1.0/24',{a:'middle',c:'f',s:'b lg'}),...bitBar(24),T('x',380,125,'Host bit = 32 − 24 = 8  →  2⁸ = 256 ঠিকানা',{a:'middle',c:'g',s:'b'}),T('y',380,160,'usable host = 256 − 2 = 254  (প্রথমটা network ID, শেষটা broadcast)',{a:'middle',c:'f'})]}),
+  S('<b>/26-এ ভাঙলাম:</b> আরও ২ bit network হল, host bit মাত্র ৬। 2⁶ = 64 ঠিকানা, usable <b>62 host</b>। একটা /24 ভেঙে ৪টা /26 হয় (<b>subnetting</b>)।',{mod:{h:{label:'192.168.1.0/26'},x:{label:'Host bit = 32 − 26 = 6  →  2⁶ = 64 ঠিকানা'},y:{label:'usable host = 64 − 2 = 62'},b24:{c:'a',label:'1'},b25:{c:'a',label:'1'}}}),
+  S('<b>সূত্র:</b> usable host = 2^(32−n) − 2। /30 → 2 host (দুই router-এর link), /32 → একটা মাত্র device।',{mod:{h:{label:'host = 2^(32 − n) − 2'},x:{label:'/24 → 254   /25 → 126   /26 → 62   /27 → 30   /30 → 2'},y:{label:'ছোট n = বড় network, বড় n = ছোট network'}}})
+],250);
+
+/* ===== 9. DHCP ===== */
+const DHCP=VH([
+  S('নতুন laptop network-এ এল। তার কোনো IP নেই (<code>0.0.0.0</code>)। <b>DHCP</b> (Dynamic Host Configuration Protocol) নিজে নিজে IP, mask, gateway, DNS দেয়। চারধাপ: <b>DORA</b>।',{add:[B('cl',30,70,150,100,'Client (laptop)\nIP: 0.0.0.0','a',{s:'sm'}),B('sv',580,70,150,100,'DHCP Server\n(router)\npool: .100–.200','g',{s:'sm'}),L('ln',180,120,580,120,'n')]}),
+  S('<b>1. Discover (broadcast):</b> "এখানে কোনো DHCP server আছে? আমার IP লাগবে।" Src 0.0.0.0 → Dst 255.255.255.255।',{add:[PK('pk',195,110,'DISC','o')],mod:{pk:{x:530},cl:{hl:1}}}),
+  S('<b>2. Offer:</b> server একটা অব্যবহৃত IP <b>প্রস্তাব</b> দেয়: 192.168.1.105, mask, gateway, DNS, lease ২৪ ঘণ্টা।',{mod:{pk:{x:195,label:'OFFER',c:'b'},sv:{hl:1},cl:{hl:0}}}),
+  S('<b>3. Request (broadcast):</b> client বলে "হ্যাঁ, 192.168.1.105-টা নিচ্ছি।" Broadcast, যাতে অন্য DHCP server থাকলে জানতে পারে তাদের offer নেওয়া হয়নি।',{mod:{pk:{x:530,label:'REQ',c:'o'},sv:{hl:0},cl:{hl:1}}}),
+  S('<b>4. Acknowledge:</b> server নিশ্চিত করে আর ওই IP lease table-এ client-এর MAC-এর সাথে লিখে রাখে।',{mod:{pk:{x:195,label:'ACK',c:'g'},sv:{hl:1,label:'DHCP Server\n(router)\n.105 → লিখল'},cl:{hl:0}}}),
+  S('<b>ফল:</b> client-এর IP হল 192.168.1.105। Lease অর্ধেক পেরোলে (T1) client নিজে <b>renew</b> চায়। না চাইলে lease শেষে IP আবার pool-এ।',{mod:{cl:{label:'Client (laptop)\nIP: 192.168.1.105',c:'g',hl:1},sv:{hl:0},pk:{label:'IP ✓',c:'g'}}})
+],250);
+
+/* ===== 10. DNS ===== */
+const DNSRES=VH([
+  S('User টাইপ করল <code>www.example.com</code>। মানুষ নাম মনে রাখে, computer IP দিয়ে কথা বলে। <b>DNS</b> হল Internet-এর ফোনবই: <b>নাম → IP</b>। প্রথমে browser আর OS-এর <b>cache</b> দেখা হয়, এখানে নেই।',{add:[B('cl',20,95,120,60,'Browser /\nOS cache\n(নেই)','a',{s:'sm'}),B('rs',200,95,130,60,'Recursive\nResolver\n(ISP / 8.8.8.8)','b',{s:'sm'}),B('rt',520,15,210,50,'Root server  (.)','n',{s:'sm'}),B('tl',520,95,210,60,'TLD server  (.com)','o',{s:'sm'}),B('au',520,185,210,50,'Authoritative\n(example.com)','g',{s:'sm'}),T('q',380,255,'www.example.com = ?',{a:'middle',c:'f',s:'b'})]}),
+  S('<b>১.</b> Client resolver-কে জিজ্ঞেস করে। Resolver-এর নিজের cache-এও নেই, তাই সে সব কাজ নিজে করবে (<b>recursive</b> query)।',{add:[L('a1',140,125,200,125,'a')],mod:{cl:{hl:1},rs:{hl:1}}}),
+  S('<b>২. Root-কে:</b> "www.example.com?" Root পুরোটা জানে না, শুধু বলে: "<b>.com</b> দেখে <b>TLD server</b>-কে (এই ঠিকানা) জিজ্ঞেস করো।"',{add:[L('a2',330,115,520,40,'n')],mod:{rt:{hl:1},cl:{hl:0}}}),
+  S('<b>৩. TLD (.com)-কে:</b> TLD বলে "example.com-এর <b>NS</b> (authoritative nameserver) ওই ঠিকানায়।"',{add:[L('a3',330,125,520,125,'n')],mod:{tl:{hl:1},rt:{hl:0}}}),
+  S('<b>৪. Authoritative-কে:</b> এই server-ই আসল উত্তরের মালিক: "www.example.com → <b>93.184.216.34</b>" (A record), সাথে <b>TTL</b> = 300 s।',{add:[L('a4',330,135,520,210,'g')],mod:{au:{hl:1,c:'g'},tl:{hl:0}}}),
+  S('<b>৫. Resolver cache করে রাখে</b> (TTL পর্যন্ত) আর client-কে IP ফেরত দেয়। Client-ও নিজের cache-এ রাখে।',{mod:{au:{hl:0},rs:{hl:1,label:'Resolver\ncache: 93.184.216.34\n(TTL 300 s)'},cl:{label:'Browser /\nOS cache\n93.184.216.34'}},add:[PK('ans',150,100,'IP','g')]}),
+  S('<b>৬.</b> Browser এবার 93.184.216.34-এ <b>TCP connection</b> খোলে (এরপর handshake, HTTPS)। পরের বার cache থেকে সাথে সাথে।',{mod:{ans:{x:100,y:100},cl:{hl:1},rs:{hl:0}}})
+],275);
+const DNSTYPES=VH([
+  S('<b>Recursive বনাম Iterative:</b> client → resolver <b>recursive</b> ("পুরো উত্তর এনে দাও")। resolver → root/TLD/authoritative <b>iterative</b> (প্রতিবার "আমি জানি না, ওকে জিজ্ঞেস করো" referral পায়, নিজে এগোয়)।',{add:[B('c1',20,40,200,60,'Client','a'),B('r1',280,40,200,60,'Resolver','b'),B('s1',540,40,200,60,'Root / TLD / Auth','g'),A('x1',220,70,280,70,'a'),A('x2',480,60,540,60,'g'),A('x3',540,85,480,85,'g'),T('t1',120,125,'recursive',{a:'middle',c:'a',s:'b'}),T('t2',510,125,'iterative (referral)',{a:'middle',c:'g',s:'b'})]}),
+  S('<b>Caching ও TTL:</b> প্রতিটা উত্তরের <b>TTL</b> থাকে (কত সেকেন্ড মনে রাখবে)। TTL ছোট = বদল সহজে ছড়ায় কিন্তু query বেশি। বড় = দ্রুত কিন্তু পুরনো উত্তর বেশি সময় টিকে।',{add:[B('ttl',140,150,480,60,'TTL 300 s\n০–৩০০ s: cache থেকে উত্তর, কোনো query নয়\n৩০০ s পরে: আবার পুরো resolution','o',{s:'sm'})]}),
+  S('<b>সুবিধা:</b> বেশিরভাগ lookup resolver-এর cache থেকেই মেটে, root server-এ খুব কম পৌঁছায়। তাই DNS দ্রুত ও scalable।',{mod:{ttl:{hl:1}}})
+],250);
+const DNS_TBL='<table class="cmp"><tr><th>Record</th><th>কাজ</th><th>উদাহরণ</th></tr>'
+ +'<tr><td>A</td><td>নাম → IPv4</td><td>example.com → 93.184.216.34</td></tr>'
+ +'<tr><td>AAAA</td><td>নাম → IPv6</td><td>example.com → 2606:2800::1</td></tr>'
+ +'<tr><td>CNAME</td><td>এক নামের alias আরেক নাম</td><td>www → example.com</td></tr>'
+ +'<tr><td>MX</td><td>মেইল server</td><td>example.com → mail.example.com</td></tr>'
+ +'<tr><td>NS</td><td>ওই domain-এর nameserver</td><td>example.com → ns1.example.com</td></tr>'
+ +'<tr><td>TXT</td><td>লেখা (SPF, যাচাই)</td><td>"v=spf1 …"</td></tr></table>';
+
+/* ===== 11. NAT ===== */
+const NAT=VH([
+  S('বাড়ির দুই device-এর <b>private IP</b>। বাইরে যেতে হলে <b>NAT router</b> লাগে, যার একটাই <b>public IP</b> (203.0.113.5)। NAT table এখন খালি।',{add:[B('p1',20,40,150,50,'PC1\n192.168.1.10','a',{s:'sm'}),B('p2',20,150,150,50,'PC2\n192.168.1.11','a',{s:'sm'}),B('rt',290,60,180,120,'NAT Router\npublic 203.0.113.5\n\nNAT table:\n(খালি)','g',{s:'sm'}),B('sv',600,95,140,50,'Web Server\n142.250.1.1:443','b',{s:'sm'}),L('l1',170,65,290,95,'n'),L('l2',170,175,290,145,'n'),L('l3',470,120,600,120,'n')]}),
+  S('<b>PC1 পাঠাল:</b> Src <code>192.168.1.10:5001</code> → Dst <code>142.250.1.1:443</code>। Private IP Internet-এ চলে না, তাই router-এর দরকার।',{add:[PK('pk',178,60,'5001')],mod:{pk:{x:262,y:80},p1:{hl:1}}}),
+  S('<b>NAT:</b> router Src বদলে করল <code>203.0.113.5:40001</code> আর table-এ লিখল: <b>192.168.1.10:5001 ↔ 40001</b>। এটাই <b>NAT table</b> (port translation, PAT)।',{mod:{rt:{label:'NAT Router\npublic 203.0.113.5\n\nNAT table:\n.10:5001 ↔ :40001',hl:1},pk:{label:'40001',c:'g'},p1:{hl:0}}}),
+  S('Server দেখে Src = 203.0.113.5:40001। সে private IP জানেই না। উত্তর পাঠায় সেই public ঠিকানায়।',{mod:{pk:{x:560,y:100},rt:{hl:0},sv:{hl:1}}}),
+  S('<b>ফেরার পথে:</b> উত্তর এল Dst 203.0.113.5:40001। Router table দেখে বুঝল এটা PC1-এর (192.168.1.10:5001), Dst বদলে ভেতরে পাঠাল।',{mod:{pk:{x:262,y:80,label:'5001',c:'o'},sv:{hl:0},rt:{hl:1}}}),
+  S('<b>PC2-ও</b> একই সময়ে বাইরে গেলে তার জন্য আলাদা entry: <b>.11:5001 ↔ :40002</b>। Port দিয়েই router আলাদা করে। একটা public IP-তে ঘরের সব device।',{mod:{pk:{x:178,y:62},rt:{label:'NAT Router\npublic 203.0.113.5\n\n.10:5001 ↔ :40001\n.11:5001 ↔ :40002',hl:0},p1:{hl:1}}}),
+  S('<b>সুবিধা/অসুবিধা:</b> IPv4 ঠিকানা বাঁচে, ভেতরের device বাইরে থেকে লুকানো (বাড়তি security)। কিন্তু বাইরে থেকে ভেতরে সংযোগ কঠিন (port forwarding লাগে), আর end-to-end সরাসরি যোগাযোগ ভাঙে।',{mod:{p1:{hl:0}}})
+],250);
+
+/* ===== 12. DSCP ===== */
+const DSCP=VH([
+  S('<b>DSCP</b> (Differentiated Services Code Point) = IP header-এর একটা ৬-bit field, যা packet-এর <b>গুরুত্ব/শ্রেণি</b> চিহ্নিত (mark) করে। QoS (Quality of Service)-এর অংশ।',{add:[B('h',30,30,700,50,'IP Header   [ … | DSCP (6 bit) | ECN (2 bit) | … ]','a',{s:'sm'}),T('t',380,110,'Router এই মান দেখে ঠিক করে কোন packet আগে যাবে',{a:'middle',c:'f',s:'b'})]}),
+  S('<b>সমস্যা:</b> link ভিড়ে (congested)। Voice call (দেরি সহ্য হয় না), video আর বড় file download একই লাইনে। সবাইকে সমান ধরলে call-এ voice কেটে যায়।',{add:[PK('v1',60,150,'voice','r'),PK('v2',110,150,'video','o'),PK('v3',160,150,'file','n'),PK('v4',210,150,'file','n'),PK('v5',260,150,'voice','r')],mod:{h:{hl:0}}}),
+  S('<b>Marking:</b> sender বা প্রথম router header-এ DSCP বসায়: voice = <b>EF (46)</b>, video = <b>AF41 (34)</b>, সাধারণ web/file = <b>0 (best effort)</b>।',{mod:{h:{label:'IP Header   [ … | DSCP: EF=46 (voice) | … ]',hl:1}}}),
+  S('<b>Router queue:</b> DSCP দেখে উচ্চ-অগ্রাধিকারের <b>priority queue</b>-তে voice, তারপর video, শেষে file। ভিড়ে voice আগে বেরোয়।',{del:['t'],add:[B('q1',500,90,230,34,'Priority queue (voice) → আগে','r',{s:'sm'}),B('q2',500,134,230,34,'Queue 2 (video)','o',{s:'sm'}),B('q3',500,178,230,34,'Best effort (file, web) → শেষে','n',{s:'sm'})],mod:{v1:{x:520,y:94},v5:{x:580,y:94},v2:{x:520,y:138},v3:{x:520,y:182},v4:{x:580,y:182}}}),
+  S('<b>সাবধান:</b> DSCP শুধু <b>অনুরোধ/চিহ্ন</b>। সত্যিই অগ্রাধিকার দেবে কিনা সেটা router-এর QoS নীতির ওপর। Internet-এ ISP প্রায়ই এই marking মোছে/উপেক্ষা করে, তাই কাজ করে মূলত নিজের (কোম্পানির) network-এ।',{mod:{h:{hl:0}}})
+],250);
+const DSCP_TBL='<table class="cmp"><tr><th>Class</th><th>DSCP মান</th><th>কিসের জন্য</th></tr>'
+ +'<tr><td>EF (Expedited Forwarding)</td><td>46</td><td>Voice (VoIP), কম delay ও jitter</td></tr>'
+ +'<tr><td>AF41</td><td>34</td><td>Interactive video</td></tr>'
+ +'<tr><td>AF21</td><td>18</td><td>গুরুত্বপূর্ণ transactional data</td></tr>'
+ +'<tr><td>CS6</td><td>48</td><td>Routing/network control</td></tr>'
+ +'<tr><td>Default (BE)</td><td>0</td><td>সাধারণ best-effort traffic</td></tr></table>';
+
+/* ===== 13. Ports ===== */
+const PORTS=VH([
+  S('একটা server-এ অনেক service একসাথে চলে। IP দিয়ে <b>machine</b> চেনা যায়, <b>port নম্বর</b> (০–৬৫৫৩৫) বলে দেয় machine-এর <b>কোন service</b>। যেন বাড়ির ঠিকানা (IP) আর ঘরের নম্বর (port)।',{add:[B('sv',380,20,360,210,'Server 93.184.216.34','n',{s:'sm',dash:1}),B('p80',400,60,150,34,':80   HTTP','a',{s:'sm'}),B('p443',570,60,150,34,':443  HTTPS','g',{s:'sm'}),B('p22',400,110,150,34,':22   SSH','o',{s:'sm'}),B('p53',570,110,150,34,':53   DNS','b',{s:'sm'}),B('p25',400,160,150,34,':25   SMTP','r',{s:'sm'}),B('p21',570,160,150,34,':20/21 FTP','n',{s:'sm'}),B('cl',20,95,140,60,'Browser\n192.168.1.10','a',{s:'sm'})]}),
+  S('Browser <code>https://…</code> খুলল। HTTPS-এর default port <b>443</b>, তাই packet-এ Dst port = 443।',{add:[PK('pk',170,105,'→443')],mod:{pk:{x:340,y:75}}}),
+  S('OS দেখে Dst port 443 → HTTPS service। Packet <b>ওই service-এর কাছেই</b> গেল, SSH বা DNS-এর কাছে নয়।',{mod:{pk:{x:556,y:63},p443:{hl:1},cl:{hl:1}}}),
+  S('<b>Socket</b> = <code>IP : port</code>। সংযোগ চেনা যায় চার জিনিসে: Src IP, Src port, Dst IP, Dst port। Client অনুমানযোগ্য নয় এমন <b>ephemeral port</b> নেয় (যেমন 52044), তাই এক browser থেকেই অনেক connection আলাদা থাকে।',{add:[T('s',250,205,'Socket: 192.168.1.10:52044  ⇄  93.184.216.34:443',{a:'middle',c:'f',s:'b m'})]})
+],250);
+const PORT_TBL='<table class="cmp"><tr><th>Port</th><th>Protocol</th><th>কাজ</th></tr>'
+ +'<tr><td>20 / 21</td><td>FTP</td><td>File transfer (20 data, 21 control)</td></tr>'
+ +'<tr><td>22</td><td>SSH</td><td>নিরাপদ remote login</td></tr>'
+ +'<tr><td>25</td><td>SMTP</td><td>Email পাঠানো</td></tr>'
+ +'<tr><td>53</td><td>DNS</td><td>নাম → IP (সাধারণত UDP, বড় উত্তরে TCP)</td></tr>'
+ +'<tr><td>67 / 68</td><td>DHCP</td><td>Server / client</td></tr>'
+ +'<tr><td>80</td><td>HTTP</td><td>Web (এনক্রিপশন ছাড়া)</td></tr>'
+ +'<tr><td>443</td><td>HTTPS</td><td>Web (TLS দিয়ে)</td></tr></table>'
+ +'<p style="margin:8px 0 0;font-size:13.5px;color:var(--muted)"><b>Well-known:</b> 0–1023 (IANA নির্ধারিত)। <b>Registered:</b> 1024–49151। <b>Ephemeral/dynamic:</b> 49152–65535।</p>';
+
+/* ===== 14. TCP vs UDP ===== */
+const TCP=VH([
+  S('<b>TCP:</b> connection খুলে, প্রতিটা segment-এ <b>নম্বর</b> দেয়, পৌঁছানোর <b>ack</b> চায়। তিনটা segment পাঠাল।',{add:[B('cl',20,80,110,70,'Sender','a'),B('sv',630,80,110,70,'Receiver','g'),L('ln',130,115,630,115,'n'),PK('s1',150,60,'#1'),PK('s2',200,60,'#2'),PK('s3',250,60,'#3')],mod:{s1:{x:560},s2:{x:480,c:'r'},s3:{x:400}}}),
+  S('<b>#2 হারাল</b> (লাল)। Receiver #1, #3 পেল। সে বুঝল #2 নেই, তাই ack-এ শুধু "#2 লাগবে" জানায়।',{add:[PK('ak',560,150,'ack #2?','r')],mod:{s1:{x:590,hl:1},s3:{x:590,y:78},s2:{x:480,label:'✗',c:'r'},ak:{x:200}}}),
+  S('Sender timeout বা duplicate ack দেখে <b>#2 আবার পাঠায়</b> (retransmit)। Receiver ক্রম অনুযায়ী #1, #2, #3 সাজিয়ে application-কে দেয়।',{del:['ak'],mod:{s2:{x:590,y:100,label:'#2',c:'g'}}}),
+  S('<b>বাড়তি সুবিধা:</b> flow control (receiver-এর ধারণক্ষমতা বুঝে), congestion control (network ভিড় হলে গতি কমানো), ক্রম ঠিক রাখা। দাম: handshake আর ack-এর বাড়তি দেরি ও header।',{mod:{}})
+],250);
+const UDP=VH([
+  S('<b>UDP:</b> কোনো connection নেই, ack নেই। প্রতিটা <b>datagram</b> আলাদা, "ছুড়ে দাও, ফিরে তাকিও না"।',{add:[B('cl',20,80,110,70,'Sender','a'),B('sv',630,80,110,70,'Receiver','g'),L('ln',130,115,630,115,'n'),PK('s1',150,60,'#1'),PK('s2',200,60,'#2'),PK('s3',250,60,'#3')],mod:{s1:{x:560},s2:{x:480,c:'r'},s3:{x:400}}}),
+  S('#2 হারাল। Receiver শুধু #1, #3 পেল। কেউ <b>পুনরায় পাঠায় না</b>, ক্রমও গ্যারান্টি নেই।',{mod:{s1:{x:590},s3:{x:590,y:78},s2:{label:'✗',c:'r'}}}),
+  S('<b>কেন তবু UDP:</b> খুব দ্রুত ও হালকা। লাইভ video call, game, DNS-এ পুরনো data আবার পাঠানোর চেয়ে নতুন data দ্রুত পাওয়া ভালো। দু-এক frame হারালে ক্ষতি নেই।',{mod:{}})
+],250);
+const TCPUDP=VH([
+  S('<b>TCP বেছে নাও</b> যখন প্রতিটা byte ঠিকঠাক ও ক্রমে পৌঁছানো <b>জরুরি</b>: web (HTTP/HTTPS), email, file transfer, SSH, database।',{add:[B('t',30,40,330,150,'TCP\nReliable, ordered\nবেশি overhead, ধীর শুরু\n\nweb · email · FTP · SSH','a',{s:'sm'})]}),
+  S('<b>UDP বেছে নাও</b> যখন <b>গতি আর কম delay</b> জরুরি, দু-একটা হারালে চলে: video/voice call, game, live stream, DNS, DHCP। (QUIC/HTTP3 UDP-র ওপর নিজে reliability বানায়।)',{add:[B('u',400,40,330,150,'UDP\nFast, connectionless\nকম overhead\n\ncall · game · stream · DNS','b',{s:'sm'})]})
+],250);
+const TCPUDP_TBL='<table class="cmp"><tr><th></th><th>TCP</th><th>UDP</th></tr>'
+ +'<tr><td>Connection</td><td>আছে (handshake)</td><td>নেই</td></tr>'
+ +'<tr><td>Reliability</td><td>ack + retransmit</td><td>নেই</td></tr>'
+ +'<tr><td>ক্রম</td><td>ঠিক ক্রমে দেয়</td><td>গ্যারান্টি নেই</td></tr>'
+ +'<tr><td>Flow / congestion control</td><td>আছে</td><td>নেই</td></tr>'
+ +'<tr><td>Header</td><td>20+ byte</td><td>8 byte</td></tr>'
+ +'<tr><td>গতি</td><td>তুলনায় ধীর</td><td>দ্রুত</td></tr>'
+ +'<tr><td>উদাহরণ</td><td>HTTP, SMTP, SSH</td><td>DNS, VoIP, game</td></tr></table>';
+
+/* ===== 15. TCP 3-way handshake ===== */
+const HAND=VH([
+  S('Data পাঠানোর আগে TCP দুজনের মধ্যে <b>connection</b> খোলে, তিন ধাপে। শুরুতে client <code>CLOSED</code>, server <code>LISTEN</code> (port শুনছে)।',{add:[B('cl',30,40,150,170,'Client\nCLOSED','a'),B('sv',580,40,150,170,'Server\nLISTEN','g'),L('l',180,125,580,125,'n')]}),
+  S('<b>1. SYN:</b> client বলে "কথা বলতে চাই, আমার শুরু-নম্বর <code>seq = x</code>।" Client এখন <code>SYN_SENT</code>।',{add:[B('pk',195,85,130,28,'SYN  seq=x','o',{s:'sm'})],mod:{cl:{label:'Client\nSYN_SENT',hl:1},pk:{x:195}}}),
+  S('SYN server-এ পৌঁছাল।',{mod:{pk:{x:440},cl:{hl:0},sv:{hl:1,label:'Server\nSYN_RCVD'}}}),
+  S('<b>2. SYN-ACK:</b> server বলে "ঠিক আছে, তোমার x পেলাম (<code>ack = x+1</code>), আমার শুরু-নম্বর <code>seq = y</code>।" Server <code>SYN_RCVD</code>।',{mod:{pk:{x:195,y:125,label:'SYN-ACK y, ack=x+1',w:170,c:'b'}}}),
+  S('<b>3. ACK:</b> client বলে "তোমার y পেলাম (<code>ack = y+1</code>)।" Client <code>ESTABLISHED</code>।',{mod:{pk:{x:440,y:165,label:'ACK  ack=y+1',w:130,c:'g'},cl:{label:'Client\nESTABLISHED',c:'g',hl:1},sv:{hl:0}}}),
+  S('ACK পেয়ে server-ও <code>ESTABLISHED</code>। <b>দু-দিকেই</b> দু-পক্ষের পাঠানো ও গ্রহণের ক্ষমতা যাচাই হল। এবার data যেতে পারে (HTTPS হলে এরপর TLS handshake)।',{mod:{sv:{label:'Server\nESTABLISHED',c:'g',hl:1},cl:{hl:0}}}),
+  S('<b>কেন তিন ধাপ, দুই নয়:</b> উভয় পক্ষের sequence number ঠিক করা আর পুরনো/ভুয়া duplicate SYN-কে connection বানানো থেকে আটকানো। একটা SYN-ACK-এর ACK না এলে server বোঝে client নেই।',{mod:{sv:{hl:0}}})
+],250);
+const FIN=VH([
+  S('<b>Connection বন্ধ (4-way):</b> প্রতিটা দিক আলাদাভাবে বন্ধ হয়। Client বলে <b>FIN</b> ("আমার আর পাঠানোর কিছু নেই")।',{add:[B('cl',30,40,150,170,'Client\nESTABLISHED','a',{s:'sm'}),B('sv',580,40,150,170,'Server\nESTABLISHED','g',{s:'sm'}),L('l',180,125,580,125,'n'),B('f',195,60,110,28,'FIN','r',{s:'sm'})],mod:{f:{x:440},cl:{label:'Client\nFIN_WAIT_1'}}}),
+  S('Server <b>ACK</b> দিল। Client এখন <code>FIN_WAIT_2</code>, server <code>CLOSE_WAIT</code> (সে হয়ত এখনো কিছু পাঠাচ্ছে)।',{add:[B('a',440,100,110,28,'ACK','g',{s:'sm'})],mod:{a:{x:195},sv:{label:'Server\nCLOSE_WAIT'},cl:{label:'Client\nFIN_WAIT_2'}}}),
+  S('Server-ও শেষ করে নিজের <b>FIN</b> পাঠায়।',{add:[B('f2',440,140,110,28,'FIN','r',{s:'sm'})],mod:{f2:{x:195},sv:{label:'Server\nLAST_ACK'}}}),
+  S('Client <b>ACK</b> দেয়, তারপর কিছুক্ষণ <code>TIME_WAIT</code>-এ থাকে (হারানো packet ও দেরিতে আসা segment সামলাতে), শেষে বন্ধ। Server আগেই CLOSED।',{add:[B('a2',195,180,110,28,'ACK','g',{s:'sm'})],mod:{a2:{x:440},cl:{label:'Client\nTIME_WAIT → CLOSED'},sv:{label:'Server\nCLOSED',c:'n'}}})
+],250);
+
+/* ===== 16. HTTP vs HTTPS ===== */
+const HTTPRR=VH([
+  S('<b>HTTP</b> (HyperText Transfer Protocol) = client-server <b>request/response</b> protocol, TCP-র ওপর, default port 80। Browser (client) request পাঠায়।',{add:[B('cl',20,70,130,100,'Browser','a'),B('sv',610,70,130,100,'Web Server\n:80','g'),L('l',150,120,610,120,'n'),B('rq',170,35,420,44,'GET /index.html HTTP/1.1\nHost: example.com','a',{m:1,s:'sm'})],mod:{rq:{x:170}}}),
+  S('<b>Request:</b> একটা <b>method</b> (GET, POST…), path, header। GET মানে "এই resource দাও"।',{mod:{cl:{hl:1},rq:{y:35}}}),
+  S('Server কাজ করে আর <b>response</b> পাঠায়: <b>status code</b> + header + body (HTML)।',{add:[B('rs',170,160,420,44,'HTTP/1.1 200 OK\nContent-Type: text/html\n<html>…</html>','g',{m:1,s:'sm'})],mod:{sv:{hl:1},cl:{hl:0}}}),
+  S('<b>Stateless:</b> প্রতিটা request আলাদা, server আগের request মনে রাখে না। তাই login ধরে রাখতে cookie/session/token লাগে।',{mod:{sv:{hl:0}}})
+],250);
+const HTTP_TBL='<table class="cmp"><tr><th>Method</th><th>কাজ</th><th>Status code</th><th>অর্থ</th></tr>'
+ +'<tr><td>GET</td><td>data পড়া</td><td>200 OK</td><td>সফল</td></tr>'
+ +'<tr><td>POST</td><td>নতুন data তৈরি</td><td>201 Created</td><td>তৈরি হয়েছে</td></tr>'
+ +'<tr><td>PUT / PATCH</td><td>সম্পূর্ণ / আংশিক বদল</td><td>301 / 302</td><td>Redirect</td></tr>'
+ +'<tr><td>DELETE</td><td>মোছা</td><td>400 / 401 / 403 / 404</td><td>ভুল request / login লাগবে / অনুমতি নেই / পাওয়া যায়নি</td></tr>'
+ +'<tr><td>HEAD / OPTIONS</td><td>শুধু header / কী সম্ভব</td><td>500 / 503</td><td>Server-এর ভুল / ব্যস্ত</td></tr></table>';
+const HTTPSATK=VH([
+  S('<b>HTTP-র সমস্যা:</b> সব কিছু <b>plain text</b>। মাঝের যে কেউ (public Wi-Fi, ISP) প্যাকেট পড়তে বা বদলাতে পারে (<b>man-in-the-middle</b>)।',{add:[B('cl',20,90,120,70,'Browser','a'),B('sv',620,90,120,70,'Server','g'),L('l',140,125,620,125,'n'),B('at',320,20,120,44,'আক্রমণকারী\n(sniffer)','r',{s:'sm'}),B('pk',280,150,200,34,'user=rahim&pass=1234','o',{m:1,s:'sm'})]}),
+  S('Password <code>1234</code> পরিষ্কার লেখায় যাচ্ছে। আক্রমণকারী সরাসরি <b>পড়ে ফেলল</b>।',{mod:{at:{hl:1}}}),
+  S('<b>HTTPS = HTTP + TLS:</b> একই HTTP, কিন্তু TLS-এ <b>এনক্রিপ্ট</b> করা, port 443। আক্রমণকারী শুধু অর্থহীন bytes দেখে।',{mod:{pk:{label:'8f3a9c1d e07b…  (encrypted)',c:'g'},at:{hl:0,label:'আক্রমণকারী\nশুধু gibberish'}}}),
+  S('<b>HTTPS দেয় তিনটা জিনিস:</b> <b>গোপনীয়তা</b> (encryption), <b>অখণ্ডতা</b> (পথে বদলালে ধরা পড়ে), <b>পরিচয়</b> (certificate দিয়ে নিশ্চিত যে এটা আসল server)। এই কারণেই তালার চিহ্ন।',{mod:{pk:{c:'g'}}})
+],250);
+const HTTPS_TBL='<table class="cmp"><tr><th></th><th>HTTP</th><th>HTTPS</th></tr>'
+ +'<tr><td>Port</td><td>80</td><td>443</td></tr>'
+ +'<tr><td>Data</td><td>Plain text</td><td>TLS-এ এনক্রিপ্টেড</td></tr>'
+ +'<tr><td>পরিচয় যাচাই</td><td>নেই</td><td>Certificate দিয়ে</td></tr>'
+ +'<tr><td>Tampering</td><td>ধরা যায় না</td><td>ধরা পড়ে</td></tr>'
+ +'<tr><td>দেরি</td><td>কম</td><td>সামান্য বাড়তি (TLS handshake)</td></tr>'
+ +'<tr><td>ব্যবহার</td><td>এখন প্রায় নেই</td><td>সব আধুনিক সাইট</td></tr></table>';
+
+/* ===== 17. SSL vs TLS ===== */
+const SSLTLS=VH([
+  S('<b>SSL 2.0 (1995)</b> ও <b>SSL 3.0 (1996)</b>: Netscape বানাল। SSL 2.0 গুরুতর ত্রুটিপূর্ণ। SSL 3.0-ও <b>POODLE</b> আক্রমণে (২০১৪) ভাঙল। আজ <b>বন্ধ</b>।',{add:[B('s2',20,40,170,60,'SSL 2.0\n1995','r',{s:'sm'}),B('s3',210,40,170,60,'SSL 3.0\n1996','r',{s:'sm'}),T('x1',210,125,'POODLE (2014)',{c:'r',s:'b'})]}),
+  S('<b>TLS</b> = SSL-এরই উত্তরসূরি, IETF-এর মানে (standard) নাম বদলে। <b>TLS 1.0 (1999)</b> ও <b>1.1 (2006)</b> এখন deprecated, দুর্বল ও পুরনো।',{add:[B('t0',400,40,150,60,'TLS 1.0\n1999','o',{s:'sm'}),B('t1',570,40,150,60,'TLS 1.1\n2006','o',{s:'sm'})]}),
+  S('<b>TLS 1.2 (2008)</b> আজও ব্যাপক চলে। <b>TLS 1.3 (2018)</b> সবচেয়ে নতুন: দুর্বল cipher বাদ, handshake দ্রুত (1-RTT), আরও নিরাপদ।',{add:[B('t2',210,150,230,60,'TLS 1.2 (2008)\nএখনো চলে','g',{s:'sm'}),B('t3',460,150,260,60,'TLS 1.3 (2018)\nসেরা, প্রস্তাবিত','g',{s:'sm',hl:1})]}),
+  S('<b>সারকথা:</b> লোকে এখনো "SSL certificate" বলে, কিন্তু আসলে <b>TLS</b>-ই চলছে। SSL আর TLS নামে আলাদা প্রজন্ম, SSL পুরোপুরি বাতিল।',{mod:{t3:{hl:0}}})
+],250);
+const SSLTLS_TBL='<table class="cmp"><tr><th>Version</th><th>বছর</th><th>অবস্থা</th></tr>'
+ +'<tr><td>SSL 2.0</td><td>1995</td><td>বাতিল (গুরুতর ত্রুটি)</td></tr>'
+ +'<tr><td>SSL 3.0</td><td>1996</td><td>বাতিল (POODLE, 2015-এ RFC 7568)</td></tr>'
+ +'<tr><td>TLS 1.0</td><td>1999</td><td>Deprecated (2021 RFC 8996)</td></tr>'
+ +'<tr><td>TLS 1.1</td><td>2006</td><td>Deprecated (2021 RFC 8996)</td></tr>'
+ +'<tr><td>TLS 1.2</td><td>2008</td><td>ব্যবহারযোগ্য</td></tr>'
+ +'<tr><td>TLS 1.3</td><td>2018</td><td>প্রস্তাবিত</td></tr></table>';
+
+/* ===== 18. TLS handshake ===== */
+const TLSH=VH([
+  S('TCP handshake-এর পর <b>TLS handshake</b>। লক্ষ্য: ১) server আসল কিনা যাচাই, ২) দু-পক্ষের <b>একই গোপন session key</b>, যা কখনো network দিয়ে যায় না। (এখানে TLS 1.3 সরলভাবে।)',{add:[B('cl',20,40,130,190,'Client\n(Browser)','a'),B('sv',610,40,130,190,'Server','g'),L('l',150,135,610,135,'n')]}),
+  S('<b>1. ClientHello:</b> client জানায় সে কোন TLS version ও cipher suite চালাতে পারে, একটা <b>random</b> সংখ্যা, আর নিজের <b>key share</b> (ECDHE public অংশ)।',{add:[B('m1',170,55,420,38,'ClientHello: versions, ciphers, random, key share','a',{s:'sm'})],mod:{m1:{x:170},cl:{hl:1}}}),
+  S('<b>2. ServerHello + Certificate:</b> server বাছে cipher, নিজের key share দেয়, আর পাঠায় তার <b>certificate</b> (public key + কার নাম + কে সই করেছে)।',{add:[B('m2',170,105,420,38,'ServerHello, key share + Certificate (+ signature)','g',{s:'sm'})],mod:{sv:{hl:1},cl:{hl:0},m1:{c:'n'}}}),
+  S('<b>3. Client certificate যাচাই করে:</b> বিশ্বাসযোগ্য <b>CA</b>-র সই আছে? domain মেলে? মেয়াদ আছে? সই-এ (signature) নিশ্চিত হয় server-ই আসল।',{add:[B('m3',170,155,420,38,'Certificate যাচাই ✓  (CA সই, domain, মেয়াদ)','o',{s:'sm'})],mod:{cl:{hl:1},sv:{hl:0},m2:{c:'n'}}}),
+  S('<b>4. Key তৈরি:</b> দু-পক্ষ নিজের গোপন সংখ্যা + অন্যের key share দিয়ে (<b>ECDHE</b> key exchange) <b>একই session key</b> গণনা করে। Key কখনো তারে যায়নি, তাই আড়ি-পাতা শুনেও বানাতে পারে না।',{add:[B('k1',20,200,130,28,'session key ✓','g',{s:'sm',hl:1}),B('k2',610,200,130,28,'session key ✓','g',{s:'sm',hl:1})]}),
+  S('<b>5. Finished:</b> দু-পক্ষ handshake-এর সারাংশ পাঠিয়ে মেলায়। এরপর সব HTTP data <b>session key দিয়ে symmetric encryption</b> (AES) হয়: দ্রুত আর নিরাপদ।',{add:[B('m4',170,205,420,28,'🔒 Application data (encrypted)','g',{s:'sm'})],mod:{m3:{c:'n'}}}),
+  S('<b>কেন দুই ধরন key:</b> public-key (asymmetric) নিরাপদ কিন্তু ধীর, তাই শুধু key ঠিক করতে। বাকি সব data দ্রুত symmetric key-তে। TLS 1.3 এটা <b>1-RTT</b>-তে করে (TLS 1.2-তে 2-RTT)।',{})
+],275);
+const CERT=VH([
+  S('<b>Certificate:</b> একটা ডিজিটাল পরিচয়পত্র: domain নাম, server-এর public key, মেয়াদ, আর কোন <b>CA</b> (Certificate Authority) সই করেছে। Server পাঠায় <b>example.com</b>-এর certificate।',{add:[B('lf',250,150,260,60,'example.com\n(server certificate)','g',{s:'sm'})]}),
+  S('এই certificate সই করেছে একটা <b>Intermediate CA</b>। তার certificate-ও server সাথে পাঠায়।',{add:[B('im',250,85,260,50,'Intermediate CA','o',{s:'sm'}),A('a1',380,148,380,137,'o')],mod:{lf:{hl:0}}}),
+  S('Intermediate-কে সই করেছে <b>Root CA</b>। Root-এর certificate আগে থেকেই আপনার OS/browser-এর <b>trust store</b>-এ বসানো (তাই বিশ্বাসযোগ্য)।',{add:[B('rt',250,20,260,50,'Root CA (trust store-এ)','a',{s:'sm'}),A('a2',380,83,380,72,'a')]}),
+  S('<b>Chain of trust:</b> Browser নিচ থেকে উপরে সই মিলিয়ে root পর্যন্ত যায়। সব মিললে server বিশ্বাসযোগ্য। কোনো ধাপ ভুল/মেয়াদোত্তীর্ণ হলে browser সতর্কতা দেখায়।',{mod:{lf:{c:'g',hl:1},im:{hl:1},rt:{hl:1}}})
+],250);
+
+/* ---------- topics ---------- */
+const PARTS=[['1','Network Fundamentals'],['2','Addressing'],['3','Transport'],['4','Web ও Security']];
+const TOPICS=[
+{part:0,q:'Network কী',
+ ans:'<b>Network</b> হল দুই বা বেশি device (computer, phone, router…) যারা <b>link</b> (তার, fibre, Wi-Fi) আর <b>protocol</b> (নিয়ম) ব্যবহার করে একে অপরের সাথে data ও resource ভাগ করে। অনেক network জুড়ে তৈরি সবচেয়ে বড়টা হল <b>Internet</b>।',
+ pts:['<b>উপাদান:</b> node (device), link (মাধ্যম), protocol (ভাষা/নিয়ম), আর জোড়ার যন্ত্র (switch, router)।','<b>কেন:</b> file/printer/Internet ভাগ করা, যোগাযোগ, কেন্দ্রীয় data।','Data যায় ছোট ছোট <b>packet</b> হয়ে।'],
+ tabs:[{n:'Network কী',steps:WHATNET}]},
+{part:0,q:'Network-এর ধরন (LAN, MAN, WAN, PAN) আর Topology (Bus, Star, Ring, Mesh, Tree)',
+ ans:'<b>আকার অনুযায়ী ধরন:</b> PAN (ব্যক্তিগত, কয়েক মিটার) &lt; LAN (building) &lt; MAN (শহর) &lt; WAN (দেশ/বিশ্ব)। <b>Topology</b> = device-গুলো <b>কীভাবে জোড়া</b> (layout): Bus, Star, Ring, Mesh, Tree। প্রতিটার সুবিধা-অসুবিধা আলাদা।',
+ pts:['<b>Network type</b> = কত বড় এলাকা। <b>Topology</b> = কীভাবে সাজানো।','আজকের LAN প্রায় সবই <b>Star</b> (switch কেন্দ্রে)। Internet আংশিক <b>Mesh</b>।','নিচের tab-এ প্রতিটা topology-তে data চলা আর ব্যর্থতা দেখো।'],
+ extra:'<table class="cmp"><tr><th>Topology</th><th>সুবিধা</th><th>অসুবিধা</th></tr>'
+  +'<tr><td>Bus</td><td>সস্তা, কম তার</td><td>backbone কাটলে সব বন্ধ, collision</td></tr>'
+  +'<tr><td>Star</td><td>সহজ, একজনের সমস্যা অন্যকে ছোঁয় না</td><td>কেন্দ্র (switch) নষ্ট হলে সব বন্ধ</td></tr>'
+  +'<tr><td>Ring</td><td>collision নেই, নিয়মিত পালা</td><td>একটা ভাঙলে (single ring) সব বন্ধ</td></tr>'
+  +'<tr><td>Mesh</td><td>অত্যন্ত নির্ভরযোগ্য (বিকল্প পথ)</td><td>তার/খরচ অনেক বেশি</td></tr>'
+  +'<tr><td>Tree</td><td>বড় network সাজানো সহজ</td><td>উপরের node নষ্ট হলে নিচের শাখা বন্ধ</td></tr></table>',
+ tabs:[{n:'PAN / LAN / MAN / WAN',steps:NETTYPES},{n:'Bus',steps:TOPO.bus},{n:'Star',steps:TOPO.star},{n:'Ring',steps:TOPO.ring},{n:'Mesh',steps:TOPO.mesh},{n:'Tree',steps:TOPO.tree}]},
+{part:0,q:'Bandwidth, Throughput আর Latency',
+ ans:'<b>Bandwidth</b> = link-এর সর্বোচ্চ ধারণক্ষমতা (Mbps)। <b>Throughput</b> = আসলে কত data পৌঁছাচ্ছে। <b>Latency</b> = packet যেতে সময় (ms), আর যাওয়া-আসা মিলিয়ে <b>RTT</b>। প্রথম দুটো <b>পরিমাণ</b>, শেষটা <b>দেরি</b>।',
+ pts:['<b>Bandwidth ≥ throughput।</b> পাইপের প্রস্থ বনাম আসলে যত পানি বইছে।','<b>Latency</b> বাড়ে দূরত্ব, hop, congestion, medium-এ। Bandwidth বাড়ালে latency কমে না।','Download-এ bandwidth, game/call-এ latency জরুরি।'],
+ tabs:[{n:'Bandwidth বনাম Throughput',steps:BW},{n:'Latency ও RTT',steps:LAT},{n:'দুটো আলাদা',steps:BWLAT}]},
+{part:0,q:'Hub, Switch ও Router',
+ ans:'<b>Hub</b> (L1) সব port-এ signal ছড়ায়। <b>Switch</b> (L2) MAC address দেখে শুধু ঠিক port-এ frame পাঠায়। <b>Router</b> (L3) IP address দেখে আলাদা network-কে জোড়ে। ক্রমে বুদ্ধিমান: hub &lt; switch &lt; router।',
+ pts:['<b>Collision domain:</b> hub-এ সবাই একটা, switch-এ প্রতি port একটা।','<b>Broadcast domain:</b> switch-এ সব এক (VLAN ছাড়া), router প্রতি port-এ আলাদা করে।','Router-ই LAN-কে Internet-এর সাথে জোড়ে (gateway)।'],
+ extra:NETDEV_CMP,
+ tabs:[{n:'Hub',steps:HUB},{n:'Switch',steps:SWI},{n:'Router',steps:ROU}]},
+{part:1,q:'MAC address কী, data কীভাবে send ও receive হয়',
+ ans:'<b>MAC address</b> = NIC-এর ৪৮-bit physical ঠিকানা (<code>3C:22:FB:9A:4D:E1</code>)। একই LAN-এ <b>frame</b> এই MAC দিয়ে যায়। IP থেকে MAC জানতে লাগে <b>ARP</b>। Switch/NIC frame-এর Dest MAC দেখে নেবে না ফেলবে ঠিক করে।',
+ pts:['<b>MAC = পরিচয়</b> (LAN-এর ভেতর), <b>IP = অবস্থান</b> (network পেরিয়ে)।','<b>ARP:</b> "এই IP-র MAC কী?" broadcast, উত্তর unicast, তারপর cache।','<b>Frame:</b> Dest MAC | Src MAC | Type | Payload | FCS।'],
+ tabs:[{n:'MAC address',steps:MACS},{n:'ARP',steps:ARPS},{n:'Frame send/receive',steps:FRAME}]},
+{part:1,q:'IP address কী; Public, Private, Static ও Dynamic IP',
+ ans:'<b>IP address</b> = network-এ device-এর logical ঠিকানা (network part + host part)। <b>Public</b> IP Internet-এ অনন্য, <b>Private</b> IP শুধু ভেতরের network-এ। <b>Static</b> স্থির, <b>Dynamic</b> DHCP থেকে ধার-নেওয়া, বদলায়।',
+ pts:['<b>Private range:</b> 10.x.x.x, 172.16–31.x.x, 192.168.x.x।','Private device বাইরে যায় <b>NAT</b>-এর মাধ্যমে।','Static: server/printer। Dynamic: সাধারণ user device।'],
+ extra:PRIV_TBL,
+ tabs:[{n:'IP কী',steps:IPWHAT},{n:'Public বনাম Private',steps:PUBPRIV},{n:'Static বনাম Dynamic',steps:STATDYN}]},
+{part:1,q:'IPv4 বনাম IPv6',
+ ans:'<b>IPv4</b> = ৩২ bit (≈ ৪৩০ কোটি ঠিকানা, ফুরিয়ে এসেছে)। <b>IPv6</b> = ১২৮ bit (≈ 3.4 × 10³⁸)। IPv6 এসেছে ঠিকানা-সংকট মেটাতে, সাথে NAT ছাড়াই সরাসরি যোগাযোগ, সরল header, SLAAC।',
+ pts:['IPv4: <code>192.168.1.10</code>, IPv6: <code>2001:db8::1</code>।','IPv6-তে broadcast নেই, multicast আছে।','বাস্তবে দুটো একসাথে চলে (dual-stack)।'],
+ extra:V46_TBL,
+ tabs:[{n:'Format',steps:V4V6},{n:'কেন IPv6 লাগল',steps:V6WHY}]},
+{part:1,q:'Subnet mask; Class A, B, C; Classful বনাম Classless (CIDR)',
+ ans:'<b>Subnet mask</b> বলে IP-র কত bit network, কত bit host (255.255.255.0 = /24)। <b>Classful</b> পুরনো পদ্ধতি: প্রথম octet দেখে A/B/C class আর স্থির mask। <b>Classless (CIDR)</b>: যেকোনো দৈর্ঘ্যের prefix (/n), অপচয় কম।',
+ pts:['<b>Network ID</b> = IP AND mask। <b>Host ID</b> = বাকি অংশ।','<b>/24 = 254 usable host</b> (256 − network ID − broadcast)। সূত্র: 2^(32−n) − 2।','Subnetting = বড় network ছোট ভাগে ভাঙা।'],
+ extra:CLASSES_TBL,
+ tabs:[{n:'Subnet mask',steps:SUBNET},{n:'Classful',steps:CLASSFUL},{n:'CIDR (/24, /26)',steps:CIDR}]},
+{part:1,q:'DHCP কী ও কীভাবে কাজ করে',
+ ans:'<b>DHCP</b> নতুন device-কে <b>স্বয়ংক্রিয়ভাবে</b> IP, mask, gateway ও DNS দেয় (lease সময়ের জন্য)। চার ধাপ: <b>D</b>iscover, <b>O</b>ffer, <b>R</b>equest, <b>A</b>cknowledge (<b>DORA</b>)। UDP port 67 (server) / 68 (client)।',
+ pts:['Discover ও Request <b>broadcast</b> (client-এর তখনো IP নেই)।','<b>Lease:</b> নির্দিষ্ট সময়ের ধার, অর্ধেক পেরোলে renew।','Reservation দিয়ে নির্দিষ্ট MAC-কে সবসময় একই IP দেওয়া যায়।'],
+ tabs:[{n:'DORA',steps:DHCP}]},
+{part:1,q:'DNS কীভাবে domain name থেকে IP address resolve করে',
+ ans:'<b>DNS</b> হল Internet-এর ফোনবই: <b>domain নাম → IP</b>। Resolve করার পথ: browser/OS cache → <b>recursive resolver</b> → <b>Root</b> → <b>TLD (.com)</b> → <b>authoritative nameserver</b>, যে আসল IP (A record) দেয়। উত্তর TTL পর্যন্ত cache হয়।',
+ pts:['<b>Recursive</b> (client → resolver): পুরো উত্তর এনে দাও। <b>Iterative</b> (resolver → server): referral ধরে ধরে এগোনো।','<b>Cache + TTL</b> বেশিরভাগ lookup দ্রুত করে।','Default port <b>53</b> (UDP; বড় উত্তরে TCP)।'],
+ extra:DNS_TBL,
+ tabs:[{n:'Resolution ধাপে ধাপে',steps:DNSRES},{n:'Recursive/Iterative, TTL',steps:DNSTYPES}]},
+{part:1,q:'NAT ও NAT table',
+ ans:'<b>NAT</b> (Network Address Translation) router-এ <b>private IP</b>-কে <b>public IP</b>-তে বদলে দেয়। Router একটা <b>NAT table</b>-এ লেখে (private IP:port ↔ public IP:port), তাই উত্তর ফেরার সময় ঠিক device-কে পৌঁছে দিতে পারে। একটা public IP-তে বাড়ির সব device।',
+ pts:['<b>PAT / NAT overload:</b> একই public IP, আলাদা port দিয়ে device আলাদা করা।','<b>সুবিধা:</b> IPv4 ঠিকানা সাশ্রয়, ভেতরের device লুকানো।','<b>অসুবিধা:</b> বাইরে থেকে ভেতরে সংযোগ কঠিন (port forwarding), end-to-end ভাঙে।'],
+ tabs:[{n:'NAT ধাপে ধাপে',steps:NAT}]},
+{part:1,q:'DSCP (QoS marking)',
+ ans:'<b>DSCP</b> = IP header-এর ৬-bit field, যা packet-এর <b>অগ্রাধিকার চিহ্নিত</b> করে (QoS)। Router এই মান দেখে ভিড়ের সময় voice/video-কে file download-এর আগে পাঠায়। যেমন voice = EF (46), সাধারণ = 0।',
+ pts:['দেরি-সংবেদনশীল traffic (voice, video call) বনাম bulk (download, backup)।','DSCP শুধু <b>marking</b>, router-এর QoS নীতি অনুযায়ী কাজ হয়।','Internet-এ প্রায়ই উপেক্ষা হয়, নিজের (কোম্পানির) network-এ কাজে লাগে।'],
+ extra:DSCP_TBL,
+ tabs:[{n:'Marking ও queue',steps:DSCP}]},
+{part:2,q:'Default port: HTTP 80, HTTPS 443, FTP 20/21, DNS 53, SMTP 25',
+ ans:'<b>Port</b> (০–৬৫৫৩৫) বলে দেয় machine-এর <b>কোন service</b>-কে data যাবে। <b>Well-known port</b> (০–১০২৩) service অনুযায়ী ঠিক করা। <b>Socket</b> = <code>IP : port</code>, আর একটা connection চেনা যায় Src IP/port + Dst IP/port দিয়ে।',
+ pts:['HTTP 80, HTTPS 443, FTP 20/21, SSH 22, SMTP 25, DNS 53, DHCP 67/68।','Client অস্থায়ী <b>ephemeral port</b> নেয় (49152+)।','IP = machine, port = machine-এর ভেতরের service।'],
+ extra:PORT_TBL,
+ tabs:[{n:'Port ও Socket',steps:PORTS}]},
+{part:2,q:'TCP বনাম UDP',
+ ans:'<b>TCP:</b> connection-ভিত্তিক, ack + retransmit, ঠিক ক্রমে পৌঁছায়, flow ও congestion control। নির্ভরযোগ্য কিন্তু ধীর। <b>UDP:</b> connection ও ack নেই, দ্রুত ও হালকা, কিন্তু হারালে কেউ দেখে না।',
+ pts:['<b>TCP:</b> web, email, file, SSH, database।','<b>UDP:</b> video/voice call, game, live stream, DNS।','মূল ফারাক: নির্ভরযোগ্যতা বনাম গতি।'],
+ extra:TCPUDP_TBL,
+ tabs:[{n:'TCP',steps:TCP},{n:'UDP',steps:UDP},{n:'কখন কোনটা',steps:TCPUDP}]},
+{part:2,q:'TCP 3-way handshake',
+ ans:'TCP connection খোলার তিন ধাপ: <b>SYN</b> (client → server), <b>SYN-ACK</b> (server → client), <b>ACK</b> (client → server)। এতে দু-পক্ষের <b>sequence number</b> ঠিক হয় আর দু-দিকের যোগাযোগ যাচাই হয়। বন্ধ করতে লাগে 4-way (FIN/ACK)।',
+ pts:['State: CLOSED/LISTEN → SYN_SENT/SYN_RCVD → ESTABLISHED।','তিন ধাপ কেন: দু-পক্ষের seq ঠিক করা আর পুরনো duplicate SYN আটকানো।','SYN flood আক্রমণ এই অর্ধ-খোলা connection ভরিয়ে দেয়।'],
+ tabs:[{n:'3-way handshake',steps:HAND},{n:'Connection বন্ধ (FIN)',steps:FIN}]},
+{part:3,q:'HTTP বনাম HTTPS',
+ ans:'<b>HTTP</b> = web-এর request/response protocol (method, path, header, status code), plain text, port 80। <b>HTTPS</b> = <b>HTTP + TLS</b>, port 443: <b>এনক্রিপশন</b>, <b>অখণ্ডতা</b> ও server-এর <b>পরিচয় যাচাই</b> (certificate) দেয়।',
+ pts:['HTTP <b>stateless</b>: প্রতি request আলাদা (cookie/token দিয়ে state)।','Method: GET, POST, PUT, PATCH, DELETE। Status: 2xx সফল, 3xx redirect, 4xx client-ভুল, 5xx server-ভুল।','HTTPS-এ man-in-the-middle পড়তে বা বদলাতে পারে না।'],
+ extra:HTTP_TBL+HTTPS_TBL,
+ tabs:[{n:'Request / Response',steps:HTTPRR},{n:'HTTP বনাম HTTPS',steps:HTTPSATK}]},
+{part:3,q:'SSL বনাম TLS',
+ ans:'<b>SSL</b> (Netscape, 1995–96) ছিল প্রথম, কিন্তু ত্রুটিপূর্ণ ও <b>বাতিল</b>। <b>TLS</b> তার <b>উত্তরসূরি</b> (IETF): 1.0 (1999), 1.1, 1.2 (2008), 1.3 (2018)। আজ সবাই "SSL certificate" বললেও আসলে TLS চলছে।',
+ pts:['SSL 2.0/3.0 (POODLE) ও TLS 1.0/1.1 আজ বাতিল।','ব্যবহার করো <b>TLS 1.2 বা 1.3</b>।','TLS 1.3 দ্রুত (1-RTT) ও আরও নিরাপদ।'],
+ extra:SSLTLS_TBL,
+ tabs:[{n:'ইতিহাস',steps:SSLTLS}]},
+{part:3,q:'TLS handshake',
+ ans:'TLS handshake-এ client ও server <b>cipher ঠিক করে</b>, server <b>certificate দিয়ে পরিচয় দেয়</b> (client যাচাই করে), তারপর <b>ECDHE key exchange</b>-এ দু-পক্ষ একই <b>session key</b> বানায়। এরপর সব data সেই key-তে <b>symmetric encryption</b> হয়।',
+ pts:['<b>ধাপ:</b> ClientHello → ServerHello + Certificate → certificate যাচাই → key exchange → Finished।','Key কখনো network দিয়ে যায় না, তাই আড়ি-পাতা বানাতে পারে না।','<b>Certificate chain:</b> server cert → Intermediate CA → Root CA (trust store-এ)।'],
+ tabs:[{n:'Handshake (TLS 1.3)',steps:TLSH},{n:'Certificate chain',steps:CERT}]}
+];
+
+/* ---------- build page ---------- */
+const app=document.getElementById('app'),partsNav=document.getElementById('parts');
+PARTS.forEach((pt,i)=>{const a=document.createElement('a');a.href='#p'+i;a.innerHTML=`<b>${pt[0]}</b>${pt[1]}`;partsNav.appendChild(a);
+  const sec=document.createElement('section');sec.className='part';sec.id='p'+i;sec.innerHTML=`<h2><span>${pt[0]}</span>${pt[1]}</h2>`;app.appendChild(sec);});
+TOPICS.forEach((t,i)=>{
+  const card=document.createElement('article');card.className='q';card.id='q'+(i+1);
+  card.innerHTML=`<h3><span class="num">${i+1}</span><span>${t.q}</span></h3><p class="ans">${t.ans}</p>${t.pts&&t.pts.length?'<ul>'+t.pts.map(x=>`<li>${x}</li>`).join('')+'</ul>':''}${t.extra?`<div class="extra">${t.extra}</div>`:''}<div class="viz"></div>`;
+  document.getElementById('p'+t.part).appendChild(card);
+  mount(card.querySelector('.viz'),t);
+});
+</script>
 </body>
 </html>
