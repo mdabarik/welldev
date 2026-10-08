@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>OS Basics - Interview Cheat Sheet</title>
-<meta name="description" content="Trainee Software Engineer interview-এর জন্য OS-এর ৪০টি প্রশ্ন - প্রতিটির সংক্ষিপ্ত উত্তর আর ক্লিক করে ধাপে ধাপে দেখার D3 animation।">
+<meta name="description" content="Trainee Software Engineer interview-এর জন্য OS-এর ৪১টি প্রশ্ন - প্রতিটির সংক্ষিপ্ত উত্তর আর ক্লিক করে ধাপে ধাপে দেখার D3 animation।">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -127,7 +127,7 @@ h1,h2,h3,h4,h5{letter-spacing:0!important}
 
   <header class="hero">
     <div class="eyebrow">Operating System · Interview</div>
-    <h1>OS Basics - ৪০টি প্রশ্ন, সোজা উত্তর</h1>
+    <h1>OS Basics - ৪১টি প্রশ্ন, সোজা উত্তর</h1>
     <p>প্রতিটি প্রশ্নে এক লাইনের উত্তর আর একটা animation। scene-এ ক্লিক করো বা <b>Next</b> চাপো - ধাপে ধাপে দেখো।</p>
     <div class="jump" id="jump"></div>
   </header>
@@ -1356,6 +1356,47 @@ const TOPICS=[
     S('<b>Bare metal:</b> OS-এর overhead নেই, কিন্তু উপরের সুবিধাও <b>কিছুই নেই</b>। একটাই কাজ, নিজে সব সামলাতে হয়।',{add:[B('n1',406,54,318,34,'Multitasking: নেই','r',{s:'sm',dash:1}),B('n2',406,96,318,34,'Isolation: নেই','r',{s:'sm',dash:1}),B('n3',406,138,318,34,'Virtual memory: নেই','r',{s:'sm',dash:1}),B('n4',406,180,318,34,'Driver, file system: নেই','r',{s:'sm',dash:1})]}),
     S('<b>সারকথা:</b> overhead শূন্য করা লক্ষ্য না। লক্ষ্য: সুবিধার তুলনায় overhead <b>ছোট</b> রাখা। তাই সাধারণ কম্পিউটারে OS ব্যবহার হয়, আর অতি সরল embedded device-এ কখনো bare metal।',{})
   ]}
+ ]},
+
+{p:9,q:'What is CPU core clock speed? How does it work, and what does it do?',
+ ans:'<b>Core</b> হল CPU-র ভেতরের একটা processing unit, যে instruction চালায়। <b>Clock</b> হল সেই core-এর কাজের ছন্দ ঠিক রাখার সংকেত। <b>Clock speed</b> = একটা core প্রতি সেকেন্ডে কতগুলো <b>clock cycle</b> সম্পন্ন করে, মাপা হয় <b>GHz</b>-এ। যেমন <b>3 GHz = প্রতি সেকেন্ডে ৩০০ কোটি cycle</b>।',
+ pts:['<b>এক cycle কত সময়:</b> 3 GHz হলে প্রায় <b>0.333 ns</b>। প্রতি cycle-এ ভেতরের circuit (register, ALU, pipeline stage) এক ধাপ এগোয়।','<b>শুধু GHz দিয়ে গতি বিচার হয় না:</b> গতি নির্ভর করে <b>IPC</b> (প্রতি cycle-এ কত instruction), architecture, cache, core সংখ্যা, memory latency আর workload-এর ওপর।','<b>Core সংখ্যা আর clock আলাদা:</b> 8 core × 3 GHz = 24 GHz হিসাব <b>ভুল</b>। Core গুলো আলাদা কাজ করে, clock যোগ হয় না।','<b>3 GHz মানে ৩০০ কোটি instruction/sec নয়:</b> এক instruction একাধিক cycle নিতে পারে, আবার pipeline আর superscalar-এ এক cycle-এ একাধিক instruction শেষও হতে পারে।','<b>Interview-তে:</b> "CPU clock speed is the number of clock cycles a core performs per second, measured in GHz. A 3 GHz core performs about 3 billion cycles per second. But performance also depends on architecture, instructions per cycle, cache and the number of cores."'],
+ extra:'<table class="cmp"><tr><th>CPU</th><th>Clock</th><th>IPC</th><th>আনুমানিক instruction/sec</th></tr>'
+  +'<tr><td>A</td><td>3 GHz</td><td>2</td><td>6 billion</td></tr>'
+  +'<tr><td>B</td><td>2 GHz</td><td>4</td><td><b>8 billion</b> (clock কম, তবু দ্রুত)</td></tr></table>',
+ tabs:[
+  {n:'1. Clock cycle কী',steps:(()=>{
+    const wave='M40,130 '+[0,1,2,3,4].map(i=>`L${40+120*i},70 L${100+120*i},70 L${100+120*i},130 L${160+120*i},130`).join(' ');
+    return [
+    S('<b>Clock</b> = CPU-র ভেতরের ঘড়ির মতো একটা সংকেত, যা বারবার <b>উঠছে আর নামছে</b>। এর তালে তালে CPU-র সব অংশ একসাথে কাজ করে।',{add:[T('cl',20,22,'Clock signal',{c:'f',s:'b'}),P('wave',wave,'a')]}),
+    S('এক <b>rising edge</b> (নিচ থেকে উপরে ওঠা) থেকে পরের rising edge পর্যন্ত <b>এক clock cycle</b>। নিচে cycle গুলোর নম্বর।',{add:[B('cyc',40,60,120,80,'','o',{dash:1,hl:1}),...[0,1,2,3,4].map(i=>T('cn'+i,100+120*i,158,'cycle '+(i+1),{a:'middle',c:i===0?'o':'n',s:'sm b'}))]}),
+    S('<b>3 GHz</b> মানে প্রতি সেকেন্ডে <b>৩০০ কোটি</b> (3,000,000,000) cycle। তাই একটা cycle মাত্র প্রায় <b>0.333 ns</b>।',{add:[T('rate',380,206,'3 GHz  =  3,000,000,000 cycle/sec   →   1 cycle ≈ 0.333 ns',{a:'middle',c:'f',s:'m b'})]}),
+    S('<b>প্রতি cycle-এ</b> CPU-র ভেতরের circuit (register, ALU, pipeline stage) clock-এর তালে <b>এক ধাপ করে এগোয়</b>। Clock ছাড়া সবাই তাল মেলাতে পারত না।',{del:['rate'],add:[B('u1',40,180,200,44,'Registers','g'),B('u2',280,180,200,44,'ALU (হিসাব)','g'),B('u3',520,180,200,44,'Pipeline stages','g')],mod:{cyc:{hl:0}}}),
+    S('<b>সারকথা:</b> clock speed যত বেশি, প্রতি সেকেন্ডে তত বেশি cycle, মানে তত বেশি ধাপ। কিন্তু একটা কাজে কত cycle লাগে, সেটা পরের tab-গুলোতে দেখো।',{mod:{u1:{hl:1},u2:{hl:1},u3:{hl:1}}})
+    ];})()},
+  {n:'2. GHz বাড়লে কি দ্রুত?',steps:[
+    S('একই architecture-এ clock বাড়লে সাধারণত বেশি কাজ হয়। কিন্তু <b>গতি = clock × IPC</b>। <b>IPC</b> = প্রতি cycle-এ গড়ে কয়টা instruction শেষ হয়। দুটো CPU তুলনা করি।',{add:[T('fm',380,18,'আনুমানিক instruction/sec  ≈  clock  ×  IPC',{a:'middle',c:'f',s:'b'}),T('la',20,82,'CPU A',{c:'a',s:'b'}),T('lb',20,162,'CPU B',{c:'b',s:'b'})]}),
+    S('<b>CPU A:</b> 3 GHz, IPC 2। গতি ≈ 3 × 2 = <b>6 billion</b> instruction/sec।',{add:[B('ba',100,64,6*60,36,'3 GHz × IPC 2  =  6 billion','a',{s:'sm'}),T('sa',100,116,'clock বেশি, IPC কম',{c:'a',s:'sm'})]}),
+    S('<b>CPU B:</b> 2 GHz, IPC 4। গতি ≈ 2 × 4 = <b>8 billion</b>। <b>Clock কম হয়েও B বেশি দ্রুত।</b>',{add:[B('bb',100,144,8*60,36,'2 GHz × IPC 4  =  8 billion','b',{s:'sm'}),T('sb',100,196,'clock কম, IPC বেশি',{c:'b',s:'sm'})],mod:{bb:{hl:1}}}),
+    S('এটা <b>বোঝার জন্য আন্দাজি হিসাব</b>। আসলে গতি আরও ঠিক হয় <b>architecture, cache, memory latency, workload</b>-এর ওপর। তাই শুধু GHz দেখে CPU বাছা ঠিক না।',{mod:{bb:{hl:0}}})
+  ]},
+  {n:'3. Core বনাম Clock',steps:[
+    S('<b>দুটো CPU:</b> <b>A</b> = 2 core, প্রতিটা 4 GHz। <b>B</b> = 8 core, প্রতিটা 3 GHz। কোনটা ভালো? কাজের ধরনের ওপর নির্ভর করে।',{add:[T('la',20,14,'CPU A  (2 core × 4 GHz)',{c:'a',s:'sm b'}),B('a1',20,30,150,44,'Core 1\n4 GHz','a'),B('a2',180,30,150,44,'Core 2\n4 GHz','a'),T('lb',20,100,'CPU B  (8 core × 3 GHz)',{c:'b',s:'sm b'}),...[0,1,2,3,4,5,6,7].map(i=>B('b'+i,20+i*90,116,82,44,'Core '+(i+1)+'\n3 GHz','b',{s:'sm'}))]}),
+    S('<b>একটাই বড় কাজ</b> (single thread, ভাগ করা যায় না): শুধু একটা core চলে। তাই <b>A-এর 4 GHz core দ্রুত</b>, B-র 3 GHz core ধীর।',{add:[T('r1',20,200,'একটা কাজ → A জেতে (প্রতি core দ্রুত)',{c:'a',s:'b'})],mod:{a1:{hl:1,c:'g'},b0:{hl:1,c:'o'}}}),
+    S('<b>৮টা আলাদা কাজ একসাথে:</b> B-র সব core একসাথে কাজ করে। A-র মাত্র ২টা core, তাই ৪ রাউন্ড লাগবে। <b>B জেতে</b> (software parallel হলে)।',{del:['r1'],add:[T('r2',20,200,'৮টা কাজ → B জেতে (বেশি core একসাথে)',{c:'b',s:'b'})],mod:{a1:{hl:0,c:'a'},b0:{c:'b'},b1:{hl:1,c:'g'},b2:{hl:1,c:'g'},b3:{hl:1,c:'g'},b4:{hl:1,c:'g'},b5:{hl:1,c:'g'},b6:{hl:1,c:'g'},b7:{hl:1,c:'g'}}}),
+    S('<b>ভুল হিসাব:</b> 8 core × 3 GHz = 24 GHz বলা যায় না। Core গুলো <b>আলাদা আলাদা কাজ</b> করে, তাদের clock যোগ হয়ে একটা বড় clock হয় না। একটা কাজের গতি একটা core-এর clock-ই ঠিক করে।',{del:['r2'],add:[T('wr',380,206,'8 × 3 GHz  ≠  24 GHz   ✗',{a:'middle',c:'r',s:'lg'})],mod:{b0:{hl:0},b1:{hl:0},b2:{hl:0},b3:{hl:0},b4:{hl:0},b5:{hl:0},b6:{hl:0},b7:{hl:0}}})
+  ]},
+  {n:'4. Cycle বনাম Instruction',steps:(()=>{
+    const SC={F:'a',D:'b',E:'g',W:'o'},X0=120,W=40;
+    const grid=[T('ct',X0,12,'cycle →',{c:'n',s:'sm'}),...[0,1,2,3,4,5,6,7].map(i=>T('cc'+i,X0+i*W+W/2,28,String(i+1),{a:'middle',c:'n',s:'sm'})),...[0,1,2,3].map(i=>T('ri'+i,20,60+i*40,'Instruction '+(i+1),{c:'f',s:'sm b'}))];
+    const cells=(starts,pre)=>starts.flatMap((st,i)=>'FDEW'.split('').map((l,k)=>B(`${pre}${i}${k}`,X0+(st+k)*W,46+i*40,W-2,34,l,SC[l],{s:'sm'})));
+    return [
+    S('একটা instruction শেষ হতে <b>একাধিক cycle</b> লাগে। সাধারণ ৪ ধাপ: <b>F</b> (আনা), <b>D</b> (বোঝা), <b>E</b> (চালানো), <b>W</b> (ফল লেখা)। প্রতিটা ধাপে ১ cycle। তাই "3 GHz = 3 billion instruction/sec" ভুল।',{add:grid}),
+    S('<b>Pipeline ছাড়া:</b> একটা শেষ হলে তবে পরেরটা শুরু। ৪টা instruction লাগে 4 × 4 = <b>16 cycle</b>। (এখানে ৮ cycle দেখানো, বাকিটা একই ধরনের।)',{add:cells([0,4,8,12].filter(s=>s<8),'n')}),
+    S('<b>Pipelining সহ:</b> একটার F শেষ হতেই পরেরটার F শুরু। ধাপগুলো <b>ঢেউয়ের মতো overlap</b> করে। ৪টা instruction শেষ <b>মাত্র 7 cycle</b>-এ।',{del:['n00','n01','n02','n03','n10','n11','n12','n13'],add:cells([0,1,2,3],'p')}),
+    S('একবার pipeline ভরে গেলে <b>প্রতি cycle-এ একটা</b> instruction শেষ হয়। আর <b>superscalar</b> core-এ একসাথে একাধিক pipeline, তাই প্রতি cycle-এ <b>একের বেশি</b> instruction-ও শেষ হতে পারে (IPC > 1)।',{mod:{p03:{hl:1,c:'g'},p13:{hl:1,c:'g'},p23:{hl:1,c:'g'},p33:{hl:1,c:'g'}}}),
+    S('<b>সারকথা:</b> cycle মানে ঘড়ির টিক, instruction মানে কাজ। এক instruction একাধিক cycle নিতে পারে, আবার একাধিক instruction এক cycle-এ শেষও হতে পারে। তাই GHz আর instruction/sec এক জিনিস নয়।',{})
+    ];})()}
  ]}
 ];
 
