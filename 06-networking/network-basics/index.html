@@ -234,6 +234,7 @@ function mount(host,topic){
     ti=i;si=0;
     const tb=tabs[ti];steps=typeof tb.steps==='function'?tb.steps():tb.steps;
     tabBox.querySelectorAll('button').forEach((b,k)=>b.classList.toggle('on',k===ti));
+    svg.select('.layer').selectAll('*').interrupt().remove(); /* fresh canvas: old tab's lines (same ids) must not leak into the new one */
     show(0);
   }
   if(tabs.length>1){
