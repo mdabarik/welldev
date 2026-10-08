@@ -149,26 +149,7 @@ struct Cmp{
         return x[1] > y[1];
     }
 };
-sort(a.begin(), a.end(), Cmp());
-
-struct P{ int id, score; };
-vector<P> ps = {{1, 90}, {2, 85}};
-
-bool byScore(const P& x, const P& y){
-    if(x.score != y.score) return x.score > y.score;
-    return x.id < y.id;
-}
-sort(ps.begin(), ps.end(), byScore);
-
-struct Q{
-    int id, score;
-    bool operator<(const Q& o) const {
-        if(score != o.score) return score > o.score;
-        return id < o.id;
-    }
-};
-vector<Q> qs = {{1, 90}, {2, 85}};
-sort(qs.begin(), qs.end());`},
+sort(a.begin(), a.end(), Cmp());`},
 {h:'vector-এর উপর common function',f:'rare',c:`*max_element(v.begin(), v.end());   *min_element(v.begin(), v.end());
 accumulate(v.begin(), v.end(), 0);           // sum (long long হলে 0LL)
 reverse(v.begin(), v.end());
