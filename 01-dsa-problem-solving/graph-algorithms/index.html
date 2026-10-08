@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Common Graph Algorithms</title>
+<meta name="description" content="Common graph algorithm-এর তালিকা: BFS, DFS, Dijkstra, Bellman-Ford, Kruskal, Prim, Floyd-Warshall, Kosaraju, bipartite, cycle detection।">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f5f7fc;--surface:#fff;--surface-2:#f1f4fa;--fg:#0f172a;--muted:#5b6478;--faint:#94a0b8;--line:#e4e8f1;--accent:#0ea5e9;
+--e:#059669;--m:#d97706;--h:#e11d48;--hero:linear-gradient(135deg,#0ea5e9 0%,#6366f1 55%,#8b5cf6 100%);
+--shadow:0 1px 2px rgba(15,23,42,.04),0 10px 30px -12px rgba(15,23,42,.14);
+--sans:"Inter","Hind Siliguri",system-ui,sans-serif;--bn:"Hind Siliguri","Inter",system-ui,sans-serif;--mono:"JetBrains Mono",ui-monospace,Menlo,monospace}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0b0f1a;--surface:#121827;--surface-2:#182033;--fg:#e7ecf6;--muted:#9aa6bf;--faint:#66728c;--line:#232c42;--accent:#38bdf8;--e:#34d399;--m:#fbbf24;--h:#fb7185;--shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6)}}
+:root[data-theme="dark"]{--bg:#0b0f1a;--surface:#121827;--surface-2:#182033;--fg:#e7ecf6;--muted:#9aa6bf;--faint:#66728c;--line:#232c42;--accent:#38bdf8;--e:#34d399;--m:#fbbf24;--h:#fb7185;--shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6)}
+*{box-sizing:border-box}html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 var(--bn);-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}button,input{font:inherit;color:inherit}
+code{font-family:var(--mono);font-size:.86em}
+.wrap{max-width:1000px;margin:0 auto;padding:20px 18px 70px}
+.topnav{display:flex;align-items:center;gap:10px}
+.brand{display:flex;align-items:center;gap:10px;font:800 16px var(--sans);letter-spacing:-.02em}
+.logo{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:#fff;font:800 13px var(--mono);background:var(--hero)}
+.sp{flex:1}
+.pill{border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:6px 14px;font:600 13px var(--sans);cursor:pointer}
+.pill:hover{color:var(--fg)}
+.hero{margin-top:20px;border-radius:22px;padding:26px 30px;color:#fff;background:var(--hero)}
+.hero .eyebrow{font:600 12px var(--sans);letter-spacing:.1em;text-transform:uppercase;opacity:.85}
+.hero h1{margin:6px 0 8px;font:800 clamp(26px,4.2vw,38px)/1.15 var(--sans);letter-spacing:-.03em}
+.hero p{margin:0;max-width:700px;opacity:.94}
+.stats{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+.stat{background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.26);border-radius:12px;padding:6px 14px;font:600 13px var(--sans)}
+.stat b{font-size:18px;margin-right:4px}
+.bar{position:sticky;top:0;z-index:5;margin:14px -18px 0;padding:10px 18px;background:color-mix(in srgb,var(--bg) 90%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.bar input{width:100%;padding:9px 14px;border-radius:12px;border:1px solid var(--line);background:var(--surface);font:500 14px var(--sans);outline:none}
+.bar input:focus{border-color:var(--accent)}
+.chips{display:flex;gap:6px;overflow-x:auto;margin-top:8px;scrollbar-width:none}
+.chip{flex:none;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:3px 12px;font:600 12.5px var(--sans);color:var(--muted);cursor:pointer}
+.chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.chip i{font-style:normal;opacity:.7;margin-left:4px}
+.cat{margin-top:34px;scroll-margin-top:110px}
+.cat>h2{display:flex;align-items:baseline;gap:10px;margin:0 0 12px;font:800 22px/1.25 var(--sans);letter-spacing:-.02em}
+.cat>h2 small{font:600 13px var(--sans);color:var(--faint)}
+.dif{display:inline-block;font:700 11px var(--sans);padding:2px 9px;border-radius:999px;border:1px solid currentColor}
+.dif.E{color:var(--e)}.dif.M{color:var(--m)}.dif.H{color:var(--h)}
+.prem{font:700 10.5px var(--sans);padding:2px 8px;border-radius:999px;background:var(--surface-2);color:var(--muted);border:1px dashed var(--faint)}
+.empty{display:none;text-align:center;color:var(--muted);margin-top:30px}
+footer{margin-top:50px;text-align:center;color:var(--faint);font:500 13px var(--sans)}
+
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:22px}
+@media (max-width:700px){.grid{grid-template-columns:1fr}}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px 20px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:8px}
+.card .top{display:flex;align-items:center;gap:10px}
+.no{flex:none;width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:#fff;font:800 14px var(--sans);background:var(--hero)}
+.card h3{margin:0;font:700 17px/1.3 var(--sans)}
+.card p{margin:0;color:var(--muted);font:400 15px/1.6 var(--sans)}
+.kind{align-self:flex-start;font:700 11px var(--sans);padding:2px 10px;border-radius:999px;background:var(--surface-2);color:var(--accent)}
+.cx{margin-top:auto;font:600 12.5px var(--mono);color:var(--fg)}
+.cx span{color:var(--faint);font-family:var(--sans)}
+.note{margin-top:22px;border:1px dashed var(--faint);border-radius:14px;padding:12px 16px;color:var(--muted);font:500 14px var(--sans)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="topnav"><a class="brand" href="../../index.html"><span class="logo">W</span>WellDev</a><span class="sp"></span><button class="pill" id="theme" type="button">Theme</button></nav>
+  <header class="hero">
+    <div class="eyebrow">DSA · Graph</div>
+    <h1>Common Graph Algorithms</h1>
+    <p>Interview-তে সবচেয়ে বেশি আসা graph algorithm-এর তালিকা: traversal, shortest path, spanning tree, SCC, bipartite আর cycle detection। প্রতিটার এক লাইনের কাজ ও time complexity।</p>
+    <div class="stats" id="stats"></div>
+  </header>
+  <div class="note">এখন শুধু algorithm-এর তালিকা। প্রতিটার বিস্তারিত ব্যাখ্যা আর animation পরে যোগ হবে।</div>
+  <main class="grid" id="app"></main>
+  <footer>Graph algorithms · বিস্তারিত পরে যোগ হবে</footer>
+</div>
+<script>
+(function(){const root=document.documentElement,btn=document.getElementById('theme');
+try{const t=localStorage.getItem('theme');if(t)root.dataset.theme=t;}catch(e){}
+const dark=()=>root.dataset.theme?root.dataset.theme==='dark':matchMedia('(prefers-color-scheme:dark)').matches;
+const label=()=>btn.textContent=dark()?'Light':'Dark';
+btn.onclick=()=>{root.dataset.theme=dark()?'light':'dark';try{localStorage.setItem('theme',root.dataset.theme);}catch(e){}label();};label();})();
+const LC=t=>'https://leetcode.com/problemset/?search='+encodeURIComponent(t);
+const DIF={E:'Easy',M:'Medium',H:'Hard'};
+const ALG=[{"n": "BFS (Breadth-First Search)", "k": "Traversal", "s": "Level by level traversal using a queue. Finds the shortest path in an unweighted graph.", "c": "O(V + E)"}, {"n": "DFS (Depth-First Search)", "k": "Traversal", "s": "Goes as deep as possible before backtracking (stack or recursion). Basis for connectivity, cycle and topological checks.", "c": "O(V + E)"}, {"n": "Dijkstra's Algorithm", "k": "Shortest path", "s": "Single-source shortest paths when all edge weights are non-negative, using a priority queue.", "c": "O((V + E) log V)"}, {"n": "Bellman-Ford Algorithm", "k": "Shortest path", "s": "Single-source shortest paths that also works with negative edge weights and detects a negative cycle.", "c": "O(V x E)"}, {"n": "Floyd-Warshall Algorithm", "k": "Shortest path", "s": "All-pairs shortest paths by trying every vertex as an intermediate point (dynamic programming).", "c": "O(V^3)"}, {"n": "Kruskal's Algorithm", "k": "Minimum spanning tree", "s": "Sort edges by weight and add the cheapest edge that does not form a cycle, using Union-Find (DSU).", "c": "O(E log E)"}, {"n": "Prim's Algorithm", "k": "Minimum spanning tree", "s": "Grow the tree from a start vertex, always adding the cheapest edge that reaches a new vertex (priority queue).", "c": "O(E log V)"}, {"n": "Kosaraju's Algorithm", "k": "Strongly connected components", "s": "Find strongly connected components of a directed graph with two DFS passes (original graph, then the reversed graph).", "c": "O(V + E)"}, {"n": "Bipartite Graph Check", "k": "Colouring", "s": "Try to 2-colour the graph with BFS or DFS. It is bipartite exactly when no edge joins two vertices of the same colour.", "c": "O(V + E)"}, {"n": "Cycle Detection in an Undirected Graph", "k": "Cycle detection", "s": "DFS that remembers the parent: meeting an already visited vertex that is not the parent means a cycle. Union-Find also works.", "c": "O(V + E)"}, {"n": "Cycle Detection in a Directed Graph", "k": "Cycle detection", "s": "DFS with a recursion-stack (a back edge means a cycle), or Kahn's algorithm: if topological sorting cannot take every vertex, there is a cycle.", "c": "O(V + E)"}];
+
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+document.getElementById('stats').innerHTML=[[ALG.length,'algorithms']].map(([v,l])=>`<div class="stat"><b>${v}</b>${l}</div>`).join('');
+document.getElementById('app').innerHTML=ALG.map((a,i)=>`<article class="card"><div class="top"><span class="no">${i+1}</span><h3>${esc(a.n)}</h3></div><span class="kind">${esc(a.k)}</span><p>${esc(a.s)}</p><div class="cx"><span>Time:</span> ${esc(a.c)}</div></article>`).join('');
+
+</script>
+</body>
+</html>

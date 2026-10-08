@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Top Interview 150</title>
+<meta name="description" content="LeetCode Top Interview 150: ১৫০টি problem, ২৩টি category অনুযায়ী সাজানো।">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f5f7fc;--surface:#fff;--surface-2:#f1f4fa;--fg:#0f172a;--muted:#5b6478;--faint:#94a0b8;--line:#e4e8f1;--accent:#0ea5e9;
+--e:#059669;--m:#d97706;--h:#e11d48;--hero:linear-gradient(135deg,#0ea5e9 0%,#6366f1 55%,#8b5cf6 100%);
+--shadow:0 1px 2px rgba(15,23,42,.04),0 10px 30px -12px rgba(15,23,42,.14);
+--sans:"Inter","Hind Siliguri",system-ui,sans-serif;--bn:"Hind Siliguri","Inter",system-ui,sans-serif;--mono:"JetBrains Mono",ui-monospace,Menlo,monospace}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0b0f1a;--surface:#121827;--surface-2:#182033;--fg:#e7ecf6;--muted:#9aa6bf;--faint:#66728c;--line:#232c42;--accent:#38bdf8;--e:#34d399;--m:#fbbf24;--h:#fb7185;--shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6)}}
+:root[data-theme="dark"]{--bg:#0b0f1a;--surface:#121827;--surface-2:#182033;--fg:#e7ecf6;--muted:#9aa6bf;--faint:#66728c;--line:#232c42;--accent:#38bdf8;--e:#34d399;--m:#fbbf24;--h:#fb7185;--shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6)}
+*{box-sizing:border-box}html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 var(--bn);-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}button,input{font:inherit;color:inherit}
+code{font-family:var(--mono);font-size:.86em}
+.wrap{max-width:1000px;margin:0 auto;padding:20px 18px 70px}
+.topnav{display:flex;align-items:center;gap:10px}
+.brand{display:flex;align-items:center;gap:10px;font:800 16px var(--sans);letter-spacing:-.02em}
+.logo{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:#fff;font:800 13px var(--mono);background:var(--hero)}
+.sp{flex:1}
+.pill{border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:6px 14px;font:600 13px var(--sans);cursor:pointer}
+.pill:hover{color:var(--fg)}
+.hero{margin-top:20px;border-radius:22px;padding:26px 30px;color:#fff;background:var(--hero)}
+.hero .eyebrow{font:600 12px var(--sans);letter-spacing:.1em;text-transform:uppercase;opacity:.85}
+.hero h1{margin:6px 0 8px;font:800 clamp(26px,4.2vw,38px)/1.15 var(--sans);letter-spacing:-.03em}
+.hero p{margin:0;max-width:700px;opacity:.94}
+.stats{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+.stat{background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.26);border-radius:12px;padding:6px 14px;font:600 13px var(--sans)}
+.stat b{font-size:18px;margin-right:4px}
+.bar{position:sticky;top:0;z-index:5;margin:14px -18px 0;padding:10px 18px;background:color-mix(in srgb,var(--bg) 90%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.bar input{width:100%;padding:9px 14px;border-radius:12px;border:1px solid var(--line);background:var(--surface);font:500 14px var(--sans);outline:none}
+.bar input:focus{border-color:var(--accent)}
+.chips{display:flex;gap:6px;overflow-x:auto;margin-top:8px;scrollbar-width:none}
+.chip{flex:none;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:3px 12px;font:600 12.5px var(--sans);color:var(--muted);cursor:pointer}
+.chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.chip i{font-style:normal;opacity:.7;margin-left:4px}
+.cat{margin-top:34px;scroll-margin-top:110px}
+.cat>h2{display:flex;align-items:baseline;gap:10px;margin:0 0 12px;font:800 22px/1.25 var(--sans);letter-spacing:-.02em}
+.cat>h2 small{font:600 13px var(--sans);color:var(--faint)}
+.dif{display:inline-block;font:700 11px var(--sans);padding:2px 9px;border-radius:999px;border:1px solid currentColor}
+.dif.E{color:var(--e)}.dif.M{color:var(--m)}.dif.H{color:var(--h)}
+.prem{font:700 10.5px var(--sans);padding:2px 8px;border-radius:999px;background:var(--surface-2);color:var(--muted);border:1px dashed var(--faint)}
+.empty{display:none;text-align:center;color:var(--muted);margin-top:30px}
+footer{margin-top:50px;text-align:center;color:var(--faint);font:500 13px var(--sans)}
+
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+@media (max-width:700px){.grid{grid-template-columns:1fr}}
+.row{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:9px 12px;font:600 14.5px/1.35 var(--sans)}
+.row:hover{border-color:var(--accent)}
+.row .no{flex:none;min-width:32px;text-align:center;font:700 12px var(--mono);color:var(--faint)}
+.row .t{flex:1}
+.row .go{flex:none;color:var(--faint);font-size:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="topnav"><a class="brand" href="../../index.html"><span class="logo">W</span>WellDev</a><span class="sp"></span><button class="pill" id="theme" type="button">Theme</button></nav>
+  <header class="hero">
+    <div class="eyebrow">DSA · Problem list</div>
+    <h1>Top Interview 150</h1>
+    <p>LeetCode-এর Top Interview 150 list: ১৫০টি problem, category অনুযায়ী সাজানো। নামে ক্লিক করলে LeetCode-এ খুলবে।</p>
+    <div class="stats" id="stats"></div>
+  </header>
+  <div class="bar"><input id="q" type="search" placeholder="খুঁজুন: LRU, graph, window...  ( / )" autocomplete="off">
+    <div class="chips" id="cats"></div><div class="chips" id="difs"></div></div>
+  <main id="app"></main><div class="empty" id="empty">কিছু পাওয়া যায়নি।</div>
+  <footer>Top Interview 150 · category ও ক্রম LeetCode-এর list অনুযায়ী</footer>
+</div>
+<script>
+(function(){const root=document.documentElement,btn=document.getElementById('theme');
+try{const t=localStorage.getItem('theme');if(t)root.dataset.theme=t;}catch(e){}
+const dark=()=>root.dataset.theme?root.dataset.theme==='dark':matchMedia('(prefers-color-scheme:dark)').matches;
+const label=()=>btn.textContent=dark()?'Light':'Dark';
+btn.onclick=()=>{root.dataset.theme=dark()?'light':'dark';try{localStorage.setItem('theme',root.dataset.theme);}catch(e){}label();};label();})();
+const LC=t=>'https://leetcode.com/problemset/?search='+encodeURIComponent(t);
+const DIF={E:'Easy',M:'Medium',H:'Hard'};
+const CATS=[{"n": "Array / String", "q": [{"t": "Merge Sorted Array", "d": "E"}, {"t": "Remove Element", "d": "E"}, {"t": "Remove Duplicates from Sorted Array", "d": "E"}, {"t": "Remove Duplicates from Sorted Array II", "d": "M"}, {"t": "Majority Element", "d": "E"}, {"t": "Rotate Array", "d": "M"}, {"t": "Best Time to Buy and Sell Stock", "d": "E"}, {"t": "Best Time to Buy and Sell Stock II", "d": "M"}, {"t": "Jump Game", "d": "M"}, {"t": "Jump Game II", "d": "M"}, {"t": "H-Index", "d": "M"}, {"t": "Insert Delete GetRandom O(1)", "d": "M"}, {"t": "Product of Array Except Self", "d": "M"}, {"t": "Gas Station", "d": "M"}, {"t": "Candy", "d": "H"}, {"t": "Trapping Rain Water", "d": "H"}, {"t": "Roman to Integer", "d": "E"}, {"t": "Integer to Roman", "d": "M"}, {"t": "Length of Last Word", "d": "E"}, {"t": "Longest Common Prefix", "d": "E"}, {"t": "Reverse Words in a String", "d": "M"}, {"t": "Zigzag Conversion", "d": "M"}, {"t": "Find the Index of the First Occurrence in a String", "d": "E"}, {"t": "Text Justification", "d": "H"}]}, {"n": "Two Pointers", "q": [{"t": "Valid Palindrome", "d": "E"}, {"t": "Is Subsequence", "d": "E"}, {"t": "Two Sum II - Input Array Is Sorted", "d": "M"}, {"t": "Container With Most Water", "d": "M"}, {"t": "3Sum", "d": "M"}]}, {"n": "Sliding Window", "q": [{"t": "Minimum Size Subarray Sum", "d": "M"}, {"t": "Longest Substring Without Repeating Characters", "d": "M"}, {"t": "Substring with Concatenation of All Words", "d": "H"}, {"t": "Minimum Window Substring", "d": "H"}]}, {"n": "Matrix", "q": [{"t": "Valid Sudoku", "d": "M"}, {"t": "Spiral Matrix", "d": "M"}, {"t": "Rotate Image", "d": "M"}, {"t": "Set Matrix Zeroes", "d": "M"}, {"t": "Game of Life", "d": "M"}]}, {"n": "Hashmap", "q": [{"t": "Ransom Note", "d": "E"}, {"t": "Isomorphic Strings", "d": "E"}, {"t": "Word Pattern", "d": "E"}, {"t": "Valid Anagram", "d": "E"}, {"t": "Group Anagrams", "d": "M"}, {"t": "Two Sum", "d": "E"}, {"t": "Happy Number", "d": "E"}, {"t": "Contains Duplicate II", "d": "E"}, {"t": "Longest Consecutive Sequence", "d": "M"}]}, {"n": "Intervals", "q": [{"t": "Summary Ranges", "d": "E"}, {"t": "Merge Intervals", "d": "M"}, {"t": "Insert Interval", "d": "M"}, {"t": "Minimum Number of Arrows to Burst Balloons", "d": "M"}]}, {"n": "Stack", "q": [{"t": "Valid Parentheses", "d": "E"}, {"t": "Simplify Path", "d": "M"}, {"t": "Min Stack", "d": "M"}, {"t": "Evaluate Reverse Polish Notation", "d": "M"}, {"t": "Basic Calculator", "d": "H"}]}, {"n": "Linked List", "q": [{"t": "Linked List Cycle", "d": "E"}, {"t": "Add Two Numbers", "d": "M"}, {"t": "Merge Two Sorted Lists", "d": "E"}, {"t": "Copy List with Random Pointer", "d": "M"}, {"t": "Reverse Linked List II", "d": "M"}, {"t": "Reverse Nodes in k-Group", "d": "H"}, {"t": "Remove Nth Node From End of List", "d": "M"}, {"t": "Remove Duplicates from Sorted List II", "d": "M"}, {"t": "Rotate List", "d": "M"}, {"t": "Partition List", "d": "M"}, {"t": "LRU Cache", "d": "M"}]}, {"n": "Binary Tree General", "q": [{"t": "Maximum Depth of Binary Tree", "d": "E"}, {"t": "Same Tree", "d": "E"}, {"t": "Invert Binary Tree", "d": "E"}, {"t": "Symmetric Tree", "d": "E"}, {"t": "Construct Binary Tree from Preorder and Inorder Traversal", "d": "M"}, {"t": "Construct Binary Tree from Inorder and Postorder Traversal", "d": "M"}, {"t": "Populating Next Right Pointers in Each Node II", "d": "M"}, {"t": "Flatten Binary Tree to Linked List", "d": "M"}, {"t": "Path Sum", "d": "E"}, {"t": "Sum Root to Leaf Numbers", "d": "M"}, {"t": "Binary Tree Maximum Path Sum", "d": "H"}, {"t": "Binary Search Tree Iterator", "d": "M"}, {"t": "Count Complete Tree Nodes", "d": "E"}, {"t": "Lowest Common Ancestor of a Binary Tree", "d": "M"}]}, {"n": "Binary Tree BFS", "q": [{"t": "Binary Tree Right Side View", "d": "M"}, {"t": "Average of Levels in Binary Tree", "d": "E"}, {"t": "Binary Tree Level Order Traversal", "d": "M"}, {"t": "Binary Tree Zigzag Level Order Traversal", "d": "M"}]}, {"n": "Binary Search Tree", "q": [{"t": "Minimum Absolute Difference in BST", "d": "E"}, {"t": "Kth Smallest Element in a BST", "d": "M"}, {"t": "Validate Binary Search Tree", "d": "M"}]}, {"n": "Graph General", "q": [{"t": "Number of Islands", "d": "M"}, {"t": "Surrounded Regions", "d": "M"}, {"t": "Clone Graph", "d": "M"}, {"t": "Evaluate Division", "d": "M"}, {"t": "Course Schedule", "d": "M"}, {"t": "Course Schedule II", "d": "M"}]}, {"n": "Graph BFS", "q": [{"t": "Snakes and Ladders", "d": "M"}, {"t": "Minimum Genetic Mutation", "d": "M"}, {"t": "Word Ladder", "d": "H"}]}, {"n": "Trie", "q": [{"t": "Implement Trie (Prefix Tree)", "d": "M"}, {"t": "Design Add and Search Words Data Structure", "d": "M"}, {"t": "Word Search II", "d": "H"}]}, {"n": "Backtracking", "q": [{"t": "Letter Combinations of a Phone Number", "d": "M"}, {"t": "Combinations", "d": "M"}, {"t": "Permutations", "d": "M"}, {"t": "Combination Sum", "d": "M"}, {"t": "N-Queens II", "d": "H"}, {"t": "Generate Parentheses", "d": "M"}, {"t": "Word Search", "d": "M"}]}, {"n": "Divide & Conquer", "q": [{"t": "Convert Sorted Array to Binary Search Tree", "d": "E"}, {"t": "Sort List", "d": "M"}, {"t": "Construct Quad Tree", "d": "M"}, {"t": "Merge k Sorted Lists", "d": "H"}]}, {"n": "Kadane's Algorithm", "q": [{"t": "Maximum Subarray", "d": "M"}, {"t": "Maximum Sum Circular Subarray", "d": "M"}]}, {"n": "Binary Search", "q": [{"t": "Search Insert Position", "d": "E"}, {"t": "Search a 2D Matrix", "d": "M"}, {"t": "Find Peak Element", "d": "M"}, {"t": "Search in Rotated Sorted Array", "d": "M"}, {"t": "Find First and Last Position of Element in Sorted Array", "d": "M"}, {"t": "Find Minimum in Rotated Sorted Array", "d": "M"}, {"t": "Median of Two Sorted Arrays", "d": "H"}]}, {"n": "Heap", "q": [{"t": "Kth Largest Element in an Array", "d": "M"}, {"t": "IPO", "d": "H"}, {"t": "Find K Pairs with Smallest Sums", "d": "M"}, {"t": "Find Median from Data Stream", "d": "H"}]}, {"n": "Bit Manipulation", "q": [{"t": "Add Binary", "d": "E"}, {"t": "Reverse Bits", "d": "E"}, {"t": "Number of 1 Bits", "d": "E"}, {"t": "Single Number", "d": "E"}, {"t": "Single Number II", "d": "M"}, {"t": "Bitwise AND of Numbers Range", "d": "M"}]}, {"n": "Math", "q": [{"t": "Palindrome Number", "d": "E"}, {"t": "Plus One", "d": "E"}, {"t": "Factorial Trailing Zeroes", "d": "M"}, {"t": "Sqrt(x)", "d": "E"}, {"t": "Pow(x, n)", "d": "M"}, {"t": "Max Points on a Line", "d": "H"}]}, {"n": "1D DP", "q": [{"t": "Climbing Stairs", "d": "E"}, {"t": "House Robber", "d": "M"}, {"t": "Word Break", "d": "M"}, {"t": "Coin Change", "d": "M"}, {"t": "Longest Increasing Subsequence", "d": "M"}]}, {"n": "Multidimensional DP", "q": [{"t": "Triangle", "d": "M"}, {"t": "Minimum Path Sum", "d": "M"}, {"t": "Unique Paths II", "d": "M"}, {"t": "Longest Palindromic Substring", "d": "M"}, {"t": "Interleaving String", "d": "M"}, {"t": "Edit Distance", "d": "M"}, {"t": "Best Time to Buy and Sell Stock III", "d": "H"}, {"t": "Best Time to Buy and Sell Stock IV", "d": "H"}, {"t": "Maximal Square", "d": "M"}]}];
+
+let cat='All',dif='All';
+const all=CATS.flatMap(c=>c.q.map(x=>({...x,c:c.n})));all.forEach((x,i)=>x.no=i+1);
+document.getElementById('stats').innerHTML=[[all.length,'problems'],[CATS.length,'categories'],[all.filter(x=>x.d==='E').length,'Easy'],[all.filter(x=>x.d==='M').length,'Medium'],[all.filter(x=>x.d==='H').length,'Hard']].map(([v,l])=>`<div class="stat"><b>${v}</b>${l}</div>`).join('');
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function chips(id,items,cur,set){const el=document.getElementById(id);el.innerHTML=items.map(([v,l,n])=>`<button class="chip${v===cur?' on':''}" data-v="${esc(v)}">${esc(l)}${n!=null?`<i>${n}</i>`:''}</button>`).join('');el.querySelectorAll('button').forEach(b=>b.onclick=()=>{set(b.dataset.v);render();});}
+function render(){
+  const words=document.getElementById('q').value.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  chips('cats',[['All','All',all.length],...CATS.map(c=>[c.n,c.n,c.q.length])],cat,v=>cat=v);
+  chips('difs',[['All','সব difficulty'],['E','Easy'],['M','Medium'],['H','Hard']],dif,v=>dif=v);
+  let shown=0;
+  document.getElementById('app').innerHTML=CATS.map(c=>{
+    if(cat!=='All'&&c.n!==cat)return '';
+    const qs=all.filter(x=>x.c===c.n&&(dif==='All'||x.d===dif)&&words.every(w=>(x.t+' '+x.c).toLowerCase().includes(w)));
+    if(!qs.length)return '';shown+=qs.length;
+    return `<section class="cat"><h2>${esc(c.n)} <small>${qs.length} problems</small></h2><div class="grid">`+qs.map(x=>`<a class="row" href="${LC(x.t)}" target="_blank" rel="noopener"><span class="no">${x.no}</span><span class="t">${esc(x.t)}</span><span class="dif ${x.d}">${DIF[x.d]}</span><span class="go">↗</span></a>`).join('')+'</div></section>';
+  }).join('');
+  document.getElementById('empty').style.display=shown?'none':'block';
+}
+document.getElementById('q').addEventListener('input',render);
+document.addEventListener('keydown',e=>{const q=document.getElementById('q');if(e.key==='/'&&document.activeElement!==q){e.preventDefault();q.focus();}if(e.key==='Escape'){q.value='';render();q.blur();}});
+render();
+
+</script>
+</body>
+</html>

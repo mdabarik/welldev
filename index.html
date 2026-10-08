@@ -145,7 +145,17 @@ footer a:hover{color:var(--text)}
 <script>
 // Every guide in the repo. Add a new page here and it shows up automatically.
 const TRACKS = [
-  { id: "dsa", n: "01", title: "DSA & Problem Solving", blurb: "Data structure আর algorithm", color: "#0ea5e9", guides: [] },
+  { id: "dsa", n: "01", title: "DSA & Problem Solving", blurb: "Data structure আর algorithm", color: "#0ea5e9", guides: [
+    { href: "01-dsa-problem-solving/blind-75/index.html", kicker: "DSA · Problem list", title: "Blind 75",
+      desc: "৭৫টি বিখ্যাত interview problem, ১০টি category অনুযায়ী। প্রতিটার সংক্ষিপ্ত problem statement আর example।",
+      tags: ["Blind 75", "LeetCode", "Array", "DP", "Tree"], meta: [["75", "problems"], ["10", "categories"]] },
+    { href: "01-dsa-problem-solving/top-150/index.html", kicker: "DSA · Problem list", title: "Top Interview 150",
+      desc: "LeetCode-এর Top Interview 150: ১৫০টি problem, ২৩টি category অনুযায়ী সাজানো।",
+      tags: ["Top 150", "LeetCode", "Two Pointers", "Graph"], meta: [["150", "problems"], ["23", "categories"]] },
+    { href: "01-dsa-problem-solving/graph-algorithms/index.html", kicker: "DSA · Graph", title: "Common Graph Algorithms",
+      desc: "BFS, DFS, Dijkstra, Bellman-Ford, Kruskal, Prim, Floyd-Warshall, Kosaraju, bipartite আর cycle detection-এর তালিকা।",
+      tags: ["BFS", "DFS", "Dijkstra", "MST"], meta: [["11", "algorithms"]] },
+  ]},
   { id: "oop", n: "02", title: "OOP & Design", blurb: "OOP থেকে UML, principle আর pattern পর্যন্ত", color: "#6366f1", guides: [
     { href: "02-oop-java/oop/index.html", kicker: "OOP", title: "OOP in C#",
       desc: "৪টি পিলার, sealed ও private constructor, upcasting-downcasting, diamond problem, coupling ও cohesion।",
