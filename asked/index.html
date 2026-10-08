@@ -1,0 +1,905 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WellDev-এ যা জিজ্ঞেস করা হয়েছে</title>
+<meta name="description" content="WellDev-এর Trainee Software Engineer ইন্টারভিউতে একজন candidate যে 28টি প্রশ্নের মুখোমুখি হয়েছিলেন, তার উত্তর আর কোড উদাহরণ।">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f5f7fc; --surface:#ffffff; --surface-2:#f1f4fa; --fg:#0f172a; --muted:#5b6478; --faint:#94a0b8; --line:#e4e8f1;
+  --accent:#6366f1; --r1:#4f46e5; --r2:#db2777;
+  --ok:#059669; --bad:#e11d48; --warn:#d97706;
+  --hero:linear-gradient(135deg,#4f46e5 0%,#7c3aed 45%,#db2777 100%);
+  --shadow:0 1px 2px rgba(15,23,42,.04),0 10px 30px -12px rgba(15,23,42,.14);
+  --code-bg:#ffffff; --code-line:#e6e9f1;
+  --sans:"Inter","Hind Siliguri",system-ui,sans-serif; --bn:"Hind Siliguri","Inter",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0b0f1a; --surface:#121827; --surface-2:#182033; --fg:#e7ecf6; --muted:#9aa6bf; --faint:#66728c; --line:#232c42;
+  --accent:#818cf8; --r1:#818cf8; --r2:#f472b6; --ok:#34d399; --bad:#fb7185; --warn:#fbbf24;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6);
+  --code-bg:#1e1e1e; --code-line:#2d2d30;
+}}
+:root[data-theme="dark"]{
+  --bg:#0b0f1a; --surface:#121827; --surface-2:#182033; --fg:#e7ecf6; --muted:#9aa6bf; --faint:#66728c; --line:#232c42;
+  --accent:#818cf8; --r1:#818cf8; --r2:#f472b6; --ok:#34d399; --bad:#fb7185; --warn:#fbbf24;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6);
+  --code-bg:#1e1e1e; --code-line:#2d2d30;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.75 var(--bn);-webkit-font-smoothing:antialiased}
+a{color:var(--accent)}
+button,input{font:inherit;color:inherit}
+code{font-family:var(--mono);font-size:.86em;font-weight:500;background:color-mix(in srgb,var(--accent) 10%,var(--surface));color:color-mix(in srgb,var(--accent) 72%,var(--fg));padding:.1em .4em;border-radius:6px}
+.wrap{max-width:920px;margin:0 auto;padding:20px 18px 80px}
+
+.topnav{display:flex;align-items:center;gap:10px}
+.brand{display:flex;align-items:center;gap:10px;color:var(--fg);text-decoration:none;font:800 16px var(--sans);letter-spacing:-.02em}
+.logo{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:#fff;font:800 13px var(--mono);background:var(--hero)}
+.topnav .sp{flex:1}
+.pill{border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:6px 14px;font:600 13px var(--sans);cursor:pointer;text-decoration:none}
+.pill:hover{color:var(--fg)}
+
+.hero{margin-top:22px;border-radius:22px;padding:30px 32px;color:#fff;background:var(--hero);position:relative;overflow:hidden}
+.hero::after{content:"";position:absolute;right:-70px;top:-90px;width:320px;height:320px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.2),transparent 65%);pointer-events:none}
+.eyebrow{font:600 12px var(--sans);letter-spacing:.1em;text-transform:uppercase;opacity:.85}
+.hero h1{margin:8px 0 10px;font:800 clamp(26px,4.4vw,40px)/1.2 var(--bn);letter-spacing:-.02em}
+.hero p{margin:0;max-width:700px;font-size:16.5px;opacity:.94}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow)}
+.note{margin:18px 0 0;padding:14px 16px;font-size:14.5px;color:var(--muted);border-left:4px solid var(--warn)}
+.note b{color:var(--fg)}
+
+.tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:26px 0 8px}
+.chip{border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:6px 14px;font:600 13px var(--sans);cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+.search{flex:1;min-width:180px;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:7px 16px;font:500 14px var(--sans);outline:none}
+.search:focus{border-color:var(--accent)}
+.count{font:500 12.5px var(--mono);color:var(--faint)}
+
+.round{margin:38px 0 14px;display:flex;align-items:center;gap:12px;font:800 clamp(20px,2.8vw,24px)/1.25 var(--bn);letter-spacing:-.02em}
+.round .dot{width:12px;height:12px;border-radius:50%;background:var(--c)}
+.round small{font:500 13px var(--bn);color:var(--muted)}
+
+details.q{margin:0 0 12px;overflow:hidden}
+details.q>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:12px;padding:14px 16px}
+details.q>summary::-webkit-details-marker{display:none}
+details.q>summary::after{content:"";margin-left:auto;flex:none;width:8px;height:8px;border-right:2px solid var(--faint);border-bottom:2px solid var(--faint);transform:rotate(45deg);transition:transform .15s}
+details.q[open]>summary::after{transform:rotate(-135deg)}
+.qn{flex:none;width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:#fff;font:700 14px var(--sans);background:var(--c)}
+.qt{font:600 16px/1.45 var(--bn)}
+.tag{flex:none;font:600 11px var(--sans);padding:2px 9px;border-radius:999px;color:var(--c);background:color-mix(in srgb,var(--c) 11%,transparent)}
+.body{padding:2px 20px 20px 62px;border-top:1px solid var(--line)}
+@media (max-width:640px){.body{padding:2px 16px 18px}.tag{display:none}}
+.body h4{margin:18px 0 6px;font:700 14.5px var(--bn);color:var(--c)}
+.body p{margin:8px 0}
+.body ul,.body ol{margin:6px 0;padding-left:22px}
+.body li{margin:4px 0}
+.body b{color:var(--fg)}
+pre.code{margin:10px 0;padding:12px 14px;border-radius:12px;background:var(--code-bg);border:1px solid var(--code-line);font:13px/1.65 var(--mono);white-space:pre;overflow-x:auto;font-variant-ligatures:none}
+.lang{display:inline-block;margin-top:10px;font:600 11px var(--mono);color:var(--muted)}
+.lang+pre.code{margin-top:4px}
+.tip{margin:12px 0;padding:10px 14px;border-radius:10px;background:color-mix(in srgb,var(--c) 8%,var(--surface));border:1px solid color-mix(in srgb,var(--c) 22%,var(--line));font-size:15px}
+.tbl{width:100%;border-collapse:collapse;margin:10px 0;font-size:14.5px;display:block;overflow-x:auto}
+.tbl th,.tbl td{border:1px solid var(--line);padding:7px 10px;text-align:left;vertical-align:top}
+.tbl th{background:var(--surface-2);font:700 13px var(--sans)}
+.r1{--c:var(--r1)} .r2{--c:var(--r2)}
+.hidden{display:none}
+footer{margin-top:50px;color:var(--faint);font-size:13.5px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<nav class="topnav">
+  <a class="brand" href="../index.html"><span class="logo">WD</span>WellDev Prep</a>
+  <span class="sp"></span>
+  <button class="pill" id="expand">সব খোলো</button>
+  <button class="pill" id="theme">Theme</button>
+</nav>
+
+<header class="hero">
+  <div class="eyebrow">Trainee Software Engineer · Interview</div>
+  <h1>WellDev-এ যা জিজ্ঞেস করা হয়েছে</h1>
+  <p>একজন candidate-এর শেয়ার করা অভিজ্ঞতা থেকে পাওয়া 28টি প্রশ্ন। প্রতিটির সংক্ষিপ্ত উত্তর, কোড আর interview-তে বলার মতো পয়েন্ট নিচে দেওয়া হলো।</p>
+</header>
+
+<div class="card note">
+  <b>সূত্র:</b> প্রশ্নগুলো একজন candidate-এর প্রকাশ করা ব্লগ থেকে নেওয়া (Trainee Software Engineer, ColdFusion, সেপ্টেম্বর 2024)। এটি অফিসিয়াল তালিকা নয়, আর একই প্রশ্ন আবার আসবে এমন নিশ্চয়তা নেই। তাই উত্তর মুখস্থ না করে মূল ধারণাটা বুঝে নাও। আরেকজনের অভিজ্ঞতায় (2025) আরও এসেছে: sorting-এর pseudocode, system design, আর একটি 3টি coding problem-এর onsite round।
+</div>
+
+<div class="tools">
+  <button class="chip" data-f="all" aria-pressed="true">সব</button>
+  <button class="chip" data-f="r1" aria-pressed="false">Round 1</button>
+  <button class="chip" data-f="r2" aria-pressed="false">Round 2</button>
+  <input class="search" id="q" type="search" placeholder="প্রশ্ন খোঁজো (যেমন SQL, API, stack)">
+  <span class="count" id="count"></span>
+</div>
+
+<!-- ============ ROUND 1 ============ -->
+<h2 class="round r1" data-round="r1"><span class="dot"></span>Technical Round 1 <small>junior engineer · problem solving, OOP, SQL</small></h2>
+
+<details class="card q r1" data-round="r1">
+<summary><span class="qn">1</span><span class="qt">Array-এর নাম print করলে base address কী আসে?</span><span class="tag">C</span></summary>
+<div class="body">
+<p>বেশিরভাগ expression-এ array-এর নাম নিজে থেকেই প্রথম element-এর pointer-এ রূপান্তরিত হয়ে যায়। একে <b>array-to-pointer decay</b> বলে। তাই <code>ara</code> আর <code>&amp;ara[0]</code> একই address, অর্থাৎ array-র base address।</p>
+<span class="lang">C</span>
+<pre class="code">int ara[5] = {10, 20, 30, 40, 50};
+
+printf("%p\n", (void*)ara);      // base address, যেমন 0x7ffd1000
+printf("%p\n", (void*)&amp;ara[0]);  // একই address
+printf("%p\n", (void*)(ara + 1)); // 0x7ffd1004 (int = 4 byte, তাই +4)</pre>
+<h4>খেয়াল রাখার বিষয়</h4>
+<ul>
+<li>সরাসরি <code>printf(ara)</code> লিখলে <code>ara</code>-কে format string ধরা হয়, তাই এটা ভুল। address দেখতে চাইলে <code>%p</code> লাগবে।</li>
+<li><code>sizeof(ara)</code> আর <code>&amp;ara</code>-তে decay হয় না। <code>sizeof(ara)</code> পুরো array-র size (এখানে 20 byte) দেয়। <code>&amp;ara</code>-এর মান একই, কিন্তু type আলাদা: <code>int (*)[5]</code>।</li>
+<li>Array আর pointer এক জিনিস নয়। Function-এ array পাঠালে সেটা pointer হয়ে যায়, তাই ভেতরে <code>sizeof</code> দিয়ে length পাওয়া যায় না।</li>
+</ul>
+</div>
+</details>
+
+<details class="card q r1" data-round="r1">
+<summary><span class="qn">2</span><span class="qt">Extra data structure ছাড়া stack-এর middle element delete করো</span><span class="tag">DSA</span></summary>
+<div class="body">
+<p><b>ধারণা:</b> Recursion ব্যবহার করো। উপর থেকে element pop করে recursive call-এর ভেতর রেখে দাও (call stack সাময়িকভাবে জমা রাখে)। middle-এ পৌঁছে সেটা pop করে ফেলো। তারপর ফেরার পথে বাকিগুলো আবার push করো। কোনো extra array বা stack লাগে না।</p>
+<span class="lang">C++</span>
+<pre class="code">void deleteMid(stack&lt;int&gt;&amp; s, int cur, int n) {
+    if (cur == n / 2) {      // middle-এ পৌঁছেছি
+        s.pop();             // এটাকেই delete করলাম
+        return;
+    }
+    int x = s.top();
+    s.pop();
+    deleteMid(s, cur + 1, n);
+    s.push(x);               // ফেরার পথে আগের element ফেরত
+}
+
+// ব্যবহার: deleteMid(s, 0, s.size());
+// [1,2,3,4,5] → [1,2,4,5]</pre>
+<ul>
+<li><b>Time:</b> O(n)। <b>Space:</b> O(n), কারণ recursion call stack ব্যবহার হয়।</li>
+<li>Element সংখ্যা জোড় হলে "middle" দুটো থাকে। উপরের কোড উপর থেকে গুনে <code>n/2</code>-তম element মুছে। interviewer-কে জিজ্ঞেস করে নাও কোনটা চান।</li>
+</ul>
+</div>
+</details>
+
+<details class="card q r1" data-round="r1">
+<summary><span class="qn">3</span><span class="qt">1 থেকে N পর্যন্ত যোগফলের recursive function-এর ভালো নাম কী হবে?</span><span class="tag">Clean code</span></summary>
+<div class="body">
+<p>নাম এমন হবে যাতে function-টা কী করে তা নাম দেখেই বোঝা যায়। যেমন <code>sumOfFirstNNaturalNumbers(n)</code> বা <code>sumFromOneToN(n)</code>। <code>f</code>, <code>calc</code>, <code>rec</code> জাতীয় নাম খারাপ।</p>
+<span class="lang">Java</span>
+<pre class="code">int sumOfFirstNNaturalNumbers(int n) {
+    if (n &lt;= 0) return 0;                       // base case
+    return n + sumOfFirstNNaturalNumbers(n - 1);
+}</pre>
+<h4>Naming-এর নিয়ম</h4>
+<ul>
+<li>Function-এর নাম হবে verb দিয়ে, যেমন <code>getUser</code>, <code>calculateTax</code>। Variable-এর নাম হবে noun।</li>
+<li>Boolean-এর নাম হবে <code>isValid</code>, <code>hasAccess</code>-এর মতো প্রশ্নের আকারে।</li>
+<li>Abbreviation এড়াও। পড়া সহজ হওয়াটাই আসল।</li>
+</ul>
+</div>
+</details>
+
+<details class="card q r1" data-round="r1">
+<summary><span class="qn">4</span><span class="qt">Recursive Fibonacci-এর time complexity কত?</span><span class="tag">Complexity</span></summary>
+<div class="body">
+<p>প্রশ্নের কোড প্রতিবার <code>fun(n-1)</code> আর <code>fun(n-2)</code>, দুটো call করে। তাই call tree প্রতি স্তরে প্রায় দ্বিগুণ হয়।</p>
+<ul>
+<li><b>Time:</b> O(2<sup>n</sup>)। সূক্ষ্মভাবে বললে Θ(φ<sup>n</sup>), যেখানে φ ≈ 1.618।</li>
+<li><b>Space:</b> O(n), কারণ সবচেয়ে গভীর call chain-এর দৈর্ঘ্য n।</li>
+</ul>
+<h4>কীভাবে ভালো করা যায়</h4>
+<table class="tbl">
+<tr><th>উপায়</th><th>Time</th><th>Space</th></tr>
+<tr><td>Memoization (top-down DP)</td><td>O(n)</td><td>O(n)</td></tr>
+<tr><td>Iterative (দুটি variable)</td><td>O(n)</td><td>O(1)</td></tr>
+<tr><td>Matrix exponentiation</td><td>O(log n)</td><td>O(1)</td></tr>
+</table>
+<p>এখানে অনেক subproblem বারবার হিসাব হয় (overlapping subproblems)। তাই cache করলেই জটিলতা exponential থেকে linear-এ নেমে আসে।</p>
+</div>
+</details>
+
+<details class="card q r1" data-round="r1">
+<summary><span class="qn">5</span><span class="qt">SQL query-র execution order কী?</span><span class="tag">SQL</span></summary>
+<div class="body">
+<p>আমরা যেভাবে লিখি আর database যেভাবে চালায়, দুটো আলাদা। চালানোর ক্রম:</p>
+<ol>
+<li><code>FROM</code> আর <code>JOIN</code> (<code>ON</code> সহ)</li>
+<li><code>WHERE</code>: row filter</li>
+<li><code>GROUP BY</code></li>
+<li><code>HAVING</code>: group filter</li>
+<li><code>SELECT</code>: column আর expression হিসাব, alias তৈরি</li>
+<li><code>DISTINCT</code></li>
+<li><code>ORDER BY</code></li>
+<li><code>LIMIT</code> / <code>OFFSET</code></li>
+</ol>
+<span class="lang">SQL</span>
+<pre class="code">SELECT dept, COUNT(*) AS total   -- 5
+FROM employees                   -- 1
+WHERE salary &gt; 30000             -- 2
+GROUP BY dept                    -- 3
+HAVING COUNT(*) &gt; 5              -- 4
+ORDER BY total DESC              -- 7
+LIMIT 10;                        -- 8</pre>
+<div class="tip"><b>কেন গুরুত্বপূর্ণ:</b> <code>SELECT</code>-এর alias <code>WHERE</code>-এ ব্যবহার করা যায় না, কারণ <code>WHERE</code> আগে চলে। কিন্তু <code>ORDER BY</code>-তে করা যায়, কারণ সেটা পরে চলে। <code>WHERE</code> aggregate ফাংশন নিতে পারে না, সেখানে <code>HAVING</code> লাগে।</div>
+</div>
+</details>
+
+<details class="card q r1" data-round="r1">
+<summary><span class="qn">6</span><span class="qt">অনেক column-এ redundant data থাকলে table কীভাবে optimize করবে?</span><span class="tag">DBMS</span></summary>
+<div class="body">
+<p>উত্তর <b>Normalization</b>: data ভেঙে ছোট ছোট সম্পর্কযুক্ত table-এ ভাগ করা, যাতে একই তথ্য একবারই থাকে। এতে তিন ধরনের anomaly কমে: insert, update ও delete anomaly।</p>
+<table class="tbl">
+<tr><th>Normal form</th><th>শর্ত</th></tr>
+<tr><td>1NF</td><td>প্রতি cell-এ একটাই মান (atomic), কোনো repeating group নেই</td></tr>
+<tr><td>2NF</td><td>1NF + কোনো non-key column composite key-এর অংশবিশেষের উপর নির্ভর করে না</td></tr>
+<tr><td>3NF</td><td>2NF + কোনো non-key column আরেকটা non-key column-এর উপর নির্ভর করে না (transitive dependency নেই)</td></tr>
+<tr><td>BCNF</td><td>প্রতিটি functional dependency-র বাঁ দিক একটি superkey</td></tr>
+</table>
+<p><b>উদাহরণ:</b> <code>orders(order_id, customer_name, customer_phone, product)</code>-এ একই customer-এর নাম ও ফোন প্রতিবার লেখা হয়। এটাকে <code>customers(id, name, phone)</code> আর <code>orders(order_id, customer_id, product)</code>-এ ভাগ করো।</p>
+<p><b>Trade-off:</b> বেশি normalize করলে query-তে বেশি JOIN লাগে। পড়ার চাপ বেশি হলে নির্দিষ্ট জায়গায় ইচ্ছা করে denormalize করা হয়।</p>
+</div>
+</details>
+
+<details class="card q r1" data-round="r1">
+<summary><span class="qn">7</span><span class="qt">Java code-এ access modifier-এর violation কীভাবে খুঁজে বের করবে?</span><span class="tag">Java</span></summary>
+<div class="body">
+<table class="tbl">
+<tr><th>Modifier</th><th>একই class</th><th>একই package</th><th>অন্য package-এর subclass</th><th>অন্য সবখান</th></tr>
+<tr><td><code>private</code></td><td>হ্যাঁ</td><td>না</td><td>না</td><td>না</td></tr>
+<tr><td>default (কিছু না লিখলে)</td><td>হ্যাঁ</td><td>হ্যাঁ</td><td>না</td><td>না</td></tr>
+<tr><td><code>protected</code></td><td>হ্যাঁ</td><td>হ্যাঁ</td><td>হ্যাঁ</td><td>না</td></tr>
+<tr><td><code>public</code></td><td>হ্যাঁ</td><td>হ্যাঁ</td><td>হ্যাঁ</td><td>হ্যাঁ</td></tr>
+</table>
+<span class="lang">Java</span>
+<pre class="code">class Account {
+    private double balance;            // শুধু Account-এর ভেতরে
+    protected String owner;
+}
+
+class Test {
+    void run() {
+        Account a = new Account();
+        a.balance = 500;               // ভুল: balance has private access in Account
+    }
+}</pre>
+<h4>সাধারণ violation আর সমাধান</h4>
+<ul>
+<li>অন্য class থেকে <code>private</code> field সরাসরি ধরা। সমাধান: <code>public</code> getter/setter দাও। এতে validation করার সুযোগও থাকে।</li>
+<li>অন্য package-এর non-subclass থেকে <code>protected</code> বা default member ধরা।</li>
+<li>Override করার সময় access কমানো যায় না। যেমন <code>public</code> method-কে <code>protected</code> করে override করলে compile error হয়।</li>
+</ul>
+<p>Compiler error message-ই সাধারণত বলে দেয় কোন member, কোন class-এ <code>private access</code>। সেই লাইন থেকে খুঁজলেই হয়।</p>
+</div>
+</details>
+
+<details class="card q r1" data-round="r1">
+<summary><span class="qn">8</span><span class="qt">OOP-এর মূল ধারণাগুলো বলো</span><span class="tag">OOP</span></summary>
+<div class="body">
+<ul>
+<li><b>Encapsulation:</b> data আর সেই data-র উপর কাজ করা method এক class-এ বেঁধে রাখা। field <code>private</code> রেখে getter/setter দিয়ে access দেওয়া হয়।</li>
+<li><b>Abstraction:</b> অপ্রয়োজনীয় ভেতরের বিবরণ লুকিয়ে শুধু দরকারি interface দেখানো। <code>abstract class</code> আর <code>interface</code> এর উদাহরণ। গাড়ি চালাতে ইঞ্জিন কীভাবে চলে জানা লাগে না।</li>
+<li><b>Inheritance:</b> একটি class আরেকটির বৈশিষ্ট্য পেয়ে code পুনর্ব্যবহার করে (<code>Dog extends Animal</code>)।</li>
+<li><b>Polymorphism:</b> একই নামের ক্রিয়া ভিন্ন আচরণ করে।
+  <ul>
+  <li><b>Compile-time:</b> method overloading (একই নাম, আলাদা parameter)।</li>
+  <li><b>Runtime:</b> method overriding (subclass parent-এর method নতুনভাবে লেখে)। কোন method চলবে তা object-এর আসল type দেখে ঠিক হয়।</li>
+  </ul></li>
+</ul>
+<span class="lang">Java</span>
+<pre class="code">abstract class Shape { abstract double area(); }
+
+class Circle extends Shape {
+    double r;
+    Circle(double r) { this.r = r; }
+    double area() { return Math.PI * r * r; }
+}
+class Square extends Shape {
+    double s;
+    Square(double s) { this.s = s; }
+    double area() { return s * s; }
+}
+
+Shape x = new Circle(2);   // reference-এর type Shape, object-এর type Circle
+x.area();                  // Circle-এর area() চলবে (runtime polymorphism)</pre>
+<div class="tip"><b>অতিরিক্ত প্রশ্ন আসতে পারে:</b> abstract class বনাম interface, overloading বনাম overriding, composition বনাম inheritance, SOLID principle।</div>
+</div>
+</details>
+
+<details class="card q r1" data-round="r1">
+<summary><span class="qn">9</span><span class="qt">ACID property কী?</span><span class="tag">DBMS</span></summary>
+<div class="body">
+<p>Transaction নির্ভরযোগ্য হওয়ার চারটি গ্যারান্টি।</p>
+<table class="tbl">
+<tr><th>অক্ষর</th><th>অর্থ</th><th>উদাহরণ (টাকা পাঠানো)</th></tr>
+<tr><td><b>A</b>tomicity</td><td>হয় সব operation হবে, নয়তো কোনোটাই না</td><td>A থেকে টাকা কাটার পর B-তে জমা ব্যর্থ হলে কাটাটাও rollback</td></tr>
+<tr><td><b>C</b>onsistency</td><td>transaction-এর আগে-পরে database সব নিয়ম (constraint) মেনে থাকবে</td><td>মোট টাকার পরিমাণ অপরিবর্তিত থাকে, balance ঋণাত্মক হয় না</td></tr>
+<tr><td><b>I</b>solation</td><td>একসাথে চলা transaction একে অপরের অসম্পূর্ণ কাজ দেখে না</td><td>দুজন একই সময়ে balance পড়লে lost update হয় না</td></tr>
+<tr><td><b>D</b>urability</td><td>commit হয়ে গেলে crash হলেও data থেকে যায়</td><td>Commit-এর পরে power চলে গেলেও transfer হারায় না (WAL log)</td></tr>
+</table>
+<p>Isolation-এর level: Read Uncommitted, Read Committed, Repeatable Read, Serializable। উপরের level-এ anomaly (dirty read, non-repeatable read, phantom read) কমে, কিন্তু concurrency কমে।</p>
+</div>
+</details>
+
+<details class="card q r1" data-round="r1">
+<summary><span class="qn">10</span><span class="qt">Table-এর duplicate row দেখানোর SQL লেখো</span><span class="tag">SQL</span></summary>
+<div class="body">
+<p>ধরা যাক <code>users(id, name, email)</code>-এ <code>email</code> duplicate খুঁজছি।</p>
+<span class="lang">SQL</span>
+<pre class="code">-- ১) কোন মান কতবার আছে
+SELECT email, COUNT(*) AS times
+FROM users
+GROUP BY email
+HAVING COUNT(*) &gt; 1;
+
+-- ২) duplicate row-গুলো পুরোটা দেখতে
+SELECT *
+FROM users
+WHERE email IN (
+    SELECT email FROM users GROUP BY email HAVING COUNT(*) &gt; 1
+)
+ORDER BY email;
+
+-- ৩) window function দিয়ে, প্রথমটা বাদ দিয়ে বাকিগুলো
+SELECT * FROM (
+    SELECT *, ROW_NUMBER() OVER (PARTITION BY email ORDER BY id) AS rn
+    FROM users
+) t
+WHERE rn &gt; 1;</pre>
+<p>একাধিক column মিলিয়ে duplicate হলে <code>GROUP BY</code>-এ সব column দাও। ভবিষ্যতে এড়াতে <code>UNIQUE</code> constraint বসাও।</p>
+</div>
+</details>
+
+<details class="card q r1" data-round="r1">
+<summary><span class="qn">11</span><span class="qt">Queue দিয়ে stack বানানো যায়?</span><span class="tag">DSA</span></summary>
+<div class="body">
+<p>হ্যাঁ যায়। Queue হলো FIFO, stack হলো LIFO। কৌশল হলো push করার পর পুরোনো সব element ঘুরিয়ে পেছনে পাঠানো, যাতে নতুনটা সামনে চলে আসে।</p>
+<span class="lang">Python (একটি queue)</span>
+<pre class="code">from collections import deque
+
+class MyStack:
+    def __init__(self):
+        self.q = deque()
+
+    def push(self, x):
+        self.q.append(x)
+        for _ in range(len(self.q) - 1):     # পুরোনোগুলো ঘুরিয়ে পেছনে
+            self.q.append(self.q.popleft())
+
+    def pop(self):
+        return self.q.popleft()              # সামনেই সবচেয়ে নতুন
+
+    def top(self):
+        return self.q[0]</pre>
+<ul>
+<li><b>Push O(n)</b>, pop/top O(1)।</li>
+<li><b>দুই queue-র উপায়:</b> push-এ নতুন element q2-তে রাখো, তারপর q1-এর সব q2-তে ঢালো, শেষে q1 আর q2 বদলাও। জটিলতা একই।</li>
+<li>বিপরীত প্রশ্নও আসে: দুটি stack দিয়ে queue বানাও। এখানে amortized O(1) পাওয়া যায়।</li>
+</ul>
+</div>
+</details>
+
+<details class="card q r1" data-round="r1">
+<summary><span class="qn">12</span><span class="qt">Chessboard-এ কিছু knight আছে। আর কিছু knight এমনভাবে বসাও যেন কেউ কাউকে attack না করে</span><span class="tag">Graph</span></summary>
+<div class="body">
+<p>প্রশ্নটা অস্পষ্ট, তাই আগে clarify করো: board কত বড়, আগের knight-গুলো নিজেরা কি একে অপরকে attack করছে, আর "সর্বোচ্চ বসাতে হবে" নাকি "যেকোনো valid ভাবে বসালেই হবে"।</p>
+<h4>ধাপ ১: Attack-এর graph</h4>
+<p>প্রতিটি ঘর একটি node। Knight-এর 8টি L-আকৃতির চাল ধরে দুটি ঘরের মধ্যে edge। যে ঘর কোনো বসানো knight-এর edge-এ পড়ে সেটা attacked।</p>
+<h4>ধাপ ২: সহজ approach (যেকোনো valid placement)</h4>
+<pre class="code">attacked = সব বসানো knight-এর 8 চালের ঘর (BFS/DFS লাগে না, সরাসরি হিসাব)
+for each ঘর (r, c):
+    if ঘর খালি এবং attacked নয়:
+        knight বসাও
+        তার 8 চালের ঘর attacked চিহ্নিত করো</pre>
+<p>এটা greedy, তাই valid উত্তর দেয় কিন্তু সর্বোচ্চ সংখ্যা নাও দিতে পারে।</p>
+<h4>ধাপ ৩: সর্বোচ্চ সংখ্যা</h4>
+<ul>
+<li>Knight সবসময় <b>উল্টো রঙের</b> ঘরে যায়। তাই board-এর graph <b>bipartite</b> (সাদা ঘর একদিকে, কালো ঘর অন্যদিকে)।</li>
+<li>এর মানে একই রঙের সব ঘরে knight বসালে কেউ কাউকে attack করে না। খালি n×n board-এ সর্বোচ্চ <code>⌈n²/2⌉</code>টি (8×8-এ 32)।</li>
+<li>আগের knight দুই রঙেই থাকলে সমস্যা হলো bipartite graph-এ <b>maximum independent set</b>। সেটা <code>মোট ঘর − maximum matching</code> (König's theorem), matching বের করতে Hopcroft–Karp ব্যবহার হয়। আগের knight-এর ঘর বাধ্যতামূলক ধরতে হবে।</li>
+</ul>
+<div class="tip">Trainee level-এ ধাপ ২ আর bipartite/রঙের পর্যবেক্ষণ (ধাপ ৩-এর প্রথম দুই পয়েন্ট) বললেই যথেষ্ট। সুন্দর পর্যবেক্ষণটা interviewer-দের ভালো লাগে।</div>
+</div>
+</details>
+
+<!-- ============ ROUND 2 ============ -->
+<h2 class="round r2" data-round="r2"><span class="dot"></span>Technical Round 2 <small>দুজন engineer · practical, API, system</small></h2>
+
+<details class="card q r2" data-round="r2">
+<summary><span class="qn">13</span><span class="qt">System ঠিকমতো চলছে কিনা দেখার API আর একটি GET API লেখো ও ব্যাখ্যা করো</span><span class="tag">API</span></summary>
+<div class="body">
+<span class="lang">Node.js (Express)</span>
+<pre class="code">const express = require("express");
+const app = express();
+
+// Health-check: server বেঁচে আছে কিনা, আর dependency ঠিক আছে কিনা
+app.get("/health", async (req, res) =&gt; {
+  try {
+    await db.query("SELECT 1");                 // database-এ পৌঁছানো যায় কিনা
+    res.status(200).json({ status: "ok" });
+  } catch (e) {
+    res.status(503).json({ status: "down" });   // Service Unavailable
+  }
+});
+
+// GET: ID দিয়ে একজন user পড়া
+app.get("/users/:id", async (req, res) =&gt; {
+  const user = await db.findUser(req.params.id);
+  if (!user) return res.status(404).json({ error: "User not found" });
+  res.status(200).json(user);
+});
+
+app.listen(3000);</pre>
+<h4>GET-এর বৈশিষ্ট্য</h4>
+<ul>
+<li><b>Safe:</b> শুধু data পড়ে, server-এর অবস্থা বদলায় না।</li>
+<li><b>Idempotent:</b> একই request বারবার দিলে ফল একই।</li>
+<li>Body থাকে না। Filter বা page query string দিয়ে যায়: <code>/users?page=2&amp;limit=20</code>।</li>
+<li>Browser আর CDN এটা cache করতে পারে। তাই password জাতীয় sensitive data URL-এ পাঠাবে না।</li>
+</ul>
+<table class="tbl">
+<tr><th>Status</th><th>অর্থ</th></tr>
+<tr><td>200</td><td>সফল</td></tr>
+<tr><td>404</td><td>resource পাওয়া যায়নি</td></tr>
+<tr><td>503</td><td>service সাময়িকভাবে বন্ধ</td></tr>
+</table>
+<p>Health-check সাধারণত load balancer আর monitoring tool নিয়মিত call করে, যাতে অসুস্থ server-কে traffic থেকে সরানো যায়।</p>
+</div>
+</details>
+
+<details class="card q r2" data-round="r2">
+<summary><span class="qn">14</span><span class="qt">একটি directory বানিয়ে তার ভেতরে "Hello World" লেখা text file তৈরি করো</span><span class="tag">File I/O</span></summary>
+<div class="body">
+<span class="lang">Python</span>
+<pre class="code">import os
+
+os.makedirs("myfolder", exist_ok=True)           # আগে থেকে থাকলেও error হবে না
+with open("myfolder/hello.txt", "w") as f:       # with দিলে file নিজে বন্ধ হয়
+    f.write("Hello World")</pre>
+<span class="lang">Node.js</span>
+<pre class="code">const fs = require("fs");
+const path = require("path");
+
+const dir = path.join(__dirname, "myfolder");
+fs.mkdirSync(dir, { recursive: true });
+fs.writeFileSync(path.join(dir, "hello.txt"), "Hello World");</pre>
+<span class="lang">ColdFusion</span>
+<pre class="code">&lt;cfset dir = expandPath("./myfolder")&gt;
+&lt;cfif NOT directoryExists(dir)&gt;
+    &lt;cfdirectory action="create" directory="#dir#"&gt;
+&lt;/cfif&gt;
+&lt;cffile action="write" file="#dir#/hello.txt" output="Hello World"&gt;</pre>
+<ul>
+<li>Directory আগে থেকে আছে কিনা দেখা বা <code>exist_ok</code>/<code>recursive</code> ব্যবহার করা ভালো অভ্যাস।</li>
+<li>Error handling (permission নেই, disk ভরা) উল্লেখ করলে ভালো ছাপ পড়ে: <code>try/except</code>, <code>try/catch</code>, <code>&lt;cftry&gt;</code>।</li>
+<li>Path ব্যবহারকারীর input থেকে এলে path traversal (<code>../</code>) থেকে সাবধান।</li>
+</ul>
+</div>
+</details>
+
+<details class="card q r2" data-round="r2">
+<summary><span class="qn">15</span><span class="qt">দুজন একই সময়ে একই ticket reserve করলে কী হবে? কীভাবে সমাধান করবে? কয়টি API লাগবে?</span><span class="tag">Concurrency</span></summary>
+<div class="body">
+<p><b>সমস্যা:</b> এটা race condition। দুটি request একসাথে "ticket খালি আছে" দেখে, দুজনেই reserve করে ফেলে। ফলে একটি ticket দুজনের নামে চলে যায় (double booking)।</p>
+<h4>সমাধান (ভালো থেকে সাধারণ ক্রমে)</h4>
+<ol>
+<li><b>Atomic conditional update:</b> check আর update একটি SQL statement-এ। কতটি row বদলাল তা দেখো।
+<pre class="code">UPDATE tickets
+SET status = 'RESERVED', user_id = :uid
+WHERE id = :ticket AND status = 'AVAILABLE';
+-- affected rows = 1 হলে সফল, 0 হলে অন্য কেউ আগে নিয়েছে → 409 Conflict</pre></li>
+<li><b>Pessimistic lock:</b> transaction-এর ভেতরে <code>SELECT ... FOR UPDATE</code>। row-টা lock হয়, দ্বিতীয় request অপেক্ষা করে।</li>
+<li><b>Optimistic lock:</b> <code>version</code> column রাখো। update-এ <code>WHERE version = :old</code> দাও, মিললে <code>version+1</code>। না মিললে retry বা reject।</li>
+<li><b>Unique constraint:</b> <code>UNIQUE(event_id, seat_no)</code> দিলে database নিজেই দ্বিতীয় insert আটকে দেয়।</li>
+<li><b>Temporary hold:</b> আগে 5-10 মিনিটের জন্য seat আটকে রাখো (expiry সহ), payment হলে confirm করো। না হলে auto-release। Redis lock বা TTL দিয়ে করা যায়।</li>
+</ol>
+<h4>কয়টি API</h4>
+<p>একটাই "সঠিক" সংখ্যা নেই। ন্যূনতম একটি flow:</p>
+<table class="tbl">
+<tr><th>API</th><th>কাজ</th></tr>
+<tr><td><code>GET /events/{id}/seats</code></td><td>খালি seat-এর তালিকা</td></tr>
+<tr><td><code>POST /reservations</code></td><td>seat hold করা (এখানেই concurrency সামলাতে হয়)</td></tr>
+<tr><td><code>POST /reservations/{id}/confirm</code></td><td>payment-এর পর নিশ্চিত করা</td></tr>
+<tr><td><code>DELETE /reservations/{id}</code></td><td>বাতিল করে seat ছেড়ে দেওয়া</td></tr>
+</table>
+<p>অর্থাৎ সাধারণত 3-4টি। বাড়তি হিসেবে একটি background job লাগে, যেটা মেয়াদ শেষ হওয়া hold ছেড়ে দেয়। যে request হেরে যায় তাকে <code>409 Conflict</code> আর স্পষ্ট বার্তা ফেরত দাও। Double-click বা retry-র জন্য idempotency key রাখলে ভালো।</p>
+<div class="tip">এই প্রশ্নের তাত্ত্বিক ভিত্তি হলো race condition আর mutex। repo-র <code>05-operating-system/mutex</code> আর <code>03-dbms-sql/optimistic-pessimistic</code> গাইড দেখে নাও।</div>
+</div>
+</details>
+
+<details class="card q r2" data-round="r2">
+<summary><span class="qn">16</span><span class="qt">Password কীভাবে এমনভাবে নিরাপদ রাখবে যে admin-ও দেখতে না পারে? Hashing কীভাবে শক্ত করবে?</span><span class="tag">Security</span></summary>
+<div class="body">
+<p>Password কখনো plain text-এ রাখা যাবে না। Encrypt করে রাখাও যথেষ্ট নয়, কারণ key যার কাছে আছে সে decrypt করতে পারে। দরকার <b>one-way hash</b>, যা থেকে মূল password ফেরত পাওয়া যায় না। Login-এর সময় দেওয়া password hash করে সংরক্ষিত hash-এর সাথে মেলানো হয়।</p>
+<h4>Hashing শক্ত করার উপায়</h4>
+<ul>
+<li><b>ধীর, adaptive algorithm:</b> <code>Argon2id</code>, <code>bcrypt</code> বা <code>scrypt</code>। সরাসরি SHA-256 নয়, কারণ সেটা এত দ্রুত যে attacker সেকেন্ডে কোটি কোটি অনুমান করতে পারে।</li>
+<li><b>Salt:</b> প্রতিটি password-এর জন্য আলাদা, random মান। এতে দুজনের password এক হলেও hash আলাদা হয়, আর rainbow table কাজ করে না। Salt গোপন রাখতে হয় না, hash-এর সাথেই রাখা যায়।</li>
+<li><b>Cost factor:</b> কাজ কতটা ভারী হবে তা ঠিক করে। হার্ডওয়্যার দ্রুত হলে এটা বাড়ানো যায়।</li>
+<li><b>Pepper (ঐচ্ছিক):</b> সবার জন্য একটি গোপন মান, যা database-এর বাইরে (secret manager বা HSM) রাখা হয়।</li>
+</ul>
+<span class="lang">Node.js (bcrypt)</span>
+<pre class="code">const bcrypt = require("bcrypt");
+
+const hash = await bcrypt.hash(password, 12);      // salt নিজে তৈরি করে, cost = 12
+const ok   = await bcrypt.compare(input, hash);    // login-এর সময় মেলানো</pre>
+<h4>এর বাইরে</h4>
+<ul>
+<li>Password ভুলে গেলে "পুনরুদ্ধার" নয়, "reset link" দাও। কারণ hash থেকে ফেরত পাওয়া যায় না।</li>
+<li>Rate limiting, account lockout, আর MFA যোগ করো।</li>
+<li>Password hash কখনো log বা API response-এ পাঠিও না।</li>
+</ul>
+</div>
+</details>
+
+<details class="card q r2" data-round="r2">
+<summary><span class="qn">17</span><span class="qt">Trigger কী? Cascading বলতে কী বোঝায়?</span><span class="tag">DBMS</span></summary>
+<div class="body">
+<p><b>Trigger</b> হলো এমন একটি stored procedure যা table-এ নির্দিষ্ট ঘটনা (<code>INSERT</code>, <code>UPDATE</code>, <code>DELETE</code>) ঘটলে database নিজে চালিয়ে দেয়। <code>BEFORE</code> বা <code>AFTER</code> দুই সময়েই বসানো যায়। সাধারণ ব্যবহার: audit log, data validation, derived value আপডেট।</p>
+<span class="lang">MySQL</span>
+<pre class="code">CREATE TRIGGER log_salary_change
+AFTER UPDATE ON employees
+FOR EACH ROW
+INSERT INTO salary_audit (emp_id, old_salary, new_salary, changed_at)
+VALUES (OLD.id, OLD.salary, NEW.salary, NOW());</pre>
+<h4>Cascading</h4>
+<p>Parent row বদলালে বা মুছলে তার সাথে সম্পর্কিত child row-এও স্বয়ংক্রিয়ভাবে সেই পরিবর্তন প্রয়োগ হওয়া। Foreign key-তে এটা লেখা যায়:</p>
+<pre class="code">CREATE TABLE orders (
+  id INT PRIMARY KEY,
+  customer_id INT,
+  FOREIGN KEY (customer_id) REFERENCES customers(id)
+    ON DELETE CASCADE      -- customer মুছলে তার সব order-ও মুছবে
+    ON UPDATE CASCADE      -- customer-এর id বদলালে order-এও বদলাবে
+);</pre>
+<table class="tbl">
+<tr><th>Option</th><th>কাজ</th></tr>
+<tr><td><code>CASCADE</code></td><td>পরিবর্তন child-এও প্রয়োগ</td></tr>
+<tr><td><code>SET NULL</code></td><td>child-এর foreign key null হবে</td></tr>
+<tr><td><code>RESTRICT</code> / <code>NO ACTION</code></td><td>child থাকলে parent বদলাতে বা মুছতে দেবে না</td></tr>
+</table>
+<p>"Cascading trigger" বলতে একটি trigger-এর কাজ আরেকটি trigger চালু করে দেওয়াকেও বোঝায়। এতে অপ্রত্যাশিত লুপ আর debug-এর সমস্যা হতে পারে, তাই বেশি ব্যবহার করা ঠিক না।</p>
+</div>
+</details>
+
+<details class="card q r2" data-round="r2">
+<summary><span class="qn">18</span><span class="qt">Website-এ অনেক data দেখাতে হলে কোন technique নেবে?</span><span class="tag">Pagination</span></summary>
+<div class="body">
+<p>সব data একবারে না এনে ছোট ছোট অংশে (page) আনা। এতে response ছোট থাকে, database-এ চাপ কমে, আর page দ্রুত খোলে।</p>
+<h4>দুটি প্রধান পদ্ধতি</h4>
+<span class="lang">SQL</span>
+<pre class="code">-- ১) Offset pagination: সহজ, "পৃষ্ঠা 3-এ যাও" করা যায়
+SELECT * FROM posts ORDER BY id DESC LIMIT 20 OFFSET 40;
+
+-- ২) Keyset (cursor) pagination: বড় data-তে দ্রুত
+SELECT * FROM posts
+WHERE id &lt; :last_seen_id          -- আগের page-এর শেষ id
+ORDER BY id DESC
+LIMIT 20;</pre>
+<table class="tbl">
+<tr><th></th><th>Offset</th><th>Keyset</th></tr>
+<tr><td>গতি</td><td>OFFSET বড় হলে ধীর (সব skip করা row পড়ে)</td><td>index ব্যবহার করে সবসময় দ্রুত</td></tr>
+<tr><td>নির্দিষ্ট page-এ লাফ</td><td>সহজ</td><td>কঠিন</td></tr>
+<tr><td>নতুন row এলে</td><td>row বাদ পড়তে বা দুইবার আসতে পারে</td><td>স্থিতিশীল</td></tr>
+</table>
+<ul>
+<li>Sort করা column-এ index রাখো।</li>
+<li>Front-end-এ: page number, "Load more" বা infinite scroll। অনেক row এক screen-এ থাকলে virtualization (শুধু দৃশ্যমান row render)।</li>
+<li>Response-এ <code>total</code>, <code>page</code>, <code>nextCursor</code> পাঠাও।</li>
+</ul>
+</div>
+</details>
+
+<details class="card q r2" data-round="r2">
+<summary><span class="qn">19</span><span class="qt">Browser-এ কোনো website খুললে কী কী ঘটে? Content কীভাবে render হয়?</span><span class="tag">Networking</span></summary>
+<div class="body">
+<ol>
+<li><b>URL parse:</b> protocol (https), domain, path আলাদা করা।</li>
+<li><b>DNS lookup:</b> domain থেকে IP খোঁজা। প্রথমে browser cache, তারপর OS cache, router, শেষে resolver (যে প্রয়োজনে root → TLD → authoritative name server-এ যায়)।</li>
+<li><b>TCP connection:</b> three-way handshake (SYN, SYN-ACK, ACK)। HTTP/3-এ QUIC (UDP) ব্যবহার হয়।</li>
+<li><b>TLS handshake:</b> certificate যাচাই, key বিনিময়, এরপর যোগাযোগ এনক্রিপ্টেড।</li>
+<li><b>HTTP request:</b> <code>GET / HTTP/1.1</code> আর header (Host, Cookie, Accept...)।</li>
+<li><b>Server-এর কাজ:</b> load balancer → web/app server → প্রয়োজনে database বা cache → response তৈরি।</li>
+<li><b>Response:</b> status code (200, 301, 404...), header আর HTML body।</li>
+<li><b>Browser rendering:</b>
+  <ul>
+  <li>HTML parse করে <b>DOM</b> তৈরি, CSS parse করে <b>CSSOM</b>।</li>
+  <li>দুটি মিলিয়ে <b>render tree</b>।</li>
+  <li><b>Layout:</b> প্রতিটি element-এর মাপ আর অবস্থান।</li>
+  <li><b>Paint</b> আর <b>Composite:</b> pixel আঁকা ও layer জোড়া।</li>
+  <li>CSS, JS, ছবির জন্য আলাদা request। <code>&lt;script&gt;</code> parsing আটকাতে পারে, তাই <code>defer</code>/<code>async</code> ব্যবহার হয়।</li>
+  </ul></li>
+</ol>
+<p>গতি বাড়ানোর উপায়: CDN, caching, compression (gzip/brotli), HTTP/2 multiplexing, keep-alive।</p>
+</div>
+</details>
+
+<details class="card q r2" data-round="r2">
+<summary><span class="qn">20</span><span class="qt">SQL আর NoSQL-এর পার্থক্য কী? Cache-এর data রাখতে SQL না NoSQL?</span><span class="tag">Database</span></summary>
+<div class="body">
+<table class="tbl">
+<tr><th></th><th>SQL (relational)</th><th>NoSQL</th></tr>
+<tr><td>Data model</td><td>table, row, column; fixed schema</td><td>document, key-value, column-family, graph; flexible schema</td></tr>
+<tr><td>Query</td><td>SQL, JOIN শক্তিশালী</td><td>প্রতিটির নিজস্ব API; JOIN সীমিত</td></tr>
+<tr><td>Consistency</td><td>সাধারণত ACID</td><td>অনেক সময় eventual consistency (BASE), কিছুতে ACID-ও আছে</td></tr>
+<tr><td>Scaling</td><td>প্রধানত vertical; horizontal কঠিন</td><td>সহজে horizontal (sharding)</td></tr>
+<tr><td>উদাহরণ</td><td>MySQL, PostgreSQL</td><td>MongoDB, Redis, Cassandra, Neo4j</td></tr>
+<tr><td>কখন</td><td>সম্পর্কযুক্ত data, transaction (ব্যাংক, order)</td><td>বিশাল পরিমাণ, দ্রুত পরিবর্তনশীল বা কাঠামোহীন data</td></tr>
+</table>
+<h4>Cache-এর জন্য কোনটি?</h4>
+<p>উত্তর: <b>NoSQL</b>, বিশেষ করে একটি <b>in-memory key-value store</b> (Redis বা Memcached)। কারণ:</p>
+<ul>
+<li>Data RAM-এ থাকে, তাই read/write মাইক্রোসেকেন্ডে হয়।</li>
+<li>Access সোজা key দিয়ে (O(1)), JOIN বা জটিল query দরকার নেই।</li>
+<li><b>TTL</b> (মেয়াদ) দেওয়া যায়, মেয়াদ শেষে data নিজে মুছে যায়।</li>
+</ul>
+<p>সাধারণ pattern হলো cache-aside: আগে cache দেখো। না পেলে database থেকে এনে cache-এ রাখো। প্রশ্নের "cache memory থেকে RAM-এ" কথাটা অস্পষ্ট। interviewer-কে জিজ্ঞেস করে নিলে ভালো।</p>
+</div>
+</details>
+
+<details class="card q r2" data-round="r2">
+<summary><span class="qn">21</span><span class="qt">Histogram-এ সবচেয়ে বড় আয়তক্ষেত্রের ক্ষেত্রফল (LeetCode 84)</span><span class="tag">DSA</span></summary>
+<div class="body">
+<p>Subarray নিলে সবচেয়ে ছোট মানটি উচ্চতা, আর element সংখ্যা প্রস্থ। ক্ষেত্রফল সর্বোচ্চ করতে হবে। Brute force O(n²) বা O(n³)। ভালো সমাধান <b>monotonic stack</b> দিয়ে O(n)।</p>
+<p><b>ধারণা:</b> উচ্চতা বাড়তে থাকলে stack-এ রাখো। ছোট একটি bar এলে stack থেকে বড় bar-গুলো pop করো। প্রতিটি pop-করা bar সেই উচ্চতায় ডানে-বাঁয়ে যতদূর যেতে পারে সেটাই তার সম্ভাব্য আয়তক্ষেত্র।</p>
+<span class="lang">Python</span>
+<pre class="code">def largest_rectangle(heights):
+    stack = []                       # (শুরুর index, উচ্চতা)
+    best = 0
+    for i, h in enumerate(heights + [0]):   # শেষে 0 দিলে সব pop হয়ে যায়
+        start = i
+        while stack and stack[-1][1] &gt; h:
+            idx, height = stack.pop()
+            best = max(best, height * (i - idx))
+            start = idx              # নতুন bar এই bar-এর বাঁ সীমা পর্যন্ত প্রসারিত হবে
+        stack.append((start, h))
+    return best
+
+print(largest_rectangle([2, 1, 5, 6, 2, 3]))   # 10  (5 আর 6 নিয়ে 5 × 2)</pre>
+<ul>
+<li><b>Time:</b> O(n), প্রতিটি element একবার push আর একবার pop হয়।</li>
+<li><b>Space:</b> O(n)।</li>
+</ul>
+</div>
+</details>
+
+<details class="card q r2" data-round="r2">
+<summary><span class="qn">22</span><span class="qt">100 তলা বিল্ডিং, দুটি marble: কোন তলা পর্যন্ত নিরাপদ তা সর্বনিম্ন কয়বারে বের করবে?</span><span class="tag">Puzzle</span></summary>
+<div class="body">
+<p>প্রশ্নটি দুই egg drop-এর রূপ। Worst case-এ সর্বনিম্ন <b>14</b> বার ফেলা লাগে।</p>
+<p><b>কেন binary search চলে না:</b> প্রথম marble ভাঙলে আর একটিই থাকে, তখন নিচ থেকে একটি একটি করে (linear) যেতে হয়। তাই প্রথমটি দিয়ে বড় লাফ, দ্বিতীয়টি দিয়ে ধাপে ধাপে।</p>
+<h4>কৌশল</h4>
+<p>প্রথম marble 14তলা থেকে ফেলো। না ভাঙলে লাফ এক কমিয়ে (13, 12, 11 ...) পরের তলায় যাও। প্রথম marble-এর প্রতিটি অতিরিক্ত drop-এর বিনিময়ে দ্বিতীয়টির সম্ভাব্য ধাপ এক কমে। তাই যেখানেই প্রথমটি ভাঙুক, মোট drop-এর সংখ্যা worst case-এ সবসময় 14।</p>
+<pre class="code">n + (n-1) + (n-2) + ... + 1 ≥ 100
+n(n+1)/2 ≥ 100  →  n = 14      (14 × 15 / 2 = 105)
+
+প্রথম marble-এর তলা: 14, 27, 39, 50, 60, 69, 77, 84, 90, 95, 99, 100</pre>
+<p><b>উদাহরণ:</b> প্রথমটি 39তলায় ভাঙল (27-এ ভাঙেনি)। দ্বিতীয়টি দিয়ে 28 থেকে 38 পর্যন্ত একটি একটি করে যাও। সর্বোচ্চ ধাপ 11, আগে 3টি ফেলা হয়েছে, মোট 14।</p>
+</div>
+</details>
+
+<details class="card q r2" data-round="r2">
+<summary><span class="qn">23</span><span class="qt"><code>product_id, price, product_name</code> table থেকে একই দামের product খুঁজে বের করো</span><span class="tag">SQL</span></summary>
+<div class="body">
+<span class="lang">SQL</span>
+<pre class="code">-- ১) subquery দিয়ে
+SELECT *
+FROM products
+WHERE price IN (
+    SELECT price FROM products GROUP BY price HAVING COUNT(*) &gt; 1
+)
+ORDER BY price;
+
+-- ২) self join দিয়ে (জোড়া আকারে)
+SELECT a.product_name AS p1, b.product_name AS p2, a.price
+FROM products a
+JOIN products b
+  ON a.price = b.price AND a.product_id &lt; b.product_id;
+
+-- ৩) window function দিয়ে
+SELECT * FROM (
+    SELECT *, COUNT(*) OVER (PARTITION BY price) AS same_price
+    FROM products
+) t
+WHERE same_price &gt; 1;</pre>
+<p><code>a.product_id &lt; b.product_id</code> দিলে নিজের সাথে নিজের জোড়া আর উল্টো জোড়া (A-B আর B-A) বাদ যায়। শুধু দাম আর সংখ্যা চাইলে <code>GROUP BY price HAVING COUNT(*) &gt; 1</code>-ই যথেষ্ট।</p>
+</div>
+</details>
+
+<details class="card q r2" data-round="r2">
+<summary><span class="qn">24</span><span class="qt">DELETE, TRUNCATE আর DROP-এর পার্থক্য কী?</span><span class="tag">SQL</span></summary>
+<div class="body">
+<table class="tbl">
+<tr><th></th><th>DELETE</th><th>TRUNCATE</th><th>DROP</th></tr>
+<tr><td>ধরন</td><td>DML</td><td>DDL</td><td>DDL</td></tr>
+<tr><td>কী মোছে</td><td>নির্দিষ্ট বা সব row</td><td>সব row (table থাকে)</td><td>পুরো table, structure সহ</td></tr>
+<tr><td><code>WHERE</code></td><td>দেওয়া যায়</td><td>যায় না</td><td>প্রযোজ্য নয়</td></tr>
+<tr><td>গতি</td><td>ধীর (row ধরে ধরে, log লেখে)</td><td>দ্রুত (page ছেড়ে দেয়)</td><td>দ্রুত</td></tr>
+<tr><td>Trigger চলে</td><td>হ্যাঁ</td><td>না</td><td>না</td></tr>
+<tr><td>Auto-increment</td><td>reset হয় না</td><td>reset হয়</td><td>table-ই নেই</td></tr>
+<tr><td>Rollback</td><td>করা যায়</td><td>database ভেদে: PostgreSQL ও SQL Server-এ transaction-এর ভেতরে যায়, MySQL ও Oracle-এ implicit commit হয়ে যায়</td><td>সাধারণত যায় না (MySQL, Oracle)</td></tr>
+</table>
+<pre class="code">DELETE FROM users WHERE id = 5;   -- একটি row
+DELETE FROM users;                -- সব row, table থাকে
+TRUNCATE TABLE users;             -- সব row, দ্রুত, counter reset
+DROP TABLE users;                 -- table-ই শেষ</pre>
+</div>
+</details>
+
+<details class="card q r2" data-round="r2">
+<summary><span class="qn">25</span><span class="qt">OOP-এ threading ব্যাখ্যা করো</span><span class="tag">Thread</span></summary>
+<div class="body">
+<p><b>Thread</b> হলো একটি process-এর ভেতরের সবচেয়ে ছোট execution unit। একই process-এর thread-গুলো heap আর code share করে, কিন্তু প্রত্যেকের নিজস্ব stack আর register থাকে। Multithreading দিয়ে একসাথে একাধিক কাজ করা যায়, যেমন UI চালু রেখে ব্যাকগ্রাউন্ডে file download।</p>
+<span class="lang">Java</span>
+<pre class="code">class Task implements Runnable {          // Runnable বেশি পছন্দনীয়: extends Thread-এ inheritance আটকে যায়
+    public void run() {
+        System.out.println("চলছে: " + Thread.currentThread().getName());
+    }
+}
+
+public class Main {
+    public static void main(String[] args) {
+        new Thread(new Task(), "worker-1").start();   // start() নতুন thread বানায়, run() সরাসরি ডাকলে বানায় না
+
+        // বাস্তবে ThreadPool ব্যবহার হয়
+        ExecutorService pool = Executors.newFixedThreadPool(4);
+        pool.submit(new Task());
+        pool.shutdown();
+    }
+}</pre>
+<h4>Shared data আর সমস্যা</h4>
+<pre class="code">class Counter {
+    private int count = 0;
+    public synchronized void increment() { count++; }   // একসাথে একটি thread ঢুকবে
+}</pre>
+<p><code>count++</code> আসলে read, add, write এই তিন ধাপ। synchronized না থাকলে দুই thread একসাথে করলে একটি update হারিয়ে যায় (race condition)। Deadlock, starvation-ও থ্রেডিংয়ের পরিচিত সমস্যা।</p>
+<ul>
+<li><b>Thread বনাম Process:</b> thread হালকা আর memory share করে। Process-এর আলাদা address space।</li>
+<li>Thread-এর life cycle: New → Runnable → Running → Blocked/Waiting → Terminated।</li>
+<li>ColdFusion-এ <code>&lt;cfthread&gt;</code> ট্যাগ দিয়ে thread চালানো যায়।</li>
+</ul>
+</div>
+</details>
+
+<details class="card q r2" data-round="r2">
+<summary><span class="qn">26</span><span class="qt">Database-এ কোনো পরিবর্তন হয়েছে কিনা কীভাবে বুঝবে?</span><span class="tag">Database</span></summary>
+<div class="body">
+<p>প্রশ্নটা বিস্তৃত, তাই কী ধরনের পরিবর্তন (row, schema) আর কত দ্রুত জানতে হবে সেটা জিজ্ঞেস করে নাও। প্রচলিত উপায়:</p>
+<ol>
+<li><b>Timestamp/version column:</b> প্রতিটি table-এ <code>updated_at</code> বা <code>version</code> রাখো। নিয়মিত <code>WHERE updated_at &gt; :last_check</code> query করো (polling)। সহজ, কিন্তু delete ধরা যায় না। তখন soft delete লাগে।</li>
+<li><b>Trigger + audit table:</b> প্রতিটি পরিবর্তনের আগের ও পরের মান আলাদা table-এ লেখা।</li>
+<li><b>Checksum/hash:</b> table বা row-এর hash আগেরটির সাথে তুলনা করা (যেমন MySQL-এ <code>CHECKSUM TABLE</code>)।</li>
+<li><b>Change Data Capture (CDC):</b> database-এর transaction log (MySQL binlog, PostgreSQL WAL) পড়ে পরিবর্তন stream করা। Debezium এর জনপ্রিয় tool। real-time চাইলে সবচেয়ে ভালো।</li>
+<li><b>Database-এর নিজস্ব সুবিধা:</b> PostgreSQL-এর <code>LISTEN/NOTIFY</code>, SQL Server-এর Change Tracking।</li>
+<li><b>Application স্তরে:</b> ORM hook বা event, যেখানে সব write এক জায়গা দিয়ে যায়।</li>
+</ol>
+<table class="tbl">
+<tr><th>পদ্ধতি</th><th>সুবিধা</th><th>অসুবিধা</th></tr>
+<tr><td>Polling</td><td>সহজ</td><td>দেরি হয়, বারবার query</td></tr>
+<tr><td>Trigger</td><td>সব পরিবর্তন ধরে</td><td>write ধীর করে</td></tr>
+<tr><td>CDC</td><td>real-time, application-এ প্রভাব নেই</td><td>সেটআপ জটিল</td></tr>
+</table>
+</div>
+</details>
+
+<details class="card q r2" data-round="r2">
+<summary><span class="qn">27</span><span class="qt">ColdFusion কী আর কেন ব্যবহার করা হয়?</span><span class="tag">ColdFusion</span></summary>
+<div class="body">
+<p><b>ColdFusion</b> একটি server-side web application platform। এর ভাষা <b>CFML</b> (ColdFusion Markup Language), যাতে HTML-এর মতো tag দিয়েও লেখা যায়, আবার <code>cfscript</code> দিয়ে JavaScript-এর মতো করেও। দুটি প্রধান engine: Adobe ColdFusion (বাণিজ্যিক) আর Lucee (open source)। এটি JVM-এর উপর চলে এবং code Java bytecode-এ compile হয়, তাই Java library সরাসরি ব্যবহার করা যায়।</p>
+<span class="lang">CFML</span>
+<pre class="code">&lt;cfquery name="users" datasource="mydb"&gt;
+    SELECT id, name FROM users WHERE active = &lt;cfqueryparam value="1" cfsqltype="cf_sql_integer"&gt;
+&lt;/cfquery&gt;
+
+&lt;cfoutput query="users"&gt;
+    #users.name#&lt;br&gt;
+&lt;/cfoutput&gt;</pre>
+<h4>কেন ব্যবহার হয়</h4>
+<ul>
+<li><b>দ্রুত development:</b> database query (<code>cfquery</code>), email (<code>cfmail</code>), file (<code>cffile</code>), PDF, REST API, scheduled task, caching সবই built-in।</li>
+<li><b>Java integration:</b> JVM-এ চলে, তাই বিদ্যমান Java ecosystem কাজে লাগে।</li>
+<li><b>Legacy ও enterprise application:</b> বহু প্রতিষ্ঠানের চালু বড় system ColdFusion-এ লেখা, আর তা ধরে রাখা ও বাড়ানোর কাজ চলতে থাকে।</li>
+<li><b>নিরাপত্তা সুবিধা:</b> <code>cfqueryparam</code> দিয়ে SQL injection ঠেকানো সহজ।</li>
+</ul>
+<div class="tip">Interview-এর আগে ColdFusion-এর মূল ধারণা (tag, <code>cfquery</code>, <code>cfoutput</code>, <code>cfscript</code>, component/<code>.cfc</code>) একটু দেখে যাও। Candidate-এর ব্লগ অনুযায়ী প্রথমেই এ নিয়ে প্রশ্ন এসেছিল। এই পদের জন্য আগের অভিজ্ঞতা লাগবে এমন নয়, তবে মৌলিক ধারণা বলতে পারলে ভালো লাগে।</div>
+</div>
+</details>
+
+<details class="card q r2" data-round="r2">
+<summary><span class="qn">28</span><span class="qt">HR: কেন WellDev? ভবিষ্যৎ পরিকল্পনা কী? তোমার সবচেয়ে বড় শক্তি কী?</span><span class="tag">HR</span></summary>
+<div class="body">
+<p>এই প্রশ্নগুলোর "সঠিক" উত্তর নেই, তবে ভালো উত্তরের একটা কাঠামো আছে। উত্তরে নিজের সত্যিকারের কথা বলো, মুখস্থ বুলি নয়।</p>
+<h4>১) কেন WellDev?</h4>
+<ul>
+<li>আগে কোম্পানির ওয়েবসাইট, কাজের ধরন আর ব্যবহৃত technology দেখে যাও। সত্যিকারের একটি-দুটি কারণ বলো (শেখার সুযোগ, কাজের ধরন, কাজের পরিবেশ)।</li>
+<li>নিজের আগ্রহের সাথে মেলাও: "আমি ... নিয়ে কাজ করতে চাই, আর আপনাদের ... project/technology সেটার সাথে মেলে।"</li>
+<li>কোম্পানি সম্পর্কে অনুমানে কিছু বোলো না, যা জানো না তা এড়িয়ে যাও।</li>
+</ul>
+<h4>২) ভবিষ্যৎ পরিকল্পনা</h4>
+<ul>
+<li>স্বল্পমেয়াদে: প্রথম 1-2 বছরে মৌলিক দক্ষতা শক্ত করা, code quality আর team-এর কাজের ধারা শেখা।</li>
+<li>দীর্ঘমেয়াদে: একজন নির্ভরযোগ্য, দায়িত্ব নিতে পারা engineer হওয়া, ধীরে ধীরে বড় feature বা design-এর দায়িত্ব নেওয়া।</li>
+<li>কোম্পানির সাথে বেড়ে ওঠার কথা বলো। "বিদেশে চলে যাব" ধরনের কথা এড়াও।</li>
+</ul>
+<h4>৩) শক্তি</h4>
+<ul>
+<li>একটি-দুটি শক্তি বেছে নাও আর <b>ছোট উদাহরণ</b> দাও। যেমন: "আমি সমস্যা ভেঙে ছোট অংশে সমাধান করি। আমার একটি project-এ ... bug খুঁজতে এভাবে ...।"</li>
+<li>দুর্বলতা জিজ্ঞেস করলে সত্যি বলো আর তা কাটাতে কী করছ তা বলো।</li>
+</ul>
+<div class="tip"><b>অন্য প্রশ্নও আসে:</b> project নিয়ে প্রশ্ন (CV থেকে সব ব্যবহারিক প্রশ্ন আসে, তাই নিজের project-এর প্রতিটি অংশ গভীরভাবে জেনে রাখো), কঠিন সমস্যা সমাধানের গল্প, টিমে মতভেদ সামলানো।</div>
+</div>
+</details>
+
+<footer>
+  এই পাতা শুধু প্রস্তুতির জন্য। প্রশ্নের উৎস: একজন candidate-এর প্রকাশ করা ব্যক্তিগত ব্লগ। উত্তরগুলো সাধারণ জ্ঞান আর প্রচলিত পদ্ধতির উপর ভিত্তি করে লেখা।
+</footer>
+
+</div>
+
+<script>
+(function () {
+  var root = document.documentElement;
+  try {
+    var saved = localStorage.getItem("theme");
+    if (saved) root.setAttribute("data-theme", saved);
+  } catch (e) {}
+
+  document.getElementById("theme").addEventListener("click", function () {
+    var dark = root.getAttribute("data-theme") === "dark" ||
+      (!root.getAttribute("data-theme") && matchMedia("(prefers-color-scheme: dark)").matches);
+    var next = dark ? "light" : "dark";
+    root.setAttribute("data-theme", next);
+    try { localStorage.setItem("theme", next); } catch (e) {}
+  });
+
+  var items = [].slice.call(document.querySelectorAll("details.q"));
+  var heads = [].slice.call(document.querySelectorAll("h2.round"));
+  var chips = [].slice.call(document.querySelectorAll(".chip"));
+  var input = document.getElementById("q");
+  var count = document.getElementById("count");
+  var filter = "all";
+
+  function apply() {
+    var term = input.value.trim().toLowerCase();
+    var shown = 0;
+    items.forEach(function (el) {
+      var okRound = filter === "all" || el.dataset.round === filter;
+      var okText = !term || el.textContent.toLowerCase().indexOf(term) !== -1;
+      var show = okRound && okText;
+      el.classList.toggle("hidden", !show);
+      if (show) shown++;
+    });
+    heads.forEach(function (h) {
+      var any = items.some(function (el) { return el.dataset.round === h.dataset.round && !el.classList.contains("hidden"); });
+      h.classList.toggle("hidden", !any);
+    });
+    count.textContent = shown + " / " + items.length;
+  }
+
+  chips.forEach(function (c) {
+    c.addEventListener("click", function () {
+      filter = c.dataset.f;
+      chips.forEach(function (x) { x.setAttribute("aria-pressed", x === c ? "true" : "false"); });
+      apply();
+    });
+  });
+  input.addEventListener("input", apply);
+
+  var expanded = false;
+  document.getElementById("expand").addEventListener("click", function () {
+    expanded = !expanded;
+    items.forEach(function (el) { el.open = expanded; });
+    this.textContent = expanded ? "সব বন্ধ করো" : "সব খোলো";
+  });
+
+  apply();
+})();
+</script>
+</body>
+</html>

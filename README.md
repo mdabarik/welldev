@@ -18,7 +18,7 @@ Software engineering interview prep — বাংলায় ব্যাখ্
 - [UML Class Diagram](02-oop-java/oop/ood/index.html) — ১৪টি UML ডায়াগ্রাম, ক্লাস বক্স, multiplicity আর ৬টি relationship, আসল UML চিহ্নে আঁকা
 - [DRY, KISS, YAGNI ও SoC](02-oop-java/design-principle/kiss-dry-yagni-soc/index.html) — ৪টি বেসিক design principle, Bad বনাম Good কোড সহ
 - [SOLID Principles](02-oop-java/design-principle/solid/index.html) — SRP, OCP, LSP, ISP, DIP — Violation বনাম Solution কোড আর এক নজরে cheat sheet
-- [Design Patterns](02-oop-java/design-pattern/index.html) — Creational, Structural, Behavioural pattern, বাংলা ব্যাখ্যা ও C# কোড সহ
+- [Design Patterns](02-oop-java/design-pattern/index.html) — Creational, Structural, Behavioural + Repository, Unit of Work pattern, বাংলা ব্যাখ্যা ও C# কোড সহ
 
 ## 03 · DBMS & SQL
 
@@ -38,7 +38,8 @@ Software engineering interview prep — বাংলায় ব্যাখ্
 - [XSS, CSRF, JWT, Access ও Refresh Token](04-resume-projects/01-xss-csrf-jwt-refresh-token-access-token/index.html) — সাথে OWASP Top 10 (2025), Clickjacking, SSRF, IDOR, session/cookie, rate limiting, file upload, path traversal, command injection, open redirect, mass assignment, security header, SSO (OAuth/OIDC/SAML), CORS (simulator সহ)
 - [Encoding, Encryption ও Hashing](04-resume-projects/02-encoding-encryption-hashing/index.html)
 - [Event Loop — Browser ও Node.js Interactive](04-resume-projects/03-event-loop/index.html) — call stack, microtask, task queue, Node-এর phase, D3 animation-এ
-- ★ **Core** · [System Design Basics](04-resume-projects/04-system-design/index.html) - Client-Server architecture, Reliability, Availability: প্রতিটির সংক্ষিপ্ত উত্তর ও step-by-step D3 animation
+- ★ **Core** · [System Design Basics](04-resume-projects/04-system-design/index.html) - ১৩টি প্রশ্ন (Client-Server, Functional vs Non-functional, Latency, Bandwidth, Throughput, Scalability, Vertical/Horizontal, Reliability, Availability, SPOF, Maintainability, Partition Tolerance, CAP): প্রতিটির সংক্ষিপ্ত উত্তর ও step-by-step D3 animation
+- ★ **Core** · [SDLC ও SDLC Model](04-resume-projects/05-sdlc/index.html) - SDLC কী, ৭টি ধাপ, Waterfall / Agile / Iterative / Incremental: সংক্ষিপ্ত উত্তর, তুলনার table ও step-by-step D3 animation
 
 ## 05 · Operating System
 

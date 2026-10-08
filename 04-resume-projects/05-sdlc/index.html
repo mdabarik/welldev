@@ -1,0 +1,415 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SDLC ও SDLC Model - Interview Cheat Sheet</title>
+<meta name="description" content="SDLC কী, SDLC-এর ৭ ধাপ আর Waterfall, Agile, Iterative, Incremental model - সংক্ষিপ্ত উত্তর আর ধাপে ধাপে D3 animation।">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<style>
+/* One card per interview question: short answer, 2-3 bullets, and a step-by-step D3 scene.
+   Scenes are plain data (see TOPICS at the bottom): each step adds / modifies / deletes nodes by id
+   and the tiny engine animates the difference. */
+:root{
+  --bg:#f5f7fc; --surface:#ffffff; --surface-2:#f1f4fa; --fg:#0f172a; --muted:#5b6478; --faint:#94a0b8; --line:#e4e8f1;
+  --accent:#6366f1;
+  --a:#4f46e5; --b:#db2777; --g:#059669; --o:#d97706; --r:#e11d48; --s:#0284c7;
+  --hero:linear-gradient(135deg,#4f46e5 0%,#7c3aed 45%,#db2777 100%);
+  --shadow:0 1px 2px rgba(15,23,42,.04),0 10px 30px -12px rgba(15,23,42,.14);
+  --sans:"Inter","Hind Siliguri",system-ui,sans-serif; --bn:"Hind Siliguri","Inter",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0b0f1a; --surface:#121827; --surface-2:#182033; --fg:#e7ecf6; --muted:#9aa6bf; --faint:#66728c; --line:#232c42;
+  --accent:#818cf8; --a:#818cf8; --b:#f472b6; --g:#34d399; --o:#fbbf24; --r:#fb7185; --s:#38bdf8;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6);
+}}
+:root[data-theme="dark"]{
+  --bg:#0b0f1a; --surface:#121827; --surface-2:#182033; --fg:#e7ecf6; --muted:#9aa6bf; --faint:#66728c; --line:#232c42;
+  --accent:#818cf8; --a:#818cf8; --b:#f472b6; --g:#34d399; --o:#fbbf24; --r:#fb7185; --s:#38bdf8;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 var(--bn);-webkit-font-smoothing:antialiased}
+a{color:var(--accent)}
+button{font:inherit;color:inherit}
+code{font-family:var(--mono);font-size:.86em;font-weight:500;background:color-mix(in srgb,var(--accent) 10%,var(--surface));color:color-mix(in srgb,var(--accent) 72%,var(--fg));padding:.1em .4em;border-radius:6px}
+.wrap{max-width:1000px;margin:0 auto;padding:20px 18px 70px}
+
+.topnav{display:flex;align-items:center;gap:10px}
+.brand{display:flex;align-items:center;gap:10px;color:var(--fg);text-decoration:none;font:800 16px var(--sans);letter-spacing:-.02em}
+.logo{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:#fff;font:800 13px var(--mono);background:var(--hero)}
+.topnav .sp{flex:1}
+.pill{border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:6px 14px;font:600 13px var(--sans);cursor:pointer;text-decoration:none}
+.pill:hover{color:var(--fg)}
+
+.hero{margin-top:20px;border-radius:22px;padding:26px 30px;color:#fff;background:var(--hero)}
+.hero .eyebrow{font:600 12px var(--sans);letter-spacing:.1em;text-transform:uppercase;opacity:.85}
+.hero h1{margin:6px 0 8px;font:800 clamp(26px,4.2vw,38px)/1.15 var(--sans);letter-spacing:-.03em}
+.hero p{margin:0;max-width:680px;opacity:.94}
+.jump{display:flex;flex-wrap:wrap;gap:6px;margin-top:16px}
+.jump a{min-width:32px;padding:0 6px;height:32px;display:grid;place-items:center;border-radius:9px;text-decoration:none;font:700 13px var(--sans);color:#fff;background:rgba(255,255,255,.18)}
+.jump a:hover{background:rgba(255,255,255,.34)}
+
+.parts{position:sticky;top:0;z-index:5;margin:14px -18px 0;padding:10px 18px;display:flex;gap:8px;overflow-x:auto;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);scrollbar-width:none}
+.parts a{flex:none;text-decoration:none;font:600 13px var(--sans);color:var(--muted);border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 13px}
+.parts a:hover{color:var(--fg)}
+.parts a b{color:var(--accent);margin-right:4px}
+
+.part{margin-top:44px;scroll-margin-top:60px}
+.part>h2{margin:0;font:800 clamp(20px,2.6vw,25px)/1.25 var(--sans);letter-spacing:-.02em}
+.part>h2 span{color:var(--accent);margin-right:8px}
+
+.q{margin-top:16px;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:20px 22px;box-shadow:var(--shadow);scroll-margin-top:64px}
+.q h3{display:flex;gap:12px;align-items:flex-start;margin:0 0 10px;font:700 18px/1.4 var(--sans);letter-spacing:-.01em}
+.skip{display:inline-block;margin-left:8px;padding:1px 10px;border-radius:999px;font:600 12px var(--sans);font-style:normal;white-space:nowrap;color:var(--muted);background:var(--surface-2);border:1px dashed var(--faint);vertical-align:middle}
+.num{flex:none;min-width:34px;height:34px;padding:0 8px;border-radius:10px;display:grid;place-items:center;color:#fff;font:800 14px var(--sans);background:var(--hero)}
+.ans{margin:0 0 10px;padding:10px 14px;border-left:4px solid var(--accent);border-radius:0 10px 10px 0;background:color-mix(in srgb,var(--accent) 8%,var(--surface))}
+.q h3 .num.w{min-width:40px}
+.q ul{margin:0 0 12px;padding-left:20px;color:var(--muted)}
+.q li{margin:2px 0}
+.q li b,.ans b{color:var(--fg)}
+.extra{margin:0 0 12px;overflow-x:auto}
+.extra table{border-collapse:collapse;font:500 13px var(--mono)}
+.extra th,.extra td{border:1px solid var(--line);padding:3px 10px;text-align:center}
+.extra th{background:var(--surface-2)}
+.extra .cmp td,.extra .cmp th{text-align:left;vertical-align:top;font:500 13.5px/1.55 var(--bn);min-width:150px}
+.extra .cmp td:first-child{font-weight:700;white-space:nowrap;min-width:0}
+
+.viz{border:1px solid var(--line);border-radius:14px;background:var(--surface-2);overflow:hidden}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;padding:10px 12px 0}
+.tabs button{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:3px 12px;font:600 12.5px var(--sans);color:var(--muted);cursor:pointer}
+.tabs button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.stage{overflow-x:auto;padding-top:8px}
+.stage svg{display:block;width:100%;min-width:680px;height:auto;cursor:pointer;user-select:none}
+.cap{padding:10px 16px;min-height:3.4em;border-top:1px dashed var(--line);font-size:15px}
+.ctl{display:flex;align-items:center;gap:8px;padding:0 12px 12px}
+.b{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:5px 14px;font:600 13px var(--sans);cursor:pointer}
+.b:hover:not(:disabled){border-color:var(--accent)}
+.b:disabled{opacity:.4;cursor:default}
+.b.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+.cnt{margin-left:auto;font:500 12px var(--mono);color:var(--faint)}
+
+/* svg scene */
+svg text,svg tspan{white-space:pre}
+svg text{font-family:var(--sans);font-size:13px;fill:var(--fg);dominant-baseline:central}
+.c-n{--cc:var(--muted)} .c-a{--cc:var(--a)} .c-b{--cc:var(--b)} .c-g{--cc:var(--g)}
+.c-o{--cc:var(--o)} .c-r{--cc:var(--r)} .c-s{--cc:var(--s)} .c-f{--cc:var(--fg)}
+.box rect,.circ circle{fill:color-mix(in srgb,var(--cc) 14%,var(--surface));stroke:var(--cc);stroke-width:1.6;transition:fill .45s,stroke .45s}
+.dash rect,.dash circle{stroke-dasharray:6 4;fill:color-mix(in srgb,var(--cc) 4%,transparent)}
+.hl rect,.hl circle{stroke-width:3.4;filter:drop-shadow(0 0 7px color-mix(in srgb,var(--cc) 65%,transparent))}
+.text text{fill:var(--cc);transition:fill .45s}
+.text.b text,.text.lg text{font-weight:700}
+.text.lg text{font-size:15px}
+.sm text{font-size:11.5px}
+.m text{font-family:var(--mono);font-size:12px}
+.path path{fill:none;stroke:var(--cc);stroke-width:3.4;stroke-linecap:round}
+.arrow line{stroke:var(--cc);stroke-width:2.2;transition:stroke .4s}
+.arrow.dash line{stroke-dasharray:6 4}
+.arrow.hl line{stroke-width:3.4}
+footer{margin-top:50px;text-align:center;color:var(--faint);font:500 13px var(--sans)}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs id="defs"></defs></svg>
+<div class="wrap">
+  <nav class="topnav">
+    <a class="brand" href="../../index.html"><span class="logo">W</span>WellDev</a>
+    <span class="sp"></span>
+    <button class="pill" id="theme" type="button">Theme</button>
+  </nav>
+
+  <header class="hero">
+    <div class="eyebrow">SDLC · Interview</div>
+    <h1>SDLC ও SDLC Model - সোজা উত্তর</h1>
+    <p>প্রতিটি প্রশ্নে এক লাইনের উত্তর আর একটা animation। scene-এ ক্লিক করো বা <b>Next</b> চাপো - ধাপে ধাপে দেখো।</p>
+    <div class="jump" id="jump"></div>
+  </header>
+  <nav class="parts" id="parts"></nav>
+  <main id="app"></main>
+  <footer>Trainee Software Engineer · SDLC basics</footer>
+</div>
+
+<script>
+/* ---------- theme ---------- */
+(function(){
+  const root=document.documentElement,btn=document.getElementById('theme');
+  try{const t=localStorage.getItem('theme');if(t)root.dataset.theme=t;}catch(e){}
+  const dark=()=>root.dataset.theme?root.dataset.theme==='dark':matchMedia('(prefers-color-scheme:dark)').matches;
+  const label=()=>btn.textContent=dark()?'Light':'Dark';
+  btn.onclick=()=>{root.dataset.theme=dark()?'light':'dark';try{localStorage.setItem('theme',root.dataset.theme);}catch(e){}label();};
+  label();
+})();
+
+/* ---------- scene engine ---------- */
+const COLORS=['n','a','b','g','o','r','s','f'];
+document.getElementById('defs').innerHTML=COLORS.map(c=>
+  `<marker id="ah-${c}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" style="fill:var(--${c==='n'?'muted':c==='f'?'fg':c})"/></marker>`).join('');
+
+const B=(id,x,y,w,h,label,c='n',o={})=>({id,k:'box',x,y,w,h,label,c,...o});
+const T=(id,x,y,label,o={})=>({id,k:'text',x,y,label,c:'n',...o});
+const A=(id,x1,y1,x2,y2,c='n',o={})=>({id,k:'arrow',x:0,y:0,x1,y1,x2,y2,c,...o});
+const C=(id,x,y,r,label,c='n',o={})=>({id,k:'circ',x,y,r,label,c,...o});
+const S=(cap,o={})=>({cap,...o});
+const P=(id,d,c='n',o={})=>({id,k:'path',x:0,y:0,d,c,...o});
+
+function stateAt(steps,i){
+  const m=new Map();
+  for(let k=0;k<=i;k++){
+    const s=steps[k];
+    (s.del||[]).forEach(id=>m.delete(id));
+    (s.add||[]).forEach(n=>m.set(n.id,{...n}));
+    Object.entries(s.mod||{}).forEach(([id,p])=>{if(m.has(id))Object.assign(m.get(id),p);});
+  }
+  return [...m.values()];
+}
+
+function setText(g,cls,str,x,y,anchor,lh=15.5){
+  let tx=g.select('text.'+cls);
+  if(tx.empty())tx=g.append('text').attr('class',cls);
+  const ls=String(str??'').split('\n');
+  tx.attr('text-anchor',anchor);
+  tx.selectAll('tspan').data(ls).join('tspan').attr('x',x).attr('y',(d,i)=>y-(ls.length-1)*lh/2+i*lh).text(d=>d);
+}
+
+function upd(g,d,t){
+  g.attr('class',`n ${d.k} c-${d.c||'n'}${d.dash?' dash':''}${d.hl?' hl':''}${d.s?' '+d.s:''}${d.m?' m':''}`);
+  if(d.k==='box'){
+    let r=g.select('rect');
+    if(r.empty())r=g.insert('rect',':first-child').attr('rx',9).attr('width',d.w).attr('height',d.h);
+    r.transition(t).attr('width',d.w).attr('height',d.h);
+    setText(g,'lb',d.label,d.w/2,d.h/2,'middle');
+  }else if(d.k==='circ'){
+    let r=g.select('circle');
+    if(r.empty())r=g.insert('circle',':first-child').attr('r',d.r);
+    r.transition(t).attr('r',d.r);
+    setText(g,'lb',d.label,0,0,'middle');
+  }else if(d.k==='text'){
+    setText(g,'lb',d.label,0,0,d.a||'start');
+  }else if(d.k==='path'){
+    let p=g.select('path');
+    if(p.empty()){p=g.append('path').attr('d',d.d);const L=p.node().getTotalLength();p.attr('stroke-dasharray',L).attr('stroke-dashoffset',L).transition(t).attr('stroke-dashoffset',0);}
+  }else if(d.k==='arrow'){
+    let l=g.select('line');
+    if(l.empty())l=g.append('line').attr('x1',d.x1).attr('y1',d.y1).attr('x2',d.x2).attr('y2',d.y2);
+    l.attr('marker-end',`url(#ah-${d.c||'n'})`).transition(t).attr('x1',d.x1).attr('y1',d.y1).attr('x2',d.x2).attr('y2',d.y2);
+  }
+}
+
+function draw(svg,nodes,dur){
+  const t=d3.transition().duration(dur).ease(d3.easeCubicInOut);
+  svg.select('.layer').selectAll('g.n').data(nodes,d=>d.id).join(
+    en=>en.append('g').attr('opacity',0).attr('transform',d=>`translate(${d.x},${d.y})`),
+    up=>up,
+    ex=>ex.transition(t).attr('opacity',0).remove()
+  ).each(function(d){upd(d3.select(this),d,t);})
+   .transition(t).attr('transform',d=>`translate(${d.x},${d.y})`).attr('opacity',d=>d.o??1);
+}
+
+function mount(host,topic){
+  const tabs=topic.tabs||[{n:'',steps:topic.steps}];
+  host.innerHTML='<div class="tabs"></div><div class="stage"><svg viewBox="0 0 760 240" role="img"><g class="layer"></g></svg></div><div class="cap"></div><div class="ctl"><button class="b prev" type="button">◀</button><button class="b pri next" type="button">Next ▶</button><span class="cnt"></span></div>';
+  const svg=d3.select(host).select('svg'),cap=host.querySelector('.cap'),cnt=host.querySelector('.cnt');
+  const prev=host.querySelector('.prev'),next=host.querySelector('.next'),tabBox=host.querySelector('.tabs');
+  let ti=0,si=0,steps;
+  function show(dur){
+    draw(svg,stateAt(steps,si),dur);
+    cap.innerHTML=steps[si].cap;
+    cnt.textContent=`${si+1} / ${steps.length}`;
+    prev.disabled=si===0;
+    next.textContent=si===steps.length-1?'↻ আবার':'Next ▶';
+  }
+  function load(i){
+    ti=i;si=0;
+    const tb=tabs[ti];steps=typeof tb.steps==='function'?tb.steps():tb.steps;
+    tabBox.querySelectorAll('button').forEach((b,k)=>b.classList.toggle('on',k===ti));
+    show(0);
+  }
+  if(tabs.length>1){
+    tabs.forEach((tb,i)=>{const b=document.createElement('button');b.type='button';b.textContent=tb.n;b.onclick=()=>load(i);tabBox.appendChild(b);});
+  }else tabBox.remove();
+  const go=()=>{si=si===steps.length-1?0:si+1;show(600);};
+  next.onclick=go;svg.on('click',go);
+  prev.onclick=()=>{if(si>0){si--;show(600);}};
+  load(0);
+}
+
+/* ---------- content ---------- */
+const PARTS=[['A','SDLC পরিচিতি'],['B','SDLC Model']];
+
+const TOPICS=[
+{p:0,n:'1',q:'SDLC কী?',
+ ans:'<b>SDLC (Software Development Life Cycle)</b> = software-এর idea থেকে শুরু করে বানানো, চালু করা আর পরে দেখভাল করা পর্যন্ত পুরো যাত্রার <b>ধাপে ধাপে কাঠামো</b>।',
+ pts:['কে কী কাজ করবে, কোন ক্রমে, আর প্রতি ধাপে কী <b>output</b> আসবে - সেটা ঠিক করে দেয়।','লক্ষ্য: <b>কম খরচ, কম সময়, ভালো মান</b>।','এটা চক্র (cycle), কারণ চালু হওয়ার পরও নতুন চাহিদা এসে আবার প্রথম থেকে ঘোরে।'],
+ tabs:[
+  {n:'1. জীবনচক্র',steps:[
+   S('Software শুরু হয় একটা <b>চাহিদা বা idea</b> থেকে।',{add:[B('b1',20,70,140,60,'চাহিদা\n(idea)','a')]}),
+   S('তারপর <b>বানানো</b>: plan, design, coding, testing।',{add:[B('b2',215,70,140,60,'বানানো\nPlan · Design\nCode · Test','b'),A('a1',162,100,213,100,'n')]}),
+   S('তৈরি হলে user-এর কাছে <b>release</b> (deploy)।',{add:[B('b3',410,70,140,60,'Release\n(deploy)','g'),A('a2',357,100,408,100,'n')]}),
+   S('চালুর পর <b>maintenance</b>: bug fix আর update।',{add:[B('b4',605,70,140,60,'Maintain\n& update','o'),A('a3',552,100,603,100,'n')]}),
+   S('নতুন চাহিদা এলে <b>আবার প্রথম থেকে</b>। তাই এটা একটা চক্র।',{add:[P('lp','M 675 132 L 675 178 L 90 178 L 90 134','r'),T('lt',380,200,'নতুন feature / নতুন চাহিদা → আবার চক্র',{a:'middle',c:'r',s:'sm b'})]})
+  ]},
+  {n:'2. SDLC ছাড়া বনাম সহ',steps:[
+   S('<b>SDLC ছাড়া:</b> সোজা code লিখে ফেলা।',{add:[T('l1',20,22,'SDLC ছাড়া',{c:'r',s:'b'}),B('x1',20,40,150,46,'সোজা code শুরু','r',{s:'sm'}),A('xa1',172,63,208,63,'r'),B('x2',210,40,150,46,'Requirement\nবারবার বদলায়','r',{s:'sm'}),A('xa2',362,63,398,63,'r'),B('x3',400,40,150,46,'শেষে এসে\nbug ধরা পড়ে','r',{s:'sm'}),A('xa3',552,63,588,63,'r'),B('x4',590,40,150,46,'Deadline মিস,\nখরচ বেশি','r',{s:'sm'})]}),
+   S('<b>SDLC সহ:</b> আগে বুঝে, নকশা করে, তারপর বানিয়ে test করে release।',{add:[T('l2',20,132,'SDLC সহ',{c:'g',s:'b'}),B('y1',20,150,150,46,'আগে plan আর\nrequirement','g',{s:'sm'}),A('ya1',172,173,208,173,'g'),B('y2',210,150,150,46,'Design করে\nতারপর code','g',{s:'sm'}),A('ya2',362,173,398,173,'g'),B('y3',400,150,150,46,'প্রতি ধাপে\ntest ও review','g',{s:'sm'}),A('ya3',552,173,588,173,'g'),B('y4',590,150,150,46,'সময়মতো,\nমান ঠিক রেখে','g',{s:'sm',hl:1})]})
+  ]}
+ ]},
+
+{p:0,n:'2',q:'SDLC-এর ৭টি ধাপ কী কী?',
+ ans:'<b>১. Planning → ২. Requirement Analysis → ৩. Design → ৪. Implementation (Coding) → ৫. Testing → ৬. Deployment → ৭. Maintenance</b>।',
+ pts:['কিছু বইয়ে Planning আর Requirement একসাথে ধরে ৬ ধাপ বলা হয়; ৭ ধাপের ভাগটাই সবচেয়ে প্রচলিত।','প্রতিটা ধাপ একটা নির্দিষ্ট <b>output</b> বানায়, সেটাই পরের ধাপের input।','Maintenance-এর পর নতুন চাহিদা এলে চক্র আবার শুরু হয়।'],
+ extra:'<table class="cmp"><tr><th>ধাপ</th><th>কী করা হয়</th><th>Output</th></tr>'+
+  '<tr><td>১. Planning</td><td>সময়, খরচ, লোকবল, ঝুঁকি আর feasibility (করা সম্ভব কি না) দেখা</td><td>Project plan, feasibility report</td></tr>'+
+  '<tr><td>২. Requirement Analysis</td><td>Customer ঠিক কী চায় সেটা জেনে লিখে ফেলা</td><td>SRS (Software Requirement Specification)</td></tr>'+
+  '<tr><td>৩. Design</td><td>Architecture, database, API আর UI-এর নকশা</td><td>HLD / LLD, ER diagram, wireframe</td></tr>'+
+  '<tr><td>৪. Implementation</td><td>নকশা অনুযায়ী code লেখা</td><td>Source code</td></tr>'+
+  '<tr><td>৫. Testing</td><td>Unit, integration, system, UAT test করে bug খোঁজা</td><td>Test report, bug list</td></tr>'+
+  '<tr><td>৬. Deployment</td><td>Production-এ release করে user-কে দেওয়া</td><td>Live software, release notes</td></tr>'+
+  '<tr><td>৭. Maintenance</td><td>Bug fix, update, নতুন feature, performance ঠিক রাখা</td><td>Patch, নতুন version</td></tr></table>',
+ tabs:[
+  {n:'1. সাত ধাপ',steps:[
+   S('<b>১. Planning:</b> কী বানাব, কত সময় আর খরচ, করা সম্ভব কি না - এটা ঠিক করা।',{add:[B('s1',4,60,84,64,'১\nPlanning','a',{s:'sm'})]}),
+   S('<b>২. Requirement Analysis:</b> customer কী চায় সেটা জেনে SRS-এ লেখা।',{add:[B('s2',112,60,84,64,'২\nRequirement','b',{s:'sm'}),A('r1',90,92,110,92,'n')]}),
+   S('<b>৩. Design:</b> architecture, database আর UI-এর নকশা।',{add:[B('s3',220,60,84,64,'৩\nDesign','o',{s:'sm'}),A('r2',198,92,218,92,'n')]}),
+   S('<b>৪. Implementation:</b> নকশা দেখে code লেখা।',{add:[B('s4',328,60,84,64,'৪\nCoding','g',{s:'sm'}),A('r3',306,92,326,92,'n')]}),
+   S('<b>৫. Testing:</b> bug খোঁজা আর requirement মেলে কি না যাচাই।',{add:[B('s5',436,60,84,64,'৫\nTesting','r',{s:'sm'}),A('r4',414,92,434,92,'n')]}),
+   S('<b>৬. Deployment:</b> production-এ release করে user-কে দেওয়া।',{add:[B('s6',544,60,84,64,'৬\nDeploy','s',{s:'sm'}),A('r5',522,92,542,92,'n')]}),
+   S('<b>৭. Maintenance:</b> চালু থাকা অবস্থায় bug fix, update, নতুন feature।',{add:[B('s7',652,60,84,64,'৭\nMaintain','a',{s:'sm'}),A('r6',630,92,650,92,'n')]}),
+   S('নতুন চাহিদা এলে <b>আবার ১ থেকে</b>। পুরোটা একটা চক্র।',{add:[P('lp','M 694 126 L 694 180 L 46 180 L 46 128','r'),T('lt',380,203,'নতুন চাহিদা → আবার চক্র',{a:'middle',c:'r',s:'sm b'})]})
+  ]},
+  {n:'2. উদাহরণ: Food delivery app',steps:[
+   S('<b>১. Planning:</b> কত সময় আর কত লোক লাগবে ঠিক করা হলো।',{add:[B('e1',20,6,720,28,'১ Planning: ৩ মাস, ৫ জন developer, বাজেট ঠিক করা হলো','a',{s:'sm'})]}),
+   S('<b>২. Requirement:</b> customer-এর চাহিদা লেখা হলো।',{add:[B('e2',20,39,720,28,'২ Requirement: customer অর্ডার দেবে, ট্র্যাক করবে, পেমেন্ট করবে','b',{s:'sm'})]}),
+   S('<b>৩. Design:</b> নকশা হলো।',{add:[B('e3',20,72,720,28,'৩ Design: database schema, API, অ্যাপের screen-এর নকশা','o',{s:'sm'})]}),
+   S('<b>৪. Implementation:</b> code লেখা হলো।',{add:[B('e4',20,105,720,28,'৪ Coding: backend API আর mobile app লেখা','g',{s:'sm'})]}),
+   S('<b>৫. Testing:</b> bug খোঁজা হলো।',{add:[B('e5',20,138,720,28,'৫ Testing: অর্ডার ও পেমেন্ট flow যাচাই, bug ঠিক করা','r',{s:'sm'})]}),
+   S('<b>৬. Deployment:</b> user-এর কাছে গেল।',{add:[B('e6',20,171,720,28,'৬ Deployment: server-এ আর Play Store-এ live','s',{s:'sm'})]}),
+   S('<b>৭. Maintenance:</b> চালু থাকার পরের কাজ।',{add:[B('e7',20,204,720,28,'৭ Maintenance: bug fix, নতুন offer feature, নতুন OS-এর সাথে update','a',{s:'sm'})]})
+  ]}
+ ]},
+
+{p:1,n:'3',q:'SDLC Model কী? কেন একাধিক model আছে?',
+ ans:'<b>SDLC model</b> = ওই ৭ ধাপ <b>কোন ক্রমে আর কতবার</b> করা হবে তার নকশা। প্রধান চারটা: <b>Waterfall, Agile, Iterative, Incremental</b>।',
+ pts:['সব project এক রকম না। Requirement কতটা স্থির, project কত বড়, ঝুঁকি কেমন - এসব দেখে model বাছা হয়।','নিচের ৩a থেকে ৩d-তে প্রতিটা model আলাদা করে আছে।','বাস্তবে অনেক team একাধিক model মিশিয়ে ব্যবহার করে। যেমন Agile আসলে iterative আর incremental দুটোই।'],
+ extra:'<table class="cmp"><tr><th>Model</th><th>কাজ কীভাবে</th><th>Requirement বদলালে</th><th>প্রথম working software</th><th>কখন ভালো</th></tr>'+
+  '<tr><td>Waterfall</td><td>ধাপ একটার পর একটা, একবারই</td><td>কঠিন ও খরচ বেশি</td><td>একদম শেষে</td><td>Requirement স্থির ও পরিষ্কার</td></tr>'+
+  '<tr><td>Agile</td><td>ছোট sprint বারবার</td><td>সহজে মানা যায়</td><td>প্রথম sprint-এর পর</td><td>Requirement বদলায়, feedback জরুরি</td></tr>'+
+  '<tr><td>Iterative</td><td>পুরোটা কাঁচা থেকে পাকা করা</td><td>পরের চক্রে ধরা যায়</td><td>প্রথম চক্রে (কাঁচা)</td><td>Requirement অস্পষ্ট, বড় system</td></tr>'+
+  '<tr><td>Incremental</td><td>টুকরো টুকরো বানিয়ে জোড়া লাগানো</td><td>পরের increment-এ</td><td>প্রথম increment-এ (আংশিক)</td><td>দ্রুত core feature release দরকার</td></tr></table>',
+ tabs:[
+  {n:'চার model এক নজরে',steps:[
+   S('<b>Waterfall:</b> ধাপগুলো সিঁড়ির মতো, একবারই।',{add:[T('w0',10,18,'Waterfall',{c:'a',s:'b'}),B('w1',10,50,60,24,'Req','a',{s:'sm'}),B('w2',40,80,60,24,'Code','a',{s:'sm'}),B('w3',70,110,60,24,'Test','a',{s:'sm'}),T('w4',10,160,'একবার, একমুখী',{c:'a',s:'sm'})]}),
+   S('<b>Agile:</b> ছোট ছোট sprint, প্রতিবার একটা চালু অংশ।',{add:[T('g0',200,18,'Agile',{c:'b',s:'b'}),B('g1',200,60,50,40,'S1','b',{s:'sm'}),B('g2',256,60,50,40,'S2','b',{s:'sm'}),B('g3',312,60,50,40,'S3','b',{s:'sm'}),T('g4',200,160,'ছোট sprint,\nঘন ঘন release',{c:'b',s:'sm'})]}),
+   S('<b>Iterative:</b> পুরোটাই আগে কাঁচা, প্রতি চক্রে ভালো।',{add:[T('i0',390,18,'Iterative',{c:'g',s:'b'}),B('i1',390,60,50,40,'v1','g',{s:'sm',dash:1}),B('i2',446,60,50,40,'v2','g',{s:'sm'}),B('i3',502,60,50,40,'v3','g',{s:'sm',hl:1}),T('i4',390,160,'একই জিনিস\nবারবার ভালো',{c:'g',s:'sm'})]}),
+   S('<b>Incremental:</b> টুকরো টুকরো বানিয়ে জোড়া লাগানো।',{add:[T('n0',580,18,'Incremental',{c:'o',s:'b'}),B('n1',580,60,52,40,'M1','o',{s:'sm'}),B('n2',632,60,52,40,'M2','o',{s:'sm'}),B('n3',684,60,52,40,'M3','o',{s:'sm'}),T('n4',580,160,'নতুন নতুন অংশ\nযোগ হয়',{c:'o',s:'sm'})]}),
+   S('Project-এর ধরন দেখে একটা বাছা হয় (বা মিশিয়ে ব্যবহার)। এরপর একটা একটা করে দেখি।',{add:[B('fin',130,196,500,34,'Project-এর আকার · Requirement স্থিরতা · ঝুঁকি · team','f',{s:'sm'})]})
+  ]}
+ ]},
+
+{p:1,n:'3a',q:'Waterfall Model',
+ ans:'<b>Waterfall:</b> ধাপগুলো একটার পর একটা, ঝরনার মতো উপর থেকে নিচে। একটা ধাপ পুরো শেষ না হলে পরেরটা শুরু হয় না, আর পেছনে ফেরা প্রায় নেই।',
+ pts:['<b>ভালো:</b> সহজ ও বোঝা সহজ; প্রতি ধাপে পুরো documentation; কাজ ট্র্যাক করা সহজ।','<b>খারাপ:</b> working software পাওয়া যায় একদম শেষে; requirement বদলালে খরচ বেড়ে যায়; test শেষে হয় বলে bug দেরিতে ধরা পড়ে।','<b>কখন:</b> requirement একদম স্থির ও পরিষ্কার (সরকারি tender, hardware-নির্ভর software)।'],
+ tabs:[
+  {n:'1. ধাপগুলো',steps:[
+   S('<b>Requirements:</b> সব চাহিদা আগে লিখে ফেলা হয়।',{add:[B('a1',6,8,104,30,'Requirements','a',{s:'sm'})]}),
+   S('<b>Design:</b> Requirement পুরো শেষ হলে তবেই design শুরু।',{add:[B('a2',132,42,104,30,'Design','b',{s:'sm'}),A('p1',110,23,130,57,'n')]}),
+   S('<b>Coding:</b> Design শেষ হলে code।',{add:[B('a3',258,76,104,30,'Coding','o',{s:'sm'}),A('p2',236,57,256,91,'n')]}),
+   S('<b>Testing:</b> Code পুরোটা শেষ হলে তবেই test।',{add:[B('a4',384,110,104,30,'Testing','r',{s:'sm'}),A('p3',362,91,382,125,'n')]}),
+   S('<b>Deployment</b> আর <b>Maintenance</b>: শেষ ধাপে এসে user software পায়।',{add:[B('a5',510,144,104,30,'Deployment','g',{s:'sm'}),A('p4',488,125,508,159,'n'),B('a6',636,178,104,30,'Maintenance','s',{s:'sm'}),A('p5',614,159,634,193,'n')]})
+  ]},
+  {n:'2. সমস্যা: দেরিতে বদল',steps:[
+   S('Requirement থেকে Testing পর্যন্ত চারটা ধাপ শেষ।',{add:[B('a1',6,8,104,30,'Requirements','a',{s:'sm'}),B('a2',132,42,104,30,'Design','b',{s:'sm'}),B('a3',258,76,104,30,'Coding','o',{s:'sm'}),B('a4',384,110,104,30,'Testing','r',{s:'sm'}),A('p1',110,23,130,57,'n'),A('p2',236,57,256,91,'n'),A('p3',362,91,382,125,'n')]}),
+   S('Testing-এ গিয়ে ধরা পড়ল <b>requirement-ই ভুল বোঝা হয়েছিল</b>।',{mod:{a4:{hl:1,label:'Testing\n⚠ ভুল ধরা পড়ল'}}}),
+   S('পেছনে ফিরতে হলে Design আর Code <b>দুটোই নতুন করে</b> করতে হবে। খরচ ও সময় দুটোই অনেক বাড়ে।',{add:[P('bk','M 436 142 L 436 215 L 58 215 L 58 40','r'),T('bt',250,196,'পেছনে ফেরা মানে অনেক খরচ',{a:'middle',c:'r',s:'sm b'})]})
+  ]},
+  {n:'3. কখন বাছব',steps:[
+   S('<b>Waterfall ভালো</b>, যখন:',{add:[T('gl',20,20,'ভালো যখন',{c:'g',s:'b'}),B('g1',20,40,340,40,'Requirement একদম স্থির ও পরিষ্কার','g',{s:'sm'}),B('g2',20,90,340,40,'ছোট বা সহজ project','g',{s:'sm'}),B('g3',20,140,340,40,'Documentation ও নিয়ম বেশি লাগে','g',{s:'sm'})]}),
+   S('<b>Waterfall ভালো না</b>, যখন:',{add:[T('bl',400,20,'ভালো না যখন',{c:'r',s:'b'}),B('b1',400,40,340,40,'Requirement বদলাতে পারে','r',{s:'sm'}),B('b2',400,90,340,40,'User-এর feedback আগে দরকার','r',{s:'sm'}),B('b3',400,140,340,40,'বড়, দীর্ঘ বা ঝুঁকিপূর্ণ project','r',{s:'sm'})]})
+  ]}
+ ]},
+
+{p:1,n:'3b',q:'Agile Model',
+ ans:'<b>Agile:</b> ছোট ছোট চক্রে (<b>sprint</b>, সাধারণত ১-৪ সপ্তাহ) কাজ করা, প্রতিবার একটা চালু-যোগ্য অংশ দেওয়া। Customer-এর feedback নিয়ে দ্রুত দিক বদলানো যায়।',
+ pts:['Scrum, Kanban, XP হলো জনপ্রিয় Agile framework। Agile একটা mindset (Manifesto), Scrum তার একটা বাস্তবায়ন।','<b>ভালো:</b> পরিবর্তন সহজে নেয়, দ্রুত feedback, ঝুঁকি কম। <b>খারাপ:</b> শুরুতে পুরো খরচ ও সময় অনুমান কঠিন; customer-কে সবসময় যুক্ত থাকতে হয়; documentation কম হতে পারে।','<b>কখন:</b> requirement বদলায় বা শুরুতে পুরোটা পরিষ্কার না, আর user-এর feedback জরুরি (startup, web / mobile app)।'],
+ tabs:[
+  {n:'1. Sprint চক্র',steps:[
+   S('<b>Product Backlog:</b> সব চাওয়া একটা তালিকায়, গুরুত্ব অনুযায়ী সাজানো।',{add:[B('c1',8,70,116,60,'Product\nBacklog','a')]}),
+   S('<b>Sprint Planning:</b> এই sprint-এ কোন কাজগুলো হবে তা বাছা।',{add:[B('c2',156,70,116,60,'Sprint\nPlanning','b'),A('k1',126,100,154,100,'n')]}),
+   S('<b>Sprint (১-৪ সপ্তাহ):</b> কাজ চলে, প্রতিদিন ছোট stand-up meeting।',{add:[B('c3',304,70,116,60,'Sprint\n১-৪ সপ্তাহ','o'),A('k2',274,100,302,100,'n'),T('su',362,150,'প্রতিদিন stand-up',{a:'middle',c:'o',s:'sm'})]}),
+   S('<b>Review (demo):</b> sprint-এর শেষে চালু অংশ customer-কে দেখানো।',{add:[B('c4',452,70,116,60,'Review\n(demo)','g'),A('k3',422,100,450,100,'n')]}),
+   S('<b>Retrospective:</b> team নিজেদের কাজের উন্নতির উপায় ভাবে।',{add:[B('c5',600,70,116,60,'Retro\n(উন্নতি)','s'),A('k4',570,100,598,100,'n')]}),
+   S('তারপর <b>পরের sprint</b>। চক্র চলতেই থাকে।',{add:[P('lp','M 658 132 L 658 192 L 214 192 L 214 134','r'),T('lt',436,212,'পরের sprint',{a:'middle',c:'r',s:'sm b'})]})
+  ]},
+  {n:'2. Waterfall বনাম Agile',steps:[
+   S('<b>Waterfall:</b> একটা লম্বা কাজ, মাঝে কিছু দেখানোর নেই।',{add:[T('wl',10,22,'Waterfall',{c:'a',s:'b'}),B('wb',10,36,640,34,'Requirement → Design → Code → Test','a',{s:'sm'})]}),
+   S('Release হয় একদম শেষে। User প্রথম software দেখে <b>অনেক মাস পর</b>।',{add:[B('wr',660,36,90,34,'🚀 Release','g',{s:'sm'}),T('wn',10,88,'ভুল বুঝে থাকলেও ধরা পড়ে শেষে',{c:'r',s:'sm'})]}),
+   S('<b>Agile:</b> একই সময়ে অনেকগুলো ছোট sprint।',{add:[T('al',10,128,'Agile',{c:'b',s:'b'}),...[0,1,2,3,4].map(i=>B('s'+i,10+i*148,142,128,34,'Sprint '+(i+1),'b',{s:'sm'}))]}),
+   S('প্রতি sprint-এর শেষে <b>release + feedback</b>। ভুল দিক হলে দ্রুত ঠিক করা যায়।',{add:[...[0,1,2,3,4].map(i=>T('rl'+i,10+i*148+64,194,'🚀',{a:'middle'})),T('fb',10,222,'প্রতি sprint-এর পর feedback নিয়ে দিক ঠিক করা',{c:'g',s:'sm b'})]})
+  ]},
+  {n:'3. Agile Manifesto',steps:[
+   S('বাঁয়ের জিনিসটাকে বেশি গুরুত্ব দেওয়া হয়। ডানেরটা দরকারি, কিন্তু কম গুরুত্বের।',{add:[B('m1',30,16,310,40,'মানুষ ও যোগাযোগ','g',{s:'sm'}),T('o1',380,36,'>',{a:'middle',s:'lg b'}),B('r1',420,16,310,40,'Process ও tool','n',{s:'sm',dash:1})]}),
+   S('বিশাল documentation-এর চেয়ে <b>চালু software</b>।',{add:[B('m2',30,68,310,40,'চালু software','g',{s:'sm'}),T('o2',380,88,'>',{a:'middle',s:'lg b'}),B('r2',420,68,310,40,'বিশাল documentation','n',{s:'sm',dash:1})]}),
+   S('চুক্তি নিয়ে দর-কষাকষির চেয়ে <b>customer-এর সাথে সহযোগিতা</b>।',{add:[B('m3',30,120,310,40,'Customer-এর সাথে সহযোগিতা','g',{s:'sm'}),T('o3',380,140,'>',{a:'middle',s:'lg b'}),B('r3',420,120,310,40,'চুক্তি নিয়ে দর-কষাকষি','n',{s:'sm',dash:1})]}),
+   S('Plan অন্ধভাবে মানার চেয়ে <b>পরিবর্তনে সাড়া দেওয়া</b>।',{add:[B('m4',30,172,310,40,'পরিবর্তনে সাড়া','g',{s:'sm'}),T('o4',380,192,'>',{a:'middle',s:'lg b'}),B('r4',420,172,310,40,'Plan অন্ধভাবে মানা','n',{s:'sm',dash:1})]})
+  ]}
+ ]},
+
+{p:1,n:'3c',q:'Iterative Model',
+ ans:'<b>Iterative:</b> শুরুতে পুরো product-এর একটা <b>কাঁচা version</b> বানিয়ে, তারপর একই চক্র (plan → design/build → test → evaluate) বারবার ঘুরিয়ে প্রতিবার সেটাকে আরও ভালো করা হয়।',
+ pts:['পুরো system আগে থেকেই থাকে, প্রতি চক্রে সেটা ঘষামাজা হয়ে পরিপক্ক হয়।','<b>ভালো:</b> ভুল আগেভাগে ধরা পড়ে, feedback থেকে ক্রমে উন্নতি। <b>খারাপ:</b> শুরুতেই পুরো architecture ভাবতে হয়; কত চক্র লাগবে আগে বলা যায় না, খরচ বাড়তে পারে।','<b>কখন:</b> requirement শুরুতে অস্পষ্ট, কিন্তু পুরো system-এর ছবিটা বোঝা যায় (বড় system)।'],
+ tabs:[
+  {n:'1. চক্র',steps:[
+   S('<b>Plan:</b> এই চক্রে কী ঠিক করব সেটা ঠিক করা।',{add:[B('c1',20,40,140,56,'Plan','a')]}),
+   S('<b>Design / Build:</b> সেই অনুযায়ী বানানো।',{add:[B('c2',200,40,140,56,'Design / Build','b'),A('k1',162,68,198,68,'n')]}),
+   S('<b>Test:</b> যা বানানো হলো যাচাই।',{add:[B('c3',380,40,140,56,'Test','o'),A('k2',342,68,378,68,'n')]}),
+   S('<b>Evaluate:</b> customer আর team ফলাফল দেখে মূল্যায়ন করে।',{add:[B('c4',560,40,140,56,'Evaluate','g'),A('k3',522,68,558,68,'n')]}),
+   S('Evaluate-এর feedback নিয়ে <b>আবার Plan থেকে</b> চক্র শুরু।',{add:[P('lp','M 630 98 L 630 138 L 90 138 L 90 100','r'),T('lt',360,120,'feedback → পরের চক্র',{a:'middle',c:'r',s:'sm b'})]}),
+   S('প্রতিটা চক্রের শেষে একটা <b>নতুন version</b>, আগেরটার চেয়ে ভালো।',{add:[B('v1',140,172,120,40,'Version 1','n',{s:'sm',dash:1}),A('va',262,192,318,192,'n'),B('v2',320,172,120,40,'Version 2','a',{s:'sm'}),A('vb',442,192,498,192,'n'),B('v3',500,172,120,40,'Version 3','g',{s:'sm',hl:1})]})
+  ]},
+  {n:'2. কাঁচা থেকে পাকা',steps:[
+   S('<b>Version 1:</b> সব feature আছে, কিন্তু সবই কাঁচা।',{add:[B('p1',15,50,210,110,'Version 1\nLogin (বেসিক)\nCart (বেসিক)\nPayment (বেসিক)','n',{dash:1})]}),
+   S('<b>Version 2:</b> feedback নিয়ে কিছু অংশ ভালো হলো।',{add:[B('p2',275,50,210,110,'Version 2\nLogin ✓ ভালো\nCart ✓ ভালো\nPayment (বেসিক)','a'),A('pa',227,105,273,105,'n')]}),
+   S('<b>Version 3:</b> সবকিছু পরিপক্ক। Feature বাড়েনি, মান বেড়েছে।',{add:[B('p3',535,50,210,110,'Version 3\nLogin ✓\nCart ✓\nPayment ✓','g',{hl:1}),A('pb',487,105,533,105,'n'),T('pt',380,198,'পুরো product প্রথম থেকেই আছে, প্রতিবার ভালো হয়েছে',{a:'middle',c:'g',s:'sm b'})]})
+  ]}
+ ]},
+
+{p:1,n:'3d',q:'Incremental Model',
+ ans:'<b>Incremental:</b> product-কে ছোট ছোট <b>module-এ ভেঙে</b> একটা একটা করে বানানো হয়। প্রতিটা অংশ (<b>increment</b>) নিজে design-code-test হয়ে ব্যবহারযোগ্য হিসেবে যোগ হয় আগের অংশের সাথে।',
+ pts:['প্রথম increment-এ core feature থাকে, তাই user আগেভাগে কাজ করা software পায়।','<b>ভালো:</b> দ্রুত প্রথম release, ঝুঁকি ভাগ হয়, test সহজ। <b>খারাপ:</b> শুরুতেই ভালো architecture ও interface না থাকলে জোড়া লাগানো কঠিন; মোট খরচ বাড়তে পারে।','<b>মনে রাখো:</b> Iterative = একই জিনিস বারবার ভালো করা; Incremental = নতুন নতুন টুকরো যোগ করা।'],
+ tabs:[
+  {n:'1. Increment-এর পর increment',steps:[
+   S('আগে product-কে <b>module-এ ভাগ</b> করা হয়।',{add:[T('ml',20,18,'সব module (এখনো বানানো হয়নি)',{c:'n',s:'sm b'}),B('m1',20,32,160,40,'Login','n',{dash:1}),B('m2',200,32,160,40,'Cart','n',{dash:1}),B('m3',380,32,160,40,'Payment','n',{dash:1}),B('m4',560,32,160,40,'Search','n',{dash:1}),T('pl',20,138,'চালু product',{c:'g',s:'sm b'})]}),
+   S('<b>Increment 1:</b> Login design-code-test হয়ে release। User প্রথম কাজ করা অংশ পেল।',{mod:{m1:{y:152,c:'g',dash:0,hl:1}}}),
+   S('<b>Increment 2:</b> Cart বানিয়ে আগেরটার সাথে জোড়া লাগল।',{mod:{m1:{hl:0},m2:{y:152,c:'g',dash:0,hl:1}}}),
+   S('<b>Increment 3:</b> Payment যোগ হলো।',{mod:{m2:{hl:0},m3:{y:152,c:'g',dash:0,hl:1}}}),
+   S('<b>Increment 4:</b> Search যোগ হয়ে পুরো product তৈরি।',{mod:{m3:{hl:0},m4:{y:152,c:'g',dash:0,hl:1}}})
+  ]},
+  {n:'2. Iterative বনাম Incremental',steps:[
+   S('<b>Iterative:</b> একই পুরো product প্রতিবার আরও ভালো।',{add:[T('il',20,22,'Iterative: একই জিনিস বারবার ভালো',{c:'g',s:'sm b'}),B('i1',20,38,150,56,'v1\nকাঁচা','g',{s:'sm',dash:1}),A('ia',172,66,208,66,'n'),B('i2',210,38,150,56,'v2\nভালো','g',{s:'sm'}),A('ib',362,66,398,66,'n'),B('i3',400,38,150,56,'v3\nপরিপক্ক','g',{s:'sm',hl:1})]}),
+   S('<b>Incremental:</b> প্রতিবার নতুন একটা টুকরো যোগ হয়, আগেরগুলো যেমন ছিল তেমন।',{add:[T('nl',20,132,'Incremental: নতুন টুকরো যোগ',{c:'o',s:'sm b'}),B('n1',20,148,110,56,'Login','o',{s:'sm'}),B('n2',130,148,110,56,'Login\n+ Cart','o',{s:'sm'}),B('n3',240,148,110,56,'+ Payment','o',{s:'sm'}),B('n4',350,148,110,56,'+ Search','o',{s:'sm',hl:1}),T('nt',500,176,'product বাড়তে বাড়তে\nপূর্ণ হয়',{c:'o',s:'sm'})]})
+  ]}
+ ]}
+];
+
+/* ---------- build page ---------- */
+const app=document.getElementById('app'),jump=document.getElementById('jump'),partsNav=document.getElementById('parts');
+PARTS.forEach((pt,pi)=>{
+  const a=document.createElement('a');a.href='#part'+pi;a.innerHTML=`<b>${pt[0]}</b>${pt[1]}`;partsNav.appendChild(a);
+  const sec=document.createElement('section');sec.className='part';sec.id='part'+pi;
+  sec.innerHTML=`<h2><span>${pt[0]}</span>${pt[1]}</h2>`;app.appendChild(sec);
+});
+TOPICS.forEach((t,i)=>{
+  const n=t.n;
+  const j=document.createElement('a');j.href='#q'+n;j.textContent=n;j.title=t.q;jump.appendChild(j);
+  const card=document.createElement('article');card.className='q';card.id='q'+n;
+  card.innerHTML=`<h3><span class="num${n.length>1?' w':''}">${n}</span><span>${t.q}</span></h3><p class="ans">${t.ans}</p><ul>${t.pts.map(x=>`<li>${x}</li>`).join('')}</ul>${t.extra?`<div class="extra">${t.extra}</div>`:''}<div class="viz"></div>`;
+  document.getElementById('part'+t.p).appendChild(card);
+  mount(card.querySelector('.viz'),t);
+});
+</script>
+</body>
+</html>
