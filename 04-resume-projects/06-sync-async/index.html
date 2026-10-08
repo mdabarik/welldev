@@ -309,22 +309,35 @@ const SYNC3=VH([
   S('<b>সমস্যা:</b> প্রতিটা thread ≈ <b>১ MB stack</b> মেমোরি নেয় আর OS-এর context switch-এর খরচ আছে। ১০,০০০ জন একসাথে এলে ১০,০০০ thread = ~১০ GB মেমোরি। আর thread-গুলোর বেশিরভাগ সময় <b>শুধু অপেক্ষায়</b>। এটাই <b>C10K problem</b>, আর এই কারণেই async এসেছে।',{})
 ],262);
 
-/* CPU scheduling timelines: 2 cores. Same lane/time language as the other tabs. */
-const lanes4=names=>[...names.flatMap((nm,i)=>[T('ln'+i,14,LN(i)+17,nm,{c:'f',s:'b'}),L('lb'+i,LX,LN(i)+42,740,LN(i)+42,'n')]),T('ax',LX,292,'সময় →',{c:'n'})];
-const cur4=t=>P('cur','M0 28L0 276','o',{s:'thin',x:LX+t*K});
-const TC={1:'a',2:'b',3:'g',4:'o',5:'s',6:'n'};                        // thread colour: follow one thread across lanes
-const run=(id,lane,a,b,t,txt)=>blk(id,lane,a,b,txt||'T'+t,TC[t]);
-const slp=(id,lane,a,b,t,txt)=>blk(id,lane,a,b,txt,TC[t],{dash:1});
-const RDY=(txt,x)=>({rdy:{label:'Ready Queue (CPU পাওয়ার লাইন): '+txt},cur:{x:LX+x*K}});
+/* Thread-pool scenes. Same board for sync and async so they can be compared:
+   Request Queue -> Thread Pool (idle) -> Ready Queue -> Core 1/2 -> (DB call) -> Blocked Queue (sync) | Pending (async) */
+const RQT=i=>({x:26+i*37,y:56}), IDL=i=>({x:50+i*55,y:215}), RDY=i=>({x:315+i*45,y:70}), BLK=i=>({x:315+i*45,y:215});
+const CORE1={x:570,y:70}, CORE2={x:690,y:70};
+const COMP=i=>({x:294+i*31,y:57}), PEND=i=>({x:294+i*31,y:202});
+const TD=(id,n,p,c,lb)=>C(id,p.x,p.y,21,lb||n,c,{s:'sm'});
+const RT=(id,n,p)=>B(id,p.x,p.y,34,28,'R'+n,'b',{s:'sm'});
+const SM=(id,n,p,c)=>B(id,p.x,p.y,28,26,'R'+n,c,{s:'sm'});          // small request object in Pending / Completion
+const BOARD=(mid)=>[
+  B('rqb',20,40,230,60,'','b',{dash:1}),T('rqbt',20,27,'Request Queue: আসা request',{c:'b',s:'sm'}),
+  B('ipb',20,180,230,70,'','n',{dash:1}),T('ipbt',20,167,'Thread Pool: বসে আছে, কোনো কাজ ধরেনি',{c:'n',s:'sm'}),
+  ...mid,
+  B('co1',520,40,100,60,'','a'),T('co1t',570,27,'Core 1',{a:'middle',c:'a',s:'sm'}),
+  B('co2',640,40,100,60,'','a'),T('co2t',690,27,'Core 2',{a:'middle',c:'a',s:'sm'}),
+  B('dvb',520,180,220,70,'Disk / Network / DB','s')];
 const SYNC4=VH([
-  S('<b>6টা thread, 2টা core।</b> OS-এর <b>scheduler</b> schedule করে <b>thread</b>-কে (request-কে নয়)। যে thread চলার জন্য তৈরি সে <b>Ready Queue</b>-তে দাঁড়ায়, আর কোনো core খালি হলে scheduler সামনের জনকে সেখানে বসায়। একসাথে সত্যিই চলে সর্বোচ্চ 2টা।',{add:[...lanes4(['Core 1','Core 2','T1 ঘুমন্ত','T2 ঘুমন্ত']),cur4(0),T('rdy',LX,14,'Ready Queue (CPU পাওয়ার লাইন): T1 T2 T3 T4 T5 T6',{c:'o',s:'sm'})]}),
-  S('<b>শুরু:</b> scheduler Ready Queue-র সামনের দুজন T1, T2-কে দুই core-এ বসাল। তারা validate করছে। বাকি 4টা লাইনে অপেক্ষায়।',{add:[run('a1',0,0,10,1),run('b1',1,0,10,2)],mod:RDY('T3 T4 T5 T6',10)}),
-  S('<b>T1 <code>db.query()</code> ডাকল।</b> উত্তর না আসা পর্যন্ত সে কিছু করতে পারে না, তাই OS তাকে <b>core থেকে নামিয়ে ঘুম পাড়ায়</b> (BLOCKED, নিচের লাল ড্যাশ)। <b>সাথে সাথে core 1 পেল T3-কে।</b> core বসে নেই।',{add:[slp('w1',2,10,60,1,'T1 BLOCKED: DB-র উত্তরের অপেক্ষা, core চায় না'),run('a2',0,10,30,3)],mod:RDY('T4 T5 T6',10)}),
-  S('<b>T2-ও DB ডাকল → BLOCKED।</b> core 2 সাথে সাথে T4-কে পেল। দুটো thread ঘুমাচ্ছে, কিন্তু <b>দুটো core-ই ব্যস্ত</b>।',{add:[slp('w2',3,10,62,2,'T2 BLOCKED: DB-র উত্তরের অপেক্ষা'),run('b2',1,10,30,4)],mod:RDY('T5 T6',10)}),
-  S('<b>Time slice:</b> T3, T4 blocked হয়নি, কিন্তু তাদের নির্ধারিত সময় (কয়েক ms) শেষ। scheduler তাদের জোর করে নামিয়ে <b>Ready Queue-র শেষে</b> পাঠাল, আর T5, T6-কে core দিল। এভাবে সবাই পালা পায়।',{add:[run('a3',0,30,50,5),run('b3',1,30,50,6)],mod:RDY('T3 T4',30)}),
-  S('<b>আবার পালা বদল:</b> T5, T6-র সময় শেষ, ফিরল লাইনে। T3, T4 আবার core পেল।',{add:[run('a4',0,50,60,3),run('b4',1,50,62,4)],mod:RDY('T5 T6',50)}),
-  S('<b>T1-এর DB উত্তর এল (সময় 60)।</b> OS T1-কে ঘুম থেকে তুলে <b>Ready Queue-তে</b> (READY) রাখল, আর core 1 খালি হতেই সে চলল: <code>query()</code> return করল, render করল। T2-ও একই ভাবে 62-তে ফিরল।',{add:[run('a5',0,60,70,1,'T1 render'),run('b5',1,62,72,2,'T2 render')],mod:RDY('T5 T6',62)}),
-  S('<b>সারকথা:</b> দুটো core-এর lane পুরোটা ভরা, কোথাও ফাঁক নেই। <b>লাল ড্যাশ = thread ঘুমাচ্ছে, core-এ নেই।</b> অপেক্ষার সময়টা অন্য thread-এর কাজ দিয়ে ভরে গেছে। খরচ: ঘুমন্ত thread-ও মেমোরি ধরে রাখে (stack ≈ 1 MB) আর thread বদলে context switch লাগে। 10,000 thread-এ এটাই ভারী।',{})
+  S('<b>Thread Pool (sync):</b> আগে থেকে বানানো <b>4টা thread</b> নিচের Pool-এ বসে আছে। 6টা request এসেছে, মেশিনে মাত্র <b>2 core</b>। নিয়ম: একটা thread একটা request <b>পুরোটা শেষ না করা পর্যন্ত ছাড়ে না</b>।',{add:[...BOARD([
+      B('rdb',290,40,190,60,'','o',{dash:1}),T('rdbt',290,27,'Ready Queue: core-এর অপেক্ষা',{c:'o',s:'sm'}),
+      B('bkb',290,180,190,70,'','r',{dash:1}),T('bkbt',290,167,'Blocked Queue: DB-র অপেক্ষায় ঘুম',{c:'r',s:'sm'})]),
+    ...[1,2,3,4,5,6].map(n=>RT('q'+n,n,RQT(n-1))),...[1,2,3,4].map(n=>TD('t'+n,'T'+n,IDL(n-1),'n'))]}),
+  S('<b>4টা thread 4টা request তুলল</b> (R1–R4), প্রত্যেকে "T1·R1" এভাবে একটা করে ধরে। এখন তারা চলার জন্য তৈরি (READY), তাই <b>Ready Queue</b>-তে। R5, R6 Request Queue-তেই থাকল, কারণ আর খালি thread নেই।',{del:['q1','q2','q3','q4'],mod:{q5:RQT(0),q6:RQT(1),t1:{...RDY(0),c:'o',label:'T1\nR1'},t2:{...RDY(1),c:'o',label:'T2\nR2'},t3:{...RDY(2),c:'o',label:'T3\nR3'},t4:{...RDY(3),c:'o',label:'T4\nR4'}}}),
+  S('<b>Scheduler (OS)</b> Ready Queue-র সামনের দুজনকে দুই core-এ বসাল: T1 → Core 1, T2 → Core 2। এরা <b>RUNNING</b>। বাকিরা লাইনে। (Core 2টা বলে একসাথে সত্যিই চলে সর্বোচ্চ 2টা thread।)',{mod:{t1:{...CORE1,c:'g'},t2:{...CORE2,c:'g'},t3:RDY(0),t4:RDY(1)}}),
+  S('<b>T1 DB ডাকল:</b> উত্তর না আসা পর্যন্ত সে এগোতে পারে না, তাই OS তাকে core থেকে নামিয়ে <b>Blocked Queue</b>-তে ঘুম পাড়াল। সে R1 <b>ধরে রেখেই</b> ঘুমায়। Core 1 খালি হতেই Scheduler Ready Queue থেকে T3-কে দিল।',{mod:{t1:{...BLK(0),c:'r'},t3:{...CORE1,c:'g'},t4:RDY(0)}}),
+  S('<b>T2-ও DB ডাকল → Blocked।</b> Core 2 পেল T4। এখন 2 thread ঘুমাচ্ছে, কিন্তু দুই core-ই ব্যস্ত।',{mod:{t2:{...BLK(1),c:'r'},t4:{...CORE2,c:'g'}}}),
+  S('<b>সমস্যা:</b> T3-ও DB ডাকল → Blocked। Core 1 <b>খালি</b>, অথচ R5, R6 Request Queue-তে পড়ে আছে! কারণ 4টা thread-ই কাজ ধরে বসে আছে (3টা ঘুমন্ত), pool-এ খালি thread নেই। এটাই sync thread pool-এর সীমা।',{mod:{t3:{...BLK(2),c:'r'}}}),
+  S('<b>T1-এর DB উত্তর এল।</b> OS interrupt পেয়ে T1-কে <b>Blocked Queue থেকে তুলে Ready Queue-তে</b> রাখল (READY)।',{mod:{t1:{...RDY(0),c:'o'}}}),
+  S('<b>Scheduler T1-কে Core 1-এ বসাল।</b> T1 <code>query()</code> থেকে return করে R1-এর বাকি কাজ (render) করছে।',{mod:{t1:{...CORE1,c:'g'}}}),
+  S('<b>T1 R1 শেষ করে Thread Pool-এ ফিরে গেল।</b> এখন সে আর কোনো request ধরে নেই, বসে আছে নতুন কাজের অপেক্ষায়।',{mod:{t1:{...IDL(0),c:'n',label:'T1'}}}),
+  S('<b>Pool-এর খালি T1 Request Queue থেকে R5 তুলল</b> এবং Ready Queue-তে গেল। এভাবে thread ঘুরে ঘুরে কাজ নেয়। <b>সারকথা:</b> sync pool-এ কাজ চলে, কিন্তু ঘুমন্ত thread-গুলো request <b>আঁকড়ে</b> থাকে, তাই বেশি request আসলে লাইন জমে। async এই আঁকড়ে থাকাটাই বন্ধ করে।',{del:['q5'],mod:{q6:RQT(0),t1:{...RDY(0),c:'o',label:'T1\nR5'}}})
 ],312);
 
 /* ===== Q2: Asynchronous ===== */
@@ -343,37 +356,21 @@ const ASYNC2=VH([
   S('<b><code>await</code> আসলে কী করে?</b> ফল না আসা পর্যন্ত <b>function-টা থামে</b> (pause), কিন্তু <b>thread থামে না</b>। Thread অন্য কাজে যায়। ফল এলে function ঠিক ওই লাইন থেকে আবার চলে। তাই <code>await</code> blocking নয়।',{add:[T('nt',380,205,'await = function পাজ, thread মুক্ত',{a:'middle',c:'f',s:'b'})],mod:{aw:{hl:1}}}),
   S('<b>মনে রাখো:</b> async/await কোনো নতুন ক্ষমতা নয়, শুধু callback/promise-কে পড়তে সহজ করে। ভেতরে সেই একই event loop আর non-blocking I/O।',{mod:{aw:{hl:0}}})
 ],235);
-const ASYNC3=VH([
-  S('<b>Async-এ অপেক্ষা কে করে?</b> Thread নয়। তিনটা অংশ কাজ করে: তোমার <b>main thread</b>, <b>OS / I/O</b> (আসল অপেক্ষা), আর মাঝে <b>Event Queue</b>। (বিস্তারিত: <a href="../03-event-loop/index.html">Event Loop</a> পাতা।)',{add:[B('mt',20,30,190,100,'Main thread\n(তোমার JS / C# কোড)','g'),B('io',550,30,190,100,'OS / I/O\n(network, disk, timer)','o'),B('qu',285,160,190,50,'Event Queue: (খালি)','b',{s:'sm'}),T('lp',380,225,'Event Loop: queue দেখে, thread মুক্ত হলে callback চালায়',{a:'middle',c:'f'})]}),
-  S('<b>1.</b> Main thread চালায় <code>fetch(url)</code>: অনুরোধটা <b>OS-কে দিয়ে দেয়</b>, সাথে বলে "শেষ হলে আমাকে জানিও।" নিজে অপেক্ষা করে না।',{add:[A('a1',210,70,550,70,'n'),T('t1',380,52,'fetch(url) + "শেষ হলে বলো"',{a:'middle',c:'f'})],mod:{mt:{hl:1}}}),
-  S('<b>2.</b> Main thread <b>সাথে সাথে পরের কোড</b> চালায়: অন্য request, UI, ইত্যাদি। আর OS ওদিকে network-এর জন্য অপেক্ষা করছে।',{mod:{mt:{label:'Main thread\nঅন্য কোড চালাচ্ছে…',hl:1},io:{hl:1,label:'OS / I/O\nrequest-এর জন্য অপেক্ষা'}}}),
-  S('<b>3.</b> Response এল। OS তোমার callback (বা Promise resolve) <b>Event Queue-তে</b> রাখে। এটা এখনো চলছে না, শুধু লাইনে দাঁড়িয়েছে।',{add:[A('a2',640,130,440,175,'g')],mod:{qu:{label:'Event Queue: [ callback ]',c:'g',hl:1},io:{hl:0,label:'OS / I/O\nশেষ ✓'},mt:{hl:0}}}),
-  S('<b>4.</b> Main thread যখন <b>ফাঁকা হয়</b>, Event Loop queue থেকে callback তুলে main thread-এ চালায়। তাই ভারী sync কাজ (যেমন বড় loop) করলে callback দেরিতে চলে।',{add:[A('a3',285,185,170,135,'g')],mod:{qu:{label:'Event Queue: (খালি)',c:'b',hl:0},mt:{label:'Main thread\ncallback চালাচ্ছে ✓',c:'g',hl:1}}})
-],250);
-const ASYNC4=VH([
-  S('<b>Async ≠ Parallel।</b> প্রথমে <b>Concurrency</b>: এক thread, একাধিক কাজ <b>পালা করে</b>, ছোট ছোট টুকরোয়। একই মুহূর্তে একটাই চলে, কিন্তু দুটোই এগোয়।',{add:[...lanes(['Thread 1']),blk('a1',0,0,15,'A','a'),blk('b1',0,15,30,'B','b'),blk('a2',0,30,45,'A','a'),blk('b2',0,45,60,'B','b')]}),
-  S('<b>Parallelism:</b> একাধিক thread/core, দুটো কাজ <b>সত্যিই একই সময়ে</b>। এর জন্য একাধিক CPU core লাগে। CPU-ভারী কাজে (ছবি প্রসেস, গণনা) এটাই কাজে দেয়।',{del:['a1','b1','a2','b2'],add:[T('ln1',14,LN(1)+17,'Thread 2',{c:'f',s:'b'}),L('lb1',LX,LN(1)+42,740,LN(1)+42,'n'),blk('p1',0,0,60,'কাজ A','a'),blk('p2',1,0,60,'কাজ B','b')]}),
-  S('<b>তফাত এক লাইনে:</b> Async/concurrency = অপেক্ষার সময় <b>কাজে লাগানো</b> (I/O-ভারী কাজে সেরা)। Parallelism = <b>একসাথে কাজ করা</b> (CPU-ভারী কাজে সেরা)। দুটো একসাথেও থাকতে পারে।',{})
-],262);
-/* async: 2 threads (one per core) serve 4 requests. The OS schedules the 2 threads; the Event Loop picks requests. */
-const RC={1:'a',2:'b',3:'g',4:'o'};
-const rq=(id,lane,a,b,r,txt)=>blk(id,lane,a,b,txt||'R'+r,RC[r]);
-const dbw=(id,lane,slot,a,b,r)=>B(id,LX+a*K,LN(lane)+slot*19,(b-a)*K,15,'R'+r+' DB',RC[r],{s:'sm',dash:1});
-const EQ=(txt,x)=>({rdy:{label:'Event Queue (আগত request / শেষ হওয়া কাজ): '+txt},cur:{x:LX+x*K}});
 const ASYNC6=VH([
-  S('<b>একই 2 core, কিন্তু async।</b> OS শুধু <b>2টা thread</b> (A, B) schedule করে, request-কে নয়। <b>কোন request আগে চলবে</b> তা ঠিক করে thread-এর ভেতরের <b>Event Loop</b> (Event Queue থেকে তুলে)। দুটো আলাদা স্তর। এখানে 4টা request: R1–R4।',{add:[...lanes4(['Thread A','Thread B','A-র DB অপেক্ষা','B-র DB অপেক্ষা']),cur4(0),T('rdy',LX,14,'Event Queue (আগত request / শেষ হওয়া কাজ): R1 R2 R3 R4',{c:'g',s:'sm'})]}),
-  S('<b>Thread A R1-কে, B R2-কে তুলল</b> এবং validate করছে।',{add:[rq('a1',0,0,10,1),rq('b1',1,0,10,2)],mod:EQ('R3 R4',10)}),
-  S('<b>R1, R2 DB call করল, কিন্তু non-blocking।</b> OS-কে বলল "কাজটা শুরু করো, শেষ হলে Event Queue-তে জানিও" এবং <b>সাথে সাথে return</b>। অপেক্ষাটা নিচের lane-এ (OS/hardware-এর কাজ)। A, B ঘুমায়নি, তখনই R3, R4 ধরল।',{add:[dbw('w1',2,0,10,40,1),dbw('w2',3,0,10,40,2),rq('a2',0,10,20,3),rq('b2',1,10,20,4)],mod:EQ('(খালি)',20)}),
-  S('<b>R3, R4-ও DB call করে ছেড়ে দিল।</b> এখন করার মতো কাজ নেই, তাই 20–40 ফাঁকা। এটা নষ্ট না: thread ঘুমায়নি, নতুন request এলে সাথে সাথে ধরত। sync-এ এই সময় thread BLOCKED হয়ে ঘুমাত আর মেমোরি ধরে রাখত।',{add:[dbw('w3',2,1,20,50,3),dbw('w4',3,1,20,50,4),T('idle',LX+21*K,LN(0)+17,'কাজ নেই, ঘুমায়ও না',{c:'n',s:'sm'})],mod:EQ('(খালি)',30)}),
-  S('<b>R1, R2-এর উত্তর এল (সময় 40)।</b> OS তাদের শেষ-হওয়ার event Event Queue-তে রাখল। Event Loop সেটা তুলে A, B-তে R1, R2-এর <b>বাকি অংশ</b> (callback / <code>await</code>-এর পরের লাইন) চালাল: render।',{del:['idle'],add:[rq('a3',0,40,50,1,'R1 render'),rq('b3',1,40,50,2,'R2 render')],mod:EQ('R1 R2 (উত্তর এসেছে)',40)}),
-  S('<b>R3, R4-এর উত্তর (সময় 50)।</b> একই ভাবে render। 4টা request শেষ, থ্রেড মাত্র 2টা, কেউ কখনো ঘুমায়নি।',{add:[rq('a4',0,50,60,3,'R3 render'),rq('b4',1,50,60,4,'R4 render')],mod:EQ('R3 R4 (উত্তর এসেছে)',50)}),
-  S('<b>নামগুলো:</b> কাজ শুরু করে ছেড়ে দেওয়া = <b>asynchronous / non-blocking I/O</b>। "শেষ হলে এটা চালিও" অংশ = <b>callback / continuation</b> (<code>await</code>-এর পরের কোড)। উত্তর জমার লাইন = <b>Event Queue</b>, তুলে চালায় <b>Event Loop</b>। অপেক্ষা করে <b>OS/hardware</b>, state মনে রাখে ছোট object। Thread ≈ core সংখ্যা, request হাজার হলেও চলে। (C#/Java-তে <code>await</code>-এ thread thread-pool-এ ফিরে যায়, শেষে যেকোনো pool thread বাকি অংশ চালায়।)',{})
+  S('<b>Thread Pool (async):</b> একই board, একই 6 request, 2 core। কিন্তু pool-এ thread মাত্র <b>2টা</b> (W1, W2), core সংখ্যার সমান। নিয়ম বদলেছে: thread request <b>আঁকড়ে ধরে না</b>। যতক্ষণ কাজ আছে ততক্ষণ চলে, DB-র অপেক্ষা এলেই ছেড়ে দেয়।',{add:[...BOARD([
+      B('cqb',290,40,190,60,'','g',{dash:1}),T('cqbt',290,27,'Completion Queue: DB-র উত্তর এসেছে',{c:'g',s:'sm'}),
+      B('pdb',290,180,190,70,'','o',{dash:1}),T('pdbt',290,167,'Pending: DB চলছে (ছোট object)',{c:'o',s:'sm'})]),
+    ...[1,2,3,4,5,6].map(n=>RT('q'+n,n,RQT(n-1))),TD('w1','W1',IDL(0),'n'),TD('w2','W2',IDL(1),'n')]}),
+  S('<b>W1 R1-কে, W2 R2-কে তুলল</b> এবং সরাসরি core-এ চলল। (thread = core, তাই Ready Queue-এ দাঁড়াতে হয় না।) validate চলছে।',{del:['q1','q2'],mod:{q3:RQT(0),q4:RQT(1),q5:RQT(2),q6:RQT(3),w1:{...CORE1,c:'g',label:'W1\nR1'},w2:{...CORE2,c:'g',label:'W2\nR2'}}}),
+  S('<b>R1, R2 DB call করল, কিন্তু non-blocking:</b> "কাজটা শুরু করো, শেষ হলে জানিও" বলে <b>সাথে সাথে return</b>। R1, R2 এখন <b>Pending</b>-এ (শুধু ছোট object, অপেক্ষা করছে DB)। W1, W2 <b>ঘুমায়নি</b>, তখনই পরের request R3, R4 তুলল।',{del:['q3','q4'],add:[SM('p1',1,PEND(0),'o'),SM('p2',2,PEND(1),'o')],mod:{q5:RQT(0),q6:RQT(1),w1:{label:'W1\nR3'},w2:{label:'W2\nR4'}}}),
+  S('<b>R3, R4-ও Pending-এ গেল।</b> W1, W2 তুলল R5, R6। 6টার মধ্যে 4টা এখন DB-তে। কোনো thread ঘুমায়নি, দুই core-ই কাজে।',{del:['q5','q6'],add:[SM('p3',3,PEND(2),'o'),SM('p4',4,PEND(3),'o')],mod:{w1:{label:'W1\nR5'},w2:{label:'W2\nR6'}}}),
+  S('<b>R5, R6-ও DB call করে Pending-এ গেল।</b> Request Queue খালি, তাই W1, W2 <b>Thread Pool-এ ফিরে গেল</b>। তারা কোনো request ধরে নেই, শুধু নতুন কাজের অপেক্ষায় বসে। (এটা "R-এর DB উত্তরের অপেক্ষা" নয়, তাই blocked নয়।)',{add:[SM('p5',5,PEND(4),'o'),SM('p6',6,PEND(5),'o')],mod:{w1:{...IDL(0),c:'n',label:'W1'},w2:{...IDL(1),c:'n',label:'W2'}}}),
+  S('<b>DB R1, R2-এর উত্তর দিল।</b> OS তাদের <b>Completion Queue</b>-তে রাখল। Pool-এর thread-দের জাগানোর কাজ এটাই: কাজ এসেছে।',{mod:{p1:{...COMP(0),c:'g'},p2:{...COMP(1),c:'g'}}}),
+  S('<b>W1, W2 জেগে R1, R2-এর বাকি অংশ তুলল</b> (callback / <code>await</code>-এর পরের লাইন) এবং core-এ চলল: render।',{del:['p1','p2'],mod:{w1:{...CORE1,c:'g',label:'W1\nR1'},w2:{...CORE2,c:'g',label:'W2\nR2'}}}),
+  S('<b>R1, R2 শেষ।</b> W1, W2 আবার Pool-এ। এদিকে DB R3, R4-এর উত্তর দিল, Completion Queue-তে এল।',{mod:{w1:{...IDL(0),c:'n',label:'W1'},w2:{...IDL(1),c:'n',label:'W2'},p3:{...COMP(0),c:'g'},p4:{...COMP(1),c:'g'}}}),
+  S('<b>W1, W2 R3, R4 তুলে চলল।</b> একই চক্র: Pool → কাজ তোলা → core → DB-তে ছেড়ে দেওয়া বা শেষ → Pool-এ ফেরা। R5, R6-ও এভাবেই শেষ হবে।',{del:['p3','p4'],mod:{w1:{...CORE1,c:'g',label:'W1\nR3'},w2:{...CORE2,c:'g',label:'W2\nR4'}}}),
+  S('<b>সারকথা:</b> 6 request, মাত্র 2 thread, কেউ ঘুমায়নি, কেউ request আঁকড়ে ধরেনি। অপেক্ষা করেছে <b>Pending-এর ছোট object</b> আর <b>OS/DB</b>। কাজ শুরু করে ছেড়ে দেওয়া = <b>non-blocking / async</b>; শেষ হলে যা চলে = <b>callback / continuation</b>; তোলার লাইন = <b>Event/Completion Queue</b>। thread যদি core-এর চেয়ে বেশি রাখো, ওপরের sync scene-এর মতো <b>Ready Queue</b> দিয়ে OS scheduler-ই তাদের পালা ঠিক করবে।',{})
 ],312);
-const ASYNC5=VH([
-  S('<b>Sync বেছে নাও</b> যখন কাজ ছোট ও দ্রুত, ধাপগুলো একটার ফলের ওপর আরেকটা নির্ভর করে, আর সরলতা জরুরি: ছোট script, গণনা, ফাইল পড়ে একবারই কিছু করা।',{add:[B('s',30,40,330,150,'Synchronous\n\nসহজ কোড, debug সহজ\nCPU-ভারী ছোট কাজ\nscript, CLI, ছোট tool','a',{s:'sm'})]}),
-  S('<b>Async বেছে নাও</b> যখন <b>অপেক্ষা বেশি</b>: network call, database, file I/O, অনেক user একসাথে। Web server, API, chat, real-time app-এ প্রায় সবসময়।',{add:[B('a',400,40,330,150,'Asynchronous\n\nI/O-ভারী, অনেক request\nবেশি user কম thread-এ\nweb server, API, chat','g',{s:'sm'})]}),
-  S('<b>সাবধান:</b> async-এর ভেতরে ভারী CPU কাজ করলে (বড় loop) পুরো event loop আটকে যায়। তখন worker thread/আলাদা process লাগে। আর async কোডে error handling ও ক্রম ঠিক রাখা একটু কঠিন।',{mod:{s:{hl:1},a:{hl:1}}})
-],230);
 
 const TABLE='<table class="cmp"><tr><th></th><th>Synchronous</th><th>Asynchronous</th></tr>'
  +'<tr><td>কাজের ক্রম</td><td>একটার পর একটা</td><td>শুরু করে ফেলে রেখে এগোনো, ফল এলে ফিরে আসা</td></tr>'
@@ -390,12 +387,12 @@ const TOPICS=[
  ans:'<b>Synchronous (sync)</b> মানে কাজ <b>একটার পর একটা, ক্রমে</b> হয়। একটা কাজ শেষ না হলে পরেরটা শুরু হয় না। কাজটা অপেক্ষার (DB, network, file) হলে <b>thread আটকে থাকে</b>, এটাকে বলে <b>blocking</b>। উপমা: রেস্টুরেন্টে waiter order নিয়ে রান্নাঘরের সামনে দাঁড়িয়ে থাকে, খাবার না হওয়া পর্যন্ত অন্য কোনো টেবিলে যায় না।',
  pts:['<b>Thread</b> = কাজের একজন কর্মী। Sync-এ সে অপেক্ষার সময়েও দাঁড়িয়ে থাকে, তাই অন্য request পেছনে লাইনে।','ভেতরে: OS thread-কে CPU থেকে নামিয়ে <b>Wait Queue-তে BLOCKED</b> করে ঘুম পাড়ায়, data এলে <b>Ready Queue-তে READY</b> করে জাগায়। <b>CPU আটকে থাকে না</b>, সে অন্য thread চালায়। আটকায় শুধু ওই thread-এর নিজের কাজ আর তার মেমোরি।','একসাথে অনেক request সামলাতে <b>thread-per-request</b>, কিন্তু প্রতি thread-এ মেমোরি খরচ (C10K সমস্যা)।'],
  extra:TABLE,
- tabs:[{n:'এক thread, ক্রমে',steps:SYNC1},{n:'ভেতরে কী ঘটে (Blocking I/O)',steps:SYNC2},{n:'Thread-per-request',steps:SYNC3},{n:'CPU scheduling: blocked thread কোথায় যায়',steps:SYNC4}]},
+ tabs:[{n:'এক thread, ক্রমে',steps:SYNC1},{n:'ভেতরে কী ঘটে (Blocking I/O)',steps:SYNC2},{n:'Thread-per-request',steps:SYNC3},{n:'Thread Pool + Queue (blocking)',steps:SYNC4}]},
 {q:'Asynchronous কীভাবে কাজ করে',
  ans:'<b>Asynchronous (async)</b> মানে কাজ <b>শুরু করে ফল না আসা পর্যন্ত দাঁড়িয়ে না থেকে</b> অন্য কাজে যাওয়া, ফল এলে ফিরে এসে বাকিটা করা (<b>non-blocking</b>)। উপমা: waiter order রান্নাঘরে দিয়ে অন্য টেবিলে যায়, খাবার তৈরি হলে বেল বাজে, তখন এসে পরিবেশন করে। একজন waiter-ই অনেক টেবিল সামলায়।',
  pts:['<b>অপেক্ষা করে OS/I/O</b>, thread নয়। ফল এলে callback <b>Event Queue</b>-তে যায়, <b>Event Loop</b> thread মুক্ত হলে সেটা চালায়।','লেখার ধরন: <b>callback → Promise → async/await</b> (একই জিনিস, ক্রমে সহজ)।','Async কাজ দ্রুত করে না, <b>অপেক্ষার সময় বাঁচায়</b>। CPU-ভারী কাজে লাগে <b>parallelism</b> (একাধিক core)।'],
  extra:CODE_ASYNC,
- tabs:[{n:'Non-blocking, এক thread',steps:ASYNC1},{n:'Callback / Promise / async-await',steps:ASYNC2},{n:'কে অপেক্ষা করে (Event Loop)',steps:ASYNC3},{n:'CPU scheduling: sync-এর সাথে তুলনা',steps:ASYNC6},{n:'Async বনাম Parallel',steps:ASYNC4},{n:'কখন কোনটা',steps:ASYNC5}]}
+ tabs:[{n:'Non-blocking, এক thread',steps:ASYNC1},{n:'Callback / Promise / async-await',steps:ASYNC2},{n:'Thread Pool + Queue (async)',steps:ASYNC6}]}
 ];
 
 const app=document.getElementById('app'),partsNav=document.getElementById('parts');
