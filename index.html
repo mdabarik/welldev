@@ -205,16 +205,16 @@ const TRACKS = [
       desc: "Timeout-এর পর retry-তে দুবার টাকা কাটা ঠেকানো: idempotency key, UNIQUE আর conditional update, ধাপে ধাপে D3 animation-এ।",
       tags: ["Idempotency key", "Retry", "UNIQUE", "D3.js"], meta: [["3", "solutions"], ["9", "animations"]] },
   ]},
-  { id: "security", n: "04", title: "Resume Projects · Security", blurb: "Web security আর data security", color: "#f59e0b", guides: [
-    { href: "04-resume-projects/01-xss-csrf-jwt-refresh-token-access-token/index.html", kicker: "Web Security", title: "XSS, CSRF, JWT ও OWASP Top 10",
-      desc: "XSS-এর ৩ ধরন, SQL injection, CSRF, JWT, OWASP Top 10 (2025), Clickjacking, SSRF, IDOR, security header আর SSO (OAuth/OIDC/SAML)।",
-      tags: ["XSS", "CSRF", "JWT", "OWASP", "SSRF", "SSO"], meta: [["4", "diagrams"], ["10", "OWASP risks"]] },
+  { id: "security", n: "04", title: "Resume Projects", blurb: "Web security, data security আর JavaScript runtime", color: "#f59e0b", guides: [
+    { href: "04-resume-projects/01-xss-csrf-jwt-refresh-token-access-token/index.html", kicker: "Web Security", title: "XSS, CSRF, JWT, OWASP ও CORS",
+      desc: "XSS-এর ৩ ধরন, SQL injection, CSRF, JWT, OWASP Top 10 (2025), Clickjacking, SSRF, IDOR, session, file upload, path traversal, command injection, security header, SSO (OAuth/OIDC/SAML) আর CORS (simulator সহ)।",
+      tags: ["XSS", "CSRF", "JWT", "OWASP", "SSRF", "SSO", "CORS"], meta: [["4", "diagrams"], ["10", "OWASP risks"], ["1", "simulator"]] },
     { href: "04-resume-projects/02-encoding-encryption-hashing/index.html", kicker: "Data Security", title: "Encoding, Encryption ও Hashing",
       desc: "তিনটার পার্থক্য — format বদলানো, গোপন রাখা আর verify করা; password hashing-এ salt ও cost factor।",
       tags: ["Base64", "AES / RSA", "bcrypt"], meta: [["3", "diagrams"]] },
-    { href: "04-resume-projects/03-cors/index.html", kicker: "Web Security · Interactive", title: "CORS — browser কাকে পড়তে দেয়",
-      desc: "Same-Origin Policy, preflight, CORS header আর common error-এর fix; CORS বনাম CSRF, XSS ও SQL injection — কোনটায় victim-এর browser লাগে।",
-      tags: ["CORS", "Preflight", "CSRF", "XSS"], meta: [["1", "simulator"], ["8", "Q&A"]] },
+    { href: "04-resume-projects/03-event-loop/index.html", kicker: "JavaScript · Interactive", title: "Event Loop — একটা thread, অনেক কাজ",
+      desc: "Call stack, microtask, task queue আর Node.js-এর phase — Browser ও Node দুই জায়গায় event loop কীভাবে চলে, D3 animation-এ।",
+      tags: ["Event loop", "Promise", "Node.js", "D3.js"], meta: [["15", "steps"], ["2", "runtimes"]] },
   ]},
   { id: "os", n: "05", title: "Operating System", blurb: "Kernel, process, thread, scheduling", color: "#ec4899", guides: [
     { tier: "core", href: "05-operating-system/basics/index.html", kicker: "OS · Interview", title: "OS Basics - ৪০টি Interview প্রশ্ন",
@@ -246,11 +246,6 @@ const TRACKS = [
     { href: "06-networking/browser/index.html", kicker: "Browser · Interactive", title: "URL থেকে Pixel: Browser কীভাবে Page বানায়",
       desc: "HTML থেকে DOM, CSSOM, layout আর paint — আর <link>, async, defer, module ও body-এর শেষের script ঠিক কখন চলে, timeline অ্যানিমেশনে।",
       tags: ["DOM / CSSOM", "async / defer", "Rendering", "GSAP"], meta: [["11", "steps"], ["5", "modes"]] },
-  ]},
-  { id: "js", n: "07", title: "JavaScript", blurb: "Runtime, event loop, async", color: "#eab308", guides: [
-    { href: "07-javascript/event-loop/index.html", kicker: "JavaScript · Interactive", title: "Event Loop — একটা thread, অনেক কাজ",
-      desc: "Call stack, microtask, task queue আর Node.js-এর phase — Browser ও Node দুই জায়গায় event loop কীভাবে চলে, D3 animation-এ।",
-      tags: ["Event loop", "Promise", "Node.js", "D3.js"], meta: [["15", "steps"], ["2", "runtimes"]] },
   ]},
   { id: "sd", n: "08", title: "System Design", blurb: "Client-server, reliability, availability", color: "#8b5cf6", guides: [
     { tier: "core", href: "08-system-design/basics/index.html", kicker: "System Design · Interview", title: "System Design Basics - ৩টি Interview প্রশ্ন",

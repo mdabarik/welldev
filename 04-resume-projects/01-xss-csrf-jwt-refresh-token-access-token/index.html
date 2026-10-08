@@ -247,9 +247,9 @@ code,pre,kbd{font-variant-ligatures:none;font-feature-settings:"liga" 0,"calt" 0
 
 /* ===== WellDev theme overrides — picture guides (Security, Encoding, OS) ===== */
 :root{--border:var(--line);--card:var(--surface);--soft:var(--surface-2);--font:var(--sans);--radius:18px;
-  --xss:#f97316;--sql:#e11d48;--csrf:#8b5cf6;--jwt:#10b981}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--xss:#fb923c;--sql:#fb7185;--csrf:#a78bfa;--jwt:#34d399}}
-:root[data-theme="dark"]{--xss:#fb923c;--sql:#fb7185;--csrf:#a78bfa;--jwt:#34d399}
+  --xss:#f97316;--sql:#e11d48;--csrf:#8b5cf6;--jwt:#10b981;--owasp:#0ea5e9;--more:#f59e0b;--sso:#14b8a6}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--xss:#fb923c;--sql:#fb7185;--csrf:#a78bfa;--jwt:#34d399;--owasp:#38bdf8;--more:#fbbf24;--sso:#2dd4bf}}
+:root[data-theme="dark"]{--xss:#fb923c;--sql:#fb7185;--csrf:#a78bfa;--jwt:#34d399;--owasp:#38bdf8;--more:#fbbf24;--sso:#2dd4bf}
 body{font-family:var(--sans)}
 p,li,figcaption,.lead,.intro,.sec-note{font-family:var(--bn)}
 
@@ -304,6 +304,147 @@ th{font-family:var(--sans)}
 .hero .card p{color:var(--ink-2)!important;opacity:1!important}
 .hero .card .num{color:var(--c)}
 .hero .eyebrow{display:inline-block!important;padding:3px 11px;border-radius:999px;font-size:12px!important;letter-spacing:.06em}
+
+/* OWASP + attack flow additions */
+.owasp{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin-top:18px}
+.owasp .point{position:relative;padding-top:20px}
+.owasp .rank{font:800 12px var(--mono);color:var(--c);letter-spacing:.04em}
+.owasp .point h4{margin:2px 0 8px;color:var(--ink)}
+.owasp .point p{margin:0 0 8px;font-size:14.5px}
+.owasp .fix{font-size:13.5px;color:var(--ink-2);border-top:1px dashed var(--line);padding-top:8px}
+.owasp .fix b{color:var(--good)}
+.flow{display:flex;flex-wrap:wrap;align-items:stretch;gap:8px;margin:16px 0}
+.flow .step{flex:1 1 150px;background:var(--surface);border:1px solid var(--line);border-top:4px solid var(--c);border-radius:14px;padding:10px 12px;font-size:14px;box-shadow:var(--shadow)}
+.flow .step b{display:block;color:var(--c);font-size:12px;letter-spacing:.05em;text-transform:uppercase;margin-bottom:2px}
+.flow .arr{align-self:center;color:var(--ink-3);font-weight:700}
+.note{margin:16px 0;padding:12px 16px;border-left:4px solid var(--c,var(--accent));background:var(--surface);border-radius:0 14px 14px 0;font-family:var(--bn);box-shadow:var(--shadow)}
+.sub-sec{margin-top:36px;padding-top:6px}
+.sub-sec>h3{display:flex;align-items:center;gap:10px;margin:0 0 4px;font-size:21px;font-weight:800;letter-spacing:-.02em}
+.sub-sec>h3 .dot{width:12px;height:12px}
+.sub-sec>.sub{color:var(--ink-2);font-size:14.5px;margin-bottom:10px}
+
+/* ===== CORS guide (merged from 03-cors) — scoped under .cg ===== */
+:root{--fg:var(--ink);--ok:var(--good);--warn:#d97706;--l1:#e11d48;--l2:#d97706;--l3:#0284c7;--l4:#059669;--sa:#4f46e5;--sb:#db2777;--corsc:#06b6d4}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--warn:#fbbf24;--l1:#fb7185;--l2:#fbbf24;--l3:#38bdf8;--l4:#34d399;--sa:#818cf8;--sb:#f472b6;--corsc:#22d3ee}}
+:root[data-theme="dark"]{--warn:#fbbf24;--l1:#fb7185;--l2:#fbbf24;--l3:#38bdf8;--l4:#34d399;--sa:#818cf8;--sb:#f472b6;--corsc:#22d3ee}
+.cg{font-family:var(--bn);font-size:16px;line-height:1.7;color:var(--fg)}
+.cg .note{margin:0;font-family:var(--bn)}
+.cg pre.code{box-shadow:none}
+.cg th{white-space:normal}
+.cg-jump{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 6px}
+.cg-jump a{text-decoration:none;font:600 13px var(--sans);padding:5px 12px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--ink-2)}
+.cg-jump a:hover{color:var(--accent);border-color:var(--accent)}
+.cg code{font-family:var(--mono);font-size:.86em;font-weight:500;background:color-mix(in srgb,var(--accent) 10%,var(--surface));color:color-mix(in srgb,var(--accent) 72%,var(--fg));padding:.1em .4em;border-radius:6px;word-break:break-word}
+.cg section{margin-top:52px;scroll-margin-top:16px}
+.cg h2{display:flex;align-items:center;gap:12px;margin:0 0 6px;font:800 clamp(21px,2.8vw,26px)/1.25 var(--sans);letter-spacing:-.025em}
+.cg .num{flex:none;width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:#fff;font:800 14px var(--mono);background:var(--c,var(--accent))}
+.cg .lead{margin:0 0 18px;color:var(--muted);max-width:820px}
+.cg h3{margin:26px 0 10px;font:700 17px var(--sans);letter-spacing:-.015em}
+.cg .cc{background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow)}
+.cg .grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.cg .grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+@media (max-width:860px){.cg .grid3{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:640px){.cg .grid2{grid-template-columns:minmax(0,1fr)}}
+.cg pre.code{margin:0;padding:12px 14px;border-radius:12px;background:var(--code-bg);border:1px solid var(--code-line);font:13px/1.65 var(--mono);white-space:pre-wrap;word-break:break-word;font-variant-ligatures:none;overflow-x:auto}
+.cg .k{color:var(--t-kw);font-weight:600}
+.cg .s{color:var(--t-str)}
+.cg .d{color:var(--t-num)}
+.cg .c{color:var(--t-com);font-style:italic}
+.cg .t{color:var(--t-type)}
+.cg .file{display:flex;align-items:center;gap:8px;margin:0 0 6px;font:600 12px var(--mono);color:var(--muted)}
+.cg .file i{width:8px;height:8px;border-radius:50%;background:var(--dot,var(--accent))}
+.cg .tscroll{overflow-x:auto}
+.cg table{border-collapse:collapse;width:100%;min-width:620px;font-size:14.5px}
+.cg th,.cg td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+.cg th{font:600 12px var(--sans);text-transform:uppercase;letter-spacing:.05em;color:var(--muted);background:var(--surface-2)}
+.cg tr:last-child td{border-bottom:0}
+.cg td.mono,.cg .mono{font-family:var(--mono);font-size:13px}
+.cg td.em{font-weight:600}
+.cg .yes,.cg .no{font:600 13px var(--sans)}
+.cg .yes{color:var(--ok)}
+.cg .no{color:var(--bad)}
+.cg .foot{margin:10px 2px 0;font-size:13.5px;color:var(--muted)}
+.cg .note{padding:16px 18px;font-size:15px}
+.cg .note h4{margin:0 0 6px;font:700 15px var(--sans)}
+.cg .note p{margin:0 0 10px;color:var(--muted)}
+.cg .note p:last-child{margin:0}
+.cg .note ul{margin:0;padding-left:20px;color:var(--muted)}
+.cg .note li{margin:3px 0}
+.cg .bar{border-left:4px solid var(--c,var(--accent))}
+.cg .verdict{margin-top:14px;padding:14px 16px;border-left:4px solid var(--c,var(--accent));border-radius:0 12px 12px 0;background:color-mix(in srgb,var(--c,var(--accent)) 7%,var(--surface));font-size:15px}
+.cg .verdict b{color:var(--fg)}
+.cg /* small flow diagrams */
+.flow{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;margin:4px 0 2px}
+.cg .flow span{font:600 13px var(--sans);padding:5px 11px;border-radius:9px;border:1px solid var(--line);background:var(--surface-2)}
+.cg .flow span.g{border-color:color-mix(in srgb,var(--ok) 45%,var(--line));background:color-mix(in srgb,var(--ok) 9%,var(--surface))}
+.cg .flow span.r{border-color:color-mix(in srgb,var(--bad) 45%,var(--line));background:color-mix(in srgb,var(--bad) 9%,var(--surface))}
+.cg .flow span.y{border-color:color-mix(in srgb,var(--warn) 45%,var(--line));background:color-mix(in srgb,var(--warn) 9%,var(--surface))}
+.cg .flow i{font-style:normal;color:var(--faint);font:700 14px var(--mono)}
+.cg /* simulator */
+.sim{padding:18px}
+.cg .ctrls{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr));gap:12px 16px}
+.cg .ctrls fieldset{border:0;margin:0;padding:0;min-width:0}
+.cg .ctrls fieldset:disabled{opacity:.45}
+.cg .ctrls legend{padding:0;margin-bottom:6px;font:700 12px var(--sans);letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.cg .seg{display:flex;flex-wrap:wrap;gap:6px}
+.cg .seg label{position:relative;cursor:pointer}
+.cg .seg input{position:absolute;opacity:0;pointer-events:none}
+.cg .seg span{display:inline-block;padding:5px 11px;border-radius:9px;border:1px solid var(--line);background:var(--surface-2);font:600 12.5px var(--mono);color:var(--muted)}
+.cg .seg input:checked + span{background:color-mix(in srgb,var(--accent) 14%,var(--surface));border-color:var(--accent);color:var(--fg)}
+.cg .seg input:focus-visible + span{outline:2px solid var(--accent);outline-offset:2px}
+.cg .simbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:16px}
+.cg .go{border:0;border-radius:11px;padding:9px 20px;font:700 14px var(--sans);color:#fff;background:var(--hero);cursor:pointer}
+.cg .go:disabled{opacity:.55;cursor:progress}
+.cg .simbar small{color:var(--muted);font-size:13px}
+.cg .stage{display:grid;grid-template-columns:96px minmax(0,1fr) 96px;align-items:center;gap:10px;margin-top:16px;padding:16px 12px;border-radius:14px;background:var(--surface-2);border:1px solid var(--line)}
+.cg .node{border:1px solid var(--line);border-radius:12px;padding:10px 6px;text-align:center;background:var(--surface);transition:box-shadow .25s,border-color .25s}
+.cg .node b{display:block;font:700 13px var(--sans)}
+.cg .node small{display:block;font:500 10.5px/1.4 var(--mono);color:var(--muted);word-break:break-all}
+.cg .node em{display:block;margin-top:4px;font:600 10.5px/1.35 var(--sans);font-style:normal;color:var(--warn);min-height:14px}
+.cg .node.hit{border-color:var(--accent);box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 20%,transparent)}
+.cg .node.okk{border-color:var(--ok);box-shadow:0 0 0 4px color-mix(in srgb,var(--ok) 20%,transparent)}
+.cg .node.badd{border-color:var(--bad);box-shadow:0 0 0 4px color-mix(in srgb,var(--bad) 20%,transparent)}
+.cg .track{position:relative;height:60px}
+.cg .track::before{content:"";position:absolute;left:0;right:0;top:50%;border-top:2px dashed var(--line)}
+.cg .pkt{position:absolute;top:50%;left:0;transform:translate(0,-50%);padding:3px 9px;border-radius:999px;font:700 11px var(--mono);color:#fff;background:var(--accent);white-space:nowrap;opacity:0;transition-property:left,transform,opacity;transition-timing-function:ease-in-out}
+.cg .pkt.pre{background:var(--warn)}
+.cg .pkt.real{background:var(--accent)}
+.cg .pkt.resp{background:var(--l3)}
+.cg .xmark{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font:800 22px var(--mono);color:var(--bad);opacity:0;transition:opacity .2s}
+.cg .xmark.on{opacity:1}
+@media (max-width:640px){.cg .stage{grid-template-columns:76px minmax(0,1fr) 76px;gap:8px;padding:14px 8px}
+.cg .sim{padding:14px}}
+.cg .simcode{margin-top:14px}
+.cg .simlog{list-style:none;margin:14px 0 0;padding:0;display:grid;gap:10px}
+.cg .lg{border:1px solid var(--line);border-left:4px solid var(--lc,var(--faint));border-radius:0 12px 12px 0;padding:10px 12px;background:var(--surface)}
+.cg .lg.req{--lc:var(--accent)}
+.cg .lg.res{--lc:var(--l3)}
+.cg .lg.ok{--lc:var(--ok)}
+.cg .lg.bad{--lc:var(--bad)}
+.cg .lg.info{--lc:var(--warn)}
+.cg .lg.js{--lc:var(--faint)}
+.cg .lg-h{font:700 14px var(--bn);margin-bottom:4px}
+.cg .lg-n{margin:6px 0 0;font-size:13.5px;color:var(--muted)}
+.cg .lg pre.code{font-size:12.5px}
+.cg .vgrid{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:0;margin-top:14px;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.cg .vgrid div{padding:9px 12px;border-bottom:1px solid var(--line);font-size:14.5px}
+.cg .vgrid div:nth-last-child(-n+2){border-bottom:0}
+.cg .vgrid .v{font:700 13.5px var(--sans);text-align:right}
+.cg .vgrid .v.ok{color:var(--ok)}
+.cg .vgrid .v.bad{color:var(--bad)}
+.cg .vgrid .v.warn{color:var(--warn)}
+.cg .vgrid .v.mut{color:var(--muted)}
+.cg .console{margin-top:12px;padding:12px 14px;border-radius:12px;font:12.8px/1.6 var(--mono);white-space:pre-wrap;word-break:break-word;color:color-mix(in srgb,var(--bad) 85%,var(--fg));background:color-mix(in srgb,var(--bad) 8%,var(--surface));border:1px solid color-mix(in srgb,var(--bad) 30%,var(--line))}
+.cg .console .ln2{color:var(--muted)}
+.cg details{border-bottom:1px solid var(--line);padding:12px 2px}
+.cg details:last-child{border-bottom:0}
+.cg summary{cursor:pointer;font:600 15.5px var(--bn);list-style:none;display:flex;gap:10px}
+.cg summary::-webkit-details-marker{display:none}
+.cg summary::before{content:"+";font:700 15px var(--mono);color:var(--accent);width:14px;flex:none}
+.cg details[open] summary::before{content:"−"}
+.cg details p{margin:8px 0 0 24px;color:var(--muted);font-size:15px}
+.cg .ans{display:inline-block;margin:0 0 10px;font:700 13px var(--sans);padding:3px 12px;border-radius:999px;color:var(--c);background:color-mix(in srgb,var(--c) 12%,transparent)}
+@media (prefers-reduced-motion:reduce){.cg .pkt,.cg .node,.cg .xmark{transition:none}}
 </style>
 </head>
 <body>
@@ -315,6 +456,10 @@ th{font-family:var(--sans)}
       <a href="#xss-sql">XSS &amp; SQLi</a>
       <a href="#csrf">CSRF</a>
       <a href="#jwt">JWT &amp; Tokens</a>
+      <a href="#owasp">OWASP</a>
+      <a href="#more">আরও Attack</a>
+      <a href="#sso">SSO</a>
+      <a href="#cors-guide">CORS</a>
       <a href="#compare">তুলনা</a>
     </nav>
     <a class="home-link" href="../../index.html">⌂ WellDev</a>
@@ -325,7 +470,7 @@ th{font-family:var(--sans)}
 <main class="wrap">
   <section class="hero">
     <span class="eyebrow">Interview Prep · Web Security</span>
-    <h1>XSS, SQL Injection, CSRF ও JWT<br>(Access &amp; Refresh Token)</h1>
+    <h1>XSS, CSRF, JWT, OWASP ও CORS<br>Web Security এক পেজে</h1>
     <p>Web application-এর সবচেয়ে common security vulnerability আর authentication flow — ছবি দিয়ে সহজ ব্যাখ্যা। যেকোনো ছবিতে click করলে বড় করে দেখা যাবে।</p>
 
     <div class="cards">
@@ -343,6 +488,26 @@ th{font-family:var(--sans)}
         <div class="num">03</div>
         <h3>JWT, Access &amp; Refresh Token</h3>
         <p>Authentication vs Authorization, login flow ও token refresh।</p>
+      </a>
+      <a class="card" href="#owasp" style="--c: var(--owasp)">
+        <div class="num">04</div>
+        <h3>OWASP Top 10</h3>
+        <p>২০২৫-এর সবচেয়ে বড় ১০টা web risk — কী, কেন, কীভাবে ঠেকাবেন।</p>
+      </a>
+      <a class="card" href="#more" style="--c: var(--more)">
+        <div class="num">05</div>
+        <h3>আরও Attack ও Defense</h3>
+        <p>Clickjacking, SSRF, IDOR, session, file upload, path traversal ও আরও।</p>
+      </a>
+      <a class="card" href="#sso" style="--c: var(--sso)">
+        <div class="num">06</div>
+        <h3>SSO</h3>
+        <p>একবার login, অনেক app — OAuth 2.0, OIDC ও SAML।</p>
+      </a>
+      <a class="card" href="#cors-guide" style="--c: var(--corsc)">
+        <div class="num">07</div>
+        <h3>CORS</h3>
+        <p>Same-Origin Policy, preflight, simulator ও error-এর fix।</p>
       </a>
     </div>
   </section>
@@ -531,6 +696,949 @@ th{font-family:var(--sans)}
     </div>
   </section>
 
+
+  <!-- ===================== 4. OWASP Top 10 ===================== -->
+  <section class="topic" id="owasp" style="--c: var(--owasp)">
+    <div class="topic-head">
+      <div class="badge">4</div>
+      <div>
+        <h2>OWASP Top 10 (2025)</h2>
+        <div class="sub">Web application-এর সবচেয়ে গুরুত্বপূর্ণ ১০টা security risk</div>
+      </div>
+    </div>
+
+    <p><b>OWASP</b> (Open Worldwide Application Security Project) একটা non-profit community। এদের <b>Top 10</b> হলো একটা awareness document — real data দেখে প্রতি কয়েক বছরে update হয়। ওপরের XSS ও SQL Injection <b>A05 Injection</b>-এর, CSRF আর JWT-র ভুল ব্যবহার <b>A01 / A07</b>-এর মধ্যে পড়ে।</p>
+
+    <div class="note" style="--c: var(--owasp)"><b>Interview tip:</b> ২০২১ থেকে ২০২৫-এ বড় পরিবর্তন — <b>SSRF</b> এখন A01 Broken Access Control-এর অংশ, <b>Security Misconfiguration</b> ৫ থেকে ২-এ উঠেছে, নতুন যোগ হয়েছে <b>Supply Chain Failures</b> আর <b>Mishandling of Exceptional Conditions</b>। Injection (XSS সহ) নেমে ৫ নম্বরে।</div>
+
+    <div class="owasp">
+      <div class="point" style="--c: var(--xss)">
+        <div class="rank">A01:2025</div>
+        <h4>Broken Access Control</h4>
+        <p>User তার অনুমতির বাইরের data/action পায় — যেমন <code>/orders/101</code> বদলে <code>/orders/102</code> খুলে অন্যের order দেখা (IDOR)। SSRF এখন এই category-র ভেতরে।</p>
+        <div class="fix"><b>Fix:</b> প্রতিটা request-এ server-side permission check, deny by default, ownership verify।</div>
+      </div>
+      <div class="point" style="--c: var(--sql)">
+        <div class="rank">A02:2025</div>
+        <h4>Security Misconfiguration</h4>
+        <p>Default password, debug mode on, directory listing, খোলা cloud bucket, অতিরিক্ত detailed error।</p>
+        <div class="fix"><b>Fix:</b> Hardened config, unused feature বন্ধ, prod-এ debug off, security header।</div>
+      </div>
+      <div class="point" style="--c: var(--csrf)">
+        <div class="rank">A03:2025</div>
+        <h4>Software Supply Chain Failures</h4>
+        <p>Compromised npm/Maven library, malicious update, বিষাক্ত build pipeline।</p>
+        <div class="fix"><b>Fix:</b> Dependency lock + audit (<code>npm audit</code>, Dependabot), SBOM, trusted registry।</div>
+      </div>
+      <div class="point" style="--c: var(--jwt)">
+        <div class="rank">A04:2025</div>
+        <h4>Cryptographic Failures</h4>
+        <p>Sensitive data plain text-এ রাখা/পাঠানো, পুরোনো algorithm (MD5, SHA-1), দুর্বল key।</p>
+        <div class="fix"><b>Fix:</b> HTTPS/TLS সব জায়গায়, password-এ bcrypt/Argon2, data at rest encrypt।</div>
+      </div>
+      <div class="point" style="--c: var(--xss)">
+        <div class="rank">A05:2025</div>
+        <h4>Injection</h4>
+        <p>Untrusted input query/command-এর অংশ হয়ে যায় — SQLi, NoSQLi, OS command, <b>XSS</b> (এখন এই category-তে)।</p>
+        <div class="fix"><b>Fix:</b> Parameterized query, input validation, output encoding, ORM।</div>
+      </div>
+      <div class="point" style="--c: var(--owasp)">
+        <div class="rank">A06:2025</div>
+        <h4>Insecure Design</h4>
+        <p>Code ঠিক আছে, কিন্তু design-ই দুর্বল — যেমন password reset-এ কোনো rate limit নেই।</p>
+        <div class="fix"><b>Fix:</b> Threat modeling, secure design pattern, abuse-case নিয়ে চিন্তা শুরুতেই।</div>
+      </div>
+      <div class="point" style="--c: var(--csrf)">
+        <div class="rank">A07:2025</div>
+        <h4>Authentication Failures</h4>
+        <p>Weak password মেনে নেওয়া, brute force আটকানো নেই, session id URL-এ, MFA নেই।</p>
+        <div class="fix"><b>Fix:</b> MFA, rate limit/lockout, strong password policy, session নতুন করে generate (login-এর পর)।</div>
+      </div>
+      <div class="point" style="--c: var(--more)">
+        <div class="rank">A08:2025</div>
+        <h4>Software or Data Integrity Failures</h4>
+        <p>Unsigned update, insecure deserialization, CI/CD-তে অবিশ্বস্ত code — integrity verify না করা।</p>
+        <div class="fix"><b>Fix:</b> Signature/checksum verify, safe deserialization, signed artifact।</div>
+      </div>
+      <div class="point" style="--c: var(--jwt)">
+        <div class="rank">A09:2025</div>
+        <h4>Security Logging and Alerting Failures</h4>
+        <p>Attack হচ্ছে কিন্তু log নেই বা কেউ alert পায় না — breach মাসের পর মাস অজানা থাকে।</p>
+        <div class="fix"><b>Fix:</b> Login fail/access denied log, centralized monitoring, alert ও incident plan।</div>
+      </div>
+      <div class="point" style="--c: var(--sql)">
+        <div class="rank">A10:2025</div>
+        <h4>Mishandling of Exceptional Conditions</h4>
+        <p>Error/exception ঠিকমতো handle না করা — stack trace leak, fail-open (error হলে access দিয়ে দেওয়া)।</p>
+        <div class="fix"><b>Fix:</b> Fail closed, generic error message, সব exception centrally handle।</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== 5. More attacks ===================== -->
+  <section class="topic" id="more" style="--c: var(--more)">
+    <div class="topic-head">
+      <div class="badge">5</div>
+      <div>
+        <h2>আরও Attack ও Defense</h2>
+        <div class="sub">CSRF-এর মতো interview-তে প্রায়ই আসা আরও কিছু security topic (Clickjacking, IDOR, SSRF, Headers, Session, Rate limit, File upload, Path traversal, Command injection, Open redirect, Mass assignment)</div>
+      </div>
+    </div>
+
+    <div class="sub-sec" style="--c: var(--csrf)">
+      <h3><span class="dot" style="background:var(--c)"></span>Clickjacking</h3>
+      <div class="sub">Victim আসল site-এ click করছে ভেবে, আসলে attacker-এর লুকানো button-এ click করে</div>
+      <div class="flow" style="--c: var(--csrf)">
+        <div class="step"><b>1 · Trap</b>Attacker একটা আকর্ষণীয় page বানায় ("Win a prize")।</div><span class="arr">→</span>
+        <div class="step"><b>2 · Hidden iframe</b><code>bank.com</code> স্বচ্ছ (opacity 0) <code>&lt;iframe&gt;</code>-এ উপরে বসানো।</div><span class="arr">→</span>
+        <div class="step"><b>3 · Click</b>User "Claim" চাপে, আসলে চাপে "Transfer"/"Delete"।</div>
+      </div>
+      <div class="points">
+        <div class="point" style="--c: var(--csrf)">
+          <h4>কেন CSRF-এর চেয়ে আলাদা?</h4>
+          <ul>
+            <li>CSRF: attacker <b>forged request</b> পাঠায়।</li>
+            <li>Clickjacking: user নিজে আসল UI-তে click করে, কিন্তু <b>ধোঁকায়</b>।</li>
+          </ul>
+        </div>
+        <div class="point" style="--c: var(--jwt)">
+          <h4>Prevention</h4>
+          <ul>
+            <li><code>Content-Security-Policy: frame-ancestors 'none'</code></li>
+            <li>পুরোনো header: <code>X-Frame-Options: DENY</code></li>
+            <li>Sensitive action-এ re-authentication।</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="sub-sec" style="--c: var(--xss)">
+      <h3><span class="dot" style="background:var(--c)"></span>IDOR (Broken Object Level Authorization)</h3>
+      <div class="sub">Login আছে, কিন্তু অন্যের object-এর id বদলালেই তার data পাওয়া যায়</div>
+      <div class="code"><div class="code-bar"><span>OrderController.java</span></div><pre><span class="t-com">// ❌ শুধু id দেখে data ফেরত — কে চাইছে চেক নেই</span>
+<span class="t-kw">@GetMapping</span>(<span class="t-str">"/orders/{id}"</span>)
+Order get(<span class="t-kw">@PathVariable</span> Long id) {
+    <span class="t-kw">return</span> repo.findById(id).orElseThrow();
+}
+
+<span class="t-com">// ✅ owner verify করে</span>
+<span class="t-kw">@GetMapping</span>(<span class="t-str">"/orders/{id}"</span>)
+Order get(<span class="t-kw">@PathVariable</span> Long id, Principal user) {
+    <span class="t-kw">return</span> repo.findByIdAndOwner(id, user.getName())
+               .orElseThrow(() -&gt; <span class="t-kw">new</span> <span class="t-type">ForbiddenException</span>());
+}</pre></div>
+      <div class="note" style="--c: var(--xss)">Sequential id (101, 102…) আরও সহজ করে দেয়; UUID একটু সাহায্য করে, কিন্তু <b>আসল সমাধান authorization check</b>, id লুকানো না।</div>
+    </div>
+
+    <div class="sub-sec" style="--c: var(--sql)">
+      <h3><span class="dot" style="background:var(--c)"></span>SSRF (Server-Side Request Forgery)</h3>
+      <div class="sub">Server-কে দিয়েই attacker-এর ইচ্ছামতো URL-এ request করানো</div>
+      <div class="flow" style="--c: var(--sql)">
+        <div class="step"><b>1 · Feature</b>"URL থেকে image import" — server URL fetch করে।</div><span class="arr">→</span>
+        <div class="step"><b>2 · Attack</b><code>http://169.254.169.254/…</code> (cloud metadata) বা <code>http://localhost:8080/admin</code> দেওয়া।</div><span class="arr">→</span>
+        <div class="step"><b>3 · Leak</b>Server internal resource পড়ে attacker-কে ফেরত দেয়।</div>
+      </div>
+      <div class="points">
+        <div class="point" style="--c: var(--sql)">
+          <h4>CSRF vs SSRF</h4>
+          <ul>
+            <li>CSRF-এ <b>user-এর browser</b> ব্যবহার হয়।</li>
+            <li>SSRF-এ <b>server নিজে</b> request পাঠায়, internal network-এ পৌঁছায়।</li>
+          </ul>
+        </div>
+        <div class="point" style="--c: var(--jwt)">
+          <h4>Prevention</h4>
+          <ul>
+            <li>Allow-list host/domain; private IP (<code>10.x</code>, <code>127.x</code>, <code>169.254.x</code>) block।</li>
+            <li>Redirect follow বন্ধ, response raw ফেরত না দেওয়া।</li>
+            <li>Network-level egress rule।</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="sub-sec" style="--c: var(--jwt)">
+      <h3><span class="dot" style="background:var(--c)"></span>Security Headers</h3>
+      <div class="sub">Server-এর response header দিয়েই browser-কে নিরাপদ আচরণ শেখানো — অল্প কাজে বড় সুরক্ষা</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Header</th><th>কী ঠেকায়</th><th>উদাহরণ</th></tr></thead>
+          <tbody>
+            <tr><th>Content-Security-Policy</th><td>XSS, Clickjacking</td><td><code>default-src 'self'; frame-ancestors 'none'</code></td></tr>
+            <tr><th>Strict-Transport-Security</th><td>HTTP downgrade, MITM</td><td><code>max-age=31536000; includeSubDomains</code></td></tr>
+            <tr><th>X-Content-Type-Options</th><td>MIME sniffing</td><td><code>nosniff</code></td></tr>
+            <tr><th>Referrer-Policy</th><td>URL-এ থাকা তথ্য leak</td><td><code>strict-origin-when-cross-origin</code></td></tr>
+            <tr><th>Set-Cookie flags</th><td>Cookie theft, CSRF</td><td><code>HttpOnly; Secure; SameSite=Lax</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="sub-sec" style="--c: var(--owasp)">
+      <h3><span class="dot" style="background:var(--c)"></span>Password Storage ও Brute Force</h3>
+      <div class="sub">Database leak হলেও যেন password বেরিয়ে না যায়</div>
+      <div class="points">
+        <div class="point" style="--c: var(--sql)">
+          <h4>❌ যা করা যাবে না</h4>
+          <ul>
+            <li>Plain text বা শুধু MD5/SHA-1/SHA-256।</li>
+            <li>সবার জন্য একই (বা কোনো) salt না দেওয়া।</li>
+          </ul>
+        </div>
+        <div class="point" style="--c: var(--jwt)">
+          <h4>✅ যা করতে হবে</h4>
+          <ul>
+            <li><b>bcrypt / Argon2 / scrypt</b> — ইচ্ছাকৃতভাবে ধীর, per-user salt সহ।</li>
+            <li>Login-এ rate limit, lockout, MFA।</li>
+            <li>বিস্তারিত: <a href="../02-encoding-encryption-hashing/index.html">Encoding, Encryption ও Hashing</a>।</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="sub-sec" style="--c: var(--csrf)">
+      <h3><span class="dot" style="background:var(--c)"></span>Session Management ও Cookie Security</h3>
+      <div class="sub">Login-এর পর user-কে চেনার উপায় — এটা চুরি হলে password ছাড়াই account হাতছাড়া</div>
+      <div class="points">
+        <div class="point" style="--c: var(--sql)">
+          <h4>Session attack</h4>
+          <ul><li><b>Hijacking:</b> session id চুরি (XSS, sniffing) করে user সাজা।</li><li><b>Fixation:</b> attacker আগে থেকে ঠিক করা session id victim-কে দিয়ে login করায়।</li></ul>
+        </div>
+        <div class="point" style="--c: var(--jwt)">
+          <h4>Prevention</h4>
+          <ul><li>Login-এর পর <b>নতুন session id</b> generate করা।</li><li>Idle ও absolute timeout; logout-এ server-side invalidate।</li><li>Cookie: <code>HttpOnly; Secure; SameSite=Lax</code>।</li></ul>
+        </div>
+      </div>
+      <div class="code"><div class="code-bar"><span>Set-Cookie</span></div><pre><span class="t-attr">Set-Cookie</span>: sid=<span class="t-str">9f8a…random</span>; <span class="t-kw">HttpOnly</span>; <span class="t-kw">Secure</span>; <span class="t-kw">SameSite</span>=Lax; Path=/; Max-Age=900</pre></div>
+    </div>
+
+    <div class="sub-sec" style="--c: var(--xss)">
+      <h3><span class="dot" style="background:var(--c)"></span>Rate Limiting ও Brute Force</h3>
+      <div class="sub">Login, OTP, password reset — যেখানে অসংখ্যবার চেষ্টা করা যায়</div>
+      <div class="points">
+        <div class="point" style="--c: var(--sql)">
+          <h4>আক্রমণ</h4>
+          <ul><li><b>Brute force:</b> এক account-এ হাজার password।</li><li><b>Credential stuffing:</b> অন্য site-এর leak হওয়া email/password মিলিয়ে দেখা।</li><li><b>OTP guessing</b>, API abuse, DoS।</li></ul>
+        </div>
+        <div class="point" style="--c: var(--jwt)">
+          <h4>Prevention</h4>
+          <ul><li>IP + account দুটোতেই rate limit; exponential backoff।</li><li>Temporary lockout / CAPTCHA, <b>MFA</b>।</li><li>OTP-তে ছোট expiry ও সীমিত attempt।</li><li>Login error সবসময় এক রকম: "email বা password ভুল" (user enumeration ঠেকাতে)।</li></ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="sub-sec" style="--c: var(--owasp)">
+      <h3><span class="dot" style="background:var(--c)"></span>File Upload Vulnerability</h3>
+      <div class="sub">User যা upload করে সেটাই server-এ code হয়ে চলতে পারে</div>
+      <div class="points">
+        <div class="point" style="--c: var(--sql)">
+          <h4>ঝুঁকি</h4>
+          <ul><li><code>shell.php</code> upload করে server-এ code চালানো (RCE)।</li><li><code>.html</code>/<code>.svg</code>-এ script → Stored XSS।</li><li>বিশাল file দিয়ে disk/memory শেষ করা।</li></ul>
+        </div>
+        <div class="point" style="--c: var(--jwt)">
+          <h4>Prevention</h4>
+          <ul><li>Extension allow-list + <b>content/magic-byte</b> চেক (শুধু <code>Content-Type</code> বিশ্বাস নয়)।</li><li>নতুন random নাম, user-এর দেওয়া নাম নয়।</li><li>Web root-এর <b>বাইরে</b> বা object storage-এ রাখা; execute permission নেই।</li><li>Size limit, virus scan।</li></ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="sub-sec" style="--c: var(--more)">
+      <h3><span class="dot" style="background:var(--c)"></span>Path Traversal</h3>
+      <div class="sub"><code>../</code> দিয়ে নির্ধারিত folder-এর বাইরের file পড়া</div>
+      <div class="code"><div class="code-bar"><span>FileController.java</span></div><pre><span class="t-com">// ❌ GET /download?file=../../etc/passwd</span>
+<span class="t-type">File</span> f = <span class="t-kw">new</span> <span class="t-type">File</span>(<span class="t-str">"/var/app/uploads/"</span> + name);
+
+<span class="t-com">// ✅ normalize করে base folder-এর ভেতরে আছে কিনা যাচাই</span>
+<span class="t-type">Path</span> base = <span class="t-type">Path</span>.of(<span class="t-str">"/var/app/uploads"</span>).toRealPath();
+<span class="t-type">Path</span> p = base.resolve(name).normalize();
+<span class="t-kw">if</span> (!p.startsWith(base)) <span class="t-kw">throw</span> <span class="t-kw">new</span> <span class="t-type">ForbiddenException</span>();</pre></div>
+      <div class="note" style="--c: var(--more)">সবচেয়ে ভালো: user-কে <b>filename নয়, id</b> দিতে দিন; server id থেকে আসল path বের করবে।</div>
+    </div>
+
+    <div class="sub-sec" style="--c: var(--sql)">
+      <h3><span class="dot" style="background:var(--c)"></span>Command Injection</h3>
+      <div class="sub">User input shell command-এর অংশ হয়ে গেলে OS-ই attacker-এর হাতে</div>
+      <div class="code"><div class="code-bar"><span>Ping.java</span></div><pre><span class="t-com">// ❌ name = "8.8.8.8; rm -rf /"</span>
+Runtime.getRuntime().exec(<span class="t-str">"sh -c 'ping "</span> + host + <span class="t-str">"'"</span>);
+
+<span class="t-com">// ✅ shell ছাড়া, argument আলাদা + validation</span>
+<span class="t-kw">new</span> <span class="t-type">ProcessBuilder</span>(<span class="t-str">"ping"</span>, <span class="t-str">"-c"</span>, <span class="t-str">"1"</span>, validatedHost).start();</pre></div>
+      <div class="note" style="--c: var(--sql)">যেখানে সম্ভব OS command না ডেকে library ব্যবহার করুন; যদি ডাকতেই হয়, shell এড়িয়ে argument array আর allow-list validation।</div>
+    </div>
+
+    <div class="sub-sec" style="--c: var(--csrf)">
+      <h3><span class="dot" style="background:var(--c)"></span>Open Redirect</h3>
+      <div class="sub"><code>/login?next=https://evil.com</code> — বিশ্বাসযোগ্য domain দিয়ে ফিশিং</div>
+      <div class="points">
+        <div class="point" style="--c: var(--sql)">
+          <h4>ঝুঁকি</h4>
+          <ul><li>Link-এ আসল site-এর নাম, কিন্তু login-এর পর attacker-এর fake page-এ যায়।</li><li>OAuth/SSO-তে <code>redirect_uri</code> দুর্বল হলে token/code চুরি।</li></ul>
+        </div>
+        <div class="point" style="--c: var(--jwt)">
+          <h4>Prevention</h4>
+          <ul><li>Redirect target-এর allow-list; শুধু relative path (<code>/dashboard</code>) মানা।</li><li>External link-এ সতর্কতা page।</li></ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="sub-sec" style="--c: var(--jwt)">
+      <h3><span class="dot" style="background:var(--c)"></span>Mass Assignment</h3>
+      <div class="sub">Request body-র সব field সরাসরি object-এ বসিয়ে দেওয়া</div>
+      <div class="code"><div class="code-bar"><span>Profile update</span></div><pre><span class="t-com">// ❌ client পাঠাল { "name": "Ali", "role": "ADMIN" }</span>
+user = objectMapper.readValue(body, <span class="t-type">User</span>.<span class="t-kw">class</span>);  <span class="t-com">// role-ও বদলে গেল!</span>
+
+<span class="t-com">// ✅ আলাদা DTO — শুধু অনুমোদিত field</span>
+<span class="t-kw">record</span> <span class="t-type">UpdateProfile</span>(<span class="t-type">String</span> name, <span class="t-type">String</span> bio) {}</pre></div>
+      <div class="note" style="--c: var(--jwt)">এটা <b>A01 Broken Access Control</b>-এর একটা রূপ — কোন field client বদলাতে পারবে, তা server ঠিক করবে, client না।</div>
+    </div>
+  </section>
+
+  <!-- ===================== 6. SSO ===================== -->
+  <section class="topic" id="sso" style="--c: var(--sso)">
+    <div class="topic-head">
+      <div class="badge">6</div>
+      <div>
+        <h2>SSO (Single Sign-On)</h2>
+        <div class="sub">একবার login করে একাধিক application ব্যবহার — "Sign in with Google" টাইপ</div>
+      </div>
+    </div>
+
+    <p>SSO-তে প্রতিটা app নিজে password নেয় না। একটা <b>Identity Provider (IdP)</b> — যেমন Google, Okta, Azure AD, Keycloak — user-কে authenticate করে, আর app (<b>Service Provider / Relying Party</b>) IdP-র দেওয়া প্রমাণ বিশ্বাস করে।</p>
+
+    <div class="points">
+      <div class="point" style="--c: var(--sso)">
+        <h4>কেন SSO?</h4>
+        <ul>
+          <li>একটাই password / MFA — user-এর সুবিধা, attack surface কম।</li>
+          <li>Central control: employee চলে গেলে এক জায়গায় access বন্ধ।</li>
+          <li>প্রতিটা app-এর password database রাখার ঝুঁকি নেই।</li>
+        </ul>
+      </div>
+      <div class="point" style="--c: var(--sql)">
+        <h4>ঝুঁকি</h4>
+        <ul>
+          <li><b>Single point of failure:</b> IdP ডাউন বা compromised হলে সব app প্রভাবিত।</li>
+          <li>IdP account-এ MFA বাধ্যতামূলক না হলে একটা চুরি = সব চুরি।</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3 class="subhead">Login flow — ধাপে ধাপে</h3>
+    <div class="flow" style="--c: var(--sso)">
+      <div class="step"><b>1 · App খোলা</b>User <code>app.com</code>-এ যায়, session নেই।</div><span class="arr">→</span>
+      <div class="step"><b>2 · Redirect</b>App user-কে IdP-র login page-এ পাঠায় (<code>state</code> সহ)।</div><span class="arr">→</span>
+      <div class="step"><b>3 · Authenticate</b>IdP-তে password + MFA; আগে login থাকলে এই ধাপ skip।</div><span class="arr">→</span>
+      <div class="step"><b>4 · Code / Assertion</b>IdP user-কে app-এ ফেরত পাঠায় একটা short-lived <code>code</code> বা signed assertion দিয়ে।</div><span class="arr">→</span>
+      <div class="step"><b>5 · Verify</b>App token verify করে নিজের session বানায়।</div>
+    </div>
+    <div class="note" style="--c: var(--sso)"><b>দ্বিতীয় app:</b> user <code>app2.com</code> খুললে IdP-তে আগের session cookie আছে, তাই password ছাড়াই ধাপ ২→৪ নিঃশব্দে হয়ে যায় — এটাই "single sign-on"।</div>
+
+    <h3 class="subhead">OAuth 2.0 vs OIDC vs SAML</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th></th><th>OAuth 2.0</th><th>OpenID Connect (OIDC)</th><th>SAML 2.0</th></tr></thead>
+        <tbody>
+          <tr><th>কাজ</th><td><b>Authorization</b> — app-কে সীমিত access দেওয়া</td><td><b>Authentication</b> — user কে, সেটা জানানো (OAuth-এর ওপর বানানো)</td><td>Authentication + attribute, enterprise SSO</td></tr>
+          <tr><th>Token</th><td>Access token (+ refresh token)</td><td><b>ID token</b> (JWT) + access token</td><td>XML <b>Assertion</b> (signed)</td></tr>
+          <tr><th>Format</th><td>JSON / REST</td><td>JSON / JWT</td><td>XML</td></tr>
+          <tr><th>সাধারণত কোথায়</th><td>API access ("Drive-এ file পড়ুক")</td><td>Modern web / mobile / SPA login</td><td>পুরোনো ও corporate app (Salesforce, Workday)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="note" style="--c: var(--sso)"><b>Interview-এর এক লাইন:</b> OAuth 2.0 = "<i>কী করতে পারো</i>" (authorization), OIDC = OAuth + "<i>তুমি কে</i>" (authentication), SAML = XML-ভিত্তিক পুরোনো enterprise SSO। আগের সেকশনের <b>JWT</b>-ই OIDC-র ID token।</div>
+
+    <h3 class="subhead">OIDC Authorization Code Flow (+ PKCE)</h3>
+    <div class="code"><div class="code-bar"><span>OIDC login — authorization request ও token exchange</span></div><pre><span class="t-com">// 1) App → browser redirect to IdP</span>
+GET https://idp.com/authorize
+  ?response_type=<span class="t-str">code</span>
+  &amp;client_id=<span class="t-str">my-app</span>
+  &amp;redirect_uri=<span class="t-str">https://app.com/callback</span>
+  &amp;scope=<span class="t-str">openid profile email</span>
+  &amp;state=<span class="t-str">xyz123</span>                <span class="t-com">// CSRF protection</span>
+  &amp;code_challenge=<span class="t-str">E9Melh…</span>      <span class="t-com">// PKCE: hash of code_verifier</span>
+  &amp;code_challenge_method=<span class="t-str">S256</span>
+
+<span class="t-com">// 2) IdP → app/callback?code=abc&amp;state=xyz123</span>
+<span class="t-com">// 3) App backend → IdP (server-to-server)</span>
+POST https://idp.com/token
+  grant_type=<span class="t-str">authorization_code</span>&amp;code=<span class="t-str">abc</span>
+  &amp;code_verifier=<span class="t-str">original-secret</span>&amp;client_id=<span class="t-str">my-app</span>
+<span class="t-com">// ← { id_token (JWT), access_token, refresh_token }</span></pre></div>
+
+    <div class="points">
+      <div class="point" style="--c: var(--csrf)">
+        <h4><code>state</code></h4>
+        <ul><li>Random value; callback-এ মিলিয়ে দেখা হয়।</li><li>না থাকলে <b>login CSRF</b> — attacker নিজের account-এ victim-কে login করিয়ে দিতে পারে।</li></ul>
+      </div>
+      <div class="point" style="--c: var(--jwt)">
+        <h4>PKCE</h4>
+        <ul><li>Public client (SPA, mobile)-এ client secret রাখা যায় না।</li><li><code>code_verifier</code> প্রমাণ করে — যে code চাইল, সে-ই token নিচ্ছে; code চুরি হলেও কাজে লাগে না।</li></ul>
+      </div>
+      <div class="point" style="--c: var(--xss)">
+        <h4>ID token verify</h4>
+        <ul><li>Signature, <code>iss</code>, <code>aud</code> (আমার client_id), <code>exp</code>, <code>nonce</code> চেক।</li><li>শুধু decode করলে হবে না — আগের JWT সেকশন মনে করুন।</li></ul>
+      </div>
+    </div>
+
+    <h3 class="subhead">SSO-তে common ভুল ও সমাধান</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>ভুল</th><th>পরিণতি</th><th>সমাধান</th></tr></thead>
+        <tbody>
+          <tr><th>Loose <code>redirect_uri</code> (wildcard)</th><td>Code/token attacker-এর site-এ চলে যায়</td><td>Exact-match registered URI</td></tr>
+          <tr><th><code>state</code> না মেলানো</th><td>Login CSRF</td><td>Random state, session-এর সাথে bind</td></tr>
+          <tr><th>Implicit flow (token URL-এ)</th><td>Token history/log-এ leak</td><td>Authorization Code + PKCE</td></tr>
+          <tr><th>SAML signature না চেক / XML wrapping</th><td>Fake assertion → অন্য user সাজা</td><td>Signature verify, trusted library, <code>Audience</code> ও <code>NotOnOrAfter</code> চেক</td></tr>
+          <tr><th>Logout শুধু app-এ</th><td>IdP session চালু, আবার auto-login</td><td>Single Logout / IdP logout endpoint</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ===================== 7. CORS (merged) ===================== -->
+  <section class="topic" id="cors-guide" style="--c: var(--corsc)">
+    <div class="topic-head">
+      <div class="badge">7</div>
+      <div>
+        <h2>CORS — browser কাকে পড়তে দেয়</h2>
+        <div class="sub">Same-Origin Policy, preflight, error ও fix, simulator; CORS বনাম CSRF / XSS / SQL injection</div>
+      </div>
+    </div>
+    <div class="cg-jump"><a href="#sop">Same-Origin Policy</a><a href="#cors">CORS header</a><a href="#preflight">Simple vs Preflight</a><a href="#sim">Simulator</a><a href="#errors">Error ও fix</a><a href="#cors-compare">CORS vs CSRF vs XSS</a><a href="#browser">Browser লাগে?</a><a href="#qa">Interview Q&amp;A</a></div>
+    <div class="cg">
+  <!-- 1. SOP -->
+  <section id="sop">
+    <h2><span class="num">1</span>আগে Same-Origin Policy (SOP)</h2>
+    <p class="lead">CORS বুঝতে হলে আগে বুঝতে হবে browser কী আটকায়। <b>Origin</b> = <code>scheme</code> + <code>host</code> + <code>port</code>। তিনটার যেকোনো একটা আলাদা হলেই সেটা আলাদা origin। Path, query, hash — এগুলো origin-এর অংশ না।</p>
+
+    <div class="cc tscroll">
+      <table>
+        <thead><tr><th>URL</th><th><code>https://shop.com</code>-এর সাথে</th><th>কেন</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">https://shop.com/cart?id=7</td><td class="yes">Same-origin</td><td>শুধু path আর query আলাদা</td></tr>
+          <tr><td class="mono">https://shop.com:443/api</td><td class="yes">Same-origin</td><td>https-এর default port 443 — একই কথা</td></tr>
+          <tr><td class="mono">http://shop.com</td><td class="no">Cross-origin</td><td>Scheme আলাদা (http vs https)</td></tr>
+          <tr><td class="mono">https://api.shop.com</td><td class="no">Cross-origin</td><td>Host আলাদা — subdomain-ও আলাদা origin</td></tr>
+          <tr><td class="mono">https://www.shop.com</td><td class="no">Cross-origin</td><td><code>www</code>-ও একটা আলাদা host</td></tr>
+          <tr><td class="mono">https://shop.com:8443</td><td class="no">Cross-origin</td><td>Port আলাদা</td></tr>
+          <tr><td class="mono">http://localhost:5173 → http://localhost:5000</td><td class="no">Cross-origin</td><td>Dev-এ frontend আর API আলাদা port — এখান থেকেই বেশিরভাগ CORS error</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="foot"><b>Same-site ≠ same-origin:</b> <code>app.shop.com</code> আর <code>api.shop.com</code> একই <i>site</i> (registrable domain <code>shop.com</code>) — cookie-র <code>SameSite</code> নিয়ম এদের same-site ধরে। কিন্তু origin আলাদা, তাই CORS লাগবে। Interview-এ এই পার্থক্যটা প্রায়ই ধরা হয়।</p>
+
+    <h3>SOP কী আটকায়, কী আটকায় না</h3>
+    <div class="grid2">
+      <div class="cc note bar" style="--c:var(--bad)">
+        <h4>আটকায় — অন্য origin-এর data <u>পড়া</u></h4>
+        <ul>
+          <li>JS দিয়ে <code>fetch()</code> / <code>XMLHttpRequest</code>-এর cross-origin response পড়া</li>
+          <li>অন্য origin-এর <code>iframe</code> বা popup window-এর DOM পড়া</li>
+          <li>Cross-origin image আঁকা <code>canvas</code>-এর pixel পড়া (canvas "tainted" হয়ে যায়)</li>
+          <li>অন্য origin-এর <code>localStorage</code> / IndexedDB</li>
+        </ul>
+      </div>
+      <div class="cc note bar" style="--c:var(--ok)">
+        <h4>আটকায় না — request <u>পাঠানো</u> আর embed করা</h4>
+        <ul>
+          <li><code>&lt;form action="https://bank.com/transfer" method="POST"&gt;</code> submit</li>
+          <li><code>&lt;img src&gt;</code>, <code>&lt;script src&gt;</code>, <code>&lt;link rel="stylesheet"&gt;</code>, <code>&lt;video&gt;</code></li>
+          <li><code>&lt;iframe&gt;</code>-এ অন্য site দেখানো (ভেতরটা পড়া যায় না)</li>
+          <li>Link-এ click করে navigation</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="verdict" style="--c:var(--accent)"><b>মূল কথা:</b> বেশিরভাগ ক্ষেত্রে browser cross-origin request <b>পাঠিয়েই দেয়</b>, server সেটা process-ও করে, response-ও ফেরত আসে। তারপর browser দেখে response-এ অনুমতি (<code>Access-Control-Allow-Origin</code>) আছে কি না — না থাকলে <b>JS-এর হাতে response দেয় না</b>। CORS তাই মূলত ঠিক করে "JS কি response পড়তে পারবে?"। ব্যতিক্রম: যে request-এ preflight লাগে, সেখানে preflight fail করলে আসল request যায়ই না।</div>
+    <div class="cc note" style="margin-top:14px">
+      <div class="flow">
+        <span>JS: fetch()</span><i>→</i><span>Browser request পাঠায়</span><i>→</i><span>Server process করে</span><i>→</i><span>Response ফেরত</span><i>→</i><span class="y">Browser CORS check</span><i>→</i><span class="g">JS পড়তে পারে</span><i>/</i><span class="r">TypeError: Failed to fetch</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. CORS -->
+  <section id="cors">
+    <h2><span class="num">2</span>CORS কী — server opt-in করে</h2>
+    <p class="lead"><b>CORS</b> (Cross-Origin Resource Sharing) হলো SOP-কে নিয়ন্ত্রিতভাবে শিথিল করার নিয়ম। Server response header দিয়ে বলে দেয় "এই origin আমার response পড়তে পারবে"। নিয়মটা <b>browser enforce করে</b> — server শুধু অনুমতি ঘোষণা করে। curl, Postman বা অন্য server-এর code browser না, তাই তারা CORS নিয়ে মাথাই ঘামায় না।</p>
+
+    <div class="cc tscroll">
+      <table>
+        <thead><tr><th>Header</th><th>কে পাঠায়</th><th>মানে</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">Origin</td><td>Browser (request)</td><td>কোন origin থেকে request আসছে। Browser নিজে বসায় — JS এটা বদলাতে পারে না (forbidden header)। curl দিয়ে অবশ্য যা খুশি লেখা যায়।</td></tr>
+          <tr><td class="mono">Access-Control-Request-Method</td><td>Browser (preflight)</td><td>আসল request কোন method-এ যাবে, যেমন <code>PUT</code></td></tr>
+          <tr><td class="mono">Access-Control-Request-Headers</td><td>Browser (preflight)</td><td>আসল request-এ কোন non-safelisted header থাকবে, যেমন <code>authorization,content-type</code></td></tr>
+          <tr><td class="mono">Access-Control-Allow-Origin</td><td>Server</td><td>কোন origin পড়তে পারবে — <b>একটাই</b> exact origin অথবা <code>*</code>। কমা দিয়ে একাধিক origin দেওয়া যায় না; একাধিক লাগলে server allowlist থেকে মিলিয়ে request-এর origin-টাই ফেরত দেয়।</td></tr>
+          <tr><td class="mono">Access-Control-Allow-Methods</td><td>Server (preflight)</td><td>কোন method অনুমোদিত, যেমন <code>GET, POST, PUT, DELETE</code></td></tr>
+          <tr><td class="mono">Access-Control-Allow-Headers</td><td>Server (preflight)</td><td>কোন request header অনুমোদিত, যেমন <code>Content-Type, Authorization</code></td></tr>
+          <tr><td class="mono">Access-Control-Allow-Credentials</td><td>Server</td><td><code>true</code> হলে cookie / HTTP auth সহ (<code>credentials: 'include'</code>) request-এর response JS পড়তে পারবে। তখন Allow-Origin-এ <code>*</code> চলবে না।</td></tr>
+          <tr><td class="mono">Access-Control-Expose-Headers</td><td>Server</td><td>Default-এ JS শুধু safelisted response header পড়তে পারে (<code>Cache-Control</code>, <code>Content-Language</code>, <code>Content-Length</code>, <code>Content-Type</code>, <code>Expires</code>, <code>Last-Modified</code>, <code>Pragma</code>)। <code>X-Total-Count</code>-এর মতো custom header পড়াতে চাইলে এখানে লিখতে হয়।</td></tr>
+          <tr><td class="mono">Access-Control-Max-Age</td><td>Server (preflight)</td><td>Preflight-এর উত্তর কত সেকেন্ড cache থাকবে। Browser নিজের সীমা বসায় (Chrome সর্বোচ্চ 7200 = ২ ঘণ্টা)।</td></tr>
+          <tr><td class="mono">Vary: Origin</td><td>Server</td><td>Response origin অনুযায়ী বদলায় — CDN / proxy cache-কে জানানো, যাতে এক origin-এর response আরেক origin-কে না দেয়।</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- preflight -->
+  <section id="preflight">
+    <h2><span class="num">3</span>Simple request vs Preflighted request</h2>
+    <p class="lead">কিছু request "নিরীহ" — HTML form দিয়েও এগুলো সবসময় পাঠানো যেত, তাই browser সরাসরি পাঠায় (spec-এর পুরনো নাম <b>simple request</b>)। বাকিগুলোর আগে browser নিজে একটা <code>OPTIONS</code> request পাঠিয়ে server-কে জিজ্ঞেস করে "এটা পাঠাতে পারি?" — এটাই <b>preflight</b>।</p>
+    <div class="grid2">
+      <div class="cc note bar" style="--c:var(--ok)">
+        <h4>Preflight লাগে না — যদি সবগুলো শর্ত মেলে</h4>
+        <ul>
+          <li>Method: <code>GET</code>, <code>HEAD</code> বা <code>POST</code></li>
+          <li>হাতে বসানো header শুধু CORS-safelisted: <code>Accept</code>, <code>Accept-Language</code>, <code>Content-Language</code>, <code>Content-Type</code> (নিচের শর্তে), <code>Range</code> (simple)</li>
+          <li><code>Content-Type</code> শুধু <code>text/plain</code>, <code>multipart/form-data</code> বা <code>application/x-www-form-urlencoded</code></li>
+          <li>Body-তে ReadableStream নেই, XHR upload-এ event listener নেই</li>
+        </ul>
+      </div>
+      <div class="cc note bar" style="--c:var(--warn)">
+        <h4>Preflight লাগে — যেকোনো একটা হলেই</h4>
+        <ul>
+          <li><code>PUT</code>, <code>PATCH</code>, <code>DELETE</code> ইত্যাদি method</li>
+          <li><code>Content-Type: application/json</code> — হ্যাঁ, সাধারণ JSON POST-ও preflight করে</li>
+          <li><code>Authorization</code> বা যেকোনো custom header (<code>X-Request-Id</code>…)</li>
+        </ul>
+        <p style="margin-top:8px">Preflight-এ কখনো cookie বা <code>Authorization</code> যায় না। তাই server-এর auth middleware যদি <code>OPTIONS</code>-কে 401 দেয়, preflight fail করবে।</p>
+      </div>
+    </div>
+
+    <h3>আসল HTTP — <code>app.shop.com</code> থেকে cookie সহ JSON <code>PUT</code></h3>
+<pre class="code" data-lang="js">// https://app.shop.com-এর page থেকে
+await fetch('https://api.shop.com/orders/42', {
+  method: 'PUT',
+  credentials: 'include',                       // cookie পাঠাও
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ status: 'cancelled' }),
+});</pre>
+    <div class="grid2" style="margin-top:14px">
+      <div>
+        <div class="file" style="--dot:var(--warn)"><i></i>① preflight request (browser নিজে পাঠায়)</div>
+<pre class="code" data-lang="http">OPTIONS /orders/42 HTTP/1.1
+Host: api.shop.com
+Origin: https://app.shop.com
+Access-Control-Request-Method: PUT
+Access-Control-Request-Headers: content-type</pre>
+      </div>
+      <div>
+        <div class="file" style="--dot:var(--warn)"><i></i>② preflight response</div>
+<pre class="code" data-lang="http">HTTP/1.1 204 No Content
+Access-Control-Allow-Origin: https://app.shop.com
+Access-Control-Allow-Methods: GET, POST, PUT, DELETE
+Access-Control-Allow-Headers: Content-Type, Authorization
+Access-Control-Allow-Credentials: true
+Access-Control-Max-Age: 600
+Vary: Origin</pre>
+      </div>
+      <div>
+        <div class="file"><i></i>③ আসল request (preflight pass হওয়ার পরেই)</div>
+<pre class="code" data-lang="http">PUT /orders/42 HTTP/1.1
+Host: api.shop.com
+Origin: https://app.shop.com
+Content-Type: application/json
+Cookie: session=8f2c41d7
+
+{"status":"cancelled"}</pre>
+      </div>
+      <div>
+        <div class="file"><i></i>④ আসল response</div>
+<pre class="code" data-lang="http">HTTP/1.1 200 OK
+Content-Type: application/json
+Access-Control-Allow-Origin: https://app.shop.com
+Access-Control-Allow-Credentials: true
+Access-Control-Expose-Headers: X-Request-Id
+Vary: Origin
+X-Request-Id: 7d1e9a
+
+{"id":42,"status":"cancelled"}</pre>
+      </div>
+    </div>
+    <p class="foot">খেয়াল করো: preflight pass করলেই হবে না — <b>আসল response-এও</b> <code>Access-Control-Allow-Origin</code> (আর credentials থাকলে <code>Allow-Credentials: true</code>) লাগবে, নাহলে JS সেটাও পড়তে পারবে না। Max-Age-এর ভেতরে একই request আবার হলে browser preflight বাদ দিয়ে সরাসরি ③ পাঠায়।</p>
+  </section>
+
+  <!-- simulator -->
+  <section id="sim">
+    <h2><span class="num">▶</span>CORS Simulator</h2>
+    <p class="lead">Page চলছে নিচের origin-এ, আর JS call করছে <code>https://api.shop.com/orders</code>। অপশন বদলে <b>Send</b> চাপো — browser আর server-এর মধ্যে কী যায়-আসে, আর শেষে JS কী পায়, দেখো।</p>
+    <div class="cc sim">
+      <form id="simForm" class="ctrls" onsubmit="return false">
+        <fieldset><legend>Page-এর origin</legend><div class="seg">
+          <label><input type="radio" name="origin" value="same"><span>api.shop.com (same)</span></label>
+          <label><input type="radio" name="origin" value="app" checked><span>https://app.shop.com</span></label>
+          <label><input type="radio" name="origin" value="evil"><span>https://evil.com</span></label>
+        </div></fieldset>
+        <fieldset><legend>Method</legend><div class="seg">
+          <label><input type="radio" name="method" value="GET" checked><span>GET</span></label>
+          <label><input type="radio" name="method" value="POST"><span>POST</span></label>
+          <label><input type="radio" name="method" value="PUT"><span>PUT</span></label>
+          <label><input type="radio" name="method" value="DELETE"><span>DELETE</span></label>
+        </div></fieldset>
+        <fieldset id="ctypeSet"><legend>Content-Type (body)</legend><div class="seg">
+          <label><input type="radio" name="ctype" value="form" checked><span>form-urlencoded</span></label>
+          <label><input type="radio" name="ctype" value="json"><span>application/json</span></label>
+        </div></fieldset>
+        <fieldset><legend>Custom header</legend><div class="seg">
+          <label><input type="radio" name="auth" value="none" checked><span>none</span></label>
+          <label><input type="radio" name="auth" value="auth"><span>Authorization</span></label>
+        </div></fieldset>
+        <fieldset><legend>credentials: 'include'</legend><div class="seg">
+          <label><input type="radio" name="cred" value="off" checked><span>off</span></label>
+          <label><input type="radio" name="cred" value="on"><span>on (cookie)</span></label>
+        </div></fieldset>
+        <fieldset id="cfgSet"><legend>Server-এর CORS config</legend><div class="seg">
+          <label><input type="radio" name="cfg" value="none" checked><span>none</span></label>
+          <label><input type="radio" name="cfg" value="star"><span>Allow-Origin: *</span></label>
+          <label><input type="radio" name="cfg" value="list"><span>allowlist app.shop.com + credentials</span></label>
+        </div></fieldset>
+      </form>
+      <div class="simbar">
+        <button class="go" id="simSend" type="button">Send ▸</button>
+        <small id="simHint"></small>
+      </div>
+
+      <div class="stage" aria-hidden="true">
+        <div class="node" id="nodeBrowser"><b>Browser</b><small id="brOrigin">https://app.shop.com</small><em id="brNote"></em></div>
+        <div class="track" id="track"><span class="pkt" id="pkt">GET</span><span class="xmark" id="xmark">✕</span></div>
+        <div class="node" id="nodeServer"><b>Server</b><small>api.shop.com</small><em id="svNote"></em></div>
+      </div>
+
+      <div class="simcode"><div class="file"><i></i>JS যা চালাবে</div><pre class="code" id="simCode"></pre></div>
+      <ol class="simlog" id="simLog" aria-live="polite"></ol>
+      <div id="simVerdict" hidden></div>
+    </div>
+    <p class="foot">Simulator ধরে নিয়েছে <code>api.shop.com</code>-এর session cookie <code>SameSite=None; Secure</code>, যাতে শুধু CORS-এর আচরণটা আলাদা করে দেখা যায়। বাস্তবে Chrome-এ <code>SameSite</code> না দিলে default <code>Lax</code> — তখন <code>evil.com</code>-এর fetch-এ (cross-site) cookie যেতই না; <code>app.shop.com</code> → <code>api.shop.com</code> same-site, তাই সেখানে যায়। <code>"allowlist"</code> config-এ server শুধু <code>https://app.shop.com</code>-কে Allow-Origin দেয়, অন্য origin-কে কোনো CORS header দেয় না।</p>
+  </section>
+
+  <!-- errors -->
+  <section id="errors">
+    <h2><span class="num">4</span>Common CORS error ও সমাধান</h2>
+    <p class="lead">সব error-এর শুরু একই: <code>Access to fetch at '…' from origin '…' has been blocked by CORS policy:</code> — তারপরের অংশটাই আসল কারণ বলে। মনে রেখো: <b>fix সবসময় server-এ</b>, frontend code থেকে CORS ঠিক করা যায় না।</p>
+    <div class="cc tscroll">
+      <table style="min-width:760px">
+        <thead><tr><th>Error-এর বাকি অংশ</th><th>কারণ</th><th>Fix</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">No 'Access-Control-Allow-Origin' header is present on the requested resource.</td><td>Server CORS header দেয়নি — config নেই, origin allowlist-এ নেই, অথবা 500 error-এর response-এ CORS middleware চলেনি / proxy header ফেলে দিয়েছে</td><td>Origin allowlist-এ যোগ করো; CORS middleware সবার আগে বসাও; Nginx-এ <code>always</code></td></tr>
+          <tr><td class="mono">Response to preflight request doesn't pass access control check: It does not have HTTP ok status.</td><td><code>OPTIONS</code>-এ 401 / 404 / 405 / 500 এসেছে — প্রায়ই auth middleware token ছাড়া preflight-কে আটকায়</td><td>CORS middleware auth-এর আগে বসাও; <code>OPTIONS</code>-কে 204 দাও</td></tr>
+          <tr><td class="mono">The value of the 'Access-Control-Allow-Origin' header in the response must not be the wildcard '*' when the request's credentials mode is 'include'.</td><td><code>*</code> + cookie</td><td>Allowlist থেকে exact origin ফেরত দাও + <code>Allow-Credentials: true</code> + <code>Vary: Origin</code></td></tr>
+          <tr><td class="mono">The value of the 'Access-Control-Allow-Credentials' header in the response is '' which must be 'true' when the request's credentials mode is 'include'.</td><td>Cookie পাঠানো হয়েছে কিন্তু server <code>Allow-Credentials</code> দেয়নি</td><td><code>Access-Control-Allow-Credentials: true</code></td></tr>
+          <tr><td class="mono">Request header field authorization is not allowed by Access-Control-Allow-Headers in preflight response.</td><td>Preflight-এর Allow-Headers-এ <code>Authorization</code> নেই</td><td>Allow-Headers-এ যোগ করো</td></tr>
+          <tr><td class="mono">Method PUT is not allowed by Access-Control-Allow-Methods in preflight response.</td><td>Method allow করা হয়নি</td><td>Allow-Methods-এ যোগ করো</td></tr>
+          <tr><td class="mono">The 'Access-Control-Allow-Origin' header contains multiple values '…, …', but only one is allowed.</td><td>App আর Nginx দুজনেই header বসিয়েছে, অথবা কমা দিয়ে একাধিক origin লেখা</td><td>CORS একটা জায়গাতেই (app <i>অথবা</i> proxy); একটাই origin ফেরত দাও</td></tr>
+          <tr><td class="mono">The 'Access-Control-Allow-Origin' header has a value '…' that is not equal to the supplied origin.</td><td>Hardcoded ভুল origin, অথবা <code>Vary: Origin</code> ছাড়া CDN অন্য origin-এর cached response দিয়েছে</td><td>Dynamic allowlist + <code>Vary: Origin</code></td></tr>
+          <tr><td class="mono">Redirect is not allowed for a preflight request.</td><td><code>OPTIONS</code> 301/302 পেয়েছে (http→https, trailing slash)</td><td>Frontend-এ final URL-টাই call করো</td></tr>
+          <tr><td class="mono">(error নেই) res.headers.get('X-Total-Count') → null</td><td>Custom response header expose করা হয়নি</td><td><code>Access-Control-Expose-Headers: X-Total-Count</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>সঠিক server config</h3>
+    <div class="file" style="--dot:var(--l4)"><i></i>Express · npm i cors</div>
+<pre class="code" data-lang="js">import express from 'express';
+import cors from 'cors';
+
+const app = express();
+const allowlist = new Set(['https://app.shop.com', 'https://admin.shop.com']);
+
+// সব route আর auth middleware-এর আগে
+app.use(cors({
+  origin(origin, cb) {
+    // Origin header নেই = same-origin GET বা curl / server-to-server — CORS প্রযোজ্য না
+    if (!origin || allowlist.has(origin)) return cb(null, true);  // exact origin echo করবে
+    return cb(null, false);                                       // কোনো CORS header দেবে না
+  },
+  credentials: true,                      // Access-Control-Allow-Credentials: true
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  exposedHeaders: ['X-Request-Id'],
+  maxAge: 600,                            // preflight 10 মিনিট cache
+}));
+// cors package নিজেই Vary: Origin বসায় আর OPTIONS-কে 204 দিয়ে শেষ করে
+
+app.get('/orders', requireAuth, listOrders);</pre>
+
+    <div class="file" style="--dot:var(--l3);margin-top:16px"><i></i>ASP.NET Core · Program.cs</div>
+<pre class="code" data-lang="cs">var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("Frontend", policy => policy
+        .WithOrigins("https://app.shop.com", "https://admin.shop.com")
+        .WithMethods("GET", "POST", "PUT", "DELETE")
+        .WithHeaders("Content-Type", "Authorization")
+        .WithExposedHeaders("X-Request-Id")
+        .AllowCredentials()
+        .SetPreflightMaxAge(TimeSpan.FromMinutes(10)));
+});
+builder.Services.AddControllers();
+
+var app = builder.Build();
+
+app.UseRouting();
+app.UseCors("Frontend");      // UseRouting-এর পরে, UseAuthentication-এর আগে
+app.UseAuthentication();
+app.UseAuthorization();
+app.MapControllers();
+app.Run();
+
+// AllowAnyOrigin() + AllowCredentials() একসাথে দিলে policy build-এর সময় InvalidOperationException</pre>
+
+    <div class="file" style="--dot:var(--l2);margin-top:16px"><i></i>Nginx · reverse proxy-তে CORS (তখন app-এ CORS বন্ধ রাখো)</div>
+<pre class="code" data-lang="nginx"># allowlist: মিললে origin-টাই, না মিললে খালি string (খালি হলে add_header বসেই না)
+map $http_origin $cors_origin {
+    default                  "";
+    "https://app.shop.com"   $http_origin;
+    "https://admin.shop.com" $http_origin;
+}
+
+server {
+    listen 443 ssl;
+    server_name api.shop.com;
+
+    location /api/ {
+        if ($request_method = OPTIONS) {
+            add_header Access-Control-Allow-Origin      $cors_origin always;
+            add_header Access-Control-Allow-Methods     "GET, POST, PUT, DELETE" always;
+            add_header Access-Control-Allow-Headers     "Content-Type, Authorization" always;
+            add_header Access-Control-Allow-Credentials "true" always;
+            add_header Access-Control-Max-Age           600 always;
+            add_header Vary                             Origin always;
+            return 204;               # preflight backend পর্যন্ত যায়ই না
+        }
+
+        # always = 4xx/5xx response-এও header বসবে (নাহলে error-এর বদলে CORS error দেখবে)
+        add_header Access-Control-Allow-Origin      $cors_origin always;
+        add_header Access-Control-Allow-Credentials "true" always;
+        add_header Access-Control-Expose-Headers    "X-Request-Id" always;
+        add_header Vary                             Origin always;
+
+        proxy_pass http://127.0.0.1:5000;
+    }
+}</pre>
+    <p class="foot">Nginx-এ ভেতরের block-এ (<code>if</code>) কোনো <code>add_header</code> থাকলে বাইরের সব <code>add_header</code> আর inherit হয় না — তাই দুই জায়গায় আলাদা করে লেখা।</p>
+
+    <h3>Dev-এ: proxy দিয়ে CORS এড়ানো (শুধু development)</h3>
+    <div class="grid2">
+<pre class="code" data-lang="js">// vite.config.js
+import { defineConfig } from 'vite';
+
+export default defineConfig({
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:5000',
+        changeOrigin: true,
+      },
+    },
+  },
+});
+
+// frontend: fetch('/api/orders')  → same-origin (localhost:5173)</pre>
+      <div class="cc note">
+        <h4>কেন কাজ করে</h4>
+        <p>Browser call করছে নিজের origin-এই (<code>localhost:5173/api/…</code>), তাই কোনো CORS নেই। Vite dev server request-টা server-to-server <code>localhost:5000</code>-এ পাঠায় — server-to-server-এ CORS প্রযোজ্যই না।</p>
+        <p>Production-এ একই কৌশল: Nginx একই domain থেকে frontend আর <code>/api</code> দুটোই serve করলে CORS লাগেই না। আলাদা domain হলে সঠিক CORS config লাগবে।</p>
+        <p><b>কখনো না:</b> "Allow CORS" browser extension, <code>chrome --disable-web-security</code> — এগুলো শুধু তোমার browser বদলায়, user-দের browser-এ error থেকেই যায়, আর নিজের browser-এর নিরাপত্তা বন্ধ হয়ে যায়। <code>mode: 'no-cors'</code>-ও fix না — response "opaque" হয়ে যায় (status 0, body পড়া যায় না)।</p>
+      </div>
+    </div>
+
+    <h3>যে ভুলগুলো security hole বানায়</h3>
+    <div class="grid2">
+      <div class="cc note bar" style="--c:var(--bad)">
+        <h4>১. যেকোনো Origin reflect + credentials</h4>
+<pre class="code" data-lang="js">// ✗ যা আসে তাই ফেরত — allowlist আসলে নেই
+res.setHeader('Access-Control-Allow-Origin', req.headers.origin);
+res.setHeader('Access-Control-Allow-Credentials', 'true');
+// cors({ origin: true, credentials: true }) — একই জিনিস</pre>
+        <p style="margin-top:8px">এতে যেকোনো site logged-in user-এর cookie দিয়ে API call করে <b>response পড়তে</b> পারে (cookie <code>SameSite=None</code> হলে)। এটা <code>*</code>-এর চেয়েও খারাপ — <code>*</code> অন্তত cookie-র সাথে চলে না।</p>
+      </div>
+      <div class="cc note bar" style="--c:var(--bad)">
+        <h4>২. <code>null</code> origin allow করা</h4>
+        <p>Sandboxed iframe, <code>file://</code> page, কিছু redirect <code>Origin: null</code> পাঠায়। যেকোনো site চাইলে sandboxed iframe বানিয়ে <code>null</code> origin পেতে পারে — তাই allowlist-এ <code>"null"</code> রাখা মানে সবাইকে অনুমতি।</p>
+      </div>
+      <div class="cc note bar" style="--c:var(--bad)">
+        <h4>৩. Regex allowlist bug</h4>
+<pre class="code" data-lang="js">/shop\.com/.test(origin)
+// ✗ https://shop.com.evil.com, https://evilshop.com — দুটোই pass
+
+/^https:\/\/app.shop.com$/.test(origin)
+// ✗ '.' escape হয়নি — https://appxshop.com pass
+
+/^https:\/\/([a-z0-9-]+\.)?shop\.com$/.test(origin)   // ✓ anchored
+allowlist.has(origin)                                 // ✓ সবচেয়ে সহজ: exact match</pre>
+      </div>
+      <div class="cc note bar" style="--c:var(--warn)">
+        <h4>৪. <code>Vary: Origin</code> ভুলে যাওয়া · আর কিছু</h4>
+        <ul>
+          <li>Origin দেখে header বদলালে <code>Vary: Origin</code> না দিলে CDN একজনের response আরেকজনকে দেয় — হয় error, নয় ভুল অনুমতি।</li>
+          <li>Allowlist-এর কোনো subdomain-এ XSS থাকলে সেটা দিয়ে API পুরোপুরি পড়া যায় — allowlist যত ছোট, তত ভালো।</li>
+          <li>CORS-কে API protection ভাবা — curl CORS মানে না; authentication / authorization সবসময় লাগবে।</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- compare -->
+  <section id="cors-compare">
+    <h2><span class="num">5</span>CORS vs CSRF vs XSS vs SQL injection</h2>
+    <p class="lead">চারটাকে প্রায়ই গুলিয়ে ফেলা হয়। CORS নিজে কোনো attack না — এটা একটা browser mechanism; সমস্যা হয় যখন সেটা ভুলভাবে config করা হয়। বিস্তারিত XSS / CSRF ছবিসহ: <a href="../01-xss-csrf-jwt-refresh-token-access-token/index.html">XSS, CSRF ও JWT গাইড</a>।</p>
+    <div class="cc tscroll">
+      <table style="min-width:820px">
+        <thead><tr><th></th><th>CORS misconfig</th><th>CSRF</th><th>XSS</th><th>SQL injection</th></tr></thead>
+        <tbody>
+          <tr><td class="em">কী</td><td>Server ভুল origin-কে response পড়ার অনুমতি দেয়</td><td>অন্য site victim-এর browser দিয়ে victim-এর নামে request পাঠায়</td><td>Trusted site-এর page-এ attacker-এর JS চলে</td><td>Input দিয়ে server-এর SQL query-র গঠন বদলে দেওয়া</td></tr>
+          <tr><td class="em">কোথায় চলে</td><td>Victim-এর browser (evil.com-এর JS)</td><td>Victim-এর browser (evil.com থেকে trigger)</td><td>Victim-এর browser, trusted origin-এর ভেতরে</td><td>Server ও database</td></tr>
+          <tr><td class="em">Victim-এর browser লাগে?</td><td>হ্যাঁ — তার cookie লাগবে</td><td>হ্যাঁ — বাধ্যতামূলক</td><td>Execute হতে browser / renderer লাগে (plant করতে লাগে না)</td><td>না — curl-ই যথেষ্ট</td></tr>
+          <tr><td class="em">কী exploit করে</td><td>দুর্বল allowlist + credentials</td><td>Browser নিজে থেকে cookie জুড়ে দেয়</td><td>Output escape না করা</td><td>String concatenation দিয়ে query</td></tr>
+          <tr><td class="em">Attacker কী পায়</td><td>User-এর data <b>পড়া</b></td><td>State <b>বদলানো</b> (transfer, password change) — response পড়তে পারে না</td><td>User যা করতে পারে সব — পড়া, লেখা, token চুরি</td><td>পুরো database পড়া / বদলানো</td></tr>
+          <tr><td class="em">মূল defence</td><td>Exact allowlist, <code>Vary: Origin</code>, <code>null</code> না</td><td><code>SameSite</code> cookie, CSRF token, <code>Origin</code> check</td><td>Output encoding, CSP, <code>HttpOnly</code> cookie</td><td>Parameterised query, least privilege</td></tr>
+          <tr><td class="em">CORS কি বাঁচায়?</td><td>—</td><td class="no">না (শুধু পড়া আটকায়)</td><td class="no">না (একই origin)</td><td class="no">না (browser জড়িতই না)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="grid3" style="margin-top:14px">
+      <div class="cc note bar" style="--c:var(--l1)">
+        <h4>CORS কোনো CSRF defence না</h4>
+        <p>evil.com-এর একটা সাধারণ HTML form POST হলো "simple request" — browser cookie সহ পাঠিয়ে দেয়, server transfer করে ফেলে। CORS শুধু evil.com-কে response <b>পড়তে</b> দেয় না, কিন্তু ক্ষতি ততক্ষণে হয়ে গেছে।</p>
+        <p>একটা সূক্ষ্ম ব্যাপার: API যদি শুধু <code>application/json</code> নেয়, cross-site JS-কে preflight করতে হয় — সেটা fail করলে request যায় না। কিন্তু এর উপর ভরসা করা ঠিক না (অনেক server <code>text/plain</code>-কেও JSON হিসেবে parse করে)। আসল defence: <code>SameSite</code>, CSRF token, <code>Origin</code> check।</p>
+      </div>
+      <div class="cc note bar" style="--c:var(--l2)">
+        <h4>ভুল CORS = evil.com data পড়ে</h4>
+        <div class="flow" style="margin-bottom:8px"><span>User shop-এ logged in</span><i>→</i><span>evil.com খোলে</span><i>→</i><span>evil-এর JS: cookie সহ fetch</span><i>→</i><span class="r">Server Origin echo + Allow-Credentials</span><i>→</i><span class="r">Browser পড়তে দেয়</span></div>
+        <p>Server reflect করছে বলে browser ভাবে অনুমতি আছে। ফল: user-এর order, address, profile সব attacker-এর JS-এ। Defence: exact allowlist। Chrome-এর default <code>SameSite=Lax</code> এই ক্ষেত্রে বাড়তি সুরক্ষা দেয়।</p>
+      </div>
+      <div class="cc note bar" style="--c:var(--l3)">
+        <h4>XSS CORS-কে পুরো bypass করে</h4>
+        <p>XSS-এর script <code>app.shop.com</code>-এর page-এর ভেতরেই চলে — তার জন্য <code>api</code> call মানে নিজের app-এর মতোই request; allowlist-এ <code>app.shop.com</code> আছে, তাই CORS সানন্দে অনুমতি দেয়। Same-origin হলে CORS-এর প্রশ্নই ওঠে না।</p>
+        <p>তাই XSS থাকলে CSRF token, CORS — কোনোটাই বাঁচায় না, কারণ script page থেকে token-ও পড়তে পারে। Defence: output encoding, CSP।</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- browser needed? -->
+  <section id="browser">
+    <h2><span class="num">6</span>কোন attack-এ victim-এর browser লাগে?</h2>
+    <p class="lead">তিনটা প্রশ্ন, তিনটা আলাদা উত্তর। মূল চাবি: attack-টা কোথায় <b>চলে</b> (execute হয়) আর কার <b>credential</b> ব্যবহার করে।</p>
+
+    <h3 id="q-xss">"XSS attack কি user-এর browser ছাড়া করা যায়?"</h3>
+    <div class="cc note" style="--c:var(--l2)">
+      <span class="ans">উত্তর: plant করা যায়, কিন্তু execute হতে browser-এর মতো renderer লাগে</span>
+      <div class="flow" style="margin:6px 0 12px">
+        <span class="g">① Plant — browser লাগে না</span><i>→</i><span>② Store — DB / log / ticket</span><i>→</i><span class="r">③ Execute — কেউ page render করলে</span>
+      </div>
+      <p><b>Plant:</b> Stored XSS-এ attacker browser ছাড়াই, সরাসরি API-তে (curl বা script দিয়ে) এমন একটা comment / নাম / ticket পাঠাতে পারে যার ভেতরে HTML-script আছে। এই ধাপে কোনো victim লাগে না — data শুধু database-এ বসে থাকে।</p>
+      <p><b>Execute:</b> সেই text যখন কোনো page-এ escape ছাড়া HTML হিসেবে বসে আর কোনো JS engine সেটা render করে, তখনই script চলে — আর চলে <b>যে render করছে তার</b> origin ও session নিয়ে। JSON হিসেবে data রাখা বা curl দিয়ে পড়া কাউকে ক্ষতি করে না, কারণ কেউ সেটা execute করে না।</p>
+    </div>
+    <div class="cc tscroll" style="margin-top:12px">
+      <table>
+        <thead><tr><th>কে render করছে</th><th>XSS চলে?</th><th>ক্ষতি কার</th></tr></thead>
+        <tbody>
+          <tr><td>Victim-এর browser (stored / reflected / DOM-based)</td><td class="no">হ্যাঁ</td><td>Victim-এর session, data, তার নামে action</td></tr>
+          <tr><td>Admin panel — support ticket, log viewer (<b>blind XSS</b>)</td><td class="no">হ্যাঁ</td><td>Admin — সবচেয়ে বেশি privilege, attacker নিজে কখনো page-টা দেখেই না</td></tr>
+          <tr><td>Mobile app-এর WebView</td><td class="no">হ্যাঁ</td><td>App user; WebView যদি native function (JS bridge) expose করে, সেগুলোও</td></tr>
+          <tr><td>Server-side headless browser / HTML→PDF renderer (Puppeteer, wkhtmltopdf)</td><td class="no">হ্যাঁ</td><td>Server নিজে — internal network-এ request (SSRF) বা local file পড়ার রাস্তা খুলতে পারে</td></tr>
+          <tr><td>curl, Postman, backend code যা শুধু text হিসেবে store / return করে</td><td class="yes">না</td><td>কারো না — HTML কখনো execute হয় না</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="verdict" style="--c:var(--l2)"><b>সারকথা:</b> XSS হলো "inject হয় server-এ, চলে browser-এ"। ক্ষতি হতে browser বা browser-এর মতো কোনো renderer লাগবেই, আর ক্ষতি হয় যার renderer-এ চলল তার। Defence তাই output-এর জায়গায়: context অনুযায়ী encoding, <code>textContent</code>, CSP, আর server-side renderer-কে sandbox / network-isolate করা।</div>
+
+    <h3 id="q-csrf">"CSRF attack কি user-এর browser ছাড়া করা যায়?"</h3>
+    <div class="cc note" style="--c:var(--l1)">
+      <span class="ans">উত্তর: না</span>
+      <p>CSRF কাজ করে <b>শুধু</b> একটা কারণে: victim-এর browser অন্য site থেকে trigger হওয়া request-এ নিজে থেকেই victim-এর cookie জুড়ে দেয়। Attacker-এর নিজের মেশিন থেকে (curl / Postman) request পাঠালে তাতে victim-এর cookie থাকে না — server 401 দেয়। আর attacker-এর হাতে যদি আগে থেকেই cookie থাকে, সেটা <b>session hijacking</b> — CSRF না, আলাদা attack (cookie চুরি হলো কীভাবে — প্রায়ই XSS বা network)।</p>
+      <div class="flow" style="margin-top:10px">
+        <span>Victim bank-এ logged in</span><i>→</i><span>evil.com খোলে</span><i>→</i><span>Hidden form auto-submit</span><i>→</i><span class="r">Victim-এর browser cookie জুড়ে দেয়</span><i>→</i><span class="r">Server ভাবে victim নিজেই চেয়েছে</span>
+      </div>
+    </div>
+    <div class="cc tscroll" style="margin-top:12px">
+      <table>
+        <thead><tr><th>কে request পাঠাচ্ছে</th><th>Victim-এর credential আছে?</th><th>CSRF?</th></tr></thead>
+        <tbody>
+          <tr><td>Victim-এর browser, evil.com-এর form থেকে trigger, cookie auth</td><td>হ্যাঁ — browser নিজে জুড়ে দিল (SameSite অনুমতি দিলে)</td><td class="no">হ্যাঁ, এটাই CSRF</td></tr>
+          <tr><td>Attacker-এর curl / Postman</td><td>না</td><td class="yes">না — শুধু 401</td></tr>
+          <tr><td>Attacker-এর curl, চুরি করা cookie সহ</td><td>হ্যাঁ, কিন্তু চুরি করা</td><td class="yes">না — এটা session hijacking</td></tr>
+          <tr><td>Victim-এর browser, API-তে <code>Authorization: Bearer</code> header auth</td><td>না — browser এই header নিজে থেকে বসায় না, আর evil.com SOP-এর কারণে app-এর token পড়তে পারে না</td><td class="yes">না</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="foot">সূক্ষ্মতা: browser যা নিজে থেকে পাঠায় তার সবকিছুই CSRF-এর ঝুঁকিতে — শুধু cookie না, HTTP Basic auth আর client certificate-ও। Bearer token CSRF-proof, কিন্তু <code>localStorage</code>-এ রাখলে XSS সেটা চুরি করতে পারে — তাই trade-off।</p>
+    <div class="verdict" style="--c:var(--l1)"><b>Defence:</b> <code>SameSite=Lax</code> বা <code>Strict</code> cookie (Chrome-এ না দিলে default <code>Lax</code> — তবে Lax top-level GET navigation-এ cookie পাঠায়, তাই GET দিয়ে কখনো state বদলাবে না); CSRF token (synchronizer বা double-submit); server-এ <code>Origin</code> / <code>Sec-Fetch-Site</code> header check; sensitive action-এ re-authentication। খেয়াল রাখো: <code>SameSite</code> শুধু cross-<i>site</i> আটকায় — তোমার নিজের কোনো subdomain দখল হলে সেটা same-site, তখন token / Origin check লাগবে।</div>
+
+    <h3 id="q-sqli">"SQL injection-এ কি browser লাগে?"</h3>
+    <div class="cc note" style="--c:var(--l3)">
+      <span class="ans">উত্তর: না — পুরোটাই server-side</span>
+      <p>দুর্বলতা server-এর code-এ: user input সরাসরি SQL string-এ জোড়া লাগানো। Input-এ একটা quote চিহ্ন string literal-টা শেষ করে দেয়, তারপরের অংশটা আর data থাকে না — SQL হয়ে যায়। Attacker browser-এর form-এর বদলে সরাসরি curl বা script দিয়ে request পাঠায়, তাই frontend validation, CORS, CSP — কিছুই কাজে আসে না। কোনো victim-ও লাগে না; target সরাসরি database।</p>
+    </div>
+    <div class="grid2" style="margin-top:12px">
+      <div>
+        <div class="file" style="--dot:var(--bad)"><i></i>✗ vulnerable · Node (pg)</div>
+<pre class="code" data-lang="js">// input SQL text-এর অংশ হয়ে যায়
+const sql = "SELECT id, email FROM users WHERE email = '"
+          + req.body.email + "'";
+const { rows } = await pool.query(sql);</pre>
+      </div>
+      <div>
+        <div class="file" style="--dot:var(--ok)"><i></i>✓ parameterised · Node (pg)</div>
+<pre class="code" data-lang="js">// value আলাদা পাঠানো হয় — কখনো SQL হিসেবে parse হয় না
+const { rows } = await pool.query(
+  'SELECT id, email FROM users WHERE email = $1',
+  [req.body.email]
+);</pre>
+      </div>
+      <div>
+        <div class="file" style="--dot:var(--ok)"><i></i>✓ parameterised · C# (Npgsql)</div>
+<pre class="code" data-lang="cs">await using var cmd = new NpgsqlCommand(
+    "SELECT id, email FROM users WHERE email = @email", conn);
+cmd.Parameters.AddWithValue("email", email);
+await using var reader = await cmd.ExecuteReaderAsync();
+
+// EF Core: FromSqlRaw($"... {email}") ✗ vulnerable
+//          FromSql($"... {email}")    ✓ parameter বানায়</pre>
+      </div>
+      <div>
+        <div class="file" style="--dot:var(--ok)"><i></i>✓ raw SQL · PostgreSQL prepared statement</div>
+<pre class="code" data-lang="sql">PREPARE find_user(text) AS
+  SELECT id, email FROM users WHERE email = $1;
+
+EXECUTE find_user('rahim@shop.com');</pre>
+      </div>
+    </div>
+    <div class="verdict" style="--c:var(--l3)"><b>সারকথা:</b> SQL injection-এ browser optional, victim অপ্রয়োজনীয়, CORS অপ্রাসঙ্গিক। Defence শুধু server-এ: parameterised query / ORM-এর safe API, DB user-এর least privilege, আর error message-এ SQL details না দেখানো।</div>
+
+    <div class="cc tscroll" style="margin-top:16px">
+      <table>
+        <thead><tr><th>Attack</th><th>Plant / পাঠাতে browser লাগে?</th><th>Execute / ক্ষতি হতে victim-এর browser লাগে?</th></tr></thead>
+        <tbody>
+          <tr><td class="em">XSS</td><td>না (stored XSS curl দিয়েও plant করা যায়)</td><td>হ্যাঁ — বা browser-এর মতো কোনো renderer</td></tr>
+          <tr><td class="em">CSRF</td><td>Attacker-এর একটা page লাগে</td><td>হ্যাঁ — victim-এর browser আর তার cookie ছাড়া অসম্ভব</td></tr>
+          <tr><td class="em">SQL injection</td><td>না</td><td>না — server আর DB-তেই সব</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- interview -->
+  <section id="qa">
+    <h2><span class="num">Q</span>Interview-এ যা আসে</h2>
+    <div class="cc" style="padding:4px 18px">
+      <details><summary>Postman-এ কাজ করে, browser-এ CORS error — কেন?</summary><p>CORS browser enforce করে। Postman / curl browser না — তাদের কোনো Same-Origin Policy নেই, তাই header দেখেই না। Server আসলে দুই ক্ষেত্রেই response পাঠিয়েছে; browser শুধু JS-কে সেটা দিতে রাজি হয়নি। Fix তাই server-এ — ঠিক origin-কে <code>Access-Control-Allow-Origin</code> দাও।</p></details>
+      <details><summary>CORS কি server-এর security feature, না browser-এর?</summary><p>Browser-এর। Server শুধু policy ঘোষণা করে, browser মানে। এটা server-কে রক্ষা করে না — রক্ষা করে <b>user</b>-কে, যাতে কোনো site তার logged-in session দিয়ে অন্য site-এর data পড়তে না পারে। Server-কে তাই authentication / authorization আলাদাভাবে করতেই হবে, কারণ non-browser client CORS উপেক্ষা করে।</p></details>
+      <details><summary>Preflight কি আমার API handler / controller পর্যন্ত যায়?</summary><p>যাওয়া উচিত না — CORS middleware (ASP.NET-এর <code>UseCors</code>, Express-এর <code>cors()</code>, বা Nginx) <code>OPTIONS</code>-এর উত্তর 204 দিয়ে সেখানেই শেষ করে। Middleware না থাকলে বা ভুল ক্রমে থাকলে OPTIONS routing-এ গিয়ে 404/405 পায়, বা auth middleware 401 দেয় — preflight fail। Preflight-এ cookie / Authorization থাকে না, তাই OPTIONS-এ auth চাওয়া যাবে না। <code>Max-Age</code> দিয়ে preflight cache করা যায়, তাতে বারবার OPTIONS যায় না।</p></details>
+      <details><summary>Cookie-র সাথে <code>Access-Control-Allow-Origin: *</code> কেন চলে না?</summary><p>Spec ইচ্ছা করে নিষেধ করেছে। <code>*</code> + credentials চললে একটা ভুল config-এই internet-এর যেকোনো site যেকোনো logged-in user-এর data পড়তে পারত। তাই credentialed response-এ server-কে exact origin লিখতে হয় — যাতে সে সচেতনভাবে নির্দিষ্ট origin-কে বিশ্বাস করে। সমাধান: allowlist থেকে origin echo + <code>Allow-Credentials: true</code> + <code>Vary: Origin</code>।</p></details>
+      <details><summary>CORS কি CSRF আটকায়?</summary><p>না। CORS response <b>পড়া</b> আটকায়, request <b>পাঠানো</b> না। Cross-site form POST simple request — cookie সহ চলে যায়, server কাজ করে ফেলে। CSRF-এর জন্য <code>SameSite</code> cookie, CSRF token আর <code>Origin</code> check লাগে। উল্টো দিকে ভুল CORS (origin reflect + credentials) বরং নতুন দুর্বলতা তৈরি করে।</p></details>
+      <details><summary>একাধিক frontend domain হলে Allow-Origin-এ কী দেব?</summary><p>Header-এ একটাই মান থাকতে পারে — কমা দিয়ে list দিলে browser reject করে। Server request-এর <code>Origin</code> দেখে allowlist-এ exact match খোঁজে, মিললে সেই origin-টাই ফেরত দেয়, না মিললে কোনো CORS header দেয় না। সাথে <code>Vary: Origin</code>, যাতে cache গুলিয়ে না যায়।</p></details>
+      <details><summary>Response-এ header আছে, কিন্তু JS-এ <code>res.headers.get()</code> null দেয় — কেন?</summary><p>Cross-origin response-এ JS default-এ শুধু safelisted header পড়তে পারে। <code>X-Total-Count</code>, <code>X-Request-Id</code>-এর মতো custom header পড়াতে server-কে <code>Access-Control-Expose-Headers</code>-এ নাম দিতে হয়।</p></details>
+      <details><summary><code>Origin</code> header কি fake করা যায়? তাহলে CORS-এর মানে কী?</summary><p>Browser-এর JS থেকে না — <code>Origin</code> forbidden header, browser নিজে বসায়। curl থেকে হ্যাঁ, যা খুশি। কিন্তু curl-এ কোনো victim-এর cookie নেই, তাই fake Origin দিয়ে attacker শুধু নিজের access-ই পায়। CORS-এর লক্ষ্য browser-এর ভেতরের user-কে রক্ষা করা — এই কারণেই এটা authentication-এর বিকল্প না।</p></details>
+    </div>
+  </section>
+    </div>
+  </section>
+
   <!-- ===================== Compare ===================== -->
   <section class="topic" id="compare" style="--c: var(--accent)">
     <div class="topic-head">
@@ -549,6 +1657,8 @@ th{font-family:var(--sans)}
             <th><span class="dot" style="--c: var(--xss)"></span>XSS</th>
             <th><span class="dot" style="--c: var(--sql)"></span>SQL Injection</th>
             <th><span class="dot" style="--c: var(--csrf)"></span>CSRF</th>
+            <th><span class="dot" style="--c: var(--more)"></span>SSRF</th>
+            <th><span class="dot" style="--c: var(--owasp)"></span>IDOR</th>
           </tr>
         </thead>
         <tbody>
@@ -556,25 +1666,25 @@ th{font-family:var(--sans)}
             <th>Target</th>
             <td>Victim-এর browser</td>
             <td>Server-এর database</td>
-            <td>Logged-in user-এর session</td>
+            <td>Logged-in user-এর session</td><td>Server-এর internal network</td><td>অন্য user-এর object</td>
           </tr>
           <tr>
             <th>কী inject / forge হয়</th>
             <td>Malicious JavaScript</td>
             <td>Malicious SQL</td>
-            <td>Unwanted HTTP request</td>
+            <td>Unwanted HTTP request</td><td>Server-এর দিয়ে বানানো request</td><td>বদলানো object id</td>
           </tr>
           <tr>
             <th>Typical impact</th>
             <td>Cookie theft, session hijack</td>
             <td>Auth bypass, data leak / delete</td>
-            <td>Money transfer, email / password change</td>
+            <td>Money transfer, email / password change</td><td>Cloud credential / internal API leak</td><td>অন্যের private data দেখা/বদলানো</td>
           </tr>
           <tr>
             <th>Main prevention</th>
             <td>Output encoding, CSP, HttpOnly</td>
             <td>Prepared statements, ORM</td>
-            <td>CSRF token, SameSite cookie</td>
+            <td>CSRF token, SameSite cookie</td><td>Allow-list URL, private IP block</td><td>Server-side ownership check</td>
           </tr>
         </tbody>
       </table>
@@ -657,6 +1767,262 @@ th{font-family:var(--sans)}
     }, { rootMargin: "-40% 0px -55% 0px" });
     map.forEach((_, id) => { const el = document.getElementById(id); if (el) io.observe(el); });
   })();
+</script>
+<script>
+// ===== CORS guide: syntax highlight + simulator =====
+(function () {
+/* ---------- syntax highlight for pre.code[data-lang] ---------- */
+const esc = s => s.replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+const KW = {
+  js: "import|from|export|default|const|let|var|function|return|if|else|new|await|async|true|false|null|undefined",
+  cs: "var|new|await|using|true|false|null|return|if|async|string",
+  nginx: "map|server|listen|server_name|location|if|add_header|return|proxy_pass|always|default|ssl",
+  sql: "PREPARE|EXECUTE|SELECT|FROM|WHERE|AS|text",
+};
+const COM = { js: "\\/\\/[^\\n]*", cs: "\\/\\/[^\\n]*", nginx: "#[^\\n]*", sql: "--[^\\n]*" };
+const STR = String.raw`'(?:[^'\\\n]|\\.)*'|"(?:[^"\\\n]|\\.)*"`;
+function hl(src, lang) {
+  if (lang === "http") {
+    return esc(src).split("\n").map((ln, i) =>
+      i === 0 || /^HTTP\//.test(ln) ? `<span class="k">${ln}</span>`
+        : ln.replace(/^([A-Za-z-]+)(:)/, '<span class="t">$1</span>$2')).join("\n");
+  }
+  if (!KW[lang]) return esc(src);
+  const re = new RegExp(`(${COM[lang]})|(${STR})|\\b(\\d+)\\b|\\b(${KW[lang]})\\b|\\b([A-Z][a-z]+[A-Za-z]*)\\b`, "g");
+  return esc(src).replace(re, (m, c, s, d, k, t) =>
+    c ? `<span class="c">${c}</span>` : s ? `<span class="s">${s}</span>` : d ? `<span class="d">${d}</span>` :
+    k ? `<span class="k">${k}</span>` : (lang === "cs" || lang === "js") ? `<span class="t">${t}</span>` : t);
+}
+document.querySelectorAll("pre.code[data-lang]").forEach(pre => { pre.innerHTML = hl(pre.textContent, pre.dataset.lang); });
+
+/* ---------- CORS simulator ---------- */
+(() => {
+  const $ = id => document.getElementById(id);
+  const form = $("simForm"), pkt = $("pkt"), xmark = $("xmark"), log = $("simLog"), vbox = $("simVerdict");
+  const sendBtn = $("simSend"), codeBox = $("simCode"), hint = $("simHint");
+  const nodeB = $("nodeBrowser"), nodeS = $("nodeServer"), brNote = $("brNote"), svNote = $("svNote");
+  const HOST = "api.shop.com", API_URL = "https://api.shop.com/orders";
+  const ORIGINS = { same: "https://api.shop.com", app: "https://app.shop.com", evil: "https://evil.com" };
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const DUR = reduce ? 1 : 850;
+  const sleep = ms => new Promise(r => setTimeout(r, reduce ? 20 : ms));
+  const BODY = { GET: '[{"id":42,"total":1250}]', POST: '{"id":43,"status":"created"}', PUT: '{"id":42,"status":"updated"}', DELETE: '{"id":42,"deleted":true}' };
+  const EFFECT = { POST: "নতুন order তৈরি হলো", PUT: "order আপডেট হলো", DELETE: "order মুছে গেল" };
+  const NO_ACAO = "No 'Access-Control-Allow-Origin' header is present on the requested resource.";
+  const WILDCARD = "The value of the 'Access-Control-Allow-Origin' header in the response must not be the wildcard '*' when the request's credentials mode is 'include'.";
+  const OPAQUE = " If an opaque response serves your needs, set the request's mode to 'no-cors' to fetch the resource with CORS disabled.";
+
+  function state() {
+    const f = new FormData(form), s = {};
+    ["origin", "method", "ctype", "auth", "cred", "cfg"].forEach(k => s[k] = f.get(k));
+    return s;
+  }
+
+  // The decision rules — the heart of the simulator.
+  function decide(s) {
+    const d = { origin: ORIGINS[s.origin], same: s.origin === "same", hasBody: s.method !== "GET", cred: s.cred === "on" };
+    d.reasons = [];
+    if (!["GET", "HEAD", "POST"].includes(s.method)) d.reasons.push(`<code>${s.method}</code> safelisted method না`);
+    if (d.hasBody && s.ctype === "json") d.reasons.push("<code>Content-Type: application/json</code> safelisted না");
+    if (s.auth === "auth") d.reasons.push("<code>Authorization</code> safelisted header না");
+    d.preflight = false; d.preOk = null; d.sent = true; d.readable = true; d.error = null;
+    d.cookie = d.same || d.cred;                    // same-origin: default credentials 'same-origin' → cookie যায়
+    if (d.same) return d;                           // SOP-ই অনুমতি দেয়, CORS check হয় না
+
+    d.preflight = d.reasons.length > 0;
+    const allowed = s.cfg === "star" || (s.cfg === "list" && s.origin === "app");
+    const wildcardWithCred = s.cfg === "star" && d.cred;
+    const prefix = `Access to fetch at '${API_URL}' from origin '${d.origin}' has been blocked by CORS policy: `;
+
+    if (d.preflight) {
+      let why = !allowed ? NO_ACAO : wildcardWithCred ? WILDCARD : null;
+      if (why) {                                    // preflight fail → আসল request কখনো যায় না
+        d.preOk = false; d.sent = false; d.readable = false; d.cookie = false;
+        d.error = prefix + "Response to preflight request doesn't pass access control check: " + why;
+        return d;
+      }
+      d.preOk = true;
+    }
+    // আসল request গেছে (simple request হলে CORS থাকুক বা না থাকুক) — এখন response পড়া যাবে কি না
+    if (!allowed) { d.readable = false; d.error = prefix + NO_ACAO + (d.preflight ? "" : OPAQUE); }
+    else if (wildcardWithCred) { d.readable = false; d.error = prefix + WILDCARD; }
+    return d;
+  }
+
+  function fetchCode(s) {
+    const hasBody = s.method !== "GET", h = [];
+    if (hasBody) h.push(`'Content-Type': '${s.ctype === "json" ? "application/json" : "application/x-www-form-urlencoded"}'`);
+    if (s.auth === "auth") h.push(`'Authorization': 'Bearer eyJhbGciOi…'`);
+    const L = [`// page: ${ORIGINS[s.origin]}`, `const res = await fetch('${API_URL}', {`, `  method: '${s.method}',`];
+    if (s.cred === "on") L.push(`  credentials: 'include',`);
+    if (h.length) L.push(`  headers: { ${h.join(", ")} },`);
+    if (hasBody) L.push(s.ctype === "json" ? `  body: JSON.stringify({ item: 'book', qty: 1 }),` : `  body: 'item=book&qty=1',`);
+    L.push("});", "const data = await res.json();");
+    return L.join("\n");
+  }
+  const ctypeVal = s => s.ctype === "json" ? "application/json" : "application/x-www-form-urlencoded";
+
+  function preflightReq(s, d) {
+    const h = [];
+    if (s.auth === "auth") h.push("authorization");
+    if (d.hasBody && s.ctype === "json") h.push("content-type");
+    const L = ["OPTIONS /orders HTTP/1.1", `Host: ${HOST}`, `Origin: ${d.origin}`, `Access-Control-Request-Method: ${s.method}`];
+    if (h.length) L.push(`Access-Control-Request-Headers: ${h.sort().join(",")}`);
+    return L.join("\n");
+  }
+  function preflightRes(s) {
+    if (s.cfg === "none") return ["HTTP/1.1 200 OK", "Allow: GET, POST, PUT, DELETE", "Content-Length: 0"].join("\n");
+    if (s.cfg === "star") return ["HTTP/1.1 204 No Content", "Access-Control-Allow-Origin: *", "Access-Control-Allow-Methods: GET, POST, PUT, DELETE", "Access-Control-Allow-Headers: Content-Type, Authorization", "Access-Control-Max-Age: 600"].join("\n");
+    if (s.origin === "app") return ["HTTP/1.1 204 No Content", "Access-Control-Allow-Origin: https://app.shop.com", "Access-Control-Allow-Methods: GET, POST, PUT, DELETE", "Access-Control-Allow-Headers: Content-Type, Authorization", "Access-Control-Allow-Credentials: true", "Access-Control-Max-Age: 600", "Vary: Origin"].join("\n");
+    return ["HTTP/1.1 204 No Content", "Vary: Origin"].join("\n");
+  }
+  function actualReq(s, d) {
+    const L = [`${s.method} /orders HTTP/1.1`, `Host: ${HOST}`];
+    if (!d.same || s.method !== "GET") L.push(`Origin: ${d.origin}`);  // same-origin GET-এ Origin যায় না
+    if (d.hasBody) L.push(`Content-Type: ${ctypeVal(s)}`);
+    if (s.auth === "auth") L.push("Authorization: Bearer eyJhbGciOi…");
+    if (d.cookie) L.push("Cookie: session=8f2c41d7");
+    if (d.hasBody) L.push("", s.ctype === "json" ? '{"item":"book","qty":1}' : "item=book&qty=1");
+    return L.join("\n");
+  }
+  function actualRes(s, d) {
+    const L = [s.method === "POST" ? "HTTP/1.1 201 Created" : "HTTP/1.1 200 OK", "Content-Type: application/json"];
+    if (!d.same) {
+      if (s.cfg === "star") L.push("Access-Control-Allow-Origin: *");
+      else if (s.cfg === "list" && s.origin === "app") L.push("Access-Control-Allow-Origin: https://app.shop.com", "Access-Control-Allow-Credentials: true", "Vary: Origin");
+      else if (s.cfg === "list") L.push("Vary: Origin");
+    }
+    L.push("", BODY[s.method]);
+    return L.join("\n");
+  }
+
+  function addLog(kind, title, raw, note, lang) {
+    const li = document.createElement("li");
+    li.className = "lg " + kind;
+    li.innerHTML = `<div class="lg-h">${title}</div>` +
+      (raw ? `<pre class="code">${hl(raw, lang || "http")}</pre>` : "") +
+      (note ? `<p class="lg-n">${note}</p>` : "");
+    log.appendChild(li);
+  }
+
+  function fly(label, toRight, cls) {
+    return new Promise(res => {
+      pkt.textContent = label;
+      pkt.className = "pkt " + cls;
+      pkt.style.transitionDuration = "0ms";
+      pkt.style.left = toRight ? "0%" : "100%";
+      pkt.style.transform = toRight ? "translate(0,-50%)" : "translate(-100%,-50%)";
+      pkt.style.opacity = "1";
+      void pkt.offsetWidth;                         // reflow so the next change animates
+      pkt.style.transitionDuration = DUR + "ms";
+      pkt.style.left = toRight ? "100%" : "0%";
+      pkt.style.transform = toRight ? "translate(-100%,-50%)" : "translate(0,-50%)";
+      setTimeout(() => { pkt.style.opacity = "0"; res(); }, DUR + 30);
+    });
+  }
+  const flash = (node, cls) => { node.classList.remove("hit", "okk", "badd"); if (cls) node.classList.add(cls); };
+
+  function reset() {
+    log.innerHTML = ""; vbox.hidden = true; vbox.innerHTML = "";
+    xmark.classList.remove("on"); flash(nodeB); flash(nodeS); brNote.textContent = ""; svNote.textContent = "";
+    pkt.style.opacity = "0";
+  }
+
+  function verdictHTML(s, d) {
+    const row = (k, v, cls) => `<div>${k}</div><div class="v ${cls}">${v}</div>`;
+    let rows = "";
+    rows += row("Preflight (OPTIONS) হয়েছে?", d.same ? "না — same-origin" : d.preflight ? (d.preOk ? "হ্যাঁ — pass" : "হ্যাঁ — fail") : "না — simple request", d.preflight ? (d.preOk ? "ok" : "bad") : "mut");
+    rows += row("আসল request server-এ পৌঁছেছে?", d.sent ? "হ্যাঁ" : "না", d.sent ? "warn" : "ok");
+    rows += row("Server-এ side effect?", !d.sent ? "না" : s.method === "GET" ? "না (GET — শুধু পড়া)" : "হ্যাঁ — " + EFFECT[s.method], d.sent && s.method !== "GET" ? "warn" : "mut");
+    rows += row("Cookie গেছে?", d.cookie ? "হ্যাঁ" : "না", d.cookie ? "warn" : "mut");
+    rows += row("JS কি response পড়তে পারে?", d.readable ? "হ্যাঁ" : "না", d.readable ? "ok" : "bad");
+
+    let lesson;
+    if (d.same) lesson = "Same-origin request — SOP নিজেই অনুমতি দেয়, CORS header লাগে না। Cookie default-এই যায় (<code>credentials: 'same-origin'</code>)।";
+    else if (d.preflight && !d.preOk) lesson = "Preflight fail করলে browser আসল request <b>পাঠায়ই না</b> — server-এ কিছুই বদলায়নি। কোনো side effect নেই।";
+    else if (!d.readable && d.sent && s.method !== "GET") lesson = "সাবধান: simple request server-এ পৌঁছে কাজ করে ফেলেছে (" + EFFECT[s.method] + "), শুধু JS উত্তরটা পড়তে পারল না। এ কারণেই CORS কোনো CSRF defence না।";
+    else if (!d.readable && s.cfg === "star") lesson = "<code>*</code> আর <code>credentials: 'include'</code> একসাথে চলে না। Server-কে exact origin + <code>Access-Control-Allow-Credentials: true</code> দিতে হবে।";
+    else if (!d.readable) lesson = "Server data পাঠিয়েছিল, network tab-এ response দেখা যায় — কিন্তু অনুমতির header নেই বলে browser JS-কে দেয়নি। JS পায় শুধু <code>TypeError: Failed to fetch</code>।";
+    else if (s.cfg === "star") lesson = (s.origin === "evil" ? "evil.com-ও পড়তে পারছে — <code>*</code> মানে যে কেউ। " : "") + "Cookie যায়নি, তাই এটা শুধু public data-র জন্য ঠিক আছে।";
+    else lesson = "Allowlist-এ থাকা origin, server exact origin" + (d.cred ? " আর <code>Allow-Credentials: true</code>" : "") + " ফেরত দিয়েছে — সব ঠিক।";
+    if (s.origin === "evil" && d.cookie) lesson += " <br><small>বাস্তবে: cookie <code>SameSite=Lax</code> (Chrome default) হলে evil.com-এর fetch-এ cookie যেত না।</small>";
+
+    let html = `<div class="vgrid">${rows}</div><div class="verdict" style="--c:${d.readable ? "var(--ok)" : "var(--bad)"}">${lesson}</div>`;
+    if (d.error) {
+      const net = d.sent ? `${s.method} ${API_URL} net::ERR_FAILED ${s.method === "POST" ? "201 (Created)" : "200 (OK)"}` : `${s.method} ${API_URL} net::ERR_FAILED`;
+      html += `<div class="file" style="margin-top:12px;--dot:var(--bad)"><i></i>Chrome DevTools console</div><div class="console">${esc(d.error)}\n<span class="ln2">${esc(net)}\nUncaught (in promise) TypeError: Failed to fetch</span></div>`;
+    }
+    return html;
+  }
+
+  let running = false;
+  async function run() {
+    if (running) return;
+    running = true; sendBtn.disabled = true;
+    const s = state(), d = decide(s);
+    reset();
+    try {
+      addLog("js", "JS: <code>fetch()</code> চালাল (উপরের code)", null, null);
+      if (d.same) addLog("info", "Browser: same-origin — CORS check লাগবে না", null, "Page আর API একই origin (<code>https://api.shop.com</code>), তাই server-এর CORS config এখানে অপ্রাসঙ্গিক।");
+      else if (d.preflight) addLog("info", "Browser: preflight লাগবে", null, "কারণ: " + d.reasons.join(" · "));
+      else addLog("info", "Browser: simple request — সরাসরি পাঠাবে", null, "Method GET/POST, কোনো custom header নেই, Content-Type safelisted — HTML form দিয়েও এটা পাঠানো যেত।");
+
+      if (d.preflight) {
+        addLog("req", "→ Preflight request (browser নিজে পাঠাল, JS না)", preflightReq(s, d), "Cookie / Authorization নেই — preflight কখনো credentials বহন করে না।");
+        await fly("OPTIONS", true, "pre");
+        flash(nodeS, "hit"); svNote.textContent = "OPTIONS-এর উত্তর";
+        await sleep(250);
+        await fly(s.cfg === "none" ? "200" : "204", false, "resp");
+        addLog("res", "← Preflight response", preflightRes(s), s.cfg === "none" ? "কোনো <code>Access-Control-*</code> header নেই।" : (s.cfg === "list" && s.origin !== "app") ? "Origin allowlist-এ নেই → <code>Access-Control-Allow-Origin</code> দেয়নি।" : null);
+        await sleep(200);
+        if (!d.preOk) {
+          flash(nodeB, "badd"); xmark.classList.add("on"); brNote.textContent = "preflight fail";
+          addLog("bad", "✗ Browser: preflight fail — আসল " + s.method + " request পাঠানোই হলো না", null, "Server-এর handler কখনো চলেনি।");
+          vbox.innerHTML = verdictHTML(s, d); vbox.hidden = false;
+          return;
+        }
+        flash(nodeB, "okk"); brNote.textContent = "preflight ✓";
+        addLog("ok", "✓ Browser: preflight pass — এবার আসল request", null, null);
+        await sleep(200);
+      }
+
+      addLog("req", "→ আসল request", actualReq(s, d), d.cookie ? "Cookie জুড়ে দেওয়া হয়েছে।" : (d.cred ? null : "<code>credentials</code> বন্ধ — cross-origin request-এ cookie যায় না।"));
+      flash(nodeB);
+      await fly(s.method, true, "real");
+      flash(nodeS, "hit");
+      svNote.textContent = s.method === "GET" ? "data পড়ল" : EFFECT[s.method];
+      await sleep(300);
+      await fly(s.method === "POST" ? "201" : "200", false, "resp");
+      addLog("res", "← Response", actualRes(s, d), null);
+      await sleep(200);
+      if (d.readable) {
+        flash(nodeB, "okk"); brNote.textContent = "JS পেল ✓";
+        addLog("ok", "✓ Browser: JS-কে response দিল", null, d.same ? "Same-origin — কোনো check লাগেনি।" : "Allow-Origin মিলেছে" + (d.cred ? ", Allow-Credentials: true আছে।" : "।"));
+      } else {
+        flash(nodeB, "badd"); brNote.textContent = "JS পেল না";
+        addLog("bad", "✗ Browser: response আটকে দিল — JS পড়তে পারবে না", null, "Response কিন্তু browser পর্যন্ত এসেছে; server কাজও করে ফেলেছে।");
+      }
+      vbox.innerHTML = verdictHTML(s, d); vbox.hidden = false;
+    } finally {
+      running = false; sendBtn.disabled = false;
+    }
+  }
+
+  function sync() {
+    const s = state();
+    $("ctypeSet").disabled = s.method === "GET";
+    $("cfgSet").disabled = s.origin === "same";
+    $("brOrigin").textContent = ORIGINS[s.origin];
+    codeBox.innerHTML = hl(fetchCode(s), "js");
+    const d = decide(s);
+    hint.innerHTML = d.same ? "Same-origin — CORS প্রযোজ্য না" : d.preflight ? "এই request-এ preflight লাগবে" : "Simple request — preflight লাগবে না";
+  }
+  form.addEventListener("change", () => { sync(); reset(); });
+  sendBtn.addEventListener("click", run);
+  sync();
+})();
+
+})();
 </script>
 </body>
 </html>
