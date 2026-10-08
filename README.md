@@ -44,6 +44,7 @@ _শীঘ্রই আসছে।_
 - [Thread Scheduling · Multi-core CPU](05-operating-system/thread/index.html) — process-এর thread কীভাবে ready queue, scheduler আর context switch পেরিয়ে multi-core CPU-তে চলে, 3D simulation
 - [Deadlock](05-operating-system/deadlock/index.html) — DB আর thread-এর উদাহরণ, ৪টি necessary condition, Banker's algorithm simulator, multiprogramming বনাম multitasking
 - [Mutex](05-operating-system/mutex/index.html) — race condition, mutex / spinlock / atomic ভেতরে কীভাবে কাজ করে, futex, D3 animation, আসল C ও Java run
+- [OS Basics - Interview](05-operating-system/basics/index.html) - ৩৯টি প্রশ্ন (৩৫ core + ৪ আরও), প্রতিটির সংক্ষিপ্ত উত্তর ও step-by-step D3 animation
 
 ## 06 · Networking
 

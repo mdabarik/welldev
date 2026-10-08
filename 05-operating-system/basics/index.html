@@ -1,0 +1,1234 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OS Basics - Interview Cheat Sheet</title>
+<meta name="description" content="Trainee Software Engineer interview-এর জন্য OS-এর ৩৯টি প্রশ্ন - প্রতিটির সংক্ষিপ্ত উত্তর আর ক্লিক করে ধাপে ধাপে দেখার D3 animation।">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<style>
+/* One card per interview question: short answer, 2-3 bullets, and a step-by-step D3 scene.
+   Scenes are plain data (see TOPICS at the bottom): each step adds / modifies / deletes nodes by id
+   and the tiny engine animates the difference. */
+:root{
+  --bg:#f5f7fc; --surface:#ffffff; --surface-2:#f1f4fa; --fg:#0f172a; --muted:#5b6478; --faint:#94a0b8; --line:#e4e8f1;
+  --accent:#6366f1;
+  --a:#4f46e5; --b:#db2777; --g:#059669; --o:#d97706; --r:#e11d48; --s:#0284c7;
+  --hero:linear-gradient(135deg,#4f46e5 0%,#7c3aed 45%,#db2777 100%);
+  --shadow:0 1px 2px rgba(15,23,42,.04),0 10px 30px -12px rgba(15,23,42,.14);
+  --sans:"Inter","Hind Siliguri",system-ui,sans-serif; --bn:"Hind Siliguri","Inter",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0b0f1a; --surface:#121827; --surface-2:#182033; --fg:#e7ecf6; --muted:#9aa6bf; --faint:#66728c; --line:#232c42;
+  --accent:#818cf8; --a:#818cf8; --b:#f472b6; --g:#34d399; --o:#fbbf24; --r:#fb7185; --s:#38bdf8;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6);
+}}
+:root[data-theme="dark"]{
+  --bg:#0b0f1a; --surface:#121827; --surface-2:#182033; --fg:#e7ecf6; --muted:#9aa6bf; --faint:#66728c; --line:#232c42;
+  --accent:#818cf8; --a:#818cf8; --b:#f472b6; --g:#34d399; --o:#fbbf24; --r:#fb7185; --s:#38bdf8;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 var(--bn);-webkit-font-smoothing:antialiased}
+a{color:var(--accent)}
+button{font:inherit;color:inherit}
+code{font-family:var(--mono);font-size:.86em;font-weight:500;background:color-mix(in srgb,var(--accent) 10%,var(--surface));color:color-mix(in srgb,var(--accent) 72%,var(--fg));padding:.1em .4em;border-radius:6px}
+.wrap{max-width:1000px;margin:0 auto;padding:20px 18px 70px}
+
+.topnav{display:flex;align-items:center;gap:10px}
+.brand{display:flex;align-items:center;gap:10px;color:var(--fg);text-decoration:none;font:800 16px var(--sans);letter-spacing:-.02em}
+.logo{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:#fff;font:800 13px var(--mono);background:var(--hero)}
+.topnav .sp{flex:1}
+.pill{border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:6px 14px;font:600 13px var(--sans);cursor:pointer;text-decoration:none}
+.pill:hover{color:var(--fg)}
+
+.hero{margin-top:20px;border-radius:22px;padding:26px 30px;color:#fff;background:var(--hero)}
+.hero .eyebrow{font:600 12px var(--sans);letter-spacing:.1em;text-transform:uppercase;opacity:.85}
+.hero h1{margin:6px 0 8px;font:800 clamp(26px,4.2vw,38px)/1.15 var(--sans);letter-spacing:-.03em}
+.hero p{margin:0;max-width:680px;opacity:.94}
+.jump{display:flex;flex-wrap:wrap;gap:6px;margin-top:16px}
+.jump a{min-width:32px;padding:0 6px;height:32px;display:grid;place-items:center;border-radius:9px;text-decoration:none;font:700 13px var(--sans);color:#fff;background:rgba(255,255,255,.18)}
+.jump a:hover{background:rgba(255,255,255,.34)}
+
+.parts{position:sticky;top:0;z-index:5;margin:14px -18px 0;padding:10px 18px;display:flex;gap:8px;overflow-x:auto;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);scrollbar-width:none}
+.parts a{flex:none;text-decoration:none;font:600 13px var(--sans);color:var(--muted);border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 13px}
+.parts a:hover{color:var(--fg)}
+.parts a b{color:var(--accent);margin-right:4px}
+
+.part{margin-top:44px;scroll-margin-top:60px}
+.part>h2{margin:0;font:800 clamp(20px,2.6vw,25px)/1.25 var(--sans);letter-spacing:-.02em}
+.part>h2 span{color:var(--accent);margin-right:8px}
+
+.q{margin-top:16px;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:20px 22px;box-shadow:var(--shadow);scroll-margin-top:64px}
+.q h3{display:flex;gap:12px;align-items:flex-start;margin:0 0 10px;font:700 18px/1.4 var(--sans);letter-spacing:-.01em}
+.skip{display:inline-block;margin-left:8px;padding:1px 10px;border-radius:999px;font:600 12px var(--sans);font-style:normal;white-space:nowrap;color:var(--muted);background:var(--surface-2);border:1px dashed var(--faint);vertical-align:middle}
+.num{flex:none;min-width:34px;height:34px;padding:0 8px;border-radius:10px;display:grid;place-items:center;color:#fff;font:800 14px var(--sans);background:var(--hero)}
+.ans{margin:0 0 10px;padding:10px 14px;border-left:4px solid var(--accent);border-radius:0 10px 10px 0;background:color-mix(in srgb,var(--accent) 8%,var(--surface))}
+.q ul{margin:0 0 12px;padding-left:20px;color:var(--muted)}
+.q li{margin:2px 0}
+.q li b,.ans b{color:var(--fg)}
+.extra{margin:0 0 12px;overflow-x:auto}
+.extra table{border-collapse:collapse;font:500 13px var(--mono)}
+.extra th,.extra td{border:1px solid var(--line);padding:3px 10px;text-align:center}
+.extra th{background:var(--surface-2)}
+.extra .cmp td,.extra .cmp th{text-align:left;vertical-align:top;font:500 13.5px/1.55 var(--bn);min-width:150px}
+.extra .cmp td:first-child{font-weight:700;white-space:nowrap;min-width:0}
+
+.viz{border:1px solid var(--line);border-radius:14px;background:var(--surface-2);overflow:hidden}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;padding:10px 12px 0}
+.tabs button{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:3px 12px;font:600 12.5px var(--sans);color:var(--muted);cursor:pointer}
+.tabs button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.stage{overflow-x:auto;padding-top:8px}
+.stage svg{display:block;width:100%;min-width:680px;height:auto;cursor:pointer;user-select:none}
+.cap{padding:10px 16px;min-height:3.4em;border-top:1px dashed var(--line);font-size:15px}
+.ctl{display:flex;align-items:center;gap:8px;padding:0 12px 12px}
+.b{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:5px 14px;font:600 13px var(--sans);cursor:pointer}
+.b:hover:not(:disabled){border-color:var(--accent)}
+.b:disabled{opacity:.4;cursor:default}
+.b.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+.cnt{margin-left:auto;font:500 12px var(--mono);color:var(--faint)}
+
+/* svg scene */
+svg text,svg tspan{white-space:pre}
+svg text{font-family:var(--sans);font-size:13px;fill:var(--fg);dominant-baseline:central}
+.c-n{--cc:var(--muted)} .c-a{--cc:var(--a)} .c-b{--cc:var(--b)} .c-g{--cc:var(--g)}
+.c-o{--cc:var(--o)} .c-r{--cc:var(--r)} .c-s{--cc:var(--s)} .c-f{--cc:var(--fg)}
+.box rect,.circ circle{fill:color-mix(in srgb,var(--cc) 14%,var(--surface));stroke:var(--cc);stroke-width:1.6;transition:fill .45s,stroke .45s}
+.dash rect,.dash circle{stroke-dasharray:6 4;fill:color-mix(in srgb,var(--cc) 4%,transparent)}
+.hl rect,.hl circle{stroke-width:3.4;filter:drop-shadow(0 0 7px color-mix(in srgb,var(--cc) 65%,transparent))}
+.text text{fill:var(--cc);transition:fill .45s}
+.text.b text,.text.lg text{font-weight:700}
+.text.lg text{font-size:15px}
+.sm text{font-size:11.5px}
+.m text{font-family:var(--mono);font-size:12px}
+.path path{fill:none;stroke:var(--cc);stroke-width:3.4;stroke-linecap:round}
+.arrow line{stroke:var(--cc);stroke-width:2.2;transition:stroke .4s}
+.arrow.dash line{stroke-dasharray:6 4}
+.arrow.hl line{stroke-width:3.4}
+footer{margin-top:50px;text-align:center;color:var(--faint);font:500 13px var(--sans)}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs id="defs"></defs></svg>
+<div class="wrap">
+  <nav class="topnav">
+    <a class="brand" href="../../index.html"><span class="logo">W</span>WellDev</a>
+    <span class="sp"></span>
+    <button class="pill" id="theme" type="button">Theme</button>
+  </nav>
+
+  <header class="hero">
+    <div class="eyebrow">Operating System · Interview</div>
+    <h1>OS Basics - ৩৯টি প্রশ্ন, সোজা উত্তর</h1>
+    <p>প্রতিটি প্রশ্নে এক লাইনের উত্তর আর একটা animation। scene-এ ক্লিক করো বা <b>Next</b> চাপো - ধাপে ধাপে দেখো।</p>
+    <div class="jump" id="jump"></div>
+  </header>
+  <nav class="parts" id="parts"></nav>
+  <main id="app"></main>
+  <footer>Trainee Software Engineer · OS basics</footer>
+</div>
+
+<script>
+/* ---------- theme ---------- */
+(function(){
+  const root=document.documentElement,btn=document.getElementById('theme');
+  try{const t=localStorage.getItem('theme');if(t)root.dataset.theme=t;}catch(e){}
+  const dark=()=>root.dataset.theme?root.dataset.theme==='dark':matchMedia('(prefers-color-scheme:dark)').matches;
+  const label=()=>btn.textContent=dark()?'Light':'Dark';
+  btn.onclick=()=>{root.dataset.theme=dark()?'light':'dark';try{localStorage.setItem('theme',root.dataset.theme);}catch(e){}label();};
+  label();
+})();
+
+/* ---------- scene engine ---------- */
+const COLORS=['n','a','b','g','o','r','s','f'];
+document.getElementById('defs').innerHTML=COLORS.map(c=>
+  `<marker id="ah-${c}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" style="fill:var(--${c==='n'?'muted':c==='f'?'fg':c})"/></marker>`).join('');
+
+const B=(id,x,y,w,h,label,c='n',o={})=>({id,k:'box',x,y,w,h,label,c,...o});
+const T=(id,x,y,label,o={})=>({id,k:'text',x,y,label,c:'n',...o});
+const A=(id,x1,y1,x2,y2,c='n',o={})=>({id,k:'arrow',x:0,y:0,x1,y1,x2,y2,c,...o});
+const C=(id,x,y,r,label,c='n',o={})=>({id,k:'circ',x,y,r,label,c,...o});
+const S=(cap,o={})=>({cap,...o});
+const P=(id,d,c='n',o={})=>({id,k:'path',x:0,y:0,d,c,...o});
+
+function stateAt(steps,i){
+  const m=new Map();
+  for(let k=0;k<=i;k++){
+    const s=steps[k];
+    (s.del||[]).forEach(id=>m.delete(id));
+    (s.add||[]).forEach(n=>m.set(n.id,{...n}));
+    Object.entries(s.mod||{}).forEach(([id,p])=>{if(m.has(id))Object.assign(m.get(id),p);});
+  }
+  return [...m.values()];
+}
+
+function setText(g,cls,str,x,y,anchor,lh=15.5){
+  let tx=g.select('text.'+cls);
+  if(tx.empty())tx=g.append('text').attr('class',cls);
+  const ls=String(str??'').split('\n');
+  tx.attr('text-anchor',anchor);
+  tx.selectAll('tspan').data(ls).join('tspan').attr('x',x).attr('y',(d,i)=>y-(ls.length-1)*lh/2+i*lh).text(d=>d);
+}
+
+function upd(g,d,t){
+  g.attr('class',`n ${d.k} c-${d.c||'n'}${d.dash?' dash':''}${d.hl?' hl':''}${d.s?' '+d.s:''}${d.m?' m':''}`);
+  if(d.k==='box'){
+    let r=g.select('rect');
+    if(r.empty())r=g.insert('rect',':first-child').attr('rx',9).attr('width',d.w).attr('height',d.h);
+    r.transition(t).attr('width',d.w).attr('height',d.h);
+    setText(g,'lb',d.label,d.w/2,d.h/2,'middle');
+  }else if(d.k==='circ'){
+    let r=g.select('circle');
+    if(r.empty())r=g.insert('circle',':first-child').attr('r',d.r);
+    r.transition(t).attr('r',d.r);
+    setText(g,'lb',d.label,0,0,'middle');
+  }else if(d.k==='text'){
+    setText(g,'lb',d.label,0,0,d.a||'start');
+  }else if(d.k==='path'){
+    let p=g.select('path');
+    if(p.empty()){p=g.append('path').attr('d',d.d);const L=p.node().getTotalLength();p.attr('stroke-dasharray',L).attr('stroke-dashoffset',L).transition(t).attr('stroke-dashoffset',0);}
+  }else if(d.k==='arrow'){
+    let l=g.select('line');
+    if(l.empty())l=g.append('line').attr('x1',d.x1).attr('y1',d.y1).attr('x2',d.x2).attr('y2',d.y2);
+    l.attr('marker-end',`url(#ah-${d.c||'n'})`).transition(t).attr('x1',d.x1).attr('y1',d.y1).attr('x2',d.x2).attr('y2',d.y2);
+  }
+}
+
+function draw(svg,nodes,dur){
+  const t=d3.transition().duration(dur).ease(d3.easeCubicInOut);
+  svg.select('.layer').selectAll('g.n').data(nodes,d=>d.id).join(
+    en=>en.append('g').attr('opacity',0).attr('transform',d=>`translate(${d.x},${d.y})`),
+    up=>up,
+    ex=>ex.transition(t).attr('opacity',0).remove()
+  ).each(function(d){upd(d3.select(this),d,t);})
+   .transition(t).attr('transform',d=>`translate(${d.x},${d.y})`).attr('opacity',d=>d.o??1);
+}
+
+function mount(host,topic){
+  const tabs=topic.tabs||[{n:'',steps:topic.steps}];
+  host.innerHTML='<div class="tabs"></div><div class="stage"><svg viewBox="0 0 760 240" role="img"><g class="layer"></g></svg></div><div class="cap"></div><div class="ctl"><button class="b prev" type="button">◀</button><button class="b pri next" type="button">Next ▶</button><span class="cnt"></span></div>';
+  const svg=d3.select(host).select('svg'),cap=host.querySelector('.cap'),cnt=host.querySelector('.cnt');
+  const prev=host.querySelector('.prev'),next=host.querySelector('.next'),tabBox=host.querySelector('.tabs');
+  let ti=0,si=0,steps;
+  function show(dur){
+    draw(svg,stateAt(steps,si),dur);
+    cap.innerHTML=steps[si].cap;
+    cnt.textContent=`${si+1} / ${steps.length}`;
+    prev.disabled=si===0;
+    next.textContent=si===steps.length-1?'↻ আবার':'Next ▶';
+  }
+  function load(i){
+    ti=i;si=0;
+    const tb=tabs[ti];steps=typeof tb.steps==='function'?tb.steps():tb.steps;
+    tabBox.querySelectorAll('button').forEach((b,k)=>b.classList.toggle('on',k===ti));
+    show(0);
+  }
+  if(tabs.length>1){
+    tabs.forEach((tb,i)=>{const b=document.createElement('button');b.type='button';b.textContent=tb.n;b.onclick=()=>load(i);tabBox.appendChild(b);});
+  }else tabBox.remove();
+  const go=()=>{si=si===steps.length-1?0:si+1;show(600);};
+  next.onclick=go;svg.on('click',go);
+  prev.onclick=()=>{if(si>0){si--;show(600);}};
+  load(0);
+}
+
+/* ---------- computed scenes ---------- */
+// scene 3: process vs thread switch
+function swSteps(kind){
+  const tg='TCB';
+  return [
+    S('<b>A</b> চলছে - CPU-র register-এ A-র state।',{add:[B('cpu',300,16,160,64,'CPU\nচলছে: A','g'),B('pa',40,150,190,64,tg+' of A','a'),B('pb',530,150,190,64,tg+' of B','b')]}),
+    S(`Timer interrupt → kernel A-র register, PC, SP ${tg}-তে <b>save</b> করে।`,{add:[A('sv',320,82,200,148,'a'),T('svl',230,108,'save',{c:'a',s:'b'})]}),
+    S('B-র saved state <b>load</b> হয় - এখন B চলে।',{add:[A('ld',540,148,440,82,'b'),T('ldl',520,108,'load',{c:'b',s:'b',a:'end'})],mod:{cpu:{label:'CPU\nচলছে: B',c:'b'}}}),
+    kind==='p'
+      ?S('<b>Process switch:</b> register তো TCB-তে save/load হলই, তার উপর address space বদলায় (PCB-র page table pointer থেকে <code>CR3</code> বদল), TLB flush, cache ঠান্ডা। তাই ভারী।',{add:[T('x',380,226,'CR3 বদলাল → TLB flush ✗ → ধীর',{a:'middle',c:'r',s:'b'})]})
+      :S('<b>Thread switch</b> (একই process): address space একই - <code>CR3</code> ও TLB ঠিক থাকে। তাই হালকা।',{add:[T('x',380,226,'CR3 একই → TLB ঠিক ✓ → দ্রুত',{a:'middle',c:'g',s:'b'})]})
+  ];
+}
+
+// scene 20: scheduling numerical
+const JOBS=[{n:'T1',at:0,bt:5,pr:2},{n:'T2',at:1,bt:3,pr:1},{n:'T3',at:2,bt:1,pr:3},{n:'T4',at:3,bt:2,pr:2}];
+const PCOL={T1:'a',T2:'b',T3:'g',T4:'o'};
+function schedSim(algo,q=2){
+  const J=JOBS.map(j=>({...j,rem:j.bt,ct:0}));const seg=[];let t=0,done=0;
+  const push=(n,s,e)=>{const l=seg[seg.length-1];if(l&&l.n===n&&l.e===s)l.e=e;else seg.push({n,s,e});};
+  if(algo==='RR'){
+    const seen=new Set(),rq=[];
+    const admit=u=>J.forEach(j=>{if(!seen.has(j.n)&&j.at<=u){seen.add(j.n);rq.push(j);}});
+    admit(0);
+    while(done<J.length){
+      if(!rq.length){t=Math.min(...J.filter(j=>!seen.has(j.n)).map(j=>j.at));admit(t);continue;}
+      const j=rq.shift(),run=Math.min(q,j.rem);
+      push(j.n,t,t+run);t+=run;j.rem-=run;admit(t);
+      if(j.rem>0)rq.push(j);else{j.ct=t;done++;}
+    }
+  }else{
+    const key={FCFS:j=>j.at,SJF:j=>j.bt,SRTF:j=>j.rem,PRIO:j=>j.pr}[algo];
+    let cur=null;
+    while(done<J.length){
+      const ready=J.filter(j=>j.at<=t&&j.rem>0);
+      if(!ready.length){t++;continue;}
+      if(!cur||cur.rem===0||algo==='SRTF')cur=ready.reduce((a,b)=>key(b)<key(a)||(key(b)===key(a)&&b.at<a.at)?b:a);
+      push(cur.n,t,t+1);t++;cur.rem--;
+      if(cur.rem===0){cur.ct=t;done++;}
+    }
+  }
+  return {seg,J};
+}
+function schedSteps(algo,rule){
+  const {seg,J}=schedSim(algo),U=62,X0=40,out=[];
+  out.push(S(rule,{add:[T('gl',X0,28,'Gantt chart',{c:'f',s:'b'}),B('frame',X0,50,11*U,44,'','n',{dash:1})]}));
+  seg.forEach((g,i)=>out.push(S(`<b>${g.n}</b> চলে t=${g.s} থেকে t=${g.e} (${g.e-g.s} unit)।`,{add:[
+    B('g'+i,X0+g.s*U,50,(g.e-g.s)*U-2,44,g.n,PCOL[g.n]),
+    T('ts'+i,X0+g.s*U,108,String(g.s),{c:'n',s:'m'}),
+    ...(i===seg.length-1?[T('te',X0+g.e*U,108,String(g.e),{c:'n',s:'m'})]:[])
+  ]})));
+  const rows=J.map((j,i)=>{const tat=j.ct-j.at,wt=tat-j.bt;
+    return {tat,wt,node:T('r'+i,X0,150+i*17,`${j.n}  CT=${j.ct}  TAT=${j.ct}-${j.at}=${tat}  WT=${tat}-${j.bt}=${wt}`,{c:PCOL[j.n],s:'m'})};});
+  const avg=k=>(rows.reduce((s,r)=>s+r[k],0)/rows.length).toFixed(2);
+  out.push(S('<b>TAT = CT - AT</b>, <b>WT = TAT - BT</b>। গড় দিয়েই algorithm তুলনা হয়।',{add:[...rows.map(r=>r.node),T('avg',X0,150+4*17,`গড়:  TAT = ${avg('tat')}   WT = ${avg('wt')}`,{c:'f',s:'m b'})]}));
+  return out;
+}
+
+// scene 27: page replacement
+const REFS=[7,0,1,2,0,3,0,4,2,3,0,3,2];
+function prSim(algo,F=3,refs=REFS){
+  const fr=Array(F).fill(null),last={};let ptr=0,faults=0;const out=[];
+  refs.forEach((r,i)=>{
+    let fault=false,note,at=fr.indexOf(r);
+    if(at>=0)note=`<b>${r}</b> frame-এ আছে → HIT`;
+    else{
+      fault=true;faults++;at=fr.indexOf(null);
+      if(at>=0){note=`<b>${r}</b> নেই, ফাঁকা frame আছে → FAULT, load`;if(algo==='FIFO')ptr=(at+1)%F;}
+      else if(algo==='FIFO'){at=ptr;ptr=(ptr+1)%F;note=`<b>${r}</b> নেই → সবচেয়ে পুরনো <b>${fr[at]}</b> বাদ`;}
+      else if(algo==='LRU'){at=fr.reduce((bi,v,k)=>last[v]<last[fr[bi]]?k:bi,0);note=`<b>${r}</b> নেই → সবচেয়ে আগে ব্যবহৃত <b>${fr[at]}</b> বাদ`;}
+      else{const nu=v=>{const k=refs.indexOf(v,i+1);return k<0?Infinity:k;};at=fr.reduce((bi,v,k)=>nu(v)>nu(fr[bi])?k:bi,0);note=`<b>${r}</b> নেই → যেটা সবচেয়ে দেরিতে লাগবে <b>${fr[at]}</b> বাদ`;}
+      fr[at]=r;
+    }
+    last[r]=i;out.push({i,fr:[...fr],fault,faults,note,at});
+  });
+  return out;
+}
+function prSteps(algo,F=3,refs=REFS){
+  const sim=prSim(algo,F,refs),out=[],fi=[...Array(F).keys()];
+  out.push(S(`Reference string আর ${F}টি frame। প্রতিটি page access-এ HIT নাকি FAULT দেখো।`,{add:[
+    T('rl',20,14,'Reference string',{c:'n',s:'sm'}),
+    ...refs.map((r,i)=>B('r'+i,20+i*55,28,48,30,String(r),'n')),
+    T('fl',20,126,'Frames',{c:'n',s:'sm'}),
+    ...fi.map(k=>B('f'+k,20+k*70,138,60,46,'-','n',{dash:1})),
+    B('bd',20+F*70+20,138,150,46,'','n',{dash:1}),T('cnt',20,212,'Faults = 0',{c:'f',s:'lg'})
+  ]}));
+  sim.forEach((s,n)=>{
+    const mod={};
+    refs.forEach((_,k)=>{mod['r'+k]=k===s.i?{c:s.fault?'r':'g',hl:1}:{hl:0};});
+    fi.forEach(k=>{mod['f'+k]={label:s.fr[k]===null?'-':String(s.fr[k]),c:k===s.at?(s.fault?'r':'g'):(s.fr[k]===null?'n':'a'),dash:s.fr[k]===null?1:0,hl:k===s.at?1:0};});
+    mod.bd={label:s.fault?'FAULT ✗':'HIT ✓',c:s.fault?'r':'g',dash:0};
+    mod.cnt={label:`Faults = ${s.faults}`};
+    out.push(S(s.note+(n===sim.length-1?`। <b>মোট ${s.faults} fault।</b>`:'।'),{mod}));
+  });
+  return out;
+}
+
+// scene 31: threading models
+function modelSteps(kind){
+  const uc=['a','b','g','o'];
+  if(kind==='m1')return [
+    S('<b>M:1</b> - অনেক user thread, মাত্র ১টা kernel thread। Switch দ্রুত, কিন্তু multicore কাজে লাগে না।',{add:[
+      ...[0,1,2].map(i=>B('u'+i,100+i*180,30,120,40,'User thread '+(i+1),uc[i])),
+      B('k0',280,140,120,46,'1 kernel thread','o'),
+      ...[0,1,2].map(i=>A('l'+i,160+i*180,70,340,138,uc[i]))]}),
+    S('একটা thread blocking syscall করল → <b>পুরো kernel thread</b> ঘুমায় → বাকি সবাই আটকা।',{mod:{u1:{c:'r'},k0:{c:'r',label:'blocked'},u0:{c:'n'},u2:{c:'n'}}})];
+  if(kind==='11')return [
+    S('<b>1:1</b> - প্রতি user thread-এর জন্য নিজস্ব kernel thread (Linux pthread, Java)। সত্যিকারের parallel।',{add:[
+      ...[0,1,2].map(i=>B('u'+i,100+i*180,30,120,40,'User thread '+(i+1),uc[i])),
+      ...[0,1,2].map(i=>B('k'+i,100+i*180,140,120,46,'kernel thread '+(i+1),'o')),
+      ...[0,1,2].map(i=>A('l'+i,160+i*180,70,160+i*180,138,uc[i]))]}),
+    S('একটা block করলে শুধু ওটাই ঘুমায়, বাকিরা অন্য core-এ চলতে থাকে। খরচ: প্রতিটির জন্য kernel resource।',{mod:{u1:{c:'r'},k1:{c:'r',label:'blocked'},k0:{c:'g'},k2:{c:'g'}}})];
+  return [
+    S('<b>M:N</b> - M user thread, N kernel thread (Go goroutine)। Runtime নিজেই বণ্টন করে।',{add:[
+      ...[0,1,2,3].map(i=>B('u'+i,50+i*175,30,120,40,'User thread '+(i+1),uc[i])),
+      B('k0',130,140,150,46,'kernel thread 1','o'),B('k1',460,140,150,46,'kernel thread 2','o'),
+      A('l0',110,70,190,138,'a'),A('l1',285,70,230,138,'b'),A('l2',460,70,520,138,'g'),A('l3',635,70,560,138,'o')]}),
+    S('একটা block করলে runtime বাকিদের অন্য kernel thread-এ সরিয়ে নেয় - দুই মডেলের ভালো দিকই পাওয়া যায়।',{mod:{u1:{c:'r'},k0:{c:'r',label:'blocked'},l0:{x1:110,y1:70,x2:520,y2:138},l1:{c:'r'}}})];
+}
+
+// scene 34: monolithic vs microkernel
+function kernelSteps(kind){
+  if(kind==='mono')return [
+    S('<b>Monolithic</b> (Linux): FS, driver, network, scheduler - সব একসাথে kernel space-এ। Function call-এ কথা হয়, তাই দ্রুত।',{add:[
+      B('k',200,14,360,150,'','o',{dash:1}),T('kl',214,30,'Kernel space (ring 0)',{c:'o',s:'b'}),
+      B('m0',216,50,100,36,'File system','o'),B('m1',330,50,100,36,'Drivers','o'),B('m2',444,50,100,36,'Network','o'),
+      B('m3',216,100,100,36,'Scheduler','o'),B('m4',330,100,100,36,'Memory','o'),B('m5',444,100,100,36,'IPC','o'),
+      B('apps',200,184,360,40,'User apps (ring 3)','a')]}),
+    S('একটা driver-এ bug → পুরো kernel crash (kernel panic / BSOD)। এটাই দুর্বলতা।',{mod:{m1:{c:'r',label:'Driver bug ☠'},k:{c:'r'},m0:{c:'r'},m2:{c:'r'},m3:{c:'r'},m4:{c:'r'},m5:{c:'r'}}})];
+  return [
+    S('<b>Microkernel</b> (Minix, QNX): kernel ছোট - শুধু scheduling, memory, IPC। FS/driver/network আলাদা user-space server।',{add:[
+      B('k',250,14,260,56,'Microkernel (ring 0)\nscheduling · memory · IPC','o'),
+      B('s0',130,100,120,40,'FS server','a'),B('s1',320,100,120,40,'Driver server','a'),B('s2',510,100,120,40,'Network server','a'),
+      A('i0',190,100,290,72,'n',{dash:1}),A('i1',380,100,380,72,'n',{dash:1}),A('i2',570,100,470,72,'n',{dash:1}),
+      B('apps',130,176,500,40,'User apps (ring 3) - server-এর সাথে IPC message-এ কথা বলে','a',{dash:1})]}),
+    S('Driver crash করলে শুধু ওই server restart হয়, system চলতে থাকে। অসুবিধা: IPC message বেশি → একটু ধীর।',{mod:{s1:{c:'r',label:'Driver crash → restart'},s0:{c:'g'},s2:{c:'g'},k:{c:'g'}}})];
+}
+
+// scene 14: atomic instruction at core level
+function coreBase(){return [
+  B('c0',20,6,300,150,'','a',{dash:1}),T('c0t',34,20,'Core 0 · Thread A',{c:'a',s:'sm b'}),
+  B('r0',36,38,110,50,'register\nRAX = ?','n',{m:1}),B('l0',166,38,140,106,'L1 cache\nlock line: S\nlock = 0','o',{m:1}),
+  B('c1',440,6,300,150,'','b',{dash:1}),T('c1t',454,20,'Core 1 · Thread B',{c:'b',s:'sm b'}),
+  B('r1',456,38,110,50,'register\nRAX = ?','n',{m:1}),B('l1',586,38,140,106,'L1 cache\nlock line: S\nlock = 0','o',{m:1}),
+  B('mem',20,184,720,48,'L3 cache / RAM\nlock line: lock = 0 (দুই core-ই copy নিয়েছে, state S = shared)','n',{m:1})
+];}
+function atomicSteps(kind){
+  if(kind==='bad')return [
+    S('দুই core একই <code>lock</code> variable দেখছে। এখনো <code>lock = 0</code> (খালি)। ধরো "লক নেওয়া" = আলাদা <b>load</b> আর আলাদা <b>store</b>।',{add:coreBase()}),
+    S('Core 0: <code>load</code> → <code>RAX = 0</code>। "খালি আছে" ভাবল।',{mod:{r0:{label:'register\nRAX = 0',c:'a'}}}),
+    S('ঠিক তখনই Core 1-ও <code>load</code> করল → <code>RAX = 0</code>। Core 0-র store এখনো হয়নি, তাই Core 1 পুরনো মান দেখল।',{mod:{r1:{label:'register\nRAX = 0',c:'b'}}}),
+    S('দুজনই <code>store 1</code> করল, দুজনই ভাবল সে-ই লক পেয়েছে। <b>দুই thread critical section-এ</b>। load আর store-এর মাঝের ফাঁকে অন্য core ঢুকে পড়েছে।',{mod:{l0:{label:'L1 cache\nlock line: M\nlock = 1',c:'r'},l1:{label:'L1 cache\nlock line: M\nlock = 1',c:'r'},r0:{c:'r'},r1:{c:'r'}},add:[T('bad',380,170,'✗ দুই thread একসাথে ভেতরে',{a:'middle',c:'r',s:'lg'})]})
+  ];
+  return [
+    S('একই শুরু। এবার লক নেওয়া হবে একটাই instruction-এ: <code>LOCK CMPXCHG [lock], 0 → 1</code> ("যদি lock == 0 হয় তবে 1 বসাও")।',{add:coreBase()}),
+    S('Core 0 আগে lock line-এর <b>exclusive মালিকানা</b> নেয় (MESI: <b>M</b>)। Core 1-এর L1 copy সাথে সাথে <b>invalid (I)</b>।',{mod:{l0:{label:'L1 cache\nlock line: M\nlock = 0',c:'g',hl:1},l1:{label:'L1 cache\nlock line: I\n(invalid)',c:'n',dash:1},mem:{label:'L3 cache / RAM\nlock line এখন Core 0-র হাতে'}}}),
+    S('মালিকানা ধরে রেখেই <b>এক ধাপে</b>: compare (0 == 0 ✓) আর write (lock = 1)। মাঝে কেউ line ছুঁতে পারে না। এটাই <b>atomic</b>।',{mod:{l0:{label:'L1 cache\nlock line: M\nlock = 1'},r0:{label:'register\nZF = 1 (সফল)',c:'g'},mem:{label:'L3 cache / RAM\nlock line এখনো Core 0-র হাতে (lock = 1)'}}}),
+    S('Core 1-ও CAS চালাল: line চাইল, Core 0 থেকে নতুন মান <code>lock = 1</code> পেল। compare (0 == 1) ✗ → <b>ব্যর্থ</b>, কিছু লেখা হল না।',{mod:{l0:{label:'L1 cache\nlock line: I\n(invalid)',c:'n',dash:1,hl:0},l1:{label:'L1 cache\nlock line: M\nlock = 1',c:'o',dash:0},r1:{label:'register\nZF = 0 (ব্যর্থ)',c:'r'},mem:{label:'L3 cache / RAM\nlock line এখন Core 1-র হাতে (lock = 1)'}}}),
+    S('ফল: <b>শুধু Core 0 লক পেল</b>। Core 1 ঢুকল না (ঘুরবে বা ঘুমাবে)। Read, compare, write একটা অবিভাজ্য ধাপ ছিল বলেই দুজন একসাথে জিততে পারল না।',{add:[T('ok',380,170,'✓ একবারে একজন',{a:'middle',c:'g',s:'lg'})]})
+  ];
+}
+function mutexFlow(){return [
+  S('<b>সমস্যা:</b> A আর B একসাথে critical section-এ ঢুকলে shared data নষ্ট হয় (race condition)।',{add:[B('A',20,96,150,70,'Thread A','a'),B('B',590,96,150,70,'Thread B','b'),B('cs',250,96,260,70,'Critical section\n(shared data)','r',{dash:1}),A('x1',172,131,248,131,'r',{dash:1}),A('x2',588,131,512,131,'r',{dash:1})]}),
+  S('<b>সমাধান:</b> ঢোকার আগে <b>lock</b> নিতে হবে। Lock মাত্র একটা, তাই একবারে একজনই পায়।',{del:['x1','x2'],add:[B('lock',290,18,180,46,'Lock: খালি','o')],mod:{cs:{c:'g'}}}),
+  S('A lock নেয় (এক atomic ধাপে: "খালি হলে আমার")। A ভেতরে ঢোকে।',{mod:{lock:{label:'Lock: A-র কাছে',c:'r'},A:{x:262,y:108,w:236,h:46,c:'g',label:'Thread A (ভেতরে)'},cs:{label:''}}}),
+  S('B চেষ্টা করে, কিন্তু lock A-র কাছে। B <b>অপেক্ষা করে</b> (ঘুমায়), ঢুকতে পারে না।',{add:[A('blk',588,131,512,131,'r',{dash:1})],mod:{B:{c:'r',label:'Thread B\nঅপেক্ষায়'}}}),
+  S('A কাজ শেষে lock <b>ছাড়ে</b> এবং B-কে জাগায়।',{del:['blk'],mod:{lock:{label:'Lock: খালি',c:'o'},A:{x:20,y:96,w:150,h:70,c:'a',label:'Thread A'},cs:{label:'Critical section\n(shared data)'},B:{c:'o',label:'Thread B\nজাগল'}}}),
+  S('B lock পায়, ঢোকে। <b>একবারে একজন</b>, data নিরাপদ।',{mod:{lock:{label:'Lock: B-র কাছে',c:'r'},B:{x:262,y:108,w:236,h:46,c:'g',label:'Thread B (ভেতরে)'},cs:{label:''}}})
+];}
+
+// scene 22: Banker's algorithm, explained from scratch
+function bankRows(al,mx){const p=x=>String(x).padStart(8);const f=(i)=>'P'+i+'  '+p(mx[i])+p(al[i])+p(mx[i]-al[i]);return [f(0),f(1),f(2)];}
+function bankerBase(al,av){
+  const mx=[10,4,9],r=bankRows(al,mx),p=x=>String(x).padStart(8);
+  return [B('hd',30,12,330,28,'Proc'+p('Max')+p('Alloc')+p('Need'),'n',{m:1,dash:1}),
+    ...r.map((l,i)=>B('p'+i,30,48+i*46,330,38,l,'a',{m:1})),
+    ...[0,1,2].map(i=>B('s'+i,376,48+i*46,120,38,'','n',{dash:1,s:'sm'})),
+    B('av',520,48,220,70,'Available = '+av+'\n(ব্যাংকে বাকি)','o'),
+    T('leg',30,200,'Max = মোট কত লাগবে   Alloc = এখন পর্যন্ত পেয়েছে',{c:'n',s:'sm'}),
+    T('leg2',30,218,'Need = Max - Alloc = আরও কত লাগবে',{c:'n',s:'sm'})];
+}
+function bankerSafe(){return [
+  S('<b>ব্যাংকের গল্প:</b> ব্যাংকের (OS) কাছে মোট ১২ টাকা (resource)। তিন গ্রাহক (process)। প্রত্যেকে আগেই জানিয়েছে সর্বোচ্চ কত লাগবে (<b>Max</b>), এখন পর্যন্ত পেয়েছে <b>Alloc</b>, আরও লাগবে <b>Need</b>। ব্যাংকে বাকি <b>Available = 3</b>।',{add:bankerBase([5,2,2],3)}),
+  S('<b>প্রশ্ন:</b> অবস্থাটা কি <b>safe</b>? মানে এমন একটা ক্রম আছে, যে ক্রমে প্রত্যেকে তার Need পেয়ে কাজ শেষ করে সব টাকা ফেরত দিতে পারে? খুঁজে দেখি।',{mod:{av:{hl:1}}}),
+  S('P0-র Need 5, কিন্তু Available মাত্র 3, তাই P0 এখন শেষ করতে পারবে না ✗। P1-র Need 2 ≤ 3, <b>P1 পারবে</b> ✓।',{mod:{s0:{label:'Need 5 > 3  ✗',c:'r',dash:0},s1:{label:'Need 2 ≤ 3  ✓',c:'g',dash:0},p1:{hl:1}}}),
+  S('P1 শেষ করে নিজের Alloc 2 ফেরত দিল। <b>Available = 3 + 2 = 5</b>।',{mod:{p1:{c:'n',hl:0},s1:{label:'শেষ, 2 ফেরত',c:'n'},s0:{label:'',c:'n',dash:1},av:{label:'Available = 5\n(ব্যাংকে বাকি)',hl:1}}}),
+  S('এবার P0: Need 5 ≤ 5 ✓। P0 শেষ করে 5 ফেরত দিল। <b>Available = 5 + 5 = 10</b>।',{mod:{s0:{label:'Need 5 ≤ 5  ✓',c:'g',dash:0},p0:{hl:1}}}),
+  S('P0 শেষ। এবার P2: Need 7 ≤ 10 ✓। শেষ করে 2 ফেরত। <b>Available = 12</b>। সবাই শেষ করতে পারল, ক্রম <b>P1, P0, P2</b>। একে বলে <b>safe sequence</b>, তাই অবস্থা <b>SAFE</b>।',{mod:{p0:{c:'n',hl:0},s0:{label:'শেষ, 5 ফেরত',c:'n'},s2:{label:'Need 7 ≤ 10  ✓',c:'g',dash:0},p2:{c:'n'},av:{label:'Available = 12\n(সব ফেরত)'}},add:[T('res',520,150,'Safe sequence:\nP1 → P0 → P2  ✓',{c:'g',s:'lg'})]})
+];}
+function bankerRequest(){return [
+  S('অবস্থা safe (আগের tab)। এখন গ্রাহক <b>আরও টাকা চাইলে</b> ব্যাংক কী করবে? Banker\'s নিয়ম: দেওয়ার <b>আগে</b> ধরে নাও দিয়েছ, তারপর safe কি না যাচাই করো।',{add:bankerBase([5,2,2],3)}),
+  S('<b>Case ১:</b> P1 আরও 1 চাইল। ধরে নিই দিলাম: P1 Alloc 3, Need 1, <b>Available = 2</b>। এখন safe কি?',{mod:{p1:{label:bankRows([5,3,2],[10,4,9])[1],c:'o',hl:1},av:{label:'Available = 2\n(ধরে নিয়ে)'}},add:[T('rq',520,140,'Request: P1 +1',{c:'o',s:'b'})]}),
+  S('যাচাই: P1 Need 1 ≤ 2 ✓ শেষ, Available = 5। P0 Need 5 ≤ 5 ✓, Available = 10। P2 ✓। safe ক্রম আছে, তাই ব্যাংক <b>দিয়ে দেয়</b> ✓।',{mod:{s1:{label:'✓',c:'g',dash:0},s0:{label:'✓',c:'g',dash:0},s2:{label:'✓',c:'g',dash:0},rq:{label:'Request: P1 +1\n→ GRANT ✓',c:'g'}}}),
+  S('<b>Case ২:</b> আবার আগের অবস্থা। এবার P2 আরও 1 চাইল। ধরে নিই দিলাম: P2 Alloc 3, Need 6, <b>Available = 2</b>।',{mod:{p1:{label:bankRows([5,2,2],[10,4,9])[1],c:'a',hl:0},p2:{label:bankRows([5,2,3],[10,4,9])[2],c:'o',hl:1},av:{label:'Available = 2\n(ধরে নিয়ে)'},s0:{label:'',c:'n',dash:1},s1:{label:'',c:'n',dash:1},s2:{label:'',c:'n',dash:1},rq:{label:'Request: P2 +1',c:'o'}}}),
+  S('যাচাই: P1 Need 2 ≤ 2 ✓ শেষ, Available = 4। কিন্তু P0 Need 5 > 4 ✗, P2 Need 6 > 4 ✗। <b>আর কেউ এগোতে পারে না।</b>',{mod:{s1:{label:'✓ শেষ',c:'g',dash:0},s0:{label:'Need 5 > 4  ✗',c:'r',dash:0},s2:{label:'Need 6 > 4  ✗',c:'r',dash:0},av:{label:'Available = 4'}}}),
+  S('কোনো safe ক্রম নেই ⇒ <b>UNSAFE</b>। ব্যাংক এই request <b>দেয় না</b>, P2 অপেক্ষা করে। এভাবে সিস্টেম কখনো এমন অবস্থায় যায় না যেখান থেকে deadlock হতে পারে।',{mod:{rq:{label:'Request: P2 +1\n→ DENY ✗ (অপেক্ষা)',c:'r'},p2:{c:'r'}}})
+];}
+
+/* ---------- content ---------- */
+const PARTS=[
+  ['A','Process ও Thread'],['B','Memory ও Kernel basics'],['C','Hardware support'],['D','Synchronization'],
+  ['E','Scheduling'],['F','Deadlock'],['G','Memory management'],['H','Lifecycle ও system interface'],['I','Driver ও architecture'],
+  ['J','আরও প্রশ্ন']
+];
+
+const TOPICS=[
+{p:0,q:'What are a process and a thread?',
+ ans:'<b>Process</b> = RAM-এ চলমান program, নিজের isolated memory ও resource-এর মালিক। <b>Thread</b> = process-এর ভেতরের execution unit - code, heap, files <b>share</b> করে, কিন্তু প্রত্যেকের নিজের <b>stack ও registers</b>।',
+ pts:['Program = disk-এ পড়ে থাকা file; process = তার চলমান instance।','এক process crash করলে অন্যটা ঠিক থাকে; thread crash করলে পুরো process মরে।','Thread তৈরি ও switch করা process-এর চেয়ে সস্তা।'],
+ steps:[
+  S('Program = disk-এ পড়ে থাকা file। এখনো কিছুই চলছে না।',{add:[B('prog',20,98,120,50,'app.exe\n(disk)','n')]}),
+  S('চালালে OS RAM-এ <b>process</b> বানায়: code, data, heap একসাথে।',{add:[
+    B('P',230,10,330,220,'','a',{dash:1}),T('Pl',244,28,'Process (RAM)',{c:'a',s:'b'}),A('a1',142,123,228,123,'n'),
+    B('code',244,44,92,34,'Code','a'),B('data',344,44,92,34,'Data','a'),B('heap',444,44,92,34,'Heap','a'),
+    B('t1',244,118,150,70,'Thread 1\nনিজের stack\n+ registers','g')]}),
+  S('একই process-এ আরেকটা <b>thread</b>: নিজের stack, কিন্তু code/data/heap <b>share</b>।',{add:[
+    B('t2',404,118,132,70,'Thread 2\nনিজের stack\n+ registers','s'),T('sh',390,100,'↑ code, data, heap - সব thread share করে',{a:'middle',c:'g',s:'sm'})]}),
+  S('অন্য process-এর memory আলাদা (<b>isolated</b>) - একে অন্যের memory ছুঁতে পারে না।',{add:[
+    B('P2',590,60,150,120,'Process 2\nআলাদা memory','b',{dash:1}),A('x',564,120,588,120,'r',{dash:1})]})
+ ]},
+
+{p:0,q:'How are processes and threads (main thread and worker threads) created, and who creates them?',
+ ans:'<b>Process:</b> parent process syscall করে (<code>fork/exec</code>, Windows-এ <code>CreateProcess</code>), বানায় <b>kernel</b>। <b>Main thread:</b> process-এর সাথেই kernel বানায়, <code>main()</code> চালায়। <b>Worker thread:</b> কোনো চলমান thread <code>pthread_create</code> / <code>new Thread()</code> call করে, kernel TCB ও stack বানায়।',
+ pts:['প্রথম process (<code>init/systemd</code>, PID 1) boot-এ kernel নিজে বানায়; বাকি সব কারও child।','অনুরোধ করে user code, কাজটা করে kernel।'],
+ steps:[
+  S('Parent (যেমন shell) আর kernel।',{add:[B('sh',30,20,150,56,'Parent process\n(shell)','g'),B('K',20,190,720,42,'Kernel (ring 0) - PCB, memory, stack এখানেই তৈরি হয়','o')]}),
+  S('Parent <code>fork()/exec()</code> syscall করে - অনুরোধ করে parent, বানায় kernel।',{add:[A('s1',105,76,105,188,'g'),T('s1l',116,130,'fork() / exec()',{c:'g',s:'sm'})]}),
+  S('Kernel নতুন <b>PCB</b>, address space আর <b>main thread</b> বানায়। Main thread আলাদা করে কেউ বানায় না - process-এর সাথেই আসে।',{add:[
+    B('C',260,16,470,134,'','a',{dash:1}),T('Cl',274,34,'Child process (নতুন PCB)',{c:'a',s:'b'}),A('s2',420,190,420,152,'o'),
+    B('mt',276,60,190,70,'Main thread\nmain() এখান থেকে শুরু','a')]}),
+  S('Main thread-ই দরকারে <code>pthread_create()</code> / <code>new Thread()</code> call করে।',{add:[A('s3',320,130,320,188,'a'),T('s3l',328,166,'pthread_create()',{c:'a',s:'sm'})]}),
+  S('Kernel worker thread-এর <b>TCB</b> ও stack বানায়।',{add:[B('wt',490,60,220,70,'Worker thread\nনিজের stack + TCB','s')]})
+ ]},
+
+{p:0,q:'What are process context switching and thread context switching?',
+ ans:'CPU এক task ছেড়ে আরেকটায় গেলে আগেরটার state <b>save</b> করে নতুনটার state <b>load</b> করা। <b>Process switch</b>-এ address space-ও বদলায় (ভারী); <b>thread switch</b> (একই process)-এ শুধু register ও stack (হালকা)।',
+ pts:['Switch চলার সময় কোনো কাজ হয় না - এটা pure overhead।','Process switch-এর পর TLB ও cache ঠান্ডা, তাই ধীর।'],
+ tabs:[{n:'Process switch',steps:()=>swSteps('p')},{n:'Thread switch (একই process)',steps:()=>swSteps('t')}]},
+
+{p:0,q:'What are the PCB (Process Control Block) and the TCB (Thread Control Block)? Where are they stored, and how are they used during a context switch?',
+ ans:'<b>PCB</b> = kernel-এর data structure, process-এর shared তথ্য। <b>TCB</b> = প্রতিটি thread-এর নিজস্ব তথ্য। দুটোই <b>kernel space-এ (RAM)</b> থাকে। Switch-এ থামা thread-এর register <b>TCB-তে save</b>, যে thread চলবে তার register <b>TCB থেকে load</b> হয়।',
+ pts:['<b>PCB</b> (process-wide): PID, page table pointer, open files, credentials।','<b>TCB</b> (per thread): TID, state, saved register (PC, SP…), kernel stack pointer, priority, PCB-র pointer।','Linux-এ দুটোই <code>task_struct</code>।'],
+ steps:[
+  S('<b>PCB</b> - kernel memory-তে থাকে, user সরাসরি ছুঁতে পারে না।',{add:[
+    B('kz',20,8,720,194,'','o',{dash:1}),T('kzl',34,22,'Kernel space (RAM)',{c:'o',s:'b'}),
+    B('pcb',36,36,300,152,'PCB (process-এর card)\nPID: 101\nPage table ptr (CR3-এর মান)\nOpen files, signals\nসব thread-এর shared জিনিস','a',{m:1})]}),
+  S('প্রতি thread-এর <b>TCB</b>; সবাই একই PCB-কে point করে।',{add:[
+    B('tcb1',390,36,330,70,'TCB #1\nTID: 1 · State: Running\nSaved PC, SP, regs · kernel stack ptr','s',{m:1}),
+    B('tcb2',390,118,330,70,'TCB #2\nTID: 2 · State: Ready\nSaved PC, SP, regs · kernel stack ptr','s',{m:1}),
+    A('p1',390,70,338,90,'n'),A('p2',390,152,338,130,'n')]}),
+  S('Context switch: থামা thread-এর CPU state এখানে <b>save</b>, পরেরটার state এখান থেকে <b>load</b>।',{
+    mod:{tcb1:{c:'r'},tcb2:{c:'g'}},add:[T('use',380,222,'save ← যেটা থামল   |   যেটা চলবে → load',{a:'middle',c:'o',s:'b'})]})
+ ]},
+
+{p:1,q:'What is a page table, and where is it stored? Is it isolated per process?',
+ ans:'Page table = virtual address → physical frame-এর map। <b>প্রতি process-এর নিজস্ব</b> table, <b>RAM-এ (kernel memory)</b> থাকে; <code>CR3</code> register চলমান process-এরটা দেখায়। তাই process isolated। একই process-এর thread-রা একই table share করে।',
+ pts:['MMU hardware translate করে; TLB সাম্প্রতিক translation cache করে।','Process switch = CR3 বদল।'],
+ steps:[
+  S('P1-এর virtual page V0, V1 → page table → physical frame F0, F2।',{add:[
+    B('p1v0',20,30,110,32,'P1: V0','a'),B('p1v1',20,72,110,32,'P1: V1','a'),
+    B('pt1',190,34,130,70,'Page table P1\nV0 → F0\nV1 → F2','a'),
+    ...[0,1,2,3,4,5].map(i=>B('F'+i,520,20+i*34,120,28,'Frame F'+i,i===0||i===2?'a':'n',{dash:i===0||i===2?0:1})),
+    A('m0',130,46,188,56,'a'),A('m1',130,88,188,84,'a'),A('e0',320,52,518,34,'a'),A('e1',320,88,518,102,'a')]}),
+  S('P2-এরও V0 আছে - একই virtual address, কিন্তু <b>আলাদা frame</b> (F3, F5)।',{add:[
+    B('p2v0',20,134,110,32,'P2: V0','b'),B('p2v1',20,176,110,32,'P2: V1','b'),
+    B('pt2',190,134,130,70,'Page table P2\nV0 → F3\nV1 → F5','b'),
+    A('n0',130,150,188,160,'b'),A('n1',130,192,188,188,'b'),A('f0',320,156,518,136,'b'),A('f1',320,190,518,204,'b')],
+    mod:{F3:{c:'b',dash:0},F5:{c:'b',dash:0}}}),
+  S('<code>CR3</code> register এখন P1-এর table দেখাচ্ছে - CPU শুধু সেটাই ব্যবহার করে।',{add:[B('cr3',190,2,130,26,'CR3 → PT1','g')],mod:{pt1:{hl:1}}}),
+  S('Context switch: OS শুধু <code>CR3</code> বদলায়। P2 চললে P1-এর frame-এ পৌঁছানোর পথই নেই।',{mod:{cr3:{label:'CR3 → PT2'},pt1:{hl:0},pt2:{hl:1}}})
+ ]},
+
+{p:1,q:'What is the kernel? What can it do?',
+ ans:'Kernel = OS-এর মূল অংশ; সবসময় RAM-এ থাকে, hardware-এর পূর্ণ নিয়ন্ত্রণ রাখে। App hardware সরাসরি ছুঁতে পারে না - <b>system call</b> দিয়ে kernel-কে বলে।',
+ pts:['কাজ: process/thread ও scheduling, memory management, file system, device driver, networking, IPC, security।','Kernel ring 0-তে চলে (পরের প্রশ্নগুলো দেখো)।'],
+ steps:[
+  S('উপরে user app, নিচে hardware। মাঝখানে কে থাকবে?',{add:[B('app',20,8,720,40,'User apps: browser, editor, game','a'),B('hw',20,192,720,40,'Hardware: CPU, RAM, disk, NIC','n')]}),
+  S('<b>Kernel</b> মাঝখানে - ৬টা প্রধান কাজ।',{add:[
+    B('kz',20,62,720,114,'','o',{dash:1}),T('kzl',34,76,'Kernel (ring 0)',{c:'o',s:'b'}),
+    ...['Process, thread\n& scheduling','Memory\nmanagement','File\nsystem','Device\ndrivers','Networking','IPC &\nsecurity'].map((l,i)=>B('m'+i,34+i*118,100,108,60,l,'o'))]}),
+  S('App <code>read(file)</code> বলে → kernel file system → driver → disk।',{add:[A('d1',330,48,330,98,'a'),T('d1l',340,74,'syscall',{c:'a',s:'sm'}),A('d2',330,160,330,190,'o'),T('d2l',340,176,'disk read',{c:'o',s:'sm'})],mod:{m2:{hl:1}}}),
+  S('উত্তর উল্টো পথে ফেরে। App কখনো hardware ছোঁয়নি - নিরাপত্তা ও স্থিরতা এখান থেকেই।',{add:[A('d3',440,190,440,162,'g'),A('d4',440,98,440,50,'g')]})
+ ]},
+
+{p:1,q:'What are kernel space (ring 0) and user space (ring 3)?',
+ ans:'<b>Privilege level</b> - CPU hardware নিজেই ঠিক করে দেয় কোন code কী করতে পারবে। দুটো ring ব্যবহার হয়: <b>Ring 0 (kernel)</b> আর <b>Ring 3 (user)</b>।',
+ pts:['<b>Ring 0 · kernel mode:</b> সব instruction ও সব memory অ্যাক্সেস করা যায়। Kernel ও driver এখানে চলে।','<b>Ring 3 · user mode:</b> সীমিত। I/O বা page table বদলের মতো privileged instruction চালালে CPU exception দেয়।','Ring 1, 2 প্রায় ব্যবহার হয় না।','কেন দরকার: একটা app-এর bug বা malware যেন পুরো system না ভাঙে।'],
+ steps:[
+  S('বাইরের ring: <b>Ring 3 - user space</b>। App, browser সব এখানে চলে।',{add:[C('r3',230,120,112,'','a'),T('r3l',230,30,'Ring 3',{a:'middle',c:'a',s:'lg'}),B('ap',202,184,56,30,'App','a'),B('lg3',420,10,320,58,'Ring 3 · User space\nতোমার app, browser · সীমিত ক্ষমতা','a')]}),
+  S('ভেতরের ring: <b>Ring 0 - kernel space</b>। সর্বোচ্চ ক্ষমতা, kernel ও driver এখানে।',{add:[C('r0',230,120,46,'Ring 0','o'),B('lg0',420,76,320,58,'Ring 0 · Kernel space\nkernel, driver · সব instruction, সব memory','o')]}),
+  S('App privileged কাজ (hardware, page table) সরাসরি করতে চাইলে CPU <b>আটকায়</b>।',{add:[A('bad',230,184,230,170,'r',{dash:1}),B('msg',420,150,320,70,'App সরাসরি I/O বা page table চাইল\n→ CPU exception ✗','r')]}),
+  S('বৈধ পথ: <b>syscall</b> → CPU ring 3 থেকে ring 0-তে যায় (mode switch), kernel কাজ করে, ফেরত দেয়।',{del:['bad'],add:[A('sc',230,184,230,168,'g')],mod:{msg:{c:'g',label:'syscall → ring 0 ✓\nkernel কাজ করে → ring 3-এ ফেরে'}}})
+ ]},
+
+{p:1,q:'What is mode switching, and how is it different from context switching?',
+ ans:'<b>Mode switch</b>: একই thread ring 3 থেকে ring 0-তে যায় (syscall, interrupt বা exception-এ)। <b>Context switch</b>: CPU একটা thread ছেড়ে আরেকটা thread-কে পায়। প্রথমটা করে CPU hardware আর kernel entry code, দ্বিতীয়টা করে scheduler।',
+ pts:['Syscall-এর পর একই thread-এ ফেরা যায়, context switch ছাড়াই।','Context switch সবসময় kernel mode-এ ঘটে, তাই তার আগে একটা mode switch লাগে (timer interrupt বা blocking syscall)। উল্টোটা সত্য নয়।','নিচের table-এ কোন জিনিস কোথায় save হয় আর কী বদলায়, দুই tab-এ দেখো।'],
+ extra:'<table class="cmp"><tr><th></th><th>Mode switch</th><th>Context switch</th></tr>'
+  +'<tr><td>কে ঘটায়</td><td>syscall instruction, interrupt বা exception (CPU hardware + kernel entry code)</td><td>Scheduler (kernel code), সাধারণত timer interrupt বা blocking syscall-এর পর</td></tr>'
+  +'<tr><td>Privilege ring</td><td>3 → 0, ফেরার সময় 0 → 3</td><td>kernel-এর ভেতরেই (ring 0), শেষে নতুন thread-এর mode-এ ফেরে</td></tr>'
+  +'<tr><td>Thread / process</td><td>একই thread, একই process</td><td>আলাদা thread (আলাদা process-ও হতে পারে)</td></tr>'
+  +'<tr><td>Stack</td><td>user stack → ওই thread-এর kernel stack</td><td>A-র kernel stack → B-র kernel stack</td></tr>'
+  +'<tr><td>Register কোথায় save</td><td>user RIP, RSP, RFLAGS আর বাকি register: ওই thread-এর kernel stack-এ (x86-64 syscall-এ RIP আর RFLAGS প্রথমে RCX ও R11-এ যায়)</td><td>A-র callee-saved register, RSP, RIP: A-র TCB ও kernel stack-এ। B-র গুলো load হয়</td></tr>'
+  +'<tr><td>Page table (CR3)</td><td>একই। Kernel সব process-এর address space-এ map করা থাকে</td><td>অন্য process হলে CR3 বদলায়, TLB flush বা ASID। একই process হলে একই</td></tr>'
+  +'<tr><td>Core-এর অবস্থা</td><td>একই core, একই thread-এর state, TCB বদলায় না</td><td>core-local <code>current</code> pointer, run queue, TLS (FS/GS base), FPU/SIMD state বদলায়</td></tr>'
+  +'<tr><td>Cache ও TLB</td><td>প্রায় অপরিবর্তিত</td><td>নতুন thread-এর data cache-এ নেই (cold), অন্য process হলে TLB-ও ঠান্ডা</td></tr>'
+  +'<tr><td>খরচ</td><td>কম</td><td>তুলনায় বেশি</td></tr></table>',
+ tabs:[
+  {n:'Mode switch',steps:[
+    S('Thread T1 user mode-এ চলছে: privilege ring 3, <code>RSP</code> user stack-এ।',{add:[
+      B('uz',20,6,300,228,'','a',{dash:1}),T('uzl',32,20,'User space (ring 3)',{c:'a',s:'sm b'}),
+      B('us',36,34,268,92,'User stack\nmain() → foo()','a'),B('ur',36,138,268,84,'T1-এর user code\nregister: RAX, RBX, RIP, RSP…','a'),
+      B('kz',440,6,300,228,'','o',{dash:1}),T('kzl',452,20,'Kernel space (ring 0)',{c:'o',s:'sm b'}),
+      B('ks',456,34,268,100,'T1-এর kernel stack\n(এখন খালি)','o',{dash:1}),B('tcb',456,146,268,76,'T1-এর TCB / PCB\n(বদলায় না)','n'),
+      B('cpu',326,70,108,100,'CPU\nring 3\nRSP: user','g')]}),
+    S('<code>syscall</code> বা interrupt: CPU hardware ring 3 → 0 করে, <code>RSP</code> বদলে T1-এর <b>kernel stack</b>-এ নেয়, <code>RIP</code> বসায় kernel entry-র ঠিকানা।',{add:[A('a1',428,120,454,100,'o')],mod:{cpu:{label:'CPU\nring 0\nRSP: kernel',c:'o',hl:1}}}),
+    S('User-এর <code>RIP, RSP, RFLAGS</code> আর বাকি register T1-এর <b>kernel stack</b>-এ save হয়।',{add:[A('a2',320,180,454,110,'g',{dash:1})],mod:{ks:{label:'T1-এর kernel stack\nsaved: user RIP, RSP, RFLAGS,\nRAX, RBX, ...',c:'g',dash:0}}}),
+    S('Kernel কাজ করে। <b>একই thread, একই core, একই page table (CR3)</b>, TCB-ও বদলায়নি। Scheduler ডাকা হয়নি।',{mod:{tcb:{hl:1,label:'T1-এর TCB / PCB\nঅপরিবর্তিত ✓',c:'g'}}}),
+    S('ফেরা: <code>sysret / iret</code> save-করা মান restore করে, ring 0 → 3। T1 ঠিক আগের জায়গা থেকে চলে।',{del:['a1','a2'],add:[A('a3',454,100,428,120,'a')],mod:{cpu:{label:'CPU\nring 3\nRSP: user',c:'g',hl:0},ks:{label:'T1-এর kernel stack\n(আবার খালি)',c:'o',dash:1},tcb:{hl:0,c:'n',label:'T1-এর TCB / PCB\n(বদলায়নি)'}}})
+  ]},
+  {n:'Context switch',steps:[
+    S('T1 চলছিল, timer interrupt-এ (একটা mode switch-এর পর) kernel-এ ঢুকেছে। Scheduler T2 বেছেছে। এখন <b>context switch</b>।',{add:[
+      B('t1',20,10,230,92,'T1-এর TCB + kernel stack\nsaved: (এখনো কিছু না)','a'),B('t2',510,10,230,92,'T2-এর TCB + kernel stack\nsaved: RSP, RIP,\nrbx, rbp, r12-r15','b'),
+      B('core',300,50,160,120,'Core 0\nring 0 (kernel)\ncurrent = T1\nRSP, RIP, regs: T1-এর','g')]}),
+    S('<b>Save</b>: T1-এর callee-saved register, <code>RSP</code>, <code>RIP</code> T1-এর TCB ও kernel stack-এ।',{add:[A('a1',302,80,252,60,'a')],mod:{t1:{label:'T1-এর TCB + kernel stack\nsaved: RSP, RIP,\nrbx, rbp, r12-r15',hl:1}}}),
+    S('<b>Load</b>: T2-এর saved মান core-এ। <code>RSP</code> এখন T2-এর kernel stack, <code>current = T2</code>।',{add:[A('a2',508,60,462,80,'b')],mod:{t1:{hl:0},core:{label:'Core 0\nring 0 (kernel)\ncurrent = T2\nRSP, RIP, regs: T2-এর',c:'b'},t2:{hl:1}}}),
+    S('সাথে বদলায়: TLS (FS/GS base), FPU/SIMD state। T2 <b>অন্য process</b>-এর হলে <code>CR3</code>-ও বদলায় ও TLB flush।',{del:['a1','a2'],add:[B('sw1',20,186,350,46,'সবসময় বদলায়\nTLS, FPU/SIMD, per-core current','o'),B('sw2',390,186,350,46,'অন্য process হলে বদলায়\nCR3 (page table), TLB flush','r')],mod:{t2:{hl:0}}}),
+    S('ফেরা: T2-এর user register kernel stack থেকে restore, <code>iret</code> → ring 3, T2 চলে। T2-এর data cache-এ নেই (cold cache)।',{mod:{core:{label:'Core 0\nring 3\nT2 user code চলছে',c:'b'}}})
+  ]}
+ ]},
+
+{p:1,q:'What are the kernel stack and the user stack?',
+ ans:'প্রতি thread-এর <b>দুটো stack</b>। <b>User stack</b> (user space): user mode-এর function call, local variable। <b>Kernel stack</b> (kernel space, ছোট ~8-16 KB): syscall/interrupt-এর সময় kernel-এর কাজের জায়গা।',
+ pts:['আলাদা কেন: user stack ভরসাযোগ্য নয় - user তাতে ভুল/ক্ষতিকর মান রাখতে পারে।','Syscall-এ CPU stack pointer user stack থেকে kernel stack-এ নেয়।'],
+ steps:[
+  S('User mode-এ function call হলে <b>user stack</b>-এ frame জমে। <code>SP</code> উপরের frame দেখায়।',{add:[
+    T('ul',60,26,'User stack (user space)',{c:'a',s:'b'}),B('u1',60,170,210,34,'main()','a'),B('u2',60,132,210,34,'foo()','a'),
+    A('sp',20,149,58,149,'g'),T('spl',22,132,'SP',{c:'g',s:'b'})]}),
+  S('<code>foo()</code> <code>read()</code> syscall করল → CPU <b>kernel stack</b>-এ switch করে, user-এর register সেখানে রাখে।',{add:[
+    T('kl',440,26,'Kernel stack (kernel space)',{c:'o',s:'b'}),B('k1',440,170,240,34,'saved user regs (PC, SP…)','o')],
+    mod:{sp:{x1:402,x2:438,y1:187,y2:187},spl:{x:404,y:170}}}),
+  S('Kernel নিজের stack-এ <code>sys_read()</code>, driver code চালায়।',{add:[B('k2',440,132,240,34,'sys_read()','o'),B('k3',440,94,240,34,'driver / disk code','o')],mod:{sp:{y1:111,y2:111},spl:{y:94}}}),
+  S('Return → kernel stack খালি, <code>SP</code> আবার <b>user stack</b>-এ।',{del:['k1','k2','k3'],mod:{sp:{x1:20,x2:58,y1:149,y2:149},spl:{x:22,y:132}}})
+ ]},
+
+{p:1,q:'Is context switching possible for user-space threads? Where is the state saved and restored?',
+ ans:'হ্যাঁ। User-level thread (goroutine, fiber, green thread)-কে kernel চেনে না - <b>runtime নিজেই</b> switch করে: register/SP/PC <b>user memory-র নিজস্ব struct-এ</b> save-restore। Kernel লাগে না, তাই খুব দ্রুত।',
+ pts:['অসুবিধা: একটা blocking syscall পুরো kernel thread আটকায়।','Runtime (Go-র মতো) এজন্য blocking call-এ অন্য kernel thread নেয়।'],
+ steps:[
+  S('Runtime নিজেই user thread চালায়। Kernel দেখে শুধু <b>১টা</b> kernel thread।',{add:[
+    B('KT',30,12,700,196,'','o',{dash:1}),T('ktl',44,30,'১টা kernel thread (kernel শুধু এটাই চেনে)',{c:'o',s:'b'}),
+    B('rt',50,56,150,66,'Runtime\nscheduler\n(user space)','a'),
+    B('u1',240,52,130,46,'U1 চলছে','g'),B('u2',390,52,130,46,'U2','n'),B('u3',540,52,130,46,'U3','n'),
+    B('c1',240,106,130,46,'saved ctx U1','n',{dash:1}),B('c2',390,106,130,46,'saved ctx U2','n',{dash:1}),B('c3',540,106,130,46,'saved ctx U3','n',{dash:1})]}),
+  S('Switch: runtime U1-এর regs/SP/PC → <b>ctx1</b>-এ save, ctx2 থেকে U2-র load। Kernel কিছুই টের পায় না।',{add:[T('act',380,176,'save/restore হয় user memory-তে - syscall নেই',{a:'middle',c:'a',s:'sm'})],mod:{u1:{label:'U1',c:'n'},u2:{label:'U2 চলছে',c:'g'},c1:{c:'a',dash:0}}}),
+  S('U2 <b>blocking</b> syscall করলে kernel পুরো thread ঘুম পাড়ায় - U1, U3-ও আটকা।',{mod:{u1:{c:'r'},u2:{c:'r'},u3:{c:'r'},KT:{c:'r'}},add:[T('blk',380,196,'blocked - সবাই',{a:'middle',c:'r',s:'b'})]})
+ ]},
+
+{p:2,q:'What is the importance of registers, the MMU (TLB), the L1, L2 and L3 caches, and the IMC? How is each used during a context switch?',
+ ans:'<b>Register</b>: সবচেয়ে দ্রুত, switch-এ save/load হয়। <b>MMU/TLB</b>: virtual→physical translation; process switch-এ flush/tag। <b>L1/L2 (per-core), L3 (shared)</b>: RAM-এর আগের দ্রুত স্তর। <b>IMC</b>: CPU-র ভেতরের memory controller - cache miss হলে RAM-এর সাথে কথা বলে।',
+ pts:['Switch-এর লুকানো খরচ: নতুন task-এর data cache-এ নেই, TLB ঠান্ডা → অনেক miss।'],
+ steps:[
+  S('গতির সিঁড়ি: যত বাঁয়ে তত দ্রুত ও ছোট; যত ডানে তত বড় ও ধীর।',{add:[
+    B('mmu',20,14,240,44,'MMU + TLB\nvirtual → physical','b'),
+    ...[['Registers\n~0.3 ns','g'],['L1\n~1 ns','g'],['L2\n~4 ns','s'],['L3\n~15 ns','s'],['IMC\nmem ctrl','o'],['RAM\n~80 ns','r']].map((v,i)=>B('h'+i,20+i*122,100,100,56,v[0],v[1])),
+    T('n1',190,172,'প্রতি core',{a:'middle',c:'n',s:'sm'}),T('n2',312,172,'প্রতি core',{a:'middle',c:'n',s:'sm'}),T('n3',434,172,'সব core share',{a:'middle',c:'n',s:'sm'}),T('n4',556,172,'CPU-র ভেতরে',{a:'middle',c:'n',s:'sm'})]}),
+  S('প্রতিটি access-এ আগে <b>MMU/TLB</b> virtual address-কে physical-এ বদলায়।',{add:[C('dot',140,36,9,'','f')]}),
+  S('Data <b>L1</b>-এ আছে → HIT, ~1 ns।',{mod:{dot:{x:190,y:128,c:'g'}}}),
+  S('L1-এ নেই, <b>L2</b>-তে আছে → ~4 ns।',{mod:{dot:{x:312,y:128,c:'s'}}}),
+  S('সব cache miss → <b>IMC</b> হয়ে <b>RAM</b> → ~80 ns, ১০০× ধীর।',{mod:{dot:{x:678,y:128,c:'r'}}}),
+  S('Context switch-এর পর নতুন task-এর data cache-এ নেই, TLB-ও ঠান্ডা - এই ধীর পথ বারবার চলে। এটাই switch-এর আসল খরচ।',{add:[T('cold',380,214,'cold cache + TLB flush → miss-এর ঝড়',{a:'middle',c:'r',s:'b'})]})
+ ]},
+
+{p:2,q:'How do registers work? What do they store, and what is saved and restored while the CPU runs and during a context switch?',
+ ans:'Register = CPU-র ভেতরের ছোট, অতি দ্রুত slot। <b>RIP/PC</b> (পরের instruction), <b>RSP</b> (stack top), general (RAX…), <b>FLAGS</b>, <b>CR3</b> (page table)। CPU data RAM থেকে register-এ এনে হিসাব করে। Switch-এ এসব register চলমান <b>thread-এর TCB</b>-তে save হয়, নতুন thread-এরটা TCB থেকে load হয়। তাই thread টেরই পায় না সে থেমেছিল।',
+ pts:['x86-64-এ ১৬টা general-purpose register।','<b>TCB-তে</b> থাকে: RIP, RSP, general register, FLAGS (প্রতি thread-এর নিজস্ব)।','<b>PCB-তে</b> থাকে: page table pointer (CR3-এর মান), যা process-এর সব thread-এর জন্য এক।'],
+ steps:[
+  S('A চলছে। CPU-র register-এ A-র মান।',{add:[
+    B('cpu',20,12,400,176,'','g',{dash:1}),T('cl',34,28,'CPU registers',{c:'g',s:'b'}),
+    B('rip',36,46,112,46,'RIP\n0x1000','n',{m:1}),B('rsp',160,46,112,46,'RSP\n0x7ff0','n',{m:1}),B('cr3',284,46,112,46,'CR3\nPT_A','n',{m:1}),
+    B('rax',36,106,112,46,'RAX\n5','n',{m:1}),B('rbx',160,106,112,46,'RBX\n3','n',{m:1}),B('fl',284,106,112,46,'FLAGS\nZF=0','n',{m:1}),
+    B('pa',470,12,260,80,'TCB of thread A (RAM)\nsaved: -','a',{m:1}),B('pb',470,108,260,80,'TCB of thread B (RAM)\nsaved: RIP 0x2000, RAX 42…','b',{m:1})]}),
+  S('<code>add rax, rbx</code> চলল → RAX = 8, RIP পরের instruction-এ।',{add:[T('ins',230,212,'add rax, rbx     # RAX = 5 + 3',{a:'middle',c:'f',s:'m'})],mod:{rax:{label:'RAX\n8',c:'g',hl:1},rip:{label:'RIP\n0x1003',c:'g',hl:1}}}),
+  S('Context switch: register A-র <b>TCB-তে save</b>।',{add:[A('sv',420,60,468,60,'a')],mod:{pa:{label:'TCB of thread A (RAM)\nsaved: RIP 0x1003,\nRSP 0x7ff0, RAX 8…'},rax:{hl:0,c:'a'},rip:{hl:0,c:'a'}}}),
+  S('B-র saved মান <b>TCB থেকে</b> CPU-তে load। <code>CR3</code>-র মান আসে B-র process-এর <b>PCB</b> থেকে (page table pointer)।',{del:['sv','ins'],add:[A('ld',468,150,420,150,'b'),B('pcbB',20,196,400,38,'CR3-এর মান: PCB থেকে (page table pointer)\nবাকি register: TCB থেকে','n')],mod:{rip:{label:'RIP\n0x2000',c:'b',hl:1},rsp:{label:'RSP\n0x6ff0',c:'b'},cr3:{label:'CR3\nPT_B',c:'b'},rax:{label:'RAX\n42',c:'b'},rbx:{label:'RBX\n7',c:'b'},fl:{label:'FLAGS\nZF=1',c:'b'}}})
+ ]},
+
+{p:3,q:'What is a race condition at the CPU level, and what are the solutions?',
+ ans:'দুই thread একই shared data-তে <b>read-modify-write</b> করলে ফল নির্ভর করে কে কখন চলল। <code>counter++</code> আসলে ৩টা instruction (load, add, store) - মাঝে switch হলে একটা update হারায়।',
+ pts:['সমাধান: <b>mutex/lock</b>, semaphore, <b>atomic</b> instruction (CAS), thread-local বা immutable data।'],
+ steps:[
+  S('<code>counter++</code> = load → add → store। counter = 0, দুই thread।',{add:[B('mem',300,14,160,56,'Memory\ncounter = 0','o'),B('ta',40,100,200,90,'Thread A\nreg = -','a'),B('tb',520,100,200,90,'Thread B\nreg = -','b'),T('cd',380,222,'counter++  =  load → add → store',{a:'middle',c:'f',s:'m'})]}),
+  S('A counter পড়ল: reg = 0।',{add:[A('r1',320,70,200,98,'a')],mod:{ta:{label:'Thread A\nreg = 0'}}}),
+  S('A-র store-এর আগেই <b>context switch</b>! B-ও 0 পড়ল।',{del:['r1'],add:[A('r2',440,70,560,98,'b')],mod:{tb:{label:'Thread B\nreg = 0'}}}),
+  S('B: add, store → counter = 1।',{del:['r2'],add:[A('w1',540,98,440,70,'b')],mod:{tb:{label:'Thread B\nreg = 1 (store হল)'},mem:{label:'Memory\ncounter = 1',c:'g'}}}),
+  S('A ফিরে add, store → counter = <b>1</b> (হওয়ার কথা ২)। এটাই <b>race condition</b>।',{del:['w1'],add:[A('w2',220,98,320,70,'r')],mod:{ta:{label:'Thread A\nreg = 1 (store হল)'},mem:{label:'Memory\ncounter = 1 ✗',c:'r',hl:1}}})
+ ]},
+
+{p:3,q:'How does a mutex solve a race condition, and how does it work? What is atomic execution?',
+ ans:'Race condition আটকাতে critical section-এ একবারে একটাই thread ঢোকে। সেই "একবারে একটা" নিশ্চিত করে CPU-র একটা <b>atomic</b> instruction, আর তার উপর বানানো <b>mutex</b>।',
+ pts:['<b>Atomic</b> = read, compare, write এক অবিভাজ্য ধাপ। মাঝে অন্য কোনো core ওই memory ছুঁতে পারে না।','<b>Core level:</b> x86-এ <code>LOCK CMPXCHG</code> আগে lock-এর cache line-এর exclusive মালিকানা নেয় (MESI-তে <b>M</b>), অন্য core-এর copy তখন <b>I</b>। তারপর compare ও write করে। ARM-এ একই কাজ <code>LDXR / STXR</code> জোড়ায়।','<b>Mutex</b> = lock নেওয়ার জন্য atomic CAS। না পেলে thread kernel-এর <b>futex</b> দিয়ে ঘুমায়, CPU নষ্ট করে না।','<b>Unlock</b> = lock ছেড়ে অপেক্ষারত thread-কে জাগানো।'],
+ tabs:[
+  {n:'1. Atomic ছাড়া (ভাঙা)',steps:()=>atomicSteps('bad')},
+  {n:'2. Atomic CAS (core level)',steps:()=>atomicSteps('cas')},
+  {n:'3. Mutex: সমস্যা ও সমাধান',steps:()=>mutexFlow()}
+ ]},
+
+{p:3,q:'Mutex vs semaphore (binary and counting), spinlock, and monitor.',
+ ans:'চারটাই shared data বাঁচানোর tool, কিন্তু কাজ করে আলাদা ভাবে। Tab চেপে একটা একটা করে দেখো।',
+ pts:['<b>Mutex:</b> একবারে ১ জন। যে lock করেছে সেই unlock করবে। না পেলে ঘুমায়।','<b>Semaphore:</b> একটা counter। N জন একসাথে ঢুকতে পারে (counting), N = 1 হলে binary। <code>signal()</code> যে কেউ দিতে পারে, মালিক লাগে না।','<b>Spinlock:</b> না পেলে ঘুমায় না, loop-এ ঘুরে ঘুরে চেক করে। ছোট critical section ও multicore-এ ভালো।','<b>Monitor:</b> data, lock আর condition একসাথে। এটা দুটো সমস্যা মেটায়: ভেতরে একবারে ১ জন, আর শর্তের জন্য নিরাপদ অপেক্ষা। Java-র <code>synchronized</code> ও <code>wait/notify</code> একটা monitor।'],
+ tabs:[
+  {n:'Mutex',steps:[
+    S('<b>Mutex</b>: একটা lock, একজন <b>মালিক</b>। এখন খালি।',{add:[B('lock',290,18,180,46,'Mutex: খালি','o'),B('A',20,96,150,70,'Thread A','a'),B('B',590,96,150,70,'Thread B','b'),B('cs',250,96,260,70,'Critical section','g',{dash:1})]}),
+    S('A <code>lock()</code> করে, মালিক হয়, ভেতরে ঢোকে।',{mod:{lock:{label:'Mutex: মালিক A',c:'r'},A:{x:262,y:108,w:236,h:46,c:'g',label:'Thread A (ভেতরে)'},cs:{label:''}}}),
+    S('B <code>lock()</code> করে, পায় না → <b>ঘুমায়</b> (CPU ছেড়ে দেয়, অন্য thread চলে)।',{mod:{B:{c:'r',label:'Thread B\nঘুমে'}}}),
+    S('B <code>unlock()</code> করতে চাইলে? সে মালিক না, তাই <b>পারে না</b> ✗। শুধু মালিকই খুলতে পারে।',{add:[T('own',380,200,'unlock করতে পারে শুধু মালিক (A)',{a:'middle',c:'r',s:'b'})]}),
+    S('A <code>unlock()</code> করে, B জাগে, মালিক হয়, ঢোকে।',{del:['own'],mod:{lock:{label:'Mutex: মালিক B'},A:{x:20,y:96,w:150,h:70,c:'a',label:'Thread A'},B:{x:262,y:108,w:236,h:46,c:'g',label:'Thread B (ভেতরে)'}}})
+  ]},
+  {n:'Semaphore',steps:[
+    S('<b>Counting semaphore</b>: ৩টা permit। যতক্ষণ permit আছে ততজন ঢুকতে পারে।',{add:[B('sem',20,10,150,50,'Semaphore\ncount = 3','o'),...[0,1,2].map(i=>B('pm'+i,190+i*60,16,52,38,'permit','o')),B('zone',320,70,420,70,'','g',{dash:1}),T('zl',334,84,'ভেতরে (resource ব্যবহার করছে)',{c:'g',s:'sm'}),B('wz',320,152,420,76,'','r',{dash:1}),T('wl',334,166,'অপেক্ষা (ঘুমিয়ে)',{c:'r',s:'sm'}),B('t1',20,76,90,30,'T1','a'),B('t2',20,112,90,30,'T2','b'),B('t3',20,148,90,30,'T3','s'),B('t4',20,184,90,30,'T4','n')]}),
+    S('T1, T2, T3 <code>wait()</code> করে, একটা করে permit নেয়। count = 0।',{mod:{sem:{label:'Semaphore\ncount = 0',c:'r'},pm0:{o:0},pm1:{o:0},pm2:{o:0},t1:{x:340,y:96,w:100},t2:{x:460,y:96,w:100},t3:{x:580,y:96,w:100}}}),
+    S('T4 <code>wait()</code> করে, permit নেই → <b>ঘুমায়</b>।',{mod:{t4:{x:340,y:176,w:100,c:'r'}}}),
+    S('T1 <code>signal()</code> করে, একটা permit ফেরে, T4 জাগে ও ঢোকে।',{mod:{t1:{o:0},t4:{x:340,y:96,c:'g'},sem:{label:'Semaphore\ncount = 0'}}}),
+    S('<b>Binary semaphore</b> = permit মাত্র ১টা (mutex-এর মতো)। তফাত: <code>signal()</code> যে কেউ দিতে পারে, মালিক লাগে না।',{})
+  ]},
+  {n:'Spinlock',steps:[
+    S('<b>Spinlock</b>: দুটো core, একটা lock। A (Core 0) lock ধরে আছে।',{add:[B('lock',290,12,180,44,'Spinlock: A-র কাছে','r'),B('c0',20,84,300,70,'Core 0\nThread A: critical section-এ','g'),B('c1',440,84,300,70,'Core 1\nThread B','b')]}),
+    S('B না পেয়ে <b>ঘুমায় না</b>। loop-এ বারবার চেক করে: <code>while (locked) { }</code>।',{mod:{c1:{label:'Core 1\nThread B: lock? lock? lock?',c:'o',hl:1}}}),
+    S('এই সময় Core 1 পুরো ব্যস্ত, কিন্তু কোনো কাজ হচ্ছে না। A দ্রুত শেষ করলে এটা ঠিক আছে।',{add:[T('burn',590,180,'CPU 100% ব্যস্ত, কাজ ০',{a:'middle',c:'r',s:'b'})]}),
+    S('A <code>unlock</code> করল। B-র পরের চেকেই সফল, কোনো ঘুম-জাগার দেরি নেই।',{del:['burn'],mod:{lock:{label:'Spinlock: B-র কাছে'},c0:{label:'Core 0\nThread A: শেষ',c:'a'},c1:{label:'Core 1\nThread B: critical section-এ',c:'g',hl:0}}}),
+    S('<b>নিয়ম:</b> critical section খুব ছোট হলে spinlock ভালো (ঘুমানোর খরচ বাঁচে)। লম্বা হলে mutex, নইলে CPU নষ্ট।',{})
+  ]},
+  {n:'Monitor: কেন দরকার',steps:[
+    S('<b>Producer</b> আর <b>Consumer</b> দুটো আলাদা <b>thread</b> (ভূমিকা): Producer item বানিয়ে shared queue-তে রাখে, Consumer সেখান থেকে নিয়ে কাজ করে। Consumer-কে item আসা পর্যন্ত <b>অপেক্ষা</b> করতে হবে। শুধু mutex দিয়ে করতে গেলে দুই ভাবে ভাঙে।',{add:[B('M',300,10,160,40,'Mutex: খালি','o'),B('Q',300,66,160,40,'queue: খালি','n'),B('C',30,60,170,64,'Consumer (thread)\nitem নিয়ে কাজ করে','a'),B('P',560,60,170,64,'Producer (thread)\nitem বানায়','b')]}),
+    S('<b>ভুল ১:</b> Consumer lock ধরে রেখেই অপেক্ষা করল। Producer lock পায় না, item-ও দিতে পারে না। কেউ এগোয় না (deadlock)।',{add:[A('bl',558,92,462,92,'r',{dash:1}),T('t1',380,150,'lock ধরে অপেক্ষা → Producer ঢুকতেই পারে না ✗',{a:'middle',c:'r',s:'b'})],mod:{M:{label:'Mutex: Consumer-এর কাছে',c:'r'},C:{label:'Consumer\nlock ধরে অপেক্ষায়',c:'r'},P:{c:'r',label:'Producer\nlock পায় না'}}}),
+    S('<b>ভুল ২:</b> Consumer ঘুমানোর আগে lock ছেড়ে দিল। কিন্তু এখনো ঘুমায়নি। এই ফাঁকে Producer item দিয়ে "জাগো" signal পাঠাল।',{del:['bl','t1'],add:[T('t2',380,150,'signal এল, কিন্তু Consumer তখনো ঘুমায়নি ✗',{a:'middle',c:'r',s:'b'})],mod:{M:{label:'Mutex: খালি',c:'o'},C:{label:'Consumer\nlock ছেড়েছে,\nএখনো জাগা',c:'o'},P:{c:'g',label:'Producer\nitem দিল + signal'},Q:{label:'queue: [item]',c:'g'}}}),
+    S('Signal হারিয়ে গেছে। Consumer এবার ঘুমাল, আর কেউ জাগাবে না। item আছে, তবু <b>চিরকাল ঘুমে</b> (lost wakeup)।',{del:['t2'],add:[T('t3',380,150,'lost wakeup: item আছে, Consumer ঘুমিয়েই থাকে ✗',{a:'middle',c:'r',s:'b'})],mod:{C:{c:'r',label:'Consumer\nঘুমে (কেউ জাগাবে না)'},P:{c:'n',label:'Producer\nশেষ'}}}),
+    S('দরকার: <b>"lock ছাড়া" আর "ঘুমানো" এক অবিভাজ্য ধাপে</b>, আর lock নেওয়া-ছাড়া যেন ভুলে না যাই। এই দুটোই <b>Monitor</b> আপনা-আপনি দেয়।',{del:['t3']})
+  ]},
+  {n:'Monitor: কীভাবে কাজ করে',steps:[
+    S('Producer আর Consumer দুটো thread। <b>Monitor</b> = shared data + তার method + lock + condition queue, সব একসাথে বাঁধা। Data শুধু method দিয়ে ছোঁয়া যায়, আর method-এ ঢুকলেই <b>lock নিজে থেকে লাগে</b>।',{add:[B('mon',230,6,330,172,'','o',{dash:1}),T('monl',244,22,'Monitor: BoundedQueue',{c:'o',s:'sm b'}),B('lk',246,34,120,30,'lock (স্বয়ংক্রিয়)','o',{s:'sm'}),B('dt',376,34,168,30,'data: queue [ ]','n',{m:1}),B('slot',246,76,296,56,'ভেতরে: একবারে ১ জন','n',{dash:1}),B('cq',590,50,150,100,'Condition queue\n(wait করে ঘুমানো)','n',{dash:1}),B('C',20,34,150,44,'Consumer (thread)','a'),B('P',20,110,150,44,'Producer (thread)','b'),T('code',20,206,'synchronized take() { while (queue.empty()) wait(); return queue.pop(); }',{c:'f',s:'m'})]}),
+    S('Consumer <code>take()</code> method-এ ঢোকে। Lock আপনা-আপনি লাগে। Producer বাইরে <b>অপেক্ষা</b> করে (একবারে ১ জন ভেতরে)।',{mod:{C:{x:254,y:84,w:280,h:40,c:'g'},lk:{label:'lock: Consumer-এর',c:'r'},P:{c:'o',label:'Producer\n(বাইরে অপেক্ষা)'}}}),
+    S('Queue খালি, তাই <code>wait()</code>। <b>এক অবিভাজ্য ধাপে</b>: lock ছাড়ে আর condition queue-তে ঘুমায়। মাঝের ফাঁক নেই, তাই signal হারায় না।',{mod:{C:{x:600,y:114,w:130,h:30,c:'r',label:'Consumer: ঘুমে'},lk:{label:'lock: খালি',c:'o'}}}),
+    S('এখন Producer ঢুকতে পারে (lock খালি)। <code>put(item)</code> করে <code>notify()</code>। Consumer জাগে, কিন্তু এখনো বাইরে, কারণ Producer ভেতরে।',{mod:{P:{x:254,y:84,w:280,h:40,c:'g',label:'Producer (ভেতরে)'},lk:{label:'lock: Producer-এর',c:'r'},dt:{label:'data: queue [item]',c:'g'},C:{x:20,y:34,w:150,h:44,c:'o',label:'Consumer\nজাগল, বাইরে'}}}),
+    S('Producer বেরোয়, lock খালি। Consumer আবার lock নিয়ে ঢোকে, <code>while</code> দিয়ে শর্ত আবার চেক করে, item পায়।',{mod:{P:{x:20,y:110,w:150,h:44,c:'b',label:'Producer'},C:{x:254,y:84,w:280,h:40,c:'g',label:'Consumer (item পেল)'},lk:{label:'lock: Consumer-এর',c:'r'}}}),
+    S('<b>সমাধান:</b> ১) ভেতরে একবারে ১ জন, lock ভুলে যাওয়ার সুযোগ নেই। ২) শর্তের জন্য নিরাপদ অপেক্ষা (<code>wait/notify</code>), কোনো signal হারায় না।',{})
+  ]}
+ ]},
+
+{p:3,q:'What are the classic synchronization problems (producer-consumer, readers-writers, dining philosophers)?',
+ ans:'<b>Producer-Consumer</b>: একটা thread (<b>Producer</b>) data বানিয়ে shared buffer-এ রাখে, আরেকটা thread (<b>Consumer</b>) সেখান থেকে নিয়ে কাজ করে। Buffer সীমিত (bounded), তাই <code>empty</code>, <code>full</code> semaphore + mutex লাগে। <b>Readers-Writers</b>: অনেক reader একসাথে, writer একা। <b>Dining Philosophers</b>: ৫ জন, ৫টা কাঁটা; সবাই বাঁ কাঁটা ধরলে deadlock।',
+ pts:['Producer আর Consumer আলাদা কোনো জিনিস না, শুধু thread-এর <b>ভূমিকা</b> (process-ও হতে পারে)।','বাস্তব উদাহরণ: web server-এ request নেওয়া thread = Producer, request process করা worker thread = Consumer। Print queue-তে app = Producer, printer driver = Consumer।','Dining philosophers-এর সমাধান: resource ordering, সর্বোচ্চ ৪ জন একসাথে, বা waiter।','নিচে Producer-Consumer দেখো।'],
+ steps:[
+  S('৪ slot-এর buffer, খালি। <code>empty = 4, full = 0</code>।',{add:[B('p',20,92,130,60,'Producer\n(thread)','a'),...[0,1,2,3].map(i=>B('s'+i,230+i*72,100,62,44,'খালি','n',{dash:1})),B('c',590,92,130,60,'Consumer\n(thread)','b'),T('cnt',380,176,'empty = 4   full = 0',{a:'middle',c:'f',s:'m'})]}),
+  S('Producer ২টা item বানাল।',{mod:{s0:{label:'item',c:'a',dash:0},s1:{label:'item',c:'a',dash:0},cnt:{label:'empty = 2   full = 2'}}}),
+  S('আরও ২টা → buffer <b>full</b>। Producer-এর <code>wait(empty)</code> → ঘুমায়।',{mod:{s2:{label:'item',c:'a',dash:0},s3:{label:'item',c:'a',dash:0},cnt:{label:'empty = 0   full = 4'},p:{c:'r',label:'Producer\nbuffer full → wait'}}}),
+  S('Consumer ১টা নিল → <code>signal(empty)</code>, Producer জাগল, আবার বানাল।',{mod:{s0:{label:'খালি',c:'g',dash:1},c:{hl:1},cnt:{label:'empty = 1   full = 3'},p:{c:'a',label:'Producer\n(thread)'}}})
+ ]},
+
+{p:4,q:'What are the CPU scheduling algorithms? Do they schedule processes or threads, and who schedules them?',
+ ans:'CPU scheduling = ready থাকা <b>thread</b>-দের মধ্যে কে পরে CPU পাবে তা ঠিক করা। এটা করে <b>kernel</b> (ring 0), দুই ভাগে: <b>scheduler</b> সিদ্ধান্ত নেয়, <b>dispatcher</b> সেটা বাস্তবে করে। Schedule হয় <b>thread</b>, process না।',
+ pts:['<b>কী schedule হয়:</b> thread (kernel thread)। Process শুধু memory, files-এর মালিক; তার প্রতিটি thread আলাদা করে CPU পায়। Single-thread process-এ main thread-ই একমাত্র thread, তাই "process schedule হয়" কথাটা চালু আছে।','<b>Scheduler:</b> kernel-এর ভেতরের সাধারণ code (Linux-এ <code>schedule()</code> function)। কাজ: ready queue থেকে algorithm মেনে পরের thread বাছা।','<b>Dispatcher:</b> একই kernel-এর ভেতরের code (Linux-এ <code>context_switch()</code>)। আলাদা process, thread বা hardware না। কাজ: পুরনো thread-এর register save, নতুনেরটা load, দরকারে CR3 বদল, user mode-এ ফেরা।','<b>কখন চলে:</b> timer interrupt (quantum শেষ), thread block হলে (I/O, lock), yield বা exit করলে।','Scheduler আর dispatcher আলাদা ভাগ করা হয় বোঝার সুবিধার জন্য (সিদ্ধান্ত বনাম বাস্তবায়ন)। বাস্তবে দুটোই kernel code, Linux-এ একই জায়গায়।','Algorithm: FCFS, SJF, SRTF, Round Robin, Priority, MLFQ (Linux CFS-ও এই পরিবারের)।'],
+ steps:[
+  S('Kernel-এর ভেতরে <b>scheduler</b> আর <b>dispatcher</b> দুটোই kernel code (ring 0)। Ready queue-তে CPU-র অপেক্ষায় ৩টা <b>thread</b> (T1, T2 একই process-এর হতেও পারে)।',{add:[B('q',20,84,330,70,'','a',{dash:1}),T('ql',34,100,'Ready queue',{c:'a',s:'sm'}),B('p1',30,110,90,38,'T1','a'),B('p2',130,110,90,38,'T2','b'),B('p3',230,110,90,38,'T3','g'),B('cpu',600,84,130,70,'CPU','n'),B('kz',372,4,186,232,'','o',{dash:1}),T('kzl',384,16,'Kernel (ring 0)',{c:'o',s:'sm b'}),B('sch',390,30,150,52,'Scheduler\n(সিদ্ধান্ত)','o'),B('dis',390,160,150,52,'Dispatcher\n(বাস্তবায়ন)','o')]}),
+  S('<b>Scheduler</b> algorithm (FCFS, RR, Priority...) মেনে ready queue থেকে একটা thread <b>বাছে</b>: T1। শুধু সিদ্ধান্ত, এখনো কিছু বদলায়নি।',{add:[A('a1',350,100,388,62,'o')],mod:{p1:{hl:1}}}),
+  S('<b>Dispatcher</b> সেই সিদ্ধান্ত <b>করে দেখায়</b>: আগের thread-এর register save, T1-এর register load, দরকারে CR3 বদল, তারপর user mode-এ T1 শুরু।',{add:[A('a2',540,186,640,156,'o')],mod:{p1:{x:640,y:100,c:'g'},p2:{x:30},p3:{x:130},cpu:{c:'g',label:'CPU\nচলছে: T1'}}}),
+  S('Quantum শেষ (timer interrupt), বা T1 block/exit করলে kernel-এ ফেরে। T1 আবার queue-তে, scheduler আবার বাছে।',{mod:{p1:{x:230,y:110,hl:0,c:'a'},cpu:{c:'n',label:'CPU'}}})
+ ]},
+
+{p:4,q:'What types of queues are used in CPU scheduling?',
+ ans:'<b>Job queue</b>: সিস্টেমের সব process (admit হওয়ার আগে)। <b>Ready queue</b>: RAM-এ, CPU-র অপেক্ষায় থাকা <b>thread</b>। <b>Device (wait) queue</b>: I/O-র অপেক্ষায় থাকা thread - প্রতি device-এর আলাদা। Admit-এর পর <b>thread</b>-ই এই queue-গুলোর মধ্যে ঘোরে।',
+ pts:['Multilevel queue: priority অনুযায়ী একাধিক ready queue।'],
+ steps:[
+  S('একটা thread-এর যাত্রা: Job → Ready → CPU → (I/O) → Ready → CPU → Exit।',{add:[
+    B('jq',20,20,170,56,'Job queue\n(নতুন process)','n'),B('rq',230,20,170,56,'Ready queue\n(CPU-র অপেক্ষা)','a'),B('cpu',440,20,120,56,'CPU','g'),B('ex',600,20,120,56,'Exit','n'),B('dq',230,150,170,56,'Device queue\n(I/O-র অপেক্ষা)','o'),
+    A('a1',190,48,228,48,'n'),A('a2',400,48,438,48,'a'),A('a3',560,48,598,48,'g'),A('a4',500,76,400,160,'o'),T('a4l',470,128,'I/O request',{c:'o',s:'sm',a:'end'}),A('a5',315,150,315,78,'o'),T('a5l',325,114,'I/O done',{c:'o',s:'sm'}),
+    C('tok',186,48,13,'T','f')]}),
+  S('Process admit হল → তার main thread <b>Ready queue</b>-তে।',{mod:{tok:{x:315,y:48},rq:{hl:1}}}),
+  S('Scheduler বেছে নিল → <b>CPU</b>।',{mod:{tok:{x:500,y:48},rq:{hl:0},cpu:{hl:1}}}),
+  S('Disk read চাইল → <b>Device queue</b>-তে অপেক্ষা (CPU খালি হল)।',{mod:{tok:{x:315,y:178},cpu:{hl:0},dq:{hl:1}}}),
+  S('I/O শেষ → আবার Ready queue।',{mod:{tok:{x:315,y:48},dq:{hl:0},rq:{hl:1}}}),
+  S('আবার CPU, কাজ শেষ → <b>Exit</b>।',{mod:{tok:{x:660,y:48},rq:{hl:0}}})
+ ]},
+
+{p:4,q:'Preemptive vs non-preemptive scheduling, starvation and aging.',
+ ans:'<b>Non-preemptive</b>: CPU পেলে নিজে ছাড়ার/শেষ হওয়ার আগে কেড়ে নেওয়া যায় না (FCFS, SJF)। <b>Preemptive</b>: OS timer interrupt দিয়ে জোর করে কেড়ে নেয় (RR, SRTF)। <b>Starvation</b>: কম priority task অনির্দিষ্টকাল পায় না; <b>aging</b>: অপেক্ষা যত বাড়ে priority তত বাড়ে।',
+ pts:['Starvation আর deadlock আলাদা: starvation-এ অন্যরা এগোয়, deadlock-এ কেউ না।'],
+ steps:[
+  S('ছোট সংখ্যা = বেশি priority। L-এর priority সবচেয়ে কম (5)।',{add:[B('L',30,100,130,50,'L  prio 5','n'),B('H1',180,100,110,50,'H1  prio 1','b'),B('H2',310,100,110,50,'H2  prio 1','b'),B('cpu',600,90,130,70,'CPU','n'),T('ql',30,84,'Ready queue',{c:'n',s:'sm'})]}),
+  S('H1 CPU পেল। এদিকে নতুন high-priority task আসতেই থাকে।',{add:[B('H3',440,100,110,50,'H3  prio 1','b')],mod:{H1:{x:620,y:100,w:90},cpu:{c:'g'}}}),
+  S('H2, H3-ও আগে চলে। L কখনো সুযোগ পায় না = <b>starvation</b>।',{mod:{L:{c:'r',hl:1},H2:{x:620,y:100,w:90},H1:{o:0},H3:{x:310}}}),
+  S('<b>Aging</b>: অপেক্ষার সময়ের সাথে L-এর priority বাড়ে (5→4→3→2→1)।',{mod:{L:{label:'L  prio 5→1',c:'g'}}}),
+  S('এবার L-ই সবচেয়ে বেশি priority - CPU পায়। Starvation শেষ।',{mod:{L:{x:610,y:100,w:110,hl:0},H2:{o:0},cpu:{c:'g'}}})
+ ]},
+
+{p:4,q:'Numerical practice: waiting time and turnaround time for FCFS, SJF, SRTF, Round Robin and Priority.',
+ ans:'<b>TAT = CT - AT</b>, <b>WT = TAT - BT</b> (CT = completion, AT = arrival, BT = burst)। Gantt chart আঁকো, CT পড়ো, সূত্র বসাও। (Schedule হয় thread - তাই T1-T4; textbook-এ এদের P1-P4 লেখা হয়।) Algorithm বদলে ট্যাব চাপো - একই job-এ ফল তুলনা করো।',
+ pts:['<b>Round Robin</b> quantum = 2। <b>Priority</b>: ছোট সংখ্যা = বেশি priority, non-preemptive।','নতুন arrival আর quantum-শেষ হওয়া task একসাথে হলে নতুনটা আগে queue-তে (এখানকার ধরন)।'],
+ extra:'<table><tr><th>Thread</th><th>AT</th><th>BT</th><th>Priority</th></tr><tr><td>T1</td><td>0</td><td>5</td><td>2</td></tr><tr><td>T2</td><td>1</td><td>3</td><td>1</td></tr><tr><td>T3</td><td>2</td><td>1</td><td>3</td></tr><tr><td>T4</td><td>3</td><td>2</td><td>2</td></tr></table>',
+ tabs:[
+  {n:'FCFS',steps:()=>schedSteps('FCFS','FCFS: যে আগে এসেছে সে আগে চলে (non-preemptive)।')},
+  {n:'SJF',steps:()=>schedSteps('SJF','SJF: ready-দের মধ্যে ছোট burst আগে (non-preemptive)।')},
+  {n:'SRTF',steps:()=>schedSteps('SRTF','SRTF: প্রতি মুহূর্তে সবচেয়ে কম remaining time (preemptive SJF)।')},
+  {n:'Round Robin (q=2)',steps:()=>schedSteps('RR','Round Robin: প্রত্যেকে সর্বোচ্চ ২ unit, তারপর queue-র পেছনে (preemptive)।')},
+  {n:'Priority',steps:()=>schedSteps('PRIO','Priority: ছোট সংখ্যা = বেশি priority (non-preemptive)।')}
+ ]},
+
+{p:5,q:'What is a deadlock? What are the 4 necessary conditions?',
+ ans:'কয়েকটা thread প্রত্যেকে অন্যের ধরে রাখা resource-এর জন্য <b>চিরকাল</b> অপেক্ষা করছে - কেউ এগোয় না। ৪টা condition <b>একসাথে</b> থাকতে হয়: <b>Mutual exclusion, Hold & wait, No preemption, Circular wait</b>।',
+ pts:['একটা ভাঙলেই deadlock হবে না।'],
+ steps:[
+  S('দুই thread (T1, T2), দুই lock (R1, R2)।',{add:[B('t1',120,24,140,48,'Thread 1','a'),B('r2',500,24,140,48,'Lock R2','o'),B('t2',500,150,140,48,'Thread 2','b'),B('r1',120,150,140,48,'Lock R1','o')]}),
+  S('T1 R1 নিল (<b>holds</b>)।',{add:[A('h1',190,150,190,74,'g'),T('h1l',200,112,'holds',{c:'g',s:'sm'})]}),
+  S('T2 R2 নিল।',{add:[A('h2',570,72,570,148,'g'),T('h2l',580,112,'holds',{c:'g',s:'sm'})]}),
+  S('T1 এখন R2 চায় - T2 ধরে আছে, T1 অপেক্ষা করে (<b>hold & wait</b>)।',{add:[A('w1',262,48,498,48,'r',{dash:1}),T('w1l',380,34,'wants',{a:'middle',c:'r',s:'sm'})]}),
+  S('T2 R1 চায় - T1 ধরে আছে। <b>Circular wait → DEADLOCK</b>।',{add:[A('w2',498,174,262,174,'r',{dash:1}),T('w2l',380,188,'wants',{a:'middle',c:'r',s:'sm'}),T('dl',380,112,'DEADLOCK ☠',{a:'middle',c:'r',s:'lg'})]}),
+  S('চারটা শর্তই পূর্ণ।',{add:[T('cond',380,222,'Mutual exclusion · Hold & wait · No preemption · Circular wait',{a:'middle',c:'f',s:'sm m'})]})
+ ]},
+
+{p:5,q:'Deadlock prevention, avoidance, detection and recovery. How is deadlock different from starvation?',
+ ans:'Deadlock সামলানোর ৪টা উপায়: <b>Prevention</b> (হতেই দেবে না), <b>Avoidance</b> (আগে হিসাব করে এড়ানো, Banker\'s algorithm), <b>Detection</b> (হতে দেবে, ধরবে) আর <b>Recovery</b> (ভাঙবে)। Tab চেপে একটা একটা করে দেখো।',
+ pts:['<b>Prevention:</b> ৪ শর্তের একটা ভেঙে দাও। সবচেয়ে সহজ: সবাই একই ক্রমে lock নেয় (lock ordering), তাহলে circular wait হয় না।','<b>Avoidance (Banker\'s):</b> resource দেওয়ার আগে হিসাব করে, দিলে সিস্টেম <b>safe</b> থাকবে কি না। safe হলে দেয়, নইলে অপেক্ষা করায়। Process-কে আগে থেকে জানাতে হয় তার Max কত লাগবে।','<b>Detection + Recovery:</b> deadlock হতে দাও। পরে wait-for graph-এ cycle খুঁজে ধরো, তারপর একটা thread kill করো বা resource কেড়ে নাও।','Linux/Windows বাস্তবে বেশির ভাগই deadlock উপেক্ষা করে (ostrich) আর lock ordering মানে। Banker\'s বাস্তবে কম ব্যবহার হয়, কারণ আগে Max জানা কঠিন।','<b>Starvation আলাদা:</b> অন্যরা এগোয়, কিন্তু একজন বারবার সুযোগ পায় না। Deadlock-এ কেউই এগোয় না।'],
+ tabs:[
+  {n:'Prevention',steps:[
+    S('নিয়ম: <b>সবাই আগে R1, তারপর R2</b> (lock ordering)।',{add:[B('t1',40,20,120,44,'Thread 1','a'),B('t2',40,168,120,44,'Thread 2','b'),B('r1',330,94,120,44,'Lock R1','o'),B('r2',560,94,120,44,'Lock R2','o'),T('rule',380,230,'R1 → R2 ক্রমে, circular wait অসম্ভব',{a:'middle',c:'f',s:'sm b'})]}),
+    S('T1 R1 নিল।',{add:[A('x1',160,50,328,108,'g')]}),
+    S('T2-ও আগে R1 চায়, পায় না, <b>অপেক্ষা করে</b> (R2 ধরে নেই, তাই কাউকে আটকায় না)।',{add:[A('x2',160,184,328,126,'r',{dash:1})]}),
+    S('T1 R2 নিয়ে কাজ সেরে দুটোই ছাড়ল।',{add:[A('x3',160,40,558,104,'g')]}),
+    S('এবার T2 R1, তারপর R2 পায়। কোনো cycle হয়নি, deadlock নেই।',{del:['x1','x3','x2'],add:[A('y1',160,184,328,126,'g'),A('y2',160,192,558,130,'g')],mod:{t1:{c:'n'}}})
+  ]},
+  {n:"Avoidance: Banker's (১) safe কি না",steps:()=>bankerSafe()},
+  {n:"Avoidance: Banker's (২) request এলে",steps:()=>bankerRequest()},
+  {n:'Detection ও Recovery',steps:[
+    S('<b>Wait-for graph</b>: "A → B" মানে A, B-র জন্য অপেক্ষা করছে। তিনটা thread।',{add:[C('T1',150,70,28,'T1','a'),C('T2',610,70,28,'T2','b'),C('T3',380,196,28,'T3','g')]}),
+    S('T1 অপেক্ষা করছে T2-র জন্য, T2 অপেক্ষা করছে T3-র জন্য।',{add:[A('w1',180,70,578,70,'n'),A('w2',596,94,404,176,'n'),T('wl',380,56,'waits for',{a:'middle',c:'n',s:'sm'})]}),
+    S('T3 অপেক্ষা করছে T1-এর জন্য। <b>Cycle তৈরি হল</b>: T1 → T2 → T3 → T1।',{add:[A('w3',356,176,166,92,'r')],mod:{w1:{c:'r'},w2:{c:'r'}}}),
+    S('<b>Detection:</b> OS মাঝে মাঝে graph-এ cycle খোঁজে। cycle পেলে বোঝে deadlock। এই নিয়ে এখনো কিছু করেনি।',{add:[T('det',380,126,'DEADLOCK ধরা পড়ল ☠',{a:'middle',c:'r',s:'lg'})]}),
+    S('<b>Recovery:</b> একটা victim বাছে, যেমন T3 kill করে বা তার resource কেড়ে নেয়।',{del:['det'],mod:{T3:{c:'r',o:0.3}}}),
+    S('T3 সরায় cycle ভাঙল। T2 এগোয়, তারপর T1। (খরচ: T3-র কাজ নষ্ট।)',{del:['w2','w3'],mod:{w1:{c:'g'}}})
+  ]}
+ ]},
+
+{p:5,q:'What is priority inversion?',opt:1,
+ ans:'High-priority <b>H</b> একটা lock-এর জন্য অপেক্ষায়, যেটা low-priority <b>L</b> ধরে আছে। মাঝারি <b>M</b> (lock লাগে না) এসে CPU নেয়, L চলতে পারে না, তাই H আসলে M-এর পেছনে আটকা। সমাধান: <b>priority inheritance</b> (L সাময়িক H-এর priority পায়)।',
+ pts:['বিখ্যাত ঘটনা: Mars Pathfinder (1997)।'],
+ steps:[
+  S('L চলছে এবং একটা lock ধরে আছে।',{add:[T('lh',20,60,'H',{c:'b',s:'lg'}),T('lm',20,120,'M',{c:'o',s:'lg'}),T('ll',20,180,'L',{c:'a',s:'lg'}),A('ax',60,222,730,222,'n'),T('axl',736,208,'time',{a:'end',c:'n',s:'sm'}),B('l1',60,162,110,36,'L (lock ধরা)','a')]}),
+  S('H এল, একই lock চায় → <b>blocked</b>।',{add:[B('h1',170,42,80,36,'H blocked','r',{dash:1})]}),
+  S('M এসে L-কে <b>preempt</b> করল। L চলতে পারে না, lock-ও ছাড়ে না। H আরও আটকা।',{add:[B('m1',210,102,180,36,'M চলছে (lock লাগে না)','o')],mod:{h1:{w:220}}}),
+  S('<b>Priority inheritance</b>: L, H-এর priority পায়, M-কে টপকে চলে।',{add:[B('l2',390,162,110,36,'L (boosted)','a',{hl:1})]}),
+  S('L unlock করল → H চলে। (Inversion শেষ।)',{add:[B('h2',500,42,130,36,'H চলছে ✓','g')],mod:{h1:{w:330}}})
+ ]},
+
+{p:6,q:'What is the memory layout of a process (text, data, heap, stack)?',
+ ans:'উপর থেকে নিচে: <b>Kernel</b>, <b>Stack</b> (function call, local - নিচের দিকে বাড়ে), খালি জায়গা, <b>Heap</b> (<code>malloc/new</code> - উপরের দিকে বাড়ে), <b>BSS</b> (uninitialized global), <b>Data</b> (initialized global), <b>Text</b> (code, read-only)।',
+ pts:['Stack overflow = stack সীমা ছাড়ায় (গভীর recursion)।','Memory leak = heap-এ নেওয়া জায়গা <code>free</code> না করা।','<b>PCB, TCB, kernel stack আর page table</b> এই user layout-এ নেই। এগুলো kernel-এর data, থাকে kernel space-এ (physical RAM-এ), user code ছুঁতে পারে না।'],
+ tabs:[
+  {n:'User অংশ (layout)',steps:[
+  S('Process-এর virtual address space।',{add:[
+    T('hi',240,22,'high address',{a:'end',c:'n',s:'sm'}),T('lo',240,218,'low address',{a:'end',c:'n',s:'sm'}),
+    B('k',250,8,260,26,'Kernel space','n',{dash:1}),B('st',250,38,260,36,'Stack ↓   locals, calls','a'),
+    B('hp',250,104,260,36,'Heap ↑   malloc / new','g'),B('bss',250,144,260,28,'BSS (uninit. globals)','o'),B('dt',250,174,260,28,'Data (initialized globals)','o'),B('tx',250,204,260,28,'Text (code, read-only)','b'),
+    T('free',380,90,'খালি জায়গা',{a:'middle',c:'n',s:'sm'})]}),
+  S('Function call → stack নিচের দিকে বাড়ে (<code>main → foo → bar</code>)।',{mod:{st:{h:46,label:'Stack ↓   main → foo → bar'},free:{y:94}}}),
+  S('<code>malloc</code> → heap উপরের দিকে বাড়ে।',{mod:{hp:{y:92,h:48,label:'Heap ↑   malloc × অনেক'},free:{y:86}}}),
+  S('দুটো একে অপরের দিকে বাড়ে - মাঝের জায়গা শেষ হলে crash।',{mod:{st:{h:50,c:'r'},hp:{y:90,h:50,c:'r'},free:{o:0}},add:[T('warn',620,86,'stack overflow /\nout of memory',{a:'middle',c:'r',s:'b'})]}),
+  S('<b>PCB আর page table কোথায়?</b> এগুলো process-এর নিজের (user) অংশে নেই। এগুলো <b>kernel-এর data</b>, থাকে kernel space অংশে।',{del:['warn'],mod:{st:{c:'a',h:46},hp:{c:'g'},k:{c:'o',dash:0,hl:1}},add:[T('kp',540,14,'Kernel space-এর ভেতরে (RAM-এ)',{c:'o',s:'sm b'}),B('kpcb',540,28,200,44,'PCB / TCB\n(task_struct)','a'),B('kks',540,80,200,34,'Kernel stack','o'),B('kpt',540,122,200,54,'Page table\n(CR3 এর ঠিকানা রাখে)','b'),A('ka',512,20,538,36,'o')]}),
+  S('<b>Page table</b> stack, heap, text-এর প্রতিটা virtual page-কে একটা physical frame-এর সাথে জোড়ে। User code যে address দেখে সেটা virtual, আসল জায়গা page table বলে দেয়।',{add:[A('m1',512,56,538,140,'b',{dash:1}),A('m2',512,122,538,148,'b',{dash:1}),A('m3',512,218,538,164,'b',{dash:1})],mod:{kpt:{hl:1}}}),
+  S('এই সব (PCB, kernel stack, page table) <b>physical RAM</b>-এ থাকে। User code (ring 3) এগুলো ছুঁতে পারে না, শুধু kernel (ring 0) পারে। Kernel space অংশ সব process-এর address space-এ একই।',{add:[B('ram',540,186,200,44,'Physical RAM\n(সবকিছুর আসল জায়গা)','g'),A('ra',640,178,640,184,'g')],mod:{kpt:{hl:0}}})
+  ]},
+  {n:'Kernel অংশ (ভেতরে কী)',steps:[
+    S('Virtual address space-এর <b>উপরের অংশ kernel space</b>। P1 আর P2-এর user অংশ আলাদা, কিন্তু kernel অংশ <b>একই</b> জিনিসকে দেখায়: RAM-এ kernel একটাই।',{add:[
+      T('c1',20,2,'P1-এর address space',{c:'a',s:'sm b'}),B('p1k',20,14,140,58,'Kernel অংশ\n(দুজনেরই একই)','o'),B('p1u',20,76,140,150,'User অংশ\n(P1-এর নিজস্ব)','a'),
+      T('c2',180,2,'P2-এর address space',{c:'b',s:'sm b'}),B('p2k',180,14,140,58,'Kernel অংশ\n(দুজনেরই একই)','o'),B('p2u',180,76,140,150,'User অংশ\n(P2-এর নিজস্ব)','b'),
+      B('kb',350,10,390,218,'','o',{dash:1}),T('kbl',364,26,'Kernel (RAM-এ একটাই কপি)',{c:'o',s:'sm b'}),
+      A('ka2',322,43,348,43,'o')]}),
+    S('Kernel-এর ভেতরে দুই ধরনের জিনিস। <b>সবার shared:</b> kernel code, kernel data, পুরো RAM-এর map। <b>প্রতি process/thread-এর নিজস্ব:</b> PCB/TCB, kernel stack, page table।',{add:[
+      B('kc',364,40,176,36,'Kernel code','o'),B('kd',550,40,178,36,'Kernel data / heap','o'),B('km',364,82,364,32,'পুরো physical RAM-এর map (kernel যেকোনো frame পড়তে পারে)','o',{s:'sm'}),
+      T('mine',364,132,'প্রতি process / thread-এর নিজস্ব:',{c:'f',s:'sm b'}),
+      B('kt',364,146,112,50,'PCB / TCB\n(task_struct)','a'),B('ks',486,146,112,50,'Kernel stack\n(প্রতি thread)','s'),B('kp',608,146,120,50,'Page table\n(CR3 দেখায়)','b')]}),
+    S('<b>User mode (ring 3)</b> থেকে kernel অংশ ছুঁলে CPU <b>fault</b> দেয়: ঠিকানা আছে, কিন্তু অনুমতি নেই। তাই user code PCB বা page table নষ্ট করতে পারে না।',{add:[T('deny',364,212,'user code → kernel অংশ  ✗ fault',{c:'r',s:'b'}),A('dn',162,120,348,150,'r',{dash:1})],mod:{p1u:{c:'r',hl:1}}}),
+    S('<b>Syscall</b> করলে CPU ring 0 হয়, <b>একই address space</b>-এই kernel অংশ খুলে যায়। Page table বদলাতে হয় না, তাই mode switch সস্তা।',{del:['deny','dn'],add:[T('ok',364,212,'syscall → ring 0 → kernel অংশ চালু  ✓',{c:'g',s:'b'})],mod:{p1u:{c:'a',hl:0},p1k:{c:'g',hl:1},kb:{c:'g'}}}),
+    S('<b>Context switch P1 → P2:</b> user অংশ বদলে যায় (<code>CR3</code> বদল), কিন্তু kernel অংশ একই থাকে। Kernel সব process-এর জন্য একটাই।',{del:['ok'],add:[T('cs',364,212,'বদলায়: user অংশ  |  একই থাকে: kernel অংশ',{c:'f',s:'b'})],mod:{p1k:{c:'o',hl:0},kb:{c:'o'},p1u:{c:'n',dash:1},p2u:{hl:1}}})
+  ]}
+ ]},
+
+{p:6,q:'Paging vs segmentation. Internal vs external fragmentation.',
+ ans:'<b>Paging:</b> process-কে <b>সমান মাপের</b> ছোট টুকরায় (page) কেটে RAM-এর সমান মাপের জায়গায় (frame) বসানো। <b>Segmentation:</b> process-কে তার <b>অর্থ অনুযায়ী</b> ভাগ করা (code, data, stack), প্রতিটা অংশ আলাদা মাপের।',
+ pts:['<b>Segmentation কীভাবে চলে:</b> address = (segment নম্বর, offset)। Segment table-এ প্রতি segment-এর <b>base</b> (RAM-এ কোথায় শুরু) আর <b>limit</b> (কত বড়)। Physical address = base + offset, যদি offset &lt; limit। নইলে trap।','<b>সুবিধা:</b> segment-ভিত্তিক সুরক্ষা (code read-only, stack আলাদা), sharing সহজ। <b>অসুবিধা:</b> external fragmentation।','<b>Paging:</b> external fragmentation নেই, শুধু শেষ page-এ <b>internal</b> অপচয়। আধুনিক OS মূলত paging (x86-64-এ segmentation প্রায় ব্যবহার হয় না)।','<b>Internal:</b> বরাদ্দের ভেতরে অব্যবহৃত জায়গা। <b>External:</b> মোট খালি যথেষ্ট, কিন্তু একসাথে নেই।'],
+ tabs:[
+  {n:'Paging',steps:[
+    S('Process 10 KB। Page = 4 KB → ৩টা page: 4 + 4 + 2 KB।',{add:[T('pl',60,22,'Process (virtual)',{c:'a',s:'sm'}),B('p0',60,34,100,40,'Page 0\n4 KB','a'),B('p1',170,34,100,40,'Page 1\n4 KB','a'),B('p2',280,34,50,40,'Page 2\n2 KB','a'),B('w',330,34,50,40,'2 KB\nঅপচয়','r',{dash:1}),T('rl',20,128,'RAM frames',{c:'n',s:'sm'}),...[0,1,2,3,4,5,6,7].map(i=>B('f'+i,20+i*90,140,82,44,'F'+i,'n',{dash:1}))]}),
+    S('Page-গুলো frame-এ <b>যেকোনো জায়গায়</b> বসে - পাশাপাশি লাগে না। তাই external fragmentation নেই।',{add:[A('m0',110,76,151,138,'a'),A('m1',220,76,601,138,'a'),A('m2',305,76,331,138,'a')],mod:{f1:{c:'a',dash:0},f6:{c:'a',dash:0},f3:{c:'a',dash:0}}}),
+    S('শেষ page-এর ২ KB অব্যবহৃত = <b>internal fragmentation</b>।',{mod:{w:{hl:1},f3:{c:'r',label:'F3\nঅপচয় ২ KB'}}})
+  ]},
+  {n:'Segmentation: কীভাবে কাজ করে',steps:[
+    S('Segmentation-এ process তার <b>অর্থ অনুযায়ী</b> ভাগ হয়: Code, Data, Stack। প্রতিটা অংশের মাপ আলাদা (Code 400, Data 300, Stack 200)।',{add:[T('ll',20,10,'Process (logical)',{c:'n',s:'sm'}),B('l0',20,26,150,56,'S0: Code\n400 byte','b'),B('l1',20,92,150,40,'S1: Data\n300 byte','o'),B('l2',20,142,150,32,'S2: Stack 200','a')]}),
+    S('<b>Segment table</b>: প্রতি segment-এর <b>base</b> (RAM-এ কোথায় বসেছে) আর <b>limit</b> (কত বড়)। RAM-এ তারা আলাদা আলাদা জায়গায় বসে।',{add:[B('th',200,16,270,26,'Seg      Base     Limit','n',{m:1,dash:1}),B('t0',200,46,270,30,'S0     1000      400','b',{m:1}),B('t1',200,80,270,30,'S1     5000      300','o',{m:1}),B('t2',200,114,270,30,'S2     8000      200','a',{m:1}),B('ram',560,6,180,226,'','g',{dash:1}),T('rl',574,20,'RAM',{c:'g',s:'sm b'}),B('r0',574,36,152,44,'Code\n1000 - 1399','b'),B('r1',574,100,152,40,'Data\n5000 - 5299','o'),B('r2',574,168,152,36,'Stack\n8000 - 8199','a'),A('e0',472,61,572,58,'b',{dash:1}),A('e1',472,95,572,120,'o',{dash:1}),A('e2',472,129,572,186,'a',{dash:1})]}),
+    S('CPU address দেয় <b>(segment নম্বর, offset)</b>: যেমন <b>(S1, 120)</b> মানে "Data segment-এর ১২০ নম্বর byte"।',{add:[T('ad',200,170,'CPU address = (S1, 120)',{c:'f',s:'b'})],mod:{t1:{hl:1},l1:{hl:1}}}),
+    S('<b>চেক:</b> offset 120 &lt; limit 300 ✓। segment-এর সীমার ভেতরে, তাই চলবে।',{add:[T('ck',200,194,'120 < 300  ✓',{c:'g',s:'b'})]}),
+    S('<b>Physical address = base + offset = 5000 + 120 = 5120</b>। RAM-এর Data segment-এর ঠিক ওই জায়গায় যায়।',{add:[T('ph',200,218,'5000 + 120 = 5120',{c:'g',s:'b'}),C('dot',712,120,7,'','g')],mod:{r1:{hl:1}}}),
+    S('অন্য case: <b>(S1, 350)</b>। 350 ≥ limit 300 ✗ → segment-এর বাইরে। CPU <b>trap</b> দেয়, OS process-কে থামায় (segmentation fault)। এটাই সুরক্ষা।',{del:['dot','ph'],mod:{ad:{label:'CPU address = (S1, 350)',c:'r'},ck:{label:'350 >= 300  ✗  trap!',c:'r'},r1:{hl:0},t1:{c:'r'}}})
+  ]},
+  {n:'Segmentation: কেন সমস্যা (external fragmentation)',steps:[
+    S('Segment আলাদা আকারের - যার যতটুকু লাগে। ১২ unit memory, চারটা segment।',{add:[...[0,1,2,3,4,5,6,7,8,9,10,11].map(i=>B('u'+i,20+i*58,150,56,26,String(i),'n',{dash:1,s:'sm'})),B('sa',20,90,3*58-2,50,'Code\n3','a'),B('sb',20+3*58,90,2*58-2,50,'Stack\n2','b'),B('sc',20+5*58,90,3*58-2,50,'Heap\n3','g'),B('sd',20+8*58,90,4*58-2,50,'Lib\n4','o')]}),
+    S('Code আর Heap শেষ হল (free হল) - দুটো আলাদা <b>hole</b> (৩ + ৩)।',{mod:{sa:{c:'n',dash:1,label:'hole 3'},sc:{c:'n',dash:1,label:'hole 3'}}}),
+    S('৫ unit-এর নতুন segment চাই। মোট খালি ৬ ≥ ৫, কিন্তু একসাথে নেই → <b>ব্যর্থ</b>। এটাই <b>external fragmentation</b>।',{add:[B('new',20,30,5*58-2,40,'নতুন segment: ৫ unit ✗','r',{dash:1})]})
+  ]}
+ ]},
+
+{p:6,sub:'25a',q:'How does paging work? Where do pages come from (SSD)?',
+ ans:'<b>Paging:</b> process-এর memory সমান ৪ KB-এর টুকরায় (<b>page</b>) ভাগ করা হয়, RAM-ও ৪ KB-এর টুকরায় (<b>frame</b>)। <b>Page table</b> বলে কোন page কোন frame-এ। Page RAM-এ না থাকলে OS তাকে SSD থেকে আনে: হয় <b>install করা ফাইল</b> থেকে, নয় <b>swap space</b> থেকে।',
+ pts:['<b>Address = (page নম্বর, offset)।</b> Page table page নম্বর দেখে frame দেয়, offset একই থাকে।','<b>File-backed page</b> (code): install করা ফাইল থেকেই আসে। RAM থেকে ফেলে দিলে লিখতে হয় না, ফাইলে কপি আছেই।','<b>Anonymous page</b> (heap, stack): কোনো ফাইল নেই। ফেলতে হলে আগে <b>swap space</b>-এ লিখতে হয়, নইলে data হারাবে।','<b>Swap space</b> SSD-তে install জায়গা থেকে <b>আলাদা</b>, OS-এর জন্য reserved (Linux-এ swap partition/file, Windows-এ pagefile)।'],
+ tabs:[
+  {n:'Paging কীভাবে কাজ করে',steps:[
+    S('Process-এর memory <b>৪ KB-এর টুকরায়</b> ভাগ: এগুলো <b>page</b> (virtual)। RAM-ও ৪ KB-এর টুকরায় ভাগ: এগুলো <b>frame</b>।',{add:[T('pl',20,10,'Process (virtual)',{c:'a',s:'sm b'}),...[0,1,2,3].map(i=>B('v'+i,20,26+i*46,110,38,'Page '+i,'a')),T('rl',400,10,'RAM (frame)',{c:'g',s:'sm b'}),...[0,1,2,3,4,5,6,7].map(i=>B('f'+i,400+(i%2)*110,26+Math.floor(i/2)*50,100,42,'Frame '+i,'n',{dash:1}))]}),
+    S('<b>Page table</b> বলে কোন page কোন frame-এ বসেছে। Page 3 এখন RAM-এ নেই (disk-এ)।',{add:[B('pt',160,26,200,130,'Page table\nPage 0  →  Frame 3\nPage 1  →  Frame 7\nPage 2  →  Frame 5\nPage 3  →  disk','b',{m:1}),B('dsk',640,26,100,60,'SSD\n(disk)','n')],mod:{f3:{c:'a',dash:0,label:'Frame 3\n(Page 0)'},f7:{c:'a',dash:0,label:'Frame 7\n(Page 1)'},f5:{c:'a',dash:0,label:'Frame 5\n(Page 2)'}}}),
+    S('CPU address দেয়: <b>8200</b>। এটা ভাগ হয়: <b>page নম্বর = 8200 ÷ 4096 = 2</b>, <b>offset = 8200 - 2×4096 = 8</b>।',{add:[T('c1',20,212,'virtual address 8200  =  page 2, offset 8',{c:'f',s:'m b'})],mod:{v2:{hl:1,c:'g'}}}),
+    S('Page table দেখে: <b>Page 2 → Frame 5</b>।',{mod:{pt:{hl:1},f5:{hl:1,c:'g'}}}),
+    S('<b>Physical address = Frame 5 × 4096 + offset 8 = 20488</b>। RAM-এর ওই ঠিকানা থেকে data আসে।',{add:[T('c2',20,230,'physical address = 5 × 4096 + 8 = 20488',{c:'g',s:'m b'})]}),
+    S('Page 3 চাইলে: page table বলে "disk-এ" → <b>page fault</b>। OS SSD থেকে এনে কোনো frame-এ বসায় (পরের tab-এ দেখো কোথা থেকে)।',{mod:{v3:{c:'r',hl:1},v2:{hl:0,c:'a'},pt:{hl:0},f5:{hl:0,c:'a'}},add:[A('pf',132,119,638,60,'r',{dash:1})]})
+  ]},
+  {n:'Page কোথা থেকে আসে (SSD)',steps:[
+    S('SSD-তে <b>দুটো আলাদা জিনিস</b>: ১) install করা program ফাইল, ২) <b>swap space</b>, OS-এর জন্য আলাদা করে রাখা জায়গা।',{add:[B('rz',20,8,420,224,'','g',{dash:1}),T('rzl',34,24,'RAM',{c:'g',s:'sm b'}),B('sz',480,8,270,224,'','n',{dash:1}),T('szl',494,24,'SSD',{c:'n',s:'sm b'}),B('file',496,40,238,76,'Install করা program ফাইল\n(code, data)','b'),B('swap',496,136,238,76,'Swap space\n(আলাদা reserved জায়গা)','o')]}),
+    S('Program চালু হলে <b>code page</b> গুলো install করা <b>ফাইল থেকেই</b> RAM-এ আসে। একে বলে <b>file-backed page</b>।',{add:[B('cp',40,50,200,60,'Code page\n(file-backed)','b'),A('a1',494,78,444,78,'b'),A('a1b',444,78,242,78,'b',{dash:1})]}),
+    S('Program চলতে চলতে <b>heap/stack page</b> বানায়। এগুলো কোনো ফাইলে নেই, শুরুতে শুধু RAM-এ। একে বলে <b>anonymous page</b>।',{add:[B('hp',40,130,200,60,'Heap page\n(anonymous)','o')]}),
+    S('RAM কম পড়লে <b>code page</b> সহজে ফেলা যায়: কপি তো ফাইলে আছেই, <b>লিখতে হয় না</b>। পরে লাগলে ফাইল থেকেই আবার পড়ে।',{del:['a1b'],mod:{cp:{c:'n',dash:1,label:'Code page\n(ফেলে দিল ✓, লেখা লাগেনি)'}}}),
+    S('<b>Heap page</b> ফেলতে চাইলে আগে <b>swap space-এ লিখে রাখতে</b> হয়, নইলে data হারাবে।',{add:[A('a2',244,160,494,174,'o')],mod:{hp:{c:'n',dash:1,label:'Heap page\n(swap-এ লেখা হল)'},swap:{hl:1}}}),
+    S('পরে heap page আবার লাগলে <b>swap space থেকেই</b> ফেরত আসে। সারকথা: <b>code → install ফাইল থেকে</b>, <b>heap/stack → swap থেকে</b>।',{del:['a2'],add:[A('a3',494,190,244,170,'o')],mod:{hp:{c:'o',dash:0,label:'Heap page\n(swap থেকে ফিরল)'},swap:{hl:0}}})
+  ]}
+ ]},
+
+{p:6,q:'What is virtual memory? What is a page fault, and how is it handled?',
+ ans:'<b>Virtual memory:</b> process শুধু <b>virtual address</b> দেখে। CPU-র ভেতরের <b>MMU</b> hardware সেটাকে <b>physical address</b>-এ বদলায়, <b>TLB</b>-র সাহায্যে দ্রুত। সব page RAM-এ থাকে না, কিছু disk (swap)-এ। Page না থাকলে (<b>present = 0</b>) <b>page fault</b>: OS সেটা disk থেকে এনে দেয়।',
+ pts:['<b>MMU:</b> hardware, কাজ virtual → physical address translation। <b>TLB:</b> MMU-র ছোট cache, সাম্প্রতিক page → frame জোড়া রাখে।','<b>TLB hit</b> হলে page table পড়তেই হয় না। <b>Miss</b> হলে MMU RAM-এর page table পড়ে (page table walk), তারপর TLB-তে রেখে দেয়।','Page fault ধীর: disk ~ms, RAM ~ns। সুবিধা: বড় program চলে, process isolated, memory ভাগ করা যায়।'],
+ tabs:[
+  {n:'TLB hit / miss',steps:[
+    S('CPU <b>virtual address</b> (V3) দেয়। <b>MMU</b> hardware সেটাকে physical address-এ বদলায়। আগে <b>TLB</b> দেখে: সাম্প্রতিক translation-এর ছোট cache।',{add:[B('cpu',20,76,100,56,'CPU\nvirtual address','a',{s:'sm'}),B('mmu',150,8,230,182,'','b',{dash:1}),T('mmul',164,22,'MMU (CPU-র ভেতরে hardware)',{c:'b',s:'sm b'}),B('tlb',164,36,202,56,'TLB (ছোট cache)\nV3 → F2','b'),B('wk',164,106,202,50,'Page table walk\n(RAM পড়ে)','n',{dash:1}),B('ram',470,8,270,138,'','g',{dash:1}),T('raml',484,22,'RAM',{c:'g',s:'sm b'}),B('pt',484,36,242,50,'Page table (RAM-এ)\nV3 → F2 ✓    V7 → disk ✗','o',{m:1}),B('f2',484,96,112,38,'F2: page V3','g'),B('f5',614,96,112,38,'F5: ফাঁকা','n',{dash:1}),B('dk',470,160,270,66,'Disk (swap)\npage V7','n'),A('c1',122,104,148,104,'a')]}),
+    S('<b>TLB hit:</b> V3 → F2 TLB-তেই আছে। সরাসরি RAM-এর F2, page table ছুঁতেও হল না। এটাই দ্রুত পথ।',{add:[A('h1',368,64,482,112,'g'),T('hl',250,200,'TLB hit: দ্রুত ✓',{a:'middle',c:'g',s:'b'})],mod:{tlb:{c:'g',hl:1}}}),
+    S('<b>TLB miss</b> (ধরো TLB খালি, বা V3 আগে আসেনি)। MMU TLB-তে পেল না।',{del:['h1','hl'],mod:{tlb:{label:'TLB (ছোট cache)\nখালি: V3 নেই ✗',c:'r',hl:0}}}),
+    S('MMU <b>page table walk</b> করে: RAM-এর page table পড়ে (বাড়তি memory access, তাই ধীর)। পায়: V3 → F2, present ✓।',{add:[A('w1',368,130,482,62,'o')],mod:{wk:{c:'o',dash:0,hl:1},pt:{hl:1}}}),
+    S('MMU <b>TLB-তে V3 → F2 রেখে দেয়</b>, তারপর F2 থেকে data আনে। পরের বার TLB hit হবে।',{del:['w1'],add:[A('h2',368,64,482,112,'g')],mod:{tlb:{label:'TLB (ছোট cache)\nV3 → F2 (নতুন)',c:'g',hl:1},wk:{c:'n',dash:1,hl:0},pt:{hl:0}}})
+  ]},
+  {n:'Page fault (present = 0)',steps:[
+    S('CPU <b>V7</b> চাইল। MMU আগে TLB দেখে: V7 নেই (miss)। TLB-তে শুধু V3 আছে।',{add:[B('cpu',20,76,100,56,'CPU\nvirtual address','a',{s:'sm'}),B('mmu',150,8,230,182,'','b',{dash:1}),T('mmul',164,22,'MMU (CPU-র ভেতরে hardware)',{c:'b',s:'sm b'}),B('tlb',164,36,202,56,'TLB (ছোট cache)\nV3 → F2','b'),B('wk',164,106,202,50,'Page table walk\n(RAM পড়ে)','n',{dash:1}),B('ram',470,8,270,138,'','g',{dash:1}),T('raml',484,22,'RAM',{c:'g',s:'sm b'}),B('pt',484,36,242,50,'Page table (RAM-এ)\nV3 → F2 ✓    V7 → disk ✗','o',{m:1}),B('f2',484,96,112,38,'F2: page V3','g'),B('f5',614,96,112,38,'F5: ফাঁকা','n',{dash:1}),B('dk',470,160,270,66,'Disk (swap)\npage V7','n'),A('c1',122,104,148,104,'a')],mod:{cpu:{label:'CPU\nload V7'},tlb:{label:'TLB (ছোট cache)\nV3 → F2 (V7 নেই ✗)',c:'r'}}}),
+    S('MMU <b>page table walk</b> করে। Entry: <b>V7 → disk, present = 0</b>। Page RAM-এ নেই।',{add:[A('w1',368,130,482,62,'r')],mod:{wk:{c:'r',dash:0,hl:1},pt:{c:'r',hl:1}}}),
+    S('MMU নিজে data আনতে পারে না। সে CPU-কে <b>page fault exception</b> দেয়। CPU kernel mode-এ <b>OS page-fault handler</b> চালায়।',{add:[B('os',150,198,230,36,'OS page-fault handler (kernel)','r')]}),
+    S('OS ফাঁকা frame <b>F5</b> বেছে disk থেকে V7 পড়ে F5-এ রাখে। (এই ধাপটাই ধীর, ~ms।)',{add:[A('d1',670,160,670,136,'o')],mod:{f5:{label:'F5: page V7 (নতুন)',c:'g',dash:0},dk:{hl:1}}}),
+    S('OS <b>page table update</b> করে: V7 → F5, present = 1। (পুরনো stale TLB entry থাকলে মুছে দেয়।)',{del:['d1'],mod:{pt:{label:'Page table (RAM-এ)\nV3 → F2 ✓    V7 → F5 ✓',c:'g',hl:1},dk:{hl:0}}}),
+    S('Faulting instruction <b>আবার</b> চলে: TLB miss → page table walk → present ✓ → TLB-তে V7 → F5 রাখে → F5 থেকে data। Program কিছুই টের পায়নি।',{del:['w1'],add:[A('r1',368,64,612,112,'g')],mod:{tlb:{label:'TLB (ছোট cache)\nV3 → F2,  V7 → F5',c:'g',hl:1},wk:{c:'n',dash:1,hl:0},pt:{hl:0},os:{c:'n'}}})
+  ]}
+ ]},
+
+{p:6,q:'Page replacement algorithms (FIFO, LRU, Optimal) and thrashing.',
+ ans:'RAM full হলে কোন page বাদ যাবে: <b>FIFO</b> (সবচেয়ে পুরনো), <b>LRU</b> (সবচেয়ে আগে ব্যবহৃত), <b>Optimal</b> (ভবিষ্যতে সবচেয়ে দেরিতে লাগবে, আদর্শ, বাস্তবে অসম্ভব)। Thrashing নিয়ে নিচে আলাদা দুটো কার্ড।',
+ pts:['FIFO-তে <b>Belady\'s anomaly</b>: frame বাড়ালে fault কমার বদলে বাড়তে পারে।'],
+ tabs:[
+  {n:'FIFO',steps:()=>prSteps('FIFO')},{n:'LRU',steps:()=>prSteps('LRU')},{n:'Optimal',steps:()=>prSteps('OPT')}
+ ]},
+
+{p:6,sub:'27a',q:'What is thrashing?',
+ ans:'<b>Thrashing:</b> CPU আসল কাজের চেয়ে RAM আর disk-এর মধ্যে page আনা-নেওয়াতেই বেশি সময় দেয়। মানে <b>অতিরিক্ত page fault + অতিরিক্ত paging + কম CPU utilization</b>।',
+ pts:['<b>Paging কী:</b> memory-কে সমান ছোট টুকরায় (page, সাধারণত ৪ KB) ভাগ করে RAM আর SSD-র মধ্যে আনা-নেওয়া। এভাবে RAM + SSD মিলে বড় memory-র মতো কাজ করে।','<b>Page SSD-তে কোথায় যায়:</b> code page install ফাইলেই আছে, লিখতে হয় না। heap/stack page install ফাইলে নেই, তাই SSD-র <b>swap space</b>-এ (আলাদা, নতুন জায়গা) লেখা হয়।','<b>macOS-এও এভাবেই:</b> RAM কম পড়লে আগে memory compress করে, তারপর কম দরকারি page SSD-র swap file-এ পাঠায় (Activity Monitor-এ Memory Pressure আর Swap Used দেখা যায়)। Windows-এ pagefile, Linux-এ swap।','<b>Page fault কী:</b> process যে অংশ (page) চাইল তা RAM-এ নেই, disk-এ আছে। OS তখন disk থেকে এনে দেয়। একটা-দুটো page fault স্বাভাবিক।','<b>কেন হয়:</b> process-গুলোর working set (যে page-গুলো এখন সক্রিয়ভাবে লাগছে) রাখার মতো frame নেই। কারণ: একসাথে অনেক process, বা process-কে কম frame।','<b>Page fault বনাম thrashing:</b> page fault স্বাভাবিক। Thrashing = এত বেশি fault যে system-এর বেশির ভাগ সময় paging-এই যায়।'],
+ tabs:[
+  {n:'Paging কী',steps:[
+    S('RAM-এ ৪টা page: A, B (code) আর C, D (heap)। SSD-তে দুটো <b>আলাদা জায়গা</b>: install করা ফাইল (code-এর আসল কপি) আর swap space। দুই ধরনের page-এর পথ আলাদা, নিচে দেখো।',{add:[B('rz',20,8,420,224,'','g',{dash:1}),T('rzl',34,24,'RAM (৪টা frame)',{c:'g',s:'sm b'}),B('pA',40,40,170,70,'Page A\n(code)','b'),B('pB',230,40,190,70,'Page B\n(code)','b'),B('pC',40,126,170,70,'Page C\n(heap)','o'),B('pD',230,126,190,70,'Page D\n(heap)','o'),B('sz',480,8,270,224,'','n',{dash:1}),T('szl',494,24,'SSD',{c:'n',s:'sm b'}),B('file',496,40,238,64,'','b'),T('fil',614,56,'Install করা ফাইল',{a:'middle',c:'b',s:'sm b'}),T('fil2',614,72,'(code-এর আসল কপি)',{a:'middle',c:'b',s:'sm'}),B('swap',496,116,238,86,'','n',{dash:1}),T('swl',614,128,'Swap space (আলাদা জায়গা)',{a:'middle',c:'n',s:'sm b'})]}),
+    S('<b>পথ ১: heap page D।</b> RAM full, তাই D-কে সরাতে হবে। D program নিজে বানিয়েছে, কপি কোথাও নেই। তাই <b>swap space-এ লিখে রাখতে</b> হয় (page-out)।',{del:['pD'],add:[B('free',230,126,190,70,'ফাঁকা','n',{dash:1}),A('po',422,160,494,160,'o'),T('pol',458,146,'page-out',{a:'middle',c:'o',s:'sm b'}),B('pD2',506,146,218,48,'Page D (heap)\nswap-এ আছে','o')],mod:{swap:{c:'o',dash:0,hl:1}}}),
+    S('<b>পথ ২: code page E।</b> এখন code-এর আরেকটা টুকরা E লাগল। E <b>swap-এ যায় না</b>। সরাসরি <b>install ফাইল থেকে RAM-এ</b> আসে, কারণ ফাইলই তার আসল জায়গা।',{del:['free','po','pol'],add:[B('pE',230,126,190,70,'Page E\n(code, ফাইল থেকে এল)','b'),A('pi',494,84,424,140,'b'),T('pil',470,100,'সরাসরি',{a:'middle',c:'b',s:'sm b'})],mod:{swap:{hl:0},file:{hl:1}}}),
+    S('এবার D আবার লাগল। RAM full, তাই কাউকে সরাতে হবে। <b>code page A</b> সরানো হল: <b>কিছু লিখতে হয় না</b>, কারণ কপি ইনস্টল ফাইলে আছেই।',{del:['pi','pil'],mod:{file:{hl:0},pA:{c:'n',dash:1,hl:1,label:'Page A (code)\nফেলে দেওয়া হল\n(লিখতে হয়নি)'}}}),
+    S('D <b>swap space থেকে</b> RAM-এ ফেরে (page-in)।',{del:['pD2'],add:[A('pi2',494,176,424,176,'g'),T('pil2',459,162,'page-in',{a:'middle',c:'g',s:'sm b'}),B('pD3',40,40,170,70,'Page D (heap)\nswap থেকে ফিরল','o')],mod:{pA:{o:0},swap:{hl:1}}}),
+    S('<b>সারকথা:</b> code page ফেলতে লেখা লাগে না, লাগলে install ফাইল থেকে আসে। heap/stack page ফেলতে swap-এ লিখতে হয়, লাগলে swap থেকে ফেরে। Swap install জায়গা থেকে <b>আলাদা</b>।',{del:['pi2','pil2'],mod:{swap:{hl:0}}})
+  ]},
+  {n:'কীভাবে ঘটে',steps:[
+    S('RAM মাত্র <b>4 GB</b>। RAM-কে ৪টা বাক্সে (slot) ভাগ করা, <b>প্রতি বাক্স = ১ GB-এর অংশ</b>। তাই একটা program একসাথে কয়েকটা বাক্স নেয়। কিন্তু দরকার: Chrome 2 + VS Code 2 + Photoshop 3 = <b>7 GB</b>, সব ধরবে না।',{add:[B('pc',20,16,200,36,'Chrome: 2 GB চাই','a'),B('pv',20,60,200,36,'VS Code: 2 GB চাই','b'),B('pp',20,104,200,36,'Photoshop: 3 GB চাই','o'),B('rz',260,8,240,152,'','g',{dash:1}),T('rzl',274,22,'RAM (4 GB = ৪টা slot)',{c:'g',s:'sm b'}),...[0,1,2,3].map(i=>B('s'+i,274+(i%2)*112,36+Math.floor(i/2)*58,104,48,'ফাঁকা\n(১ GB)','n',{dash:1})),B('dz',560,8,180,152,'','n',{dash:1}),T('dzl',574,22,'Disk (swap)',{c:'n',s:'sm b'}),B('cpu',260,176,240,52,'CPU\nকাজ করছে','g')]}),
+    S('Chrome-এর ২ GB = <b>২টা বাক্স</b> নেয় (তাই Chrome দুবার দেখা যাচ্ছে)।',{mod:{s0:{label:'Chrome\nঅংশ ১',c:'a',dash:0},s1:{label:'Chrome\nঅংশ ২',c:'a',dash:0}}}),
+    S('VS Code-ও ২টা বাক্স নেয়। <b>RAM full।</b>',{mod:{s2:{label:'VS Code\nঅংশ ১',c:'b',dash:0},s3:{label:'VS Code\nঅংশ ২',c:'b',dash:0}}}),
+    S('Photoshop চালাতে জায়গা চাই। OS Chrome-এর অংশ (<b>page</b>) <b>disk-এ পাঠায়</b> (page-out), সেই বাক্সে Photoshop-এর অংশ আনে। যার যতটুকু এখন দরকার সে ততটুকুই RAM-এ পায়।',{add:[B('d0',574,40,152,40,'Chrome-এর অংশ','a'),B('d1',574,88,152,40,'Chrome-এর অংশ','a'),A('po',506,64,556,64,'o'),T('pol',531,50,'page-out',{a:'middle',c:'o',s:'sm b'})],mod:{s0:{label:'Photoshop\nঅংশ ১',c:'o'},s1:{label:'Photoshop\nঅংশ ২',c:'o'}}}),
+    S('এবার Chrome চলতে চায়, কিন্তু তার দরকারি অংশ এখন disk-এ, RAM-এ নেই। একেই বলে <b>page fault</b>। তখন OS disk থেকে সেই অংশ আনে (page-in), আর জায়গা করতে VS Code-এর অংশ disk-এ পাঠায়।',{add:[A('pi',556,124,506,124,'g'),T('pil',531,138,'page-in',{a:'middle',c:'g',s:'sm b'}),T('pf',630,200,'PAGE FAULT!\nদরকারি অংশ\nRAM-এ নেই',{a:'middle',c:'r',s:'b'})],mod:{po:{c:'r'},s2:{label:'Chrome\nঅংশ ১',c:'a'},s3:{label:'Chrome\nঅংশ ২',c:'a'},d0:{label:'VS Code-এর অংশ',c:'b'},d1:{label:'VS Code-এর অংশ',c:'b'}}}),
+    S('এখন VS Code-এর অংশ লাগে: আবার page fault, আবার page-in/page-out। এভাবে <b>বারবার</b> চলতে থাকে। কারো কাজ এগোয় না।',{del:['pf'],mod:{pi:{hl:1},po:{hl:1},s0:{label:'VS Code\nঅংশ ১',c:'b'},s1:{label:'VS Code\nঅংশ ২',c:'b'},s2:{label:'Chrome\nঅংশ ১',c:'a'},d0:{label:'Photoshop-এর অংশ',c:'o'},d1:{label:'Photoshop-এর অংশ',c:'o'}}}),
+    S('CPU কাজ করার বদলে বেশির ভাগ সময় disk থেকে page আসার <b>অপেক্ষায়</b>। CPU utilization পড়ে যায়, system ধীর। এটাই <b>thrashing</b>।',{mod:{cpu:{label:'CPU: page-এর অপেক্ষায়\nutilization খুব কম',c:'r'}},add:[T('th',630,200,'THRASHING:\nকাজের চেয়ে\npaging বেশি',{a:'middle',c:'r',s:'b'})]})
+  ]},
+  {n:'CPU utilization graph',steps:[
+    S('<b>Conceptual graph</b> (মাপা data না): নিচে process-এর সংখ্যা (degree of multiprogramming), পাশে CPU utilization।',{add:[A('ay',60,206,60,16,'n'),A('ax',60,206,720,206,'n'),T('yl',74,20,'CPU utilization',{c:'n',s:'sm b'}),T('xl',720,224,'একসাথে চলা process-এর সংখ্যা →',{a:'end',c:'n',s:'sm b'})]}),
+    S('শুরুতে process বাড়ালে CPU utilization <b>বাড়ে</b>: একজন I/O-র জন্য থামলে আরেকজন CPU পায়।',{add:[P('rise','M60,196 C150,120 260,62 360,52','g')]}),
+    S('এই <b>সর্বোচ্চ বিন্দুতে</b> RAM-এ সবার working set এঁটে যায়।',{add:[C('peak',360,52,7,'','g'),T('pk',372,36,'সর্বোচ্চ',{c:'g',s:'sm b'})]}),
+    S('এরপর আরও process ঢোকালে RAM-এ আর কারো working set এঁটে না। Page fault বাড়ে, CPU অপেক্ষায় থাকে, utilization <b>পড়ে যায়</b>। এই এলাকাই <b>thrashing</b>।',{add:[P('fall','M360,52 C450,56 520,110 570,160 S660,196 700,198','r'),B('tz',440,30,270,176,'','r',{dash:1}),T('tzl',460,48,'Thrashing এলাকা',{c:'r',s:'b'})]}),
+    S('বিপদ: OS দেখে "CPU তো বসে আছে!" ভেবে <b>আরও process ঢোকায়</b>, ফলে আরও খারাপ। তাই OS-কে process সংখ্যা <b>কমাতে</b> হয়।',{add:[T('adv',575,100,'ভুল সিদ্ধান্ত:\nআরও process ঢোকানো ✗',{a:'middle',c:'r',s:'sm b'})]})
+  ]}
+ ]},
+
+{p:6,sub:'27b',q:'How is thrashing solved?',
+ ans:'মূল কথা: process-গুলোর working set যেন RAM-এ এঁটে যায়। উপায়: <b>Working Set Model</b>, <b>Page Fault Frequency</b>, একসাথে কম process চালানো, RAM বাড়ানো।',
+ pts:['<b>Working Set:</b> process-এর সক্রিয় page-গুলো RAM-এ রাখো। সবার working set-এর যোগফল RAM-এর বেশি হলে একটা process suspend করো।','<b>Page Fault Frequency:</b> fault-এর হার মেপে frame কম-বেশি করো।','সবচেয়ে সোজা: RAM বাড়ানো।'],
+ tabs:[
+  {n:'Working Set + process কমানো',steps:[
+    S('<b>Working set</b> = একটা process যে page-গুলো এখন সক্রিয়ভাবে ব্যবহার করছে। RAM-এ মোট ৮টা frame। তিন process-এর working set: 3 + 3 + 3 = ৯।',{add:[T('rl',20,14,'RAM (৮টা frame)',{c:'g',s:'sm b'}),B('ram',20,28,8*40,36,'','g',{dash:1}),B('wa',20,84,3*40,38,'A: working set 3','a',{s:'sm'}),B('wb',20+3*40,84,3*40,38,'B: working set 3','b',{s:'sm'}),B('wc',20+6*40,84,3*40,38,'C: working set 3','o',{s:'sm'})]}),
+    S('মোট চাহিদা ৯ > ৮ frame। কারো না কারো working set এঁটে না → <b>বারবার page fault → thrashing</b>।',{add:[A('lim',340,70,340,130,'r',{dash:1}),T('over',380,160,'RAM-এর সীমা পেরিয়ে গেছে ✗',{a:'middle',c:'r',s:'b'})],mod:{wc:{c:'r'}}}),
+    S('<b>প্রতিকার ১: process কমানো।</b> C-কে পুরো swap out (disk-এ) করা হল। এখন চাহিদা 3 + 3 = ৬ ≤ ৮ ✓।',{del:['lim','over'],mod:{wc:{y:190,c:'n',dash:1,label:'C: suspend (disk-এ)'},}})]},
+  {n:'Page Fault Frequency',steps:[
+    S('<b>PFF:</b> OS প্রতি process-এর page fault-এর <b>হার</b> মাপে। দুটো সীমা ঠিক করা: <b>upper</b> (খুব বেশি) আর <b>lower</b> (খুব কম)।',{add:[B('band',60,70,420,70,'','g',{dash:1}),T('bl',72,84,'ঠিক আছে এলাকা',{c:'g',s:'sm b'}),A('up',50,70,490,70,'r',{dash:1}),T('upl',496,70,'upper',{c:'r',s:'sm b'}),A('lo',50,140,490,140,'o',{dash:1}),T('lol',496,140,'lower',{c:'o',s:'sm b'}),T('yl',20,18,'fault rate ↑',{c:'n',s:'sm b'}),C('mk',270,105,10,'','a'),B('pa',580,60,150,90,'Process A\nframes = 4','a')]}),
+    S('Rate <b>upper-এর উপরে</b>: process-এর frame কম পড়ছে, তাই বেশি fault। OS তাকে <b>আরও frame</b> দেয়।',{mod:{mk:{y:40,c:'r'},pa:{label:'Process A\nframes = 4 → 6',c:'g',hl:1}}}),
+    S('Frame বাড়ায় fault কমে এসে <b>সীমার ভেতরে</b>। ঠিক আছে।',{mod:{mk:{y:105,c:'g'},pa:{label:'Process A\nframes = 6',c:'a',hl:0}}}),
+    S('Rate <b>lower-এর নিচে</b>: process-এর বাড়তি frame আছে। কিছু frame কেড়ে অন্য process-কে দেওয়া হয়।',{mod:{mk:{y:175,c:'o'},pa:{label:'Process A\nframes = 6 → 4',c:'o'}}}),
+    S('ফাঁকা frame না থাকলে আর rate বেশি হলে: একটা process <b>suspend</b> করে তার frame বাকিদের দেওয়া হয়।',{add:[T('sp',280,215,'ফাঁকা frame নেই + rate বেশি → একটা process suspend',{a:'middle',c:'r',s:'b'})],mod:{mk:{y:40,c:'r'},pa:{label:'Process A\nframes = 4',c:'a'}}})
+  ]}
+ ]},
+
+{p:7,q:'Process states and the state transition diagram.',
+ ans:'<b>New → Ready → Running → Terminated</b> - এই state আসলে প্রতিটি <b>thread</b>-এর (TCB-তে থাকে; Linux-এ প্রতি task-এর)। Running থেকে I/O চাইলে <b>Waiting</b>; I/O শেষে আবার Ready। Timer শেষ হলে Running → Ready (preempt)।',
+ pts:['Ready → Running: scheduler/dispatcher। Running → Ready: preemption। Running → Waiting: I/O বা event-এর অপেক্ষা।'],
+ steps:[
+  S('<b>New</b>: process-এর PCB আর main thread-এর TCB তৈরি হচ্ছে।',{add:[
+    B('new',20,70,110,44,'New','n'),B('rdy',200,70,110,44,'Ready','a'),B('run',420,70,110,44,'Running','g'),B('trm',610,70,110,44,'Terminated','n'),B('wt',310,180,110,44,'Waiting','o'),
+    A('a1',130,92,198,92,'n'),T('a1l',164,80,'admit',{a:'middle',c:'n',s:'sm'}),
+    A('a2',310,82,418,82,'a'),T('a2l',364,66,'dispatch',{a:'middle',c:'a',s:'sm'}),
+    A('a3',418,104,312,104,'b'),T('a3l',364,122,'preempt',{a:'middle',c:'b',s:'sm'}),
+    A('a4',530,92,608,92,'n'),T('a4l',570,80,'exit',{a:'middle',c:'n',s:'sm'}),
+    A('a5',470,114,400,178,'o'),T('a5l',468,152,'I/O wait',{a:'end',c:'o',s:'sm'}),
+    A('a6',330,178,260,116,'o'),T('a6l',262,152,'I/O done',{c:'o',s:'sm'}),
+    C('tok',75,92,13,'T','f')]}),
+  S('Admit হয়ে <b>Ready</b> - CPU-র অপেক্ষা।',{mod:{tok:{x:255,y:92},new:{c:'n'},rdy:{hl:1}}}),
+  S('Scheduler বেছে নিল → <b>Running</b>।',{mod:{tok:{x:475,y:92},rdy:{hl:0},run:{hl:1}}}),
+  S('Disk read চাইল → <b>Waiting</b>।',{mod:{tok:{x:365,y:202},run:{hl:0},wt:{hl:1}}}),
+  S('I/O শেষ → আবার <b>Ready</b>।',{mod:{tok:{x:255,y:92},wt:{hl:0},rdy:{hl:1}}}),
+  S('আবার Running → কাজ শেষে <b>Terminated</b>।',{mod:{tok:{x:665,y:92},rdy:{hl:0},trm:{hl:1}}})
+ ]},
+
+{p:7,q:'System calls. How do fork() and exec() work? What are zombie and orphan processes?',
+ ans:'<b>System call</b> = program kernel-এর কাছে কাজ চাওয়ার একমাত্র দরজা। <code>fork()</code> process-এর <b>copy</b> বানায়, <code>exec()</code> সেই process-এর ভেতরের <b>program বদলে</b> দেয়, <code>wait()</code> child শেষ হওয়ার <b>অপেক্ষা</b> করে। Tab চেপে একটা একটা করে দেখো।',
+ pts:['<b>fork:</b> parent-এর হুবহু copy (child)। Parent-এ ফেরে child-এর PID, child-এ ফেরে 0।','<b>exec:</b> process একই থাকে (PID একই), শুধু ভেতরের program বদলে নতুন program চলে।','<b>Zombie:</b> child শেষ, কিন্তু parent এখনো <code>wait()</code> করেনি, তাই kernel-এ তার entry রয়ে গেছে।','<b>Orphan:</b> parent আগে মরে গেছে, child চলছে। <code>init</code> (PID 1) তাকে দত্তক নেয়।'],
+ tabs:[
+  {n:'1. System call কী',steps:[
+    S('<b>System call</b> = program-এর kernel-কে অনুরোধ জানানোর একমাত্র দরজা। কারণ program (ring 3) নিজে disk বা hardware ছুঁতে পারে না।',{add:[B('pg',20,70,180,80,'Program\n(user mode, ring 3)','a'),B('kn',330,50,200,120,'Kernel\n(ring 0)\nhardware-এর মালিক','o'),B('hw',600,70,140,80,'Disk\n(hardware)','n'),T('ex',380,205,'উদাহরণ: file পড়তে চাই',{a:'middle',c:'f',s:'sm b'})]}),
+    S('Program <code>read()</code> syscall করে: "kernel, এই file থেকে ১০০ byte দাও"।',{add:[A('s1',202,100,328,100,'a'),T('s1l',265,86,'read()',{a:'middle',c:'a',s:'sm b'})]}),
+    S('CPU user mode থেকে kernel mode-এ যায়। Kernel disk-এর সাথে কথা বলে, data আনে।',{add:[A('s2',532,110,598,110,'o')],mod:{kn:{hl:1}}}),
+    S('Kernel data program-কে ফেরত দেয়, CPU আবার user mode-এ ফেরে। Program শুধু ফলটা পায়।',{add:[A('s3',328,135,202,135,'g'),T('s3l',265,152,'data',{a:'middle',c:'g',s:'sm b'})],mod:{kn:{hl:0}}}),
+    S('<code>fork, exec, wait</code> সবই syscall। এগুলো দিয়ে program নতুন process বানায়, নতুন program চালায়, আর child-এর জন্য অপেক্ষা করে। পরের tab-এ দেখো।',{})
+  ]},
+  {n:'2. fork() কী করে',steps:[
+    S('ধরো Parent (PID 100) চলছে। কোডের লাইন: <code>pid = fork();</code>',{add:[B('par',40,40,180,70,'Parent\nPID 100','g'),T('code',20,200,'pid = fork();',{c:'f',s:'m b'})]}),
+    S('<code>fork()</code> syscall: kernel Parent-এর <b>হুবহু copy</b> বানায়। নতুন process = <b>Child (PID 101)</b>। দুজনেই এখন <code>fork()</code>-এর পরের লাইন থেকে চলে।',{add:[B('chi',320,40,180,70,'Child\nPID 101\n(Parent-এর copy)','s'),A('f',222,75,318,75,'g'),T('fl',270,60,'fork()',{a:'middle',c:'g',s:'sm b'})]}),
+    S('কে কোনটা বোঝার উপায়: <code>fork()</code>-এর <b>return মান</b> আলাদা। Parent-এ ফেরে <b>101</b> (child-এর PID), Child-এ ফেরে <b>0</b>।',{add:[T('r1',130,140,'fork() ফেরত দিল: 101',{a:'middle',c:'g',s:'m b'}),T('r2',410,140,'fork() ফেরত দিল: 0',{a:'middle',c:'s',s:'m b'})]}),
+    S('কোড তাই ভাগ হয়: <code>if (pid == 0)</code> হলে child-এর কাজ, নইলে parent-এর কাজ। এখন দুটো আলাদা process: আলাদা PID, আলাদা memory।',{mod:{code:{label:'if (pid == 0) { child-এর কাজ } else { parent-এর কাজ }'}}}),
+    S('<b>Copy-on-write:</b> copy আসলে সাথে সাথে হয় না। দুজন একই memory ভাগ করে, কেউ <b>লিখতে গেলে</b> তখন শুধু সেই page copy হয়। তাই fork সস্তা।',{})
+  ]},
+  {n:'3. fork + exec + wait (ls চালানো)',steps:[
+    S('Shell-এ তুমি <code>ls</code> লিখলে। Shell (PID 100) এর কাজ তিন ধাপে: <b>fork → exec → wait</b>।',{add:[B('par',40,40,180,70,'Shell\nPID 100','g'),T('code',20,200,'১) fork()   ২) exec("ls")   ৩) wait()',{c:'f',s:'m b'})]}),
+    S('<b>১) fork():</b> shell নিজের copy বানায়: Child (PID 101)। এখনো Child-ও আসলে shell-ই।',{add:[B('chi',320,40,180,70,'Child\nPID 101\n(এখনো shell-এর copy)','s'),A('f',222,75,318,75,'g')]}),
+    S('<b>২) exec("ls"):</b> Child নিজের ভেতরের program <b>বদলে ফেলে</b>, <code>ls</code> বসায়। PID একই (101), কিন্তু এখন সে <code>ls</code> চালাচ্ছে।',{mod:{chi:{label:'Child\nPID 101\nএখন ls চালাচ্ছে',c:'a'}}}),
+    S('<b>৩) wait():</b> Parent (shell) <code>wait()</code> করে অপেক্ষা করে, Child শেষ না হওয়া পর্যন্ত।',{mod:{par:{label:'Shell\nPID 100\nwait()-এ অপেক্ষা',c:'o'}}}),
+    S('<code>ls</code> ফল ছেপে শেষ হয় (exit)। Kernel Parent-কে জানায় ও exit status দেয়।',{mod:{chi:{label:'Child\nPID 101\nশেষ (exit)',c:'n',dash:1},par:{label:'Shell\nPID 100\nজাগল, status পেল',c:'g'}}}),
+    S('Shell Child-এর entry মুছে (<b>reap</b>) আবার prompt দেখায়। <b>fork = copy বানানো, exec = program বদলানো, wait = শেষ হওয়ার অপেক্ষা।</b>',{del:['chi','f'],mod:{par:{label:'Shell\nPID 100\nprompt আবার',c:'g'}}})
+  ]},
+  {n:'4. Zombie',steps:[
+    S('Parent (PID 100) আর তার Child (PID 101) চলছে। Parent এখন অন্য কাজে ব্যস্ত, <code>wait()</code> ডাকেনি।',{add:[B('par',40,60,180,70,'Parent\nPID 100\n(অন্য কাজে ব্যস্ত)','g'),B('chi',320,60,200,70,'Child\nPID 101\nচলছে','s')]}),
+    S('Child কাজ শেষ করে <b>exit</b> করল। তার memory মুক্ত হয়ে গেল।',{mod:{chi:{label:'Child\nPID 101\nexit করল',c:'n'}}}),
+    S('কিন্তু Parent তার শেষ খবর (exit status) এখনো নেয়নি। তাই kernel একটা ছোট entry রেখে দেয়: PID + exit status। এই "মরা কিন্তু entry আছে" অবস্থাই <b>Zombie</b>।',{mod:{chi:{label:'Zombie (Z)\nশুধু entry: PID 101, status 0',c:'r',dash:1,h:56}}}),
+    S('<b>উপমা:</b> ছাত্র পরীক্ষা শেষ করে চলে গেছে, কিন্তু রেজাল্ট শিট কেউ নেয়নি, তাই খাতায় তার নাম রয়ে গেছে। <code>ps</code>-এ এই process-এর state <b>Z</b> দেখায়।',{add:[T('an',380,200,'CPU বা memory নেয় না, কিন্তু PID table-এ জায়গা নেয়',{a:'middle',c:'r',s:'sm b'})]}),
+    S('Parent <code>wait()</code> করলে exit status পায়, kernel entry মুছে ফেলে (<b>reap</b>)। Zombie শেষ।',{del:['an'],add:[A('wt',222,95,318,95,'g'),T('wtl',270,80,'wait()',{a:'middle',c:'g',s:'sm b'})],mod:{chi:{o:0.15}}}),
+    S('সমস্যা: parent যদি কখনো <code>wait()</code> না করে আর অনেক zombie জমে, PID ফুরিয়ে নতুন process বানানো আটকে যেতে পারে।',{})
+  ]},
+  {n:'5. Orphan',steps:[
+    S('Parent (PID 200) আর তার Child (PID 201) চলছে।',{add:[B('par',40,60,180,70,'Parent\nPID 200','g'),B('chi',320,60,200,70,'Child\nPID 201\nচলছে','s')]}),
+    S('Parent <b>আগে মরে গেল</b> (exit বা crash)। Child এখনো চলছে।',{mod:{par:{label:'Parent\nPID 200\nমরে গেছে',c:'n',dash:1}}}),
+    S('Child এখন <b>Orphan</b> (অনাথ): তার parent নেই।',{mod:{chi:{label:'Child (Orphan)\nPID 201\nparent নেই, তবু চলছে',c:'o'}}}),
+    S('Kernel তাকে <b>init (PID 1)</b> process-এর কাছে দিয়ে দেয়, মানে দত্তক। init এখন তার নতুন parent।',{add:[B('ini',600,60,140,70,'init\nPID 1','g'),A('ad',582,95,524,95,'g',{dash:0}),T('adl',552,80,'দত্তক',{a:'middle',c:'g',s:'sm b'})]}),
+    S('Child শেষ হলে init <code>wait()</code> করে তাকে reap করে। তাই orphan নিজে সমস্যা না, zombie-ও হয় না।',{mod:{chi:{label:'Child (শেষ)\nPID 201',c:'n',dash:1}}}),
+    S('<b>তফাত:</b> Zombie = child আগে শেষ, parent wait করেনি। Orphan = parent আগে শেষ, child চলছে।',{})
+  ]}
+ ]},
+
+{p:7,q:'What is an interrupt, and how is it different from a system call?',
+ ans:'<b>Interrupt:</b> বাইরের hardware (keyboard, timer, disk) CPU-কে জানায় "আমাকে দেখো!"। CPU চলতি কাজ থামিয়ে তার handler (<b>ISR</b>) চালায়, তারপর আগের কাজে ফেরে। <b>System call:</b> program <b>নিজে</b> kernel-কে কাজ চায়। মূল তফাত: <b>কে শুরু করে</b>, hardware নাকি program।',
+ pts:['<b>Timer interrupt</b> প্রতি কয়েক ms-এ আসে। এভাবেই OS CPU কেড়ে নিয়ে অন্য thread চালায় (preemptive scheduling)।','Interrupt আর syscall দুটোতেই CPU ring 3 → 0-তে যায় (mode switch)।','নিচের table-এ তিনটা পাশাপাশি: interrupt, syscall, আর exception।'],
+ extra:'<table class="cmp"><tr><th></th><th>Interrupt</th><th>System call</th><th>Exception</th></tr>'
+  +'<tr><td>কে শুরু করে</td><td>বাইরের hardware</td><td>program নিজে</td><td>instruction-এর ভুল</td></tr>'
+  +'<tr><td>কখন</td><td>যেকোনো সময়, আগে থেকে জানা নেই (asynchronous)</td><td>program যখন চায় (synchronous)</td><td>ভুল করা instruction-এই (synchronous)</td></tr>'
+  +'<tr><td>উদাহরণ</td><td>key চাপা, timer, disk শেষ</td><td><code>read()</code>, <code>fork()</code></td><td>০ দিয়ে ভাগ, page fault</td></tr>'
+  +'<tr><td>উপমা</td><td>পড়ার সময় হঠাৎ ফোন বাজল</td><td>তুমি নিজে গিয়ে লাইব্রেরিয়ানকে বই চাইলে</td><td>অঙ্কে ভুল করলে শিক্ষক থামালেন</td></tr></table>',
+ tabs:[
+  {n:'1. Interrupt কীভাবে কাজ করে',steps:[
+    S('CPU একটা একটা করে instruction চালাচ্ছে। <code>PC</code> (তীর) দেখায় এখন কোনটা চলছে।',{add:[
+      T('pcl',30,24,'চলমান program',{c:'n',s:'sm'}),B('i1',30,40,190,28,'mov rax, [x]','n',{m:1}),B('i2',30,72,190,28,'add rax, 1','a',{m:1}),B('i3',30,104,190,28,'cmp rax, 10','n',{m:1}),B('i4',30,136,190,28,'jl loop','n',{m:1}),A('pc',6,86,28,86,'g'),
+      B('dev',560,20,180,56,'Keyboard / Timer\n(hardware)','o'),B('idt',300,100,190,48,'IDT (তালিকা)\nIRQ1 → kbd_isr','n',{m:1}),B('isr',300,172,190,48,'ISR (kernel handler)','o')]}),
+    S('হঠাৎ keyboard-এ key চাপা হল। Hardware CPU-কে <b>interrupt</b> সংকেত পাঠায়: "জরুরি, আমাকে দেখো!" এটা program চায়নি, বাইরে থেকে এসেছে।',{add:[A('irq',558,52,224,76,'o'),T('irql',400,52,'interrupt',{a:'middle',c:'o',s:'sm b'})],mod:{dev:{hl:1}}}),
+    S('CPU চলতি instruction শেষ করে নিজের অবস্থা (<code>PC</code>, register) <b>save</b> করে রাখে, যাতে পরে ঠিক ওখান থেকে ফিরতে পারে।',{del:['irq','irql'],add:[B('sv',30,172,190,48,'Saved: PC, registers\n(ফেরার জন্য)','g')],mod:{dev:{hl:0}}}),
+    S('CPU <b>IDT</b> দেখে। এটা একটা তালিকা: "কোন সংকেত এলে কোন handler চলবে"। IRQ1 = keyboard, handler = <code>kbd_isr</code>।',{add:[A('a1',222,100,298,120,'o')],mod:{idt:{c:'o',hl:1}}}),
+    S('<b>ISR</b> (handler, kernel code) চলে: key কোনটা চাপা হল পড়ে, buffer-এ রেখে দেয়।',{add:[A('a2',395,150,395,170,'o')],mod:{isr:{hl:1},idt:{hl:0}}}),
+    S('কাজ শেষে <code>iret</code>: save করা অবস্থা ফেরত আসে, program ঠিক আগের জায়গা থেকে আবার চলে। Program টেরই পায়নি।',{del:['a1','a2'],add:[A('a3',298,196,222,196,'g')],mod:{isr:{hl:0},sv:{hl:1}}})
+  ]},
+  {n:'2. Interrupt বনাম System call',steps:[
+    S('দুটোতেই CPU চলতি কাজ ছেড়ে kernel-এর কোড চালায়। তফাত একটাই: <b>কে শুরু করল</b>।',{add:[T('h',380,12,'দুটোই kernel-এ ঢোকায়, শুরু করে আলাদা কেউ',{a:'middle',c:'f',s:'sm b'}),B('cpu1',330,34,140,56,'CPU','g'),B('cpu2',330,140,140,56,'CPU','g')]}),
+    S('<b>Interrupt:</b> শুরু করে <b>hardware</b>, যেকোনো সময়। Program জানত না। <b>উপমা:</b> তুমি পড়ছ, হঠাৎ ফোন বাজল।',{add:[B('hw',20,34,170,56,'Hardware\n(keyboard, timer)','o'),A('l1',192,62,328,62,'o'),T('l1l',260,48,'হঠাৎ',{a:'middle',c:'o',s:'sm b'}),T('n1',600,62,'কে: hardware\nকখন: অপ্রত্যাশিত',{a:'middle',c:'o',s:'sm'})]}),
+    S('<b>System call:</b> শুরু করে <b>program নিজে</b>, যখন কাজ দরকার। <b>উপমা:</b> তুমি নিজে লাইব্রেরিয়ানের কাছে গিয়ে বই চাইলে।',{add:[B('pg',20,140,170,56,'Program\n(read() ডাকল)','a'),A('l2',192,168,328,168,'a'),T('l2l',260,154,'নিজে চাইল',{a:'middle',c:'a',s:'sm b'}),T('n2',600,168,'কে: program\nকখন: পরিকল্পিত',{a:'middle',c:'a',s:'sm'})]}),
+    S('<b>তৃতীয় জিনিস, Exception:</b> instruction-ই ভুল (০ দিয়ে ভাগ, page fault)। CPU নিজেই kernel-কে ডাকে। <b>উপমা:</b> অঙ্কে ভুল করলে শিক্ষক থামালেন।',{add:[T('ex',380,222,'Exception: ভুল instruction থেকে, CPU নিজেই ডাকে',{a:'middle',c:'r',s:'sm b'})]}),
+    S('<b>সারকথা:</b> Interrupt = hardware ডাকে (async)। Syscall = program ডাকে (sync)। Exception = ভুল instruction ডাকে (sync)। তিনটাতেই শেষে kernel handler চলে আর CPU ফেরে।',{})
+  ]}
+ ]},
+
+{p:7,q:'What are the multithreading models (user-level, kernel-level, one-to-one, many-to-many)?',
+ ans:'<b>Many-to-one (M:1)</b>: অনেক user thread → ১ kernel thread; দ্রুত, কিন্তু multicore নেই, একটা block করলে সব block। <b>One-to-one (1:1)</b>: প্রতিটির নিজস্ব kernel thread (Linux, Java) - সত্যিকারের parallel। <b>Many-to-many (M:N)</b>: হাইব্রিড (Go)।',
+ pts:['Tab চাপো আর "block" ধাপে পার্থক্য দেখো।'],
+ tabs:[{n:'Many-to-one (M:1)',steps:()=>modelSteps('m1')},{n:'One-to-one (1:1)',steps:()=>modelSteps('11')},{n:'Many-to-many (M:N)',steps:()=>modelSteps('mn')}]},
+
+{p:7,q:'What is IPC (Inter-Process Communication)?',opt:1,
+ ans:'Process-এর memory আলাদা, তাই কথা বলতে <b>kernel-এর মাধ্যমে</b>: <b>Pipe</b> (এক-মুখী byte stream, <code>ls | grep</code>), <b>Message queue</b>, <b>Shared memory</b> (সবচেয়ে দ্রুত), <b>Socket</b> (network/local), <b>Signal</b> (ছোট notification, <code>SIGKILL</code>)।',
+ pts:['Shared memory-তে synchronization নিজেকে করতে হয় (mutex/semaphore)।','Pipe/queue-তে kernel buffer ও copy আছে - ধীর কিন্তু নিরাপদ।'],
+ tabs:[
+  {n:'Pipe',steps:[
+    S('A আর B আলাদা memory-র process। মাঝে kernel-এর <b>pipe buffer</b>।',{add:[B('pa',30,60,150,70,'Process A\nwrite()','a'),B('kz',260,20,240,150,'','o',{dash:1}),T('kzl',274,36,'Kernel',{c:'o',s:'b'}),B('buf',280,80,200,50,'pipe buffer','o'),B('pb',580,60,150,70,'Process B\nread()','b')]}),
+    S('A <code>write("hi")</code> → data kernel buffer-এ কপি হল।',{add:[A('w',180,95,278,105,'a'),B('d',330,92,90,26,'hi','a')]}),
+    S('B <code>read()</code> → kernel buffer থেকে B-তে কপি। দুই syscall, দুই কপি - ধীর কিন্তু নিরাপদ।',{add:[A('r',482,105,578,95,'b')],mod:{d:{x:380,c:'b'}}})
+  ]},
+  {n:'Shared memory',steps:[
+    S('A আর B আলাদা।',{add:[B('pa',30,40,150,70,'Process A','a'),B('pb',580,40,150,70,'Process B','b')]}),
+    S('Kernel একটা RAM page দুই process-এরই address space-এ <b>map</b> করে।',{add:[B('sh',280,150,200,56,'Shared RAM page','g'),A('m1',120,112,300,148,'a'),A('m2',640,112,460,148,'b')]}),
+    S('A লেখে, B <b>সরাসরি</b> পড়ে - মাঝে kernel নেই, তাই সবচেয়ে দ্রুত। কিন্তু race condition ঠেকাতে mutex/semaphore লাগে।',{add:[T('x',380,126,'A লেখে → B পড়ে',{a:'middle',c:'g',s:'b'})],mod:{sh:{hl:1}}})
+  ]}
+ ]},
+
+{p:8,q:'How do drivers (keyboard, mouse, monitor) work - in user space or kernel space?',
+ ans:'Driver = hardware-এর সাথে কথা বলার software। বেশির ভাগ driver <b>kernel space</b>-এ (loadable module), কারণ hardware register ও interrupt লাগে। Keyboard/mouse: interrupt → kernel driver → input event → user-space (display server, app)। Monitor: GPU driver-এর kernel অংশ (DRM/KMS) + user অংশ (Mesa)।',
+ pts:['Driver bug → পুরো system crash (kernel panic/BSOD)। তাই কিছু driver user space-এ (FUSE, libusb) আর microkernel-এ প্রায় সবই।'],
+ steps:[
+  S('তিন স্তর: user space, kernel space, hardware।',{add:[
+    B('uz',20,4,720,74,'','a',{dash:1}),T('uzl',32,16,'User space (ring 3)',{c:'a',s:'b'}),B('app',40,32,150,38,'App (editor)','a'),B('ds',230,32,170,38,'Display server','a'),
+    B('kz',20,86,720,78,'','o',{dash:1}),T('kzl',32,98,'Kernel space (ring 0)',{c:'o',s:'b'}),B('kd',40,114,150,40,'Keyboard driver','o'),B('inp',230,114,150,40,'Input subsystem','o'),B('gd',420,114,150,40,'GPU driver (DRM)','o'),
+    B('hz',20,172,720,62,'','n',{dash:1}),B('kb',40,188,150,38,'Keyboard','n'),B('mon',420,188,150,38,'Monitor / GPU','n')]}),
+  S('Key চাপলে hardware <b>IRQ</b> পাঠায়; kernel-এর keyboard driver ধরে।',{add:[A('a1',115,188,115,156,'o'),T('a1l',125,172,'IRQ',{c:'o',s:'sm'})],mod:{kb:{hl:1}}}),
+  S('Driver → input subsystem → display server → app। Event পৌঁছল user space-এ।',{add:[A('a2',190,134,228,134,'o'),A('a3',315,112,315,72,'a'),A('a4',230,51,192,51,'a')],mod:{kb:{hl:0}}}),
+  S('App-এর আঁকা ছবি display server → GPU driver (kernel) → monitor।',{add:[A('b1',360,72,450,112,'g'),A('b2',495,156,495,186,'g')],mod:{mon:{hl:1}}})
+ ]},
+
+{p:8,q:'Monolithic kernel vs microkernel.',
+ ans:'<b>Monolithic</b> (Linux): সব service kernel space-এ - দ্রুত, কিন্তু একটা bug পুরো kernel ফেলে। <b>Microkernel</b> (Minix, QNX): kernel ছোট; বাকি service user-space server - স্থিতিশীল, কিন্তু IPC-র কারণে একটু ধীর। <b>Hybrid</b>: Windows NT, macOS।',
+ pts:[],
+ tabs:[{n:'Monolithic',steps:()=>kernelSteps('mono')},{n:'Microkernel',steps:()=>kernelSteps('micro')}]},
+
+{p:8,q:'File system basics: inode and file descriptor.',
+ ans:'File disk-এ থাকে তিন ভাগে: <b>directory</b> (নাম → inode নম্বর), <b>inode</b> (file-এর পরিচয়পত্র: মাপ, মালিক, permission, data কোথায়), আর <b>data block</b> (আসল লেখা)। <b>File descriptor</b> = <code>open()</code> করার পর kernel-এর দেওয়া ছোট সংখ্যা (টোকেন), যা দিয়ে process ওই file-এ কাজ করে।',
+ pts:['<b>নাম inode-এ থাকে না</b>, থাকে directory-তে। তাই নাম বদলালে file-এর data বা inode বদলায় না।','<b>fd:</b> 0 = stdin (keyboard), 1 = stdout (screen), 2 = stderr (error)। <code>open()</code> প্রথম ফাঁকা সংখ্যা দেয়, সাধারণত 3।','<b>Hard link:</b> একই inode-এ একাধিক নাম।'],
+ tabs:[
+  {n:'1. File disk-এ কীভাবে থাকে',steps:[
+    S('File সংরক্ষণে <b>তিনটা জিনিস</b>। <b>উপমা (লাইব্রেরি):</b> directory = সূচিপত্র (নাম → নম্বর), inode = বইয়ের catalog card (মাপ, লেখক, কোথায় আছে), data block = বইয়ের আসল পাতা।',{add:[B('dir',20,20,200,80,'Directory\n(সূচিপত্র)\nনাম → inode নম্বর','a'),B('ino',290,20,230,80,'inode\n(পরিচয়পত্র)\nমাপ, মালিক, permission,\nআসল data কোথায়','o'),B('dat',590,20,150,80,'Data block\n(আসল লেখা)','g'),A('x1',222,60,288,60,'n',{dash:1}),A('x2',522,60,588,60,'n',{dash:1})]}),
+    S('তুমি <code>a.txt</code> খুলতে চাইলে প্রথমে <b>directory</b>-তে নাম খোঁজা হয়। পাওয়া যায়: <b>a.txt → inode 12</b>।',{add:[T('s1',120,150,'a.txt  →  inode 12',{a:'middle',c:'a',s:'m b'})],mod:{dir:{hl:1}}}),
+    S('এবার <b>inode 12</b> খোলা হয়। সেখানে লেখা: file কত বড়, কার, কে পড়তে পারবে, আর আসল data আছে <b>block 7, 9, 15</b>-এ।',{add:[T('s2',405,150,'size 3 KB · owner · permission · blocks: 7, 9, 15',{a:'middle',c:'o',s:'sm b'})],mod:{dir:{hl:0},ino:{hl:1}}}),
+    S('Kernel <b>block 7, 9, 15</b> থেকে আসল লেখা পড়ে নিয়ে আসে। এভাবেই file খোলা যায়।',{add:[B('b7',590,110,150,28,'Block 7','g',{s:'sm'}),B('b9',590,142,150,28,'Block 9','g',{s:'sm'}),B('b15',590,174,150,28,'Block 15','g',{s:'sm'})],mod:{ino:{hl:0},dat:{hl:1}}}),
+    S('<b>মনে রাখো:</b> নাম থাকে directory-তে, inode-এ না। তাই file-এর নাম বদলালে শুধু directory-র লেখা বদলায়, inode আর data একই থাকে।',{mod:{dat:{hl:0}}})
+  ]},
+  {n:'2. File descriptor',steps:[
+    S('File-এ কাজ করতে process আগে <code>open("a.txt")</code> ডাকে। Kernel file খোলে, আর process-কে একটা <b>ছোট সংখ্যা</b> ফেরত দেয়। এই সংখ্যাই <b>file descriptor (fd)</b>।',{add:[B('pr',20,50,150,70,'Process\nopen("a.txt")','a'),B('kn',260,50,160,70,'Kernel\nfile খোলে','o'),A('a1',172,85,258,85,'a'),A('a2',258,100,172,100,'g'),T('a2l',215,118,'fd = 3',{a:'middle',c:'g',s:'sm b'})]}),
+    S('প্রতিটা process-এর নিজের <b>fd table</b> আছে। শুরুতেই তিনটা নেওয়া: <b>0 = stdin</b> (keyboard), <b>1 = stdout</b> (screen), <b>2 = stderr</b> (error বার্তা)।',{del:['kn','a1','a2','a2l'],add:[B('fd',230,20,170,100,'fd table\n0  stdin\n1  stdout\n2  stderr','b',{m:1})],mod:{pr:{y:50}}}),
+    S('<code>open("a.txt")</code> প্রথম ফাঁকা জায়গা নেয়: <b>fd 3</b>। সে যায় একটা <b>open file entry</b>-তে (এখন file-এর কোথায় আছি, offset), সেখান থেকে <b>inode</b>-এ।',{mod:{fd:{label:'fd table\n0  stdin\n1  stdout\n2  stderr\n3  → a.txt'}},add:[B('of',450,30,160,60,'open file entry\nঅবস্থান (offset) = 0','n',{m:1,s:'sm'}),B('in',650,30,100,60,'inode 12\n(a.txt)','o'),A('a3',402,70,448,60,'b'),A('a4',612,60,648,60,'n')]}),
+    S('এরপর <code>read(3, ...)</code> লিখলেই kernel বোঝে "fd 3 মানে a.txt"। নাম বারবার লিখতে হয় না। <b>উপমা:</b> reception থেকে টোকেন নম্বর পেলে পরের বার শুধু নম্বর বললেই চলে।',{add:[T('rd',300,160,'read(3, buf, 100)   →   a.txt থেকে পড়ো',{a:'middle',c:'g',s:'m b'})],mod:{fd:{hl:1}}}),
+    S('কাজ শেষে <code>close(3)</code>। fd 3 আবার ফাঁকা হয়, পরের <code>open()</code> এই সংখ্যাটা আবার পেতে পারে।',{del:['rd'],mod:{fd:{label:'fd table\n0  stdin\n1  stdout\n2  stderr\n3  (ফাঁকা)',hl:0},of:{o:0.2},in:{o:0.5}}})
+  ]},
+  {n:'3. Hard link',steps:[
+    S('একটা file-এর <b>একাধিক নাম</b> থাকতে পারে। <code>a.txt</code> আর <code>b.txt</code> দুটো নামই <b>একই inode 12</b>-কে দেখায়।',{add:[B('dir',20,30,230,90,'Directory\na.txt → inode 12\nb.txt → inode 12','a',{m:1}),B('ino',350,30,200,90,'inode 12\nlinks: 2\n(data একটাই)','o',{m:1}),B('dat',640,50,100,50,'Data','g'),A('x1',252,75,348,75,'a'),A('x2',552,75,638,75,'o')]}),
+    S('একে বলে <b>hard link</b>। Data কপি হয়নি, একটাই আছে। শুধু দুটো নাম একই জায়গা দেখায়। <code>links: 2</code> মানে "দুটো নাম আছে"।',{mod:{ino:{hl:1}}}),
+    S('<code>rm a.txt</code> করলে একটা নাম মুছল, <code>links: 1</code>। কিন্তু <b>data থাকে</b>, কারণ <code>b.txt</code> এখনো আছে।',{mod:{dir:{label:'Directory\nb.txt → inode 12'},ino:{label:'inode 12\nlinks: 1\n(data আছে)',hl:0}}}),
+    S('শেষ নামটাও মুছলে <code>links: 0</code>। তখন inode আর data block সত্যিই মুছে যায়।',{mod:{dir:{label:'Directory\n(কোনো নাম নেই)'},ino:{label:'inode 12\nlinks: 0\n(মুছে গেল)',c:'r'},dat:{c:'r',dash:1}}})
+  ]}
+ ]},
+
+{p:9,q:'What is the difference between a system call and a library call (printf vs write)?',
+ ans:'<b>Library call</b> (<code>printf</code>) user space-এর libc ফাংশন - format করে, buffer রাখে; অনেক ক্ষেত্রে kernel-ই লাগে না। <b>System call</b> (<code>write</code>) kernel-এ ঢোকার দরজা - mode switch হয়, ধীর। <code>printf</code> শেষে (buffer flush করার সময়) <code>write</code> syscall করে।',
+ pts:['<code>strace</code> দিয়ে আসল syscall দেখা যায়।','<code>strlen</code>, <code>sqrt</code> - library call, syscall নেই।'],
+ steps:[
+  S('App <code>printf("hi\\n")</code> call করল - এটা libc-র function।',{add:[B('app',20,90,130,60,'App\nprintf("hi")','a'),B('lib',190,90,160,60,'libc (user space)\nformat + buffer','s'),B('wr',390,90,150,60,'write() wrapper\nsyscall instruction','o'),B('ker',580,90,160,60,'Kernel (ring 0)\nsys_write → driver','r'),A('a1',152,120,188,120,'a')]}),
+  S('libc string format করে, <b>buffer</b>-এ রাখে। এখনো kernel জানে না।',{mod:{lib:{hl:1}}}),
+  S('Buffer flush (যেমন <code>\\n</code> বা ভরলে) → libc <code>write(1, "hi\\n", 3)</code> ডাকে।',{add:[A('a2',352,120,388,120,'s')],mod:{lib:{hl:0},wr:{hl:1}}}),
+  S('<b>syscall</b> instruction → mode switch ring 3 → 0 → kernel terminal-এ লেখে।',{add:[A('a3',542,120,578,120,'o')],mod:{wr:{hl:0},ker:{hl:1}}}),
+  S('<code>strlen</code>-এর মতো library call kernel-এ যায়ই না।',{add:[T('nt',380,200,'printf = library call (user space)   |   write = system call (kernel-এ ঢোকে)',{a:'middle',c:'f',s:'sm b'})]})
+ ]},
+
+{p:9,q:'What is the difference between an interrupt, a trap and an exception?',
+ ans:'তিনটাই CPU-কে চলতি কাজ থামিয়ে kernel-এর handler চালাতে বাধ্য করে। তফাত <b>কে ডাকল</b>: <b>Interrupt</b> = বাইরের hardware। <b>Trap</b> = program নিজে ইচ্ছা করে (syscall)। <b>Exception</b> = instruction-এর ভুল (০ দিয়ে ভাগ, page fault)।',
+ pts:['<b>Timer interrupt</b> ছাড়া OS CPU কেড়ে নিতে পারত না। প্রতি কয়েক ms-এ সে-ই context switch চালু করে (preemptive scheduling)।','<b>Maskable</b> interrupt OS সাময়িক বন্ধ রাখতে পারে। <b>NMI</b> কখনো বন্ধ হয় না (জরুরি hardware ত্রুটি)।','<b>ফেরা:</b> interrupt আর trap-এ পরের instruction-এ। Fault-এ (যেমন page fault) ওই instruction-ই আবার।'],
+ tabs:[
+  {n:'1. তিনটার পার্থক্য',steps:[
+    S('<b>Interrupt</b>: বাইরের hardware ডাকে, <b>যেকোনো সময়</b> (program আগে জানত না)। উপমা: পড়ার সময় হঠাৎ ফোন বাজল।',{add:[B('i',20,10,230,150,'Interrupt\nউৎস: hardware\nকখন: যেকোনো সময়\n(asynchronous)\nউদা: key চাপা, timer\nফেরা: পরের instruction','o'),T('ia',135,180,'উপমা: ফোন বাজল',{a:'middle',c:'o',s:'sm b'})]}),
+    S('<b>Trap</b>: program <b>নিজে ইচ্ছা করে</b> ডাকে। উপমা: তুমি নিজে লাইব্রেরিয়ানের কাছে গিয়ে বই চাইলে।',{add:[B('t',270,10,230,150,'Trap\nউৎস: program নিজে\nকখন: যখন চায়\n(synchronous)\nউদা: syscall, breakpoint\nফেরা: পরের instruction','a'),T('ta',385,180,'উপমা: নিজে বই চাইলে',{a:'middle',c:'a',s:'sm b'})]}),
+    S('<b>Exception / fault</b>: instruction-ই <b>ভুল</b>। CPU নিজেই kernel-কে ডাকে। উপমা: অঙ্কে ভুল করলে শিক্ষক থামালেন।',{add:[B('e',520,10,230,150,'Exception / fault\nউৎস: ভুল instruction\nকখন: ভুল ঘটলে\n(synchronous)\nউদা: ০ দিয়ে ভাগ, page fault\nফেরা: ওই instruction আবার','r'),T('ea',635,180,'উপমা: শিক্ষক থামালেন',{a:'middle',c:'r',s:'sm b'})]}),
+    S('তিনটাই <b>IDT</b> দেখে kernel-এর handler চালায়, শেষে <code>iret</code> দিয়ে ফেরে।',{add:[B('idt',150,200,460,34,'সবই: IDT → kernel handler → iret','n')]})
+  ]},
+  {n:'2. Interrupt-এর ধরন',steps:[
+    S('<b>Hardware interrupt</b> অনেক রকম। সাধারণগুলো: <b>Timer</b> (প্রতি কয়েক ms), <b>Keyboard/Mouse</b> (key বা click), <b>Disk/SSD</b> (I/O শেষ), <b>Network card</b> (packet এল)।',{add:[T('h1',20,12,'সাধারণ hardware interrupt',{c:'f',s:'sm b'}),B('hi0',20,30,170,56,'Timer\nপ্রতি কয়েক ms','o'),B('hi1',200,30,170,56,'Keyboard / Mouse\nkey, click','o'),B('hi2',380,30,170,56,'Disk / SSD\nI/O শেষ হল','o'),B('hi3',560,30,180,56,'Network card\npacket এল','o')]}),
+    S('এগুলোকে <b>maskable</b> বলে: OS জরুরি কাজের সময় সাময়িক <b>বন্ধ রাখতে</b> পারে, পরে খোলে।',{add:[B('mk',20,96,720,30,'Maskable: OS সাময়িক বন্ধ রাখতে পারে','g',{s:'sm'})]}),
+    S('<b>NMI</b> (Non-Maskable Interrupt): <b>কখনো বন্ধ করা যায় না</b>। জরুরি hardware ত্রুটির জন্য, যেমন memory error, watchdog।',{add:[T('h2',20,148,'বিশেষ interrupt',{c:'f',s:'sm b'}),B('nmi',20,166,350,56,'NMI (বন্ধ করা যায় না)\nজরুরি hardware ত্রুটি, watchdog','r')]}),
+    S('<b>IPI</b> (Inter-Processor Interrupt): এক CPU core আরেক core-কে ডাকে। যেমন একটা core page table বদলালে অন্য core-দের TLB পরিষ্কার করতে বলে।',{add:[B('ipi',390,166,350,56,'IPI (core থেকে core)\nএক core অন্যকে ডাকে, যেমন TLB flush','b')]}),
+    S('<b>সারকথা:</b> বাইরের জন্য hardware interrupt (timer, keyboard, disk, network)। জরুরি হলে NMI। Core-দের নিজেদের মধ্যে IPI। আর trap ও exception interrupt না, কিন্তু একই handler-পথে যায়।',{})
+  ]},
+  {n:'3. Timer interrupt → context switch',steps:[
+    S('Thread A চলছে। <b>Timer</b> (hardware ঘড়ি) প্রতি কয়েক ms-এ CPU-কে interrupt পাঠায়। এটা না থাকলে A নিজে না ছাড়লে CPU আর কেউ পেত না।',{add:[B('tm',200,10,200,40,'Timer (hardware ঘড়ি)','o'),B('ta',20,90,170,56,'Thread A\nচলছে','a'),T('tl',380,200,'প্রতি ~১-১০ ms-এ ঘড়ি বাজে',{a:'middle',c:'n',s:'sm'})]}),
+    S('ঘড়ি বাজল: <b>timer interrupt</b>। CPU A-কে থামিয়ে kernel-এ ঢোকে, A-র অবস্থা save করে।',{add:[A('a1',300,52,300,88,'o'),B('kn',230,90,170,56,'Kernel\n(interrupt handler)','o')],mod:{ta:{c:'n',dash:1}}}),
+    S('<b>Scheduler</b> দেখে: A-র time slice শেষ। Ready queue থেকে পরের thread <b>B</b> বাছে।',{add:[T('sc',315,162,'A-র slice শেষ, পরেরটা B',{a:'middle',c:'o',s:'sm b'})]}),
+    S('<b>Context switch:</b> A-র register <b>TCB-তে save</b>, B-র register <b>load</b>।',{add:[B('sv',230,176,170,40,'save A → load B','g',{s:'sm'})]}),
+    S('<code>iret</code>: CPU ফেরে, এবার <b>B চলে</b>। A আবার তার পালায় ফিরবে।',{add:[A('a2',402,118,438,118,'b'),B('tb',440,90,170,56,'Thread B\nচলছে','b')]}),
+    S('<b>সারকথা:</b> timer interrupt = ঘড়ি। ঘড়ি বাজলেই OS CPU কেড়ে নিয়ে অন্য thread-কে দেয়। এটাই <b>preemptive scheduling ও context switch</b>-এর ভিত্তি।',{})
+  ]}
+ ]},
+
+{p:9,q:'What is the difference between multiprogramming, multitasking, multiprocessing and multithreading?',
+ ans:'<b>Multiprogramming:</b> একাধিক job RAM-এ, একটা I/O-তে গেলে CPU অন্যটায়। <b>Multitasking:</b> তার উপর time-slice, সবাই ঘুরে ঘুরে চলে। <b>Multiprocessing:</b> একাধিক CPU/core, সত্যিই একই মুহূর্তে। <b>Multithreading:</b> এক process-এ একাধিক thread। Tab চেপে একটা একটা করে দেখো।',
+ pts:['<b>Concurrency:</b> অনেক কাজ একসাথে <b>এগোচ্ছে</b>, ঘুরে ঘুরে হলেও। এক core-তেই সম্ভব। <b>Parallelism:</b> অনেক কাজ <b>ঠিক একই মুহূর্তে</b> চলছে। একাধিক core লাগে।','<b>উপমা:</b> একজন বাবুর্চি দুই চুলায় পালা করে রাঁধছে = concurrency। দুজন বাবুর্চি দুই চুলায় একসাথে রাঁধছে = parallelism।','প্রতিটা tab-এর শেষে দেখো সেটা concurrency, parallelism, নাকি দুটোই।'],
+ extra:'<table class="cmp"><tr><th></th><th>মানে</th><th>লক্ষ্য</th><th>Concurrency</th><th>Parallelism</th></tr>'
+  +'<tr><td>Multiprogramming</td><td>একাধিক job RAM-এ, I/O-তে গেলে CPU অন্যটায়</td><td>CPU utilization</td><td>✓</td><td>✗</td></tr>'
+  +'<tr><td>Multitasking</td><td>Multiprogramming + time-slice</td><td>সাড়া দেওয়া (responsiveness)</td><td>✓</td><td>✗ (এক core-এ)</td></tr>'
+  +'<tr><td>Multiprocessing</td><td>একাধিক CPU/core</td><td>গতি, throughput</td><td>✓</td><td>✓</td></tr>'
+  +'<tr><td>Multithreading</td><td>এক process-এ একাধিক thread</td><td>একই process-এ কাজ ভাগ</td><td>✓ সবসময়</td><td>✓ শুধু একাধিক core-এ</td></tr></table>',
+ tabs:[
+  {n:'1. Multiprogramming',steps:[
+    S('<b>Multiprogramming:</b> RAM-এ একসাথে একাধিক job রাখা হয়। এখানে A, B, C। CPU মাত্র <b>১টা</b>।',{add:[B('ram',20,10,330,64,'RAM-এ ৩টা job: A, B, C','g',{dash:1}),T('cl',20,125,'CPU (১টা)',{c:'f',s:'b'})]}),
+    S('A CPU-তে চলছে।',{add:[B('a1',140,100,150,50,'A চলে','a')]}),
+    S('A disk থেকে data চাইল, <b>I/O-র জন্য অপেক্ষা</b> করছে। CPU বসে থাকলে নষ্ট। তাই OS CPU <b>B-কে</b> দেয়।',{add:[B('aw',140,160,150,34,'A: disk-এর অপেক্ষা','n',{dash:1,s:'sm'}),B('b1',290,100,200,50,'B চলে (A-র I/O চলছে)','b')],mod:{a1:{label:'A: I/O শুরু',c:'n',dash:1}}}),
+    S('A-র I/O শেষ, A আবার CPU পায়। <b>CPU পুরো সময় ব্যস্ত</b>, তাই utilization বেশি। এটাই multiprogramming-এর লক্ষ্য।',{add:[B('a2',490,100,150,50,'A আবার চলে','a')],mod:{aw:{o:0}}}),
+    S('<b>Concurrency ✓</b> (এক CPU-তে পালা করে অনেক job এগোয়)। <b>Parallelism ✗</b> (একই মুহূর্তে একটাই চলে)।',{add:[B('cc',140,196,200,30,'Concurrency ✓','g'),B('pp',360,196,200,30,'Parallelism ✗','r')]})
+  ]},
+  {n:'2. Multitasking',steps:[
+    S('<b>Multitasking (time-sharing):</b> multiprogramming-এর উপর <b>timer</b>। প্রতিটা job ছোট time-slice (যেমন ১০ ms) পায়, I/O না থাকলেও।',{add:[T('cl',20,125,'CPU (১টা)',{c:'f',s:'b'}),T('tl',140,80,'সময় →',{c:'n',s:'sm'})]}),
+    S('A এক slice চলে, timer বাজে, OS কেড়ে নিয়ে B-কে দেয়, তারপর C।',{add:[B('s0',140,100,52,50,'A','a'),B('s1',194,100,52,50,'B','b'),B('s2',248,100,52,50,'C','g')]}),
+    S('আবার A, B, C... এভাবে ঘুরতে থাকে। প্রতিবার timer interrupt আসে।',{add:[B('s3',302,100,52,50,'A','a'),B('s4',356,100,52,50,'B','b'),B('s5',410,100,52,50,'C','g'),B('s6',464,100,52,50,'A','a'),B('s7',518,100,52,50,'B','b'),B('s8',572,100,52,50,'C','g')]}),
+    S('Slice এত ছোট যে ব্যবহারকারীর মনে হয় গান, browser, editor <b>একসাথে</b> চলছে। আসলে ঘুরে ঘুরে। লক্ষ্য: <b>সাড়া দেওয়া</b> (responsiveness)।',{add:[T('note',380,185,'টাইপ করছ, গান বাজছে, browser খোলা: সবাই সাড়া দেয়',{a:'middle',c:'f',s:'sm b'})]}),
+    S('<b>Concurrency ✓</b> (সবাই এগোয়)। <b>Parallelism ✗</b> (এক core-এ একই মুহূর্তে একটাই)।',{del:['note'],add:[B('cc',140,196,200,30,'Concurrency ✓','g'),B('pp',360,196,200,30,'Parallelism ✗','r')]})
+  ]},
+  {n:'3. Multiprocessing',steps:[
+    S('<b>Multiprocessing:</b> একাধিক CPU বা core। এখানে ৩টা core। প্রতিটা নিজের কাজ নিজে চালায়।',{add:[T('c1',20,48,'Core 1',{c:'f',s:'b'}),T('c2',20,108,'Core 2',{c:'f',s:'b'}),T('c3',20,168,'Core 3',{c:'f',s:'b'}),T('tl',140,10,'সময় →',{c:'n',s:'sm'})]}),
+    S('Core 1-এ A চলছে।',{add:[B('a',140,26,420,44,'A','a')]}),
+    S('<b>ঠিক একই সময়ে</b> Core 2-এ B-ও চলছে। কেউ কারো জন্য অপেক্ষা করছে না।',{add:[B('b',140,86,420,44,'B','b'),A('vl',350,16,350,194,'o',{dash:1}),T('vll',350,206,'একই মুহূর্ত',{a:'middle',c:'o',s:'sm b'})]}),
+    S('Core 3-এ C। তিনটা কাজ একই মুহূর্তে চলছে: <b>সত্যিকারের parallel</b>। লক্ষ্য: গতি বাড়ানো।',{add:[B('c',140,146,420,44,'C','g')]}),
+    S('<b>Parallelism ✓</b> (একই মুহূর্তে অনেক কাজ)। <b>Concurrency ✓</b>-ও (সব কাজ এগোচ্ছে)। শর্ত: একাধিক core থাকতে হবে।',{del:['vl','vll'],add:[B('cc',140,200,200,30,'Concurrency ✓','g'),B('pp',360,200,200,30,'Parallelism ✓','g')]})
+  ]},
+  {n:'4. Multithreading',steps:[
+    S('<b>Multithreading:</b> একটা <b>process</b>-এর ভেতরে একাধিক <b>thread</b>। তারা code, data, heap ভাগ করে, প্রত্যেকের নিজের stack।',{add:[B('pr',20,10,330,120,'','a',{dash:1}),T('prl',34,26,'একটা process (যেমন browser)',{c:'a',s:'sm b'}),B('t1',36,44,90,44,'Thread 1\nUI','g'),B('t2',134,44,90,44,'Thread 2\nnetwork','s'),B('t3',232,44,90,44,'Thread 3\nrender','b'),B('sh',36,96,286,26,'shared: code, data, heap','n',{s:'sm'})]}),
+    S('<b>এক core হলে:</b> thread-রা ঘুরে ঘুরে চলে। এটা <b>concurrency</b>, parallelism না।',{add:[T('l1',380,14,'এক core',{c:'f',s:'sm b'}),...[0,1,2,3,4,5].map(i=>B('x'+i,380+i*58,28,54,36,'T'+(i%3+1),['g','s','b'][i%3]))]}),
+    S('<b>দুই core হলে:</b> Thread 1 আর Thread 2 <b>একই মুহূর্তে</b> আলাদা core-এ চলে। এটা <b>parallelism</b>।',{add:[T('l2',380,84,'দুই core',{c:'f',s:'sm b'}),B('y1',380,100,340,34,'Core 1: Thread 1','g'),B('y2',380,140,340,34,'Core 2: Thread 2','s')]}),
+    S('<b>Concurrency ✓ সবসময়</b> (thread থাকলেই)। <b>Parallelism ✓ শুধু একাধিক core-এ</b>। লক্ষ্য: এক process-এর কাজ ভাগ করা (UI আটকায় না, network আলাদা চলে)।',{add:[B('cc',20,196,330,30,'Concurrency ✓ সবসময়','g'),B('pp',380,196,340,30,'Parallelism ✓ শুধু একাধিক core-এ','o')]})
+  ]}
+ ]},
+
+{p:9,q:'What happens inside the OS when a process crashes (core dump, resource cleanup)?',
+ ans:'Process এমন কিছু করল যা CPU অনুমতি দেয় না (যেমন অবৈধ memory access)। তখন: <b>১)</b> CPU exception দেয়, <b>২)</b> kernel process-কে <b>signal</b> (যেমন <code>SIGSEGV</code>) পাঠায়, <b>৩)</b> default action: process <b>terminate</b> (সাথে <b>core dump</b>), <b>৪)</b> kernel সব resource <b>cleanup</b> করে, <b>৫)</b> parent-কে জানায়। OS আর অন্য process ঠিক থাকে।',
+ pts:['<b>কেন crash:</b> NULL pointer, অবৈধ address, stack overflow (<code>SIGSEGV</code>), ০ দিয়ে ভাগ (<code>SIGFPE</code>), ভুল instruction (<code>SIGILL</code>)।','<b>Core dump:</b> crash-এর মুহূর্তে process-এর memory ও register-এর ছবি, ফাইলে সেভ, পরে debugger (<code>gdb</code>) দিয়ে দেখার জন্য।','<b>Cleanup:</b> kernel ফাইল, memory, socket ছেড়ে দেয়। শুধু ছোট entry থাকে (<b>zombie</b>), parent <code>wait()</code> করলে মুছে যায়।','OS ঠিক থাকে, কারণ process-গুলো <b>isolated</b> (প্রত্যেকের নিজস্ব address space)।'],
+ tabs:[
+  {n:'1. Crash থেকে terminate',steps:[
+    S('ধরো program-এ আছে: <code>int *p = NULL; *p = 5;</code>। NULL মানে "কোথাও না", সেখানে লেখা অবৈধ।',{add:[B('b1',20,50,130,86,'Process\n*p = 5\n(p = NULL)','r'),T('code',380,200,'int *p = NULL;   *p = 5;',{a:'middle',c:'f',s:'m b'})]}),
+    S('CPU address দেখে (page table-এ নেই, অবৈধ)। সে <b>exception</b> (page fault) ঘটায় এবং control kernel-কে দেয়।',{add:[A('a1',152,93,168,93,'r'),B('b2',170,50,130,86,'CPU\nexception\n(page fault)','o')]}),
+    S('Kernel-এর handler দেখে: এই address ঠিক করা সম্ভব না (যেমন page disk থেকে আনা যায় না)। তাই এটা <b>program-এর ভুল</b>।',{add:[A('a2',302,93,318,93,'o'),B('b3',320,50,130,86,'Kernel handler\nঠিক করা যায় না\n(address অবৈধ)','o')]}),
+    S('Kernel process-কে <b>signal</b> পাঠায়: <b>SIGSEGV</b> (segmentation fault)। ০ দিয়ে ভাগ হলে যেত <code>SIGFPE</code>, ভুল instruction হলে <code>SIGILL</code>।',{add:[A('a3',452,93,468,93,'r'),B('b4',470,50,130,86,'Signal\nSIGSEGV\nপাঠানো হল','r')]}),
+    S('<b>SIGSEGV-র default action: terminate।</b> Process কে থামিয়ে দেওয়া হয়। (Program চাইলে signal handler বসিয়ে ধরতে পারে, কিন্তু সাধারণত পারে না।)',{add:[A('a4',602,93,618,93,'r'),B('b5',620,50,120,86,'Process\nশেষ\n(terminate)','n',{dash:1})]}),
+    S('<b>মূল কথা:</b> ভুলটা CPU ধরে, kernel signal পাঠায়, process থামে। OS আর অন্য process-এর কিছু হয় না, কারণ প্রতিটা process আলাদা address space-এ।',{})
+  ]},
+  {n:'2. Core dump',steps:[
+    S('Terminate করার <b>আগে</b> kernel চাইলে process-এর অবস্থার একটা <b>ছবি</b> তোলে। একে বলে <b>core dump</b>। দেখো crash-এর মুহূর্তে process-এ কী ছিল।',{add:[B('pm',20,20,300,200,'','r',{dash:1}),T('pml',34,36,'Process (crash-এর মুহূর্ত)',{c:'r',s:'sm b'}),B('h',40,56,260,44,'Heap (ডেটা)','o'),B('st',40,108,260,44,'Stack (function call)','a'),B('rg',40,160,260,44,'Register + কোন লাইনে crash','b')]}),
+    S('এই সবটা <b>core file</b> নামে disk-এ লেখা হয়।',{add:[A('w',322,120,438,120,'r'),B('cf',440,70,160,100,'core file\n(disk-এ)\nmemory + register\nএর ছবি','n')]}),
+    S('Developer পরে <b>debugger (gdb)</b> দিয়ে এই file খোলে। দেখে ঠিক কোন লাইনে, কোন মানে crash হয়েছিল। এটাই core dump-এর কাজ: <b>ভুল খুঁজে পাওয়া</b>।',{add:[A('g',602,120,638,120,'g'),B('gdb',640,80,100,80,'gdb\n(debugger)','g')]}),
+    S('বাস্তবে অনেক system-এ core dump <b>default-এ বন্ধ</b> (file অনেক বড় হয়)। চালু করতে হয়, যেমন Linux-এ <code>ulimit -c unlimited</code>। Windows-এ minidump, macOS-এ crash report।',{})
+  ]},
+  {n:'3. Resource cleanup',steps:[
+    S('Process থামার পর kernel তার ধরে রাখা <b>সব resource</b> ছেড়ে দেয়, যাতে system-এ কিছু আটকে না থাকে। ছয়টা জিনিস:',{add:[B('r1',20,20,350,50,'খোলা ফাইল (open files)','n'),B('r2',390,20,350,50,'Memory + page table','n'),B('r3',20,84,350,50,'Network socket (connection)','n'),B('r4',390,84,350,50,'Lock ও IPC (shared memory)','n'),B('r5',20,148,350,50,'Child process','n'),B('r6',390,148,350,50,'Scheduler-এর তালিকা','n')]}),
+    S('<b>খোলা ফাইল</b> বন্ধ হয়। <b>Memory ও page table</b> মুক্ত হয়, frame-গুলো অন্যদের জন্য ফাঁকা।',{mod:{r1:{c:'g',label:'খোলা ফাইল: বন্ধ হল ✓'},r2:{c:'g',label:'Memory + page table: মুক্ত ✓'}}}),
+    S('<b>Socket</b> বন্ধ হয় (অপর পক্ষ connection reset দেখে)। <b>Lock ও IPC</b> ছাড়া হয়, যাতে অন্য process আটকে না থাকে।',{mod:{r3:{c:'g',label:'Socket: বন্ধ ✓'},r4:{c:'g',label:'Lock ও IPC: ছাড়া হল ✓'}}}),
+    S('এর <b>child process</b>-গুলো orphan হয়, <code>init</code> (PID 1) তাদের দত্তক নেয়। Process <b>scheduler-এর তালিকা থেকে</b> সরে যায়, আর CPU পাবে না।',{mod:{r5:{c:'g',label:'Child: init-এর কাছে ✓'},r6:{c:'g',label:'Scheduler থেকে: সরানো ✓'}}}),
+    S('সবকিছু মুক্ত হল। বাকি রইল শুধু একটা <b>ছোট entry</b> (PID + exit status)। এই অবস্থার নাম <b>Zombie</b>, parent-কে জানাবার জন্য রাখা হয়। পরের tab-এ দেখো।',{add:[T('z',380,220,'বাকি আছে শুধু: PID + exit status = Zombie',{a:'middle',c:'r',s:'b'})]})
+  ]},
+  {n:'4. Parent-কে জানানো',steps:[
+    S('Process শেষ, কিন্তু ছোট entry (Zombie) আছে। Parent হল shell, যে এই program চালিয়েছিল।',{add:[B('pa',30,60,200,80,'Parent (shell)\nPID 100','g'),B('ch',470,60,230,80,'Child (Zombie)\nPID 101\nশুধু entry: exit status','r',{dash:1})]}),
+    S('Kernel parent-কে <b>SIGCHLD</b> signal পাঠায়: "তোমার child শেষ হয়েছে"।',{add:[A('sg',466,100,234,100,'o'),T('sgl',350,86,'SIGCHLD',{a:'middle',c:'o',s:'sm b'})]}),
+    S('Parent <code>wait()</code> ডাকে। Kernel তাকে <b>exit status</b> দেয়: "child <b>signal 11 (SIGSEGV)</b> দিয়ে মারা গেছে"।',{add:[A('wt',236,125,466,125,'g'),T('wtl',350,140,'wait() → status: signal 11',{a:'middle',c:'g',s:'sm b'})]}),
+    S('Shell সেই status দেখে ছাপে: <b>"Segmentation fault (core dumped)"</b>। তুমি terminal-এ এটাই দেখো।',{add:[T('msg',380,200,'Segmentation fault (core dumped)',{a:'middle',c:'r',s:'m b'})]}),
+    S('Parent status নেওয়া মাত্র kernel <b>entry-ও মুছে ফেলে</b> (reap)। Process-এর আর কোনো চিহ্ন থাকে না।',{del:['msg'],mod:{ch:{o:0.15}}}),
+    S('<b>সারকথা:</b> ভুল (CPU exception) → signal (SIGSEGV) → terminate + core dump → cleanup → parent-কে SIGCHLD → wait() → reap। এতে OS বা অন্য process-এর ক্ষতি হয় না।',{})
+  ]}
+ ]}
+];
+
+/* ---------- build page ---------- */
+const app=document.getElementById('app'),jump=document.getElementById('jump'),partsNav=document.getElementById('parts');
+PARTS.forEach((pt,pi)=>{
+  const a=document.createElement('a');a.href='#part'+pi;a.innerHTML=`<b>${pt[0]}</b>${pt[1]}`;partsNav.appendChild(a);
+  const sec=document.createElement('section');sec.className='part';sec.id='part'+pi;
+  sec.innerHTML=`<h2><span>${pt[0]}</span>${pt[1]}</h2>`;app.appendChild(sec);
+});
+let mainNo=0;
+TOPICS.forEach((t,i)=>{
+  const n=t.sub||String(++mainNo);
+  const j=document.createElement('a');j.href='#q'+n;j.textContent=n;j.title=t.q;jump.appendChild(j);
+  const card=document.createElement('article');card.className='q';card.id='q'+n;
+  card.innerHTML=`<h3><span class="num">${n}</span><span>${t.q}${t.opt?' <em class="skip">Optional - skip করা যায়</em>':''}</span></h3><p class="ans">${t.ans}</p>${t.pts&&t.pts.length?'<ul>'+t.pts.map(x=>`<li>${x}</li>`).join('')+'</ul>':''}${t.extra?`<div class="extra">${t.extra}</div>`:''}<div class="viz"></div>`;
+  document.getElementById('part'+t.p).appendChild(card);
+  mount(card.querySelector('.viz'),t);
+});
+</script>
+</body>
+</html>
