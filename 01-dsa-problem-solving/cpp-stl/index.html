@@ -93,10 +93,10 @@ int main(){
 }`}]},
 
 {id:'vector',t:'1. vector',cards:[
-{h:'বানানো, push, pop, access',f:'hot',c:`vector<int> v;                       // খালি
-vector<int> a(n, 0);                 // n টা 0
+{h:'বানানো, push, pop, access',f:'hot',c:`vector<int> v;
+vector<int> a(n, 0);
 vector<int> b = {1, 2, 3};
-vector<vector<int>> g(n, vector<int>(m, 0));    // 2D
+vector<vector<int>> g(n, vector<int>(m, 0));
 
 v.push_back(x);
 v.pop_back();
@@ -105,12 +105,12 @@ v.front();  v.back();  v[i];
 v.clear();
 v.resize(n);
 
-v.insert(v.begin() + i, x);          // O(n)
-v.erase(v.begin() + i);              // O(n)
-v.erase(v.begin() + l, v.begin() + r);   // [l, r)
+v.insert(v.begin() + i, x);
+v.erase(v.begin() + i);
+v.erase(v.begin() + l, v.begin() + r);
 
-for(int x : v) {}                    // value
-for(int& x : v) x *= 2;              // বদলাতে চাইলে &`},
+for(int x : v) {}
+for(int& x : v) x *= 2;`},
 {h:'sort',f:'hot',c:`sort(v.begin(), v.end());                    // ascending
 sort(v.begin(), v.end(), greater<int>());    // descending
 sort(v.rbegin(), v.rend());                  // descending (আরেকভাবে)`},
