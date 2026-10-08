@@ -248,6 +248,19 @@ function mount(host,topic){
 const PARTS=[['1','Joins'],['2','Clustered বনাম Non-clustered'],['3','SQL বনাম NoSQL'],['4','Data Model বনাম ER'],['5','Trigger ও Cascading'],['6','Views']];
 
 /* ===== 1. Joins ===== */
+/* ---------- table helpers (real tables with header + rows) ---------- */
+const cellRows=(pre,x,y,w,rows,h,i0=0)=>{const o=[];rows.forEach((r,i)=>{let cx=x;r.forEach((v,j)=>{o.push(B(`${pre}${i+i0}_${j}`,cx,y+h*(i+i0+1),w[j],h,v==null?'NULL':v,v==null?'o':'n',{rx:3,m:1,s:'sm'}));cx+=w[j];});});return o;};
+const cells=(pre,x,y,cols,w,rows,c,h)=>{const o=[];let cx=x;
+  cols.forEach((n,j)=>{o.push(B(`${pre}h${j}`,cx,y,w[j],h,n,c,{rx:3,m:1,s:'sm hd'}));cx+=w[j];});
+  return o.concat(cellRows(pre,x,y,w,rows,h));};
+const rowMod=(pre,i,data,c)=>{const m={};data.forEach((v,j)=>{m[`${pre}${i}_${j}`]=c?{c,s:'sm on'}:{c:v==null?'o':'n',s:'sm'};});return m;};
+const rp=(pre,i,n,p)=>Object.fromEntries(Array.from({length:n},(_,j)=>[`${pre}${i}_${j}`,p]));
+const cp=(pre,i,j,p)=>({[`${pre}${i}_${j}`]:p});
+const hp=(pre,n,p)=>Object.fromEntries(Array.from({length:n},(_,j)=>[`${pre}h${j}`,p]));
+const allp=(pre,rows,n,p)=>Object.assign({},...Array.from({length:rows},(_,i)=>rp(pre,i,n,p)));
+const ON=c=>({c,s:'sm on'}),OFF=c=>({c:c||'n',s:'sm'});
+
+
 const JEMP={lt:'employees  (e)',rt:'departments  (d)',t1:'employees e',t2:'departments d',cond:'e.dept_id = d.id',ln:'employees',rn:'departments',lkn:'dept_id',
   lcols:['id','name','dept_id'],lw:[40,84,84],lk:2,rcols:['id','name'],rw:[50,116],la:'e',ra:'d',
   L:[[1,'Rahim',10],[2,'Karim',20],[3,'Sumon',null],[4,'Anika',30]],
@@ -262,11 +275,6 @@ const JT={INNER:'INNER JOIN',LEFT:'LEFT JOIN',RIGHT:'RIGHT JOIN',FULL:'FULL OUTE
 function joinScene(cfg,type){
   const rh=28,ty=30,lx=20,rx=480,rr=22,ry=236,{L,R,lw,rw}=cfg,nl=lw.length,nr=rw.length,ow=[...lw,...rw];
   const sum=a=>a.reduce((x,y)=>x+y,0),lend=lx+sum(lw),key=l=>l[cfg.lk],yc=i=>ty+rh*(i+1)+rh/2;
-  const cells=(pre,x,y,cols,w,rows,c,h)=>{const o=[];let cx=x;
-    cols.forEach((n,j)=>{o.push(B(`${pre}h${j}`,cx,y,w[j],h,n,c,{rx:3,m:1,s:'sm hd'}));cx+=w[j];});
-    rows.forEach((r,i)=>{cx=x;r.forEach((v,j)=>{o.push(B(`${pre}${i}_${j}`,cx,y+h*(i+1),w[j],h,v==null?'NULL':v,v==null?'o':'n',{rx:3,m:1,s:'sm'}));cx+=w[j];});});
-    return o;};
-  const rowMod=(pre,i,data,c)=>{const m={};data.forEach((v,j)=>{m[`${pre}${i}_${j}`]=c?{c,s:'sm on'}:{c:v==null?'o':'n',s:'sm'};});return m;};
   const sql=`SELECT * FROM ${cfg.t1} ${JT[type]} ${cfg.t2}${type==='CROSS'?'':' ON '+cfg.cond};`;
   const base=[T('lt',lx,14,cfg.lt,{c:'a',s:'sm b'}),T('rt',rx,14,cfg.rt,{c:'b',s:'sm b'}),T('on',(lend+rx)/2,14,type==='CROSS'?'ON নেই':'ON '+cfg.cond,{a:'middle',c:'g',s:'m b'}),
     ...cells('l',lx,ty,cfg.lcols,lw,L,'a',rh),...cells('r',rx,ty,cfg.rcols,rw,R,'b',rh),
@@ -341,26 +349,26 @@ const CLUSTERED=[
   S('<b>Range query</b> (id 40 থেকে 60): row গুলো সাজানো, তাই পাশাপাশি দুটো leaf-ই যথেষ্ট। খুব দ্রুত।',{mod:{p2:{label:'Leaf: id 26-50\nrow 40..50 ✓',hl:1},p3:{c:'g',hl:1,label:'Leaf: id 51-75\nrow 51..60 ✓'}}}),
   S('<b>Table-এ clustered index একটাই</b> হতে পারে, কারণ row একভাবেই সাজানো যায় (id অনুযায়ী, আবার একসাথে email অনুযায়ী না)।',{mod:{p2:{hl:0},p3:{hl:0}}})
 ];
+const NC_U=[[3,'Rahim','rahim@x.com'],[9,'Sumon','sumon@x.com'],[17,'Anika','anika@x.com']],NC_I=[['anika@x.com',17],['rahim@x.com',3],['sumon@x.com',9]];
 const NONCLUST=[
   S('<b>Non-clustered index:</b> table থেকে <b>আলাদা</b> একটা structure। এখানে email অনুযায়ী সাজানো, ভেতরে <b>email + row-এর pointer</b>। উদাহরণ: <code>email = rahim@x.com</code>।',{add:[
-    B('ir',40,8,230,34,'Index on email (root)','b'),
-    B('il',20,64,270,92,'Index leaf (email অনুযায়ী সাজানো)\nanika@x.com  →  row 17\nrahim@x.com  →  row 3\nsumon@x.com  →  row 9','b',{m:1,s:'sm'}),A('ia',155,44,155,62,'n'),
-    B('tb',420,8,320,214,'','g',{dash:1}),T('tbl',434,22,'users table (id অনুযায়ী সাজানো)',{c:'g',s:'sm b'}),
-    B('t3',436,40,288,36,'id 3   Rahim   rahim@x.com','g',{m:1,s:'sm'}),B('t9',436,84,288,36,'id 9   Sumon   sumon@x.com','g',{m:1,s:'sm'}),B('t17',436,128,288,36,'id 17  Anika   anika@x.com','g',{m:1,s:'sm'}),
+    B('ir',20,8,250,30,'Index on email (root)','b',{s:'sm'}),A('ia',145,40,145,58,'n'),...cells('i',20,60,['email','row id'],[140,110],NC_I,'b',26),
+    T('ut',430,12,'users table (id অনুযায়ী সাজানো)',{c:'g',s:'sm b'}),...cells('t',430,28,['id','name','email'],[40,80,160],NC_U,'g',30),
     T('qq',380,222,'SELECT * FROM users WHERE email = \'rahim@x.com\';',{a:'middle',c:'f',s:'m'})]}),
-  S('<b>প্রথমে index-এ খুঁজি।</b> Index email অনুযায়ী সাজানো, তাই দ্রুত খোঁজা যায়: <code>rahim@x.com</code> পাওয়া গেল।',{mod:{ir:{c:'o',hl:1},il:{c:'o',hl:1}}}),
-  S('Index-এর leaf-এ লেখা আছে: <b>row 3</b>। এটা একটা <b>pointer</b>, আসল data এখানে নেই।',{mod:{ir:{hl:0,c:'b'}}}),
-  S('<b>Pointer ধরে table-এর row 3-এ</b> যাই। এটা বাড়তি একটা ধাপ (lookup)। একেই বলে non-clustered index-এর বাড়তি খরচ।',{add:[A('pt',292,110,434,58,'o')],mod:{t3:{c:'o',hl:1}}}),
-  S('<b>Row পেলাম।</b> Table সাজানো id অনুযায়ী, তাই index ছাড়া email খুঁজতে পুরো table scan করতে হতো। Index সেই কাজ বাঁচাল।',{mod:{t3:{c:'g',hl:1},il:{hl:0,c:'b'}}}),
-  S('<b>এক table-এ অনেক non-clustered index</b> থাকতে পারে (email, name, phone...)। প্রতিটা আলাদা structure, তাই insert/update-এ সবগুলো আপডেট হয়, খরচ বাড়ে।',{mod:{t3:{hl:0}}})
+  S('<b>প্রথমে index-এ খুঁজি।</b> Index email অনুযায়ী সাজানো, তাই দ্রুত খোঁজা যায়: <code>rahim@x.com</code> পাওয়া গেল।',{mod:{ir:{c:'o',hl:1},...rp('i',1,2,ON('o'))}}),
+  S('Index-এর leaf-এ লেখা আছে: <b>row id 3</b>। এটা একটা <b>pointer</b>, আসল data এখানে নেই।',{mod:{ir:{hl:0,c:'b'},...cp('i',1,1,ON('g'))}}),
+  S('<b>Pointer ধরে table-এর row 3-এ</b> যাই। এটা বাড়তি একটা ধাপ (lookup)। একেই বলে non-clustered index-এর বাড়তি খরচ।',{add:[A('pt',272,125,428,73,'o')],mod:rp('t',0,3,ON('o'))}),
+  S('<b>Row পেলাম।</b> Table সাজানো id অনুযায়ী, তাই index ছাড়া email খুঁজতে পুরো table scan করতে হতো। Index সেই কাজ বাঁচাল।',{mod:{...rp('t',0,3,ON('g')),...rp('i',1,2,OFF())}}),
+  S('<b>এক table-এ অনেক non-clustered index</b> থাকতে পারে (email, name, phone...)। প্রতিটা আলাদা structure, তাই insert/update-এ সবগুলো আপডেট হয়, খরচ বাড়ে।',{mod:rp('t',0,3,OFF())})
 ];
 
 /* ===== 3. SQL vs NoSQL ===== */
+const SU=[[1,'Rahim','r@x.com'],[2,'Karim','k@x.com'],[3,'Sumon','s@x.com']],SO=[[1,1,500],[2,1,300],[3,2,700]];
 const SQLTAB=[
-  S('<b>SQL (relational):</b> data <b>table</b>-এ, প্রতিটা table-এর <b>নির্দিষ্ট column</b> (schema আগে ঠিক করা)।',{add:[T('ut',20,10,'users',{c:'a',s:'sm b'}),B('u',20,26,330,104,'id | name  | email\n1  | Rahim | r@x.com\n2  | Karim | k@x.com\n3  | Sumon | s@x.com','a',{m:1,s:'sm'}),T('ot',410,10,'orders',{c:'b',s:'sm b'}),B('o',410,26,330,104,'id | user_id | total\n1  | 1       | 500\n2  | 1       | 300\n3  | 2       | 700','b',{m:1,s:'sm'})]}),
-  S('Table গুলো <b>relation</b>-এ জোড়া: <code>orders.user_id</code> → <code>users.id</code> (foreign key)। <code>JOIN</code> দিয়ে একসাথে আনা যায়।',{add:[A('fk',412,78,352,78,'g'),T('fkl',380,62,'FK',{a:'middle',c:'g',s:'sm b'}),B('jq',20,150,720,40,'SELECT u.name, o.total FROM users u JOIN orders o ON o.user_id = u.id;','g',{m:1,s:'sm'})]}),
-  S('নতুন একটা field (<code>phone</code>) চাইলে <b>ALTER TABLE</b>: <b>সব row-এ</b> নতুন column আসে (খালি/NULL)। Schema সবার জন্য একই।',{mod:{u:{label:'id | name  | email   | phone\n1  | Rahim | r@x.com | NULL\n2  | Karim | k@x.com | NULL\n3  | Sumon | s@x.com | NULL',c:'o'}},add:[T('al',380,210,'ALTER TABLE users ADD phone text;',{a:'middle',c:'o',s:'m b'})]}),
-  S('<b>ACID transaction:</b> একাধিক table একসাথে বদলায়, হয় সবটা নয় কিছুই না। ব্যাংক, order, payment-এর মতো জায়গায় এটাই দরকার।',{del:['al'],mod:{u:{c:'g'},o:{c:'g'}},add:[T('ac',380,210,'BEGIN; ... ; COMMIT;   (সব বা কিছুই না)',{a:'middle',c:'g',s:'m b'})]})
+  S('<b>SQL (relational):</b> data <b>table</b>-এ, প্রতিটা table-এর <b>নির্দিষ্ট column</b> (schema আগে ঠিক করা)।',{add:[T('ut',20,10,'users',{c:'a',s:'sm b'}),...cells('u',20,26,['id','name','email'],[40,90,130],SU,'a',26),T('ot',410,10,'orders',{c:'b',s:'sm b'}),...cells('o',410,26,['id','user_id','total'],[50,90,90],SO,'b',26)]}),
+  S('Table গুলো <b>relation</b>-এ জোড়া: <code>orders.user_id</code> → <code>users.id</code> (foreign key)। <code>JOIN</code> দিয়ে একসাথে আনা যায়।',{add:[A('fk',408,65,282,65,'g'),T('fkl',345,48,'FK',{a:'middle',c:'g',s:'sm b'}),B('jq',20,150,720,40,'SELECT u.name, o.total FROM users u JOIN orders o ON o.user_id = u.id;','g',{m:1,s:'sm'})],mod:{uh0:{c:'g'},oh1:{c:'g'},...Object.assign({},...[0,1,2].map(i=>({...cp('u',i,0,ON('g')),...cp('o',i,1,ON('g'))})))}}),
+  S('নতুন একটা field (<code>phone</code>) চাইলে <b>ALTER TABLE</b>: <b>সব row-এ</b> নতুন column আসে (খালি/NULL)। Schema সবার জন্য একই।',{add:[B('uh3',280,26,80,26,'phone','o',{rx:3,m:1,s:'sm hd'}),...[0,1,2].map(i=>B(`u${i}_3`,280,26+26*(i+1),80,26,'NULL','o',{rx:3,m:1,s:'sm'})),T('al',380,210,'ALTER TABLE users ADD phone text;',{a:'middle',c:'o',s:'m b'})],mod:{fk:{x2:362}}}),
+  S('<b>ACID transaction:</b> একাধিক table একসাথে বদলায়, হয় সবটা নয় কিছুই না। ব্যাংক, order, payment-এর মতো জায়গায় এটাই দরকার।',{del:['al'],mod:{...allp('u',3,3,ON('g')),...allp('o',3,3,ON('g'))},add:[T('ac',380,210,'BEGIN; ... ; COMMIT;   (সব বা কিছুই না)',{a:'middle',c:'g',s:'m b'})]})
 ];
 const DOCTAB=[
   S('<b>NoSQL (document):</b> data <b>JSON document</b> হিসেবে। কোনো fixed table নেই, প্রতিটা document নিজের শেপ নিয়ে থাকতে পারে।',{add:[B('d1',20,20,230,150,'{\n  "name": "Rahim",\n  "email": "r@x.com"\n}','a',{m:1,s:'sm'}),B('d2',270,20,230,150,'{\n  "name": "Karim",\n  "email": "k@x.com"\n}','a',{m:1,s:'sm'}),B('d3',520,20,220,150,'{\n  "name": "Sumon",\n  "email": "s@x.com"\n}','a',{m:1,s:'sm'})]}),
@@ -402,11 +410,13 @@ const ERBUILD=[
   S('সম্পর্কেরও attribute থাকতে পারে: <b>grade</b> (কোন ছাত্র কোন কোর্সে কত পেল)। এটা Student-এরও না, Course-এরও না, দুজনের সম্পর্কের।',{add:[B('g',330,184,100,30,'grade','n',{s:'sm'}),A('x5',380,182,380,156,'n',{dash:1})]})
 ];
 const ERTABLES=[
-  S('ER diagram আঁকা শেষ। এবার একে <b>relational table</b>-এ বদলাই (conceptual → logical)। প্রতিটা entity একটা table।',{add:[B('st',20,60,200,110,'students\nid  (PK)\nname','a',{m:1}),B('co',540,60,200,110,'courses\nid  (PK)\ntitle','b',{m:1}),T('er',380,24,'ER: Student  M ─ Enrolls ─ N  Course',{a:'middle',c:'f',s:'sm b'})]}),
-  S('<b>M : N সম্পর্ক</b> সরাসরি দুই table-এ রাখা যায় না। তাই মাঝে একটা <b>junction table</b> লাগে: <b>enrollments</b>।',{add:[B('en',260,50,240,130,'enrollments\nstudent_id (FK)\ncourse_id  (FK)\ngrade\nPK (student_id, course_id)','o',{m:1})]}),
-  S('Junction table দুই দিকেই <b>foreign key</b> দিয়ে জোড়া: student_id → students, course_id → courses।',{add:[A('f1',258,100,222,100,'g'),A('f2',502,100,538,100,'g')]}),
-  S('<b>Relationship-এর attribute</b> (grade) এখন junction table-এর column। এক ছাত্র অনেক কোর্সে: enrollments-এ অনেক row।',{mod:{en:{hl:1,c:'g'}}}),
-  S('<b>সারকথা:</b> ER diagram (ধারণা) → relational table (logical model) → CREATE TABLE (physical)। এই তিন ধাপই data model-এর তিন স্তর।',{mod:{en:{hl:0}}})
+  S('ER diagram আঁকা শেষ। এবার একে <b>relational table</b>-এ বদলাই (conceptual → logical)। প্রতিটা entity একটা table।',{add:[T('er',380,22,'ER: Student  M ─ Enrolls ─ N  Course',{a:'middle',c:'f',s:'sm b'}),
+    T('stt',20,50,'students',{c:'a',s:'sm b'}),...cells('s',20,64,['id (PK)','name'],[80,100],[[1,'Rahim'],[2,'Karim']],'a',28),
+    T('cot',570,50,'courses',{c:'b',s:'sm b'}),...cells('c',570,64,['id (PK)','title'],[80,100],[[101,'DBMS'],[102,'Java']],'b',28)]}),
+  S('<b>M : N সম্পর্ক</b> সরাসরি দুই table-এ রাখা যায় না। তাই মাঝে একটা <b>junction table</b> লাগে: <b>enrollments</b>।',{add:[T('ent',270,50,'enrollments (junction)',{c:'o',s:'sm b'}),...cells('n',270,64,['student_id FK','course_id FK','grade'],[104,104,52],[[1,101,'A'],[1,102,'B'],[2,101,'A-']],'o',28)]}),
+  S('Junction table দুই দিকেই <b>foreign key</b> দিয়ে জোড়া: student_id → students, course_id → courses।',{add:[A('f1',268,106,202,106,'g'),A('f2',532,106,568,106,'g')],mod:{nh0:{c:'g'},nh1:{c:'g'}}}),
+  S('<b>Relationship-এর attribute</b> (grade) এখন junction table-এর column। এক ছাত্র অনেক কোর্সে: enrollments-এ অনেক row (Rahim দুই কোর্সে)।',{mod:{...allp('n',3,3,ON('g')),nh2:{c:'g'}}}),
+  S('<b>সারকথা:</b> ER diagram (ধারণা) → relational table (logical model) → CREATE TABLE (physical)। এই তিন ধাপই data model-এর তিন স্তর।',{mod:allp('n',3,3,OFF())})
 ];
 
 
@@ -421,42 +431,45 @@ const CASS=[
 
 /* ===== 5. Trigger and cascading ===== */
 const TRIG=[
-  S('<b>Trigger:</b> database-এর ভেতরের কোড, যা কোনো <b>event</b> (INSERT / UPDATE / DELETE) হলে <b>নিজে থেকে চলে</b>। উদাহরণ: কারো salary বদলালে আপনা-আপনি <b>audit log</b> লেখা।',{add:[B('em',20,16,330,110,'employees\nid | name  | salary\n1  | Rahim | 50000','a',{m:1,s:'sm'}),B('au',410,16,330,110,'audit_log\nid | emp | old   | new\n(খালি)','b',{m:1,s:'sm'}),T('qq',380,170,'',{a:'middle',c:'f',s:'m b'})]}),
-  S('Application লেখে: <code>UPDATE employees SET salary = 60000 WHERE id = 1;</code>',{mod:{qq:{label:'UPDATE employees SET salary = 60000 WHERE id = 1;'},em:{label:'employees\nid | name  | salary\n1  | Rahim | 60000',c:'o',hl:1}}}),
-  S('Event ঘটল: <b>AFTER UPDATE</b>। Database-এর trigger <b>নিজে জেগে ওঠে</b>। Application কিছু ডাকেনি।',{add:[A('tg',352,70,408,70,'o'),T('tgl',380,50,'trigger',{a:'middle',c:'o',s:'sm b'})],mod:{em:{hl:0}}}),
-  S('Trigger নিজে <code>audit_log</code>-এ row লেখে: <b>old 50000 → new 60000</b>। এই কাজ যেকোনো application থেকেই আপডেট হোক, সবসময় হবে।',{mod:{au:{label:'audit_log\nid | emp | old   | new\n1  | 1   | 50000 | 60000',c:'g',hl:1}}}),
-  S('<b>সাবধান:</b> trigger লুকানো logic (কোড পড়ে বোঝা যায় না কী ঘটছে), লেখার গতি কমায়, debug কঠিন। তাই অল্প ও স্পষ্ট কাজে ব্যবহার করো (audit, simple rule)।',{del:['tg','tgl'],mod:{au:{hl:0},qq:{label:'BEFORE / AFTER  ·  row-level / statement-level',c:'n'}}})
+  S('<b>Trigger:</b> database-এর ভেতরের কোড, যা কোনো <b>event</b> (INSERT / UPDATE / DELETE) হলে <b>নিজে থেকে চলে</b>। উদাহরণ: কারো salary বদলালে আপনা-আপনি <b>audit log</b> লেখা।',{add:[T('et',20,12,'employees',{c:'a',s:'sm b'}),...cells('e',20,28,['id','name','salary'],[40,100,90],[[1,'Rahim',50000]],'a',28),T('at',410,12,'audit_log',{c:'b',s:'sm b'}),...cells('a',410,28,['id','emp','old','new'],[40,50,80,80],[],'b',28),T('ae',535,70,'(খালি)',{a:'middle',c:'n',s:'sm'}),T('qq',380,170,'',{a:'middle',c:'f',s:'m b'})]}),
+  S('Application লেখে: <code>UPDATE employees SET salary = 60000 WHERE id = 1;</code>',{mod:{qq:{label:'UPDATE employees SET salary = 60000 WHERE id = 1;'},...cp('e',0,2,{label:'60000',c:'o',s:'sm on'})}}),
+  S('Event ঘটল: <b>AFTER UPDATE</b>। Database-এর trigger <b>নিজে জেগে ওঠে</b>। Application কিছু ডাকেনি।',{add:[A('tg',252,70,408,70,'o'),T('tgl',330,50,'trigger',{a:'middle',c:'o',s:'sm b'})],mod:cp('e',0,2,OFF())}),
+  S('Trigger নিজে <code>audit_log</code>-এ row লেখে: <b>old 50000 → new 60000</b>। এই কাজ যেকোনো application থেকেই আপডেট হোক, সবসময় হবে।',{del:['ae'],add:cellRows('a',410,28,[40,50,80,80],[[1,1,50000,60000]],28),mod:rp('a',0,4,ON('g'))}),
+  S('<b>সাবধান:</b> trigger লুকানো logic (কোড পড়ে বোঝা যায় না কী ঘটছে), লেখার গতি কমায়, debug কঠিন। তাই অল্প ও স্পষ্ট কাজে ব্যবহার করো (audit, simple rule)।',{del:['tg','tgl'],mod:{...rp('a',0,4,OFF()),qq:{label:'BEFORE / AFTER  ·  row-level / statement-level',c:'n'}}})
 ];
 function casScene(action){
-  const dept=[{l:'10  Sales'},{l:'20  HR'}],emp=[{l:'1  Rahim   dept=10',d:10},{l:'2  Karim   dept=20',d:20},{l:'3  Sumon   dept=10',d:10}];
-  const base=[T('dt',20,12,'departments (parent)',{c:'b',s:'sm b'}),...dept.map((r,i)=>B('d'+i,20,28+i*44,200,36,r.l,'b',{m:1,s:'sm'})),
-    T('et',300,12,'employees (child, dept FK)',{c:'a',s:'sm b'}),...emp.map((r,i)=>B('e'+i,300,28+i*44,260,36,r.l,'a',{m:1,s:'sm'})),
-    A('f1',302,46,222,46,'n',{dash:1}),A('f2',302,90,222,90,'n',{dash:1}),A('f3',302,134,222,46,'n',{dash:1}),
+  const D=[[10,'Sales'],[20,'HR']],E=[[1,'Rahim',10],[2,'Karim',20],[3,'Sumon',10]];
+  const base=[T('dt',20,12,'departments (parent)',{c:'b',s:'sm b'}),...cells('d',20,28,['id','name'],[50,110],D,'b',30),
+    T('et',300,12,'employees (child)',{c:'a',s:'sm b'}),...cells('e',300,28,['id','name','dept_id (FK)'],[40,90,110],E,'a',30),
+    A('f1',298,73,182,73,'n',{dash:1}),A('f2',298,103,182,103,'n',{dash:1}),A('f3',298,133,182,73,'n',{dash:1}),
     T('qq',380,190,'',{a:'middle',c:'f',s:'m b'}),T('rs',380,214,'',{a:'middle',c:'f',s:'b'})];
   const intro={CASCADE:'<b>Foreign key action:</b> parent row মুছলে বা বদলালে child row-এর কী হবে? <b>ON DELETE CASCADE</b>: parent মুছলে child-ও <b>আপনা-আপনি মুছে যায়</b>।',SETNULL:'<b>ON DELETE SET NULL:</b> parent মুছলে child মুছে না, শুধু তার foreign key <b>NULL</b> হয়ে যায়।',RESTRICT:'<b>ON DELETE RESTRICT</b> (বা NO ACTION): child থাকলে parent <b>মোছাই যাবে না</b>, error। সবচেয়ে নিরাপদ, সাধারণত default।'}[action];
-  const sql={CASCADE:'DELETE FROM departments WHERE id = 10;   -- FK: ON DELETE CASCADE',SETNULL:'DELETE FROM departments WHERE id = 10;   -- FK: ON DELETE SET NULL',RESTRICT:'DELETE FROM departments WHERE id = 10;   -- FK: ON DELETE RESTRICT'}[action];
-  const steps=[S(intro,{add:base}),S('<b>Department 10 (Sales)</b> মুছতে চাই। Employees-এ Rahim আর Sumon এই department-এ আছে।',{mod:{qq:{label:sql},d0:{c:'r',hl:1},e0:{c:'o',hl:1},e2:{c:'o',hl:1}}})];
-  if(action==='CASCADE')steps.push(S('Cascade: Sales মুছল, সাথে <b>Rahim আর Sumon-ও মুছে গেল</b>। কেউ কোথাও দাঁড়িয়ে নেই (কোনো এতিম row নেই)। সাবধান: ভুলে parent মুছলে অনেক data উড়ে যায়।',{mod:{d0:{o:0.2,dash:1},e0:{o:0.2,dash:1},e2:{o:0.2,dash:1},f1:{o:0},f3:{o:0},rs:{label:'ফল: 1 department + 2 employee মুছল',c:'r'}}}));
-  if(action==='SETNULL')steps.push(S('Set null: Sales মুছল, কিন্তু Rahim আর Sumon <b>থাকল</b>, শুধু তাদের <code>dept</code> হল <b>NULL</b> (কোনো department নেই)। FK column NULL-able হতে হবে।',{mod:{d0:{o:0.2,dash:1},e0:{label:'1  Rahim   dept=NULL',c:'g',hl:1},e2:{label:'3  Sumon   dept=NULL',c:'g',hl:1},f1:{o:0},f3:{o:0},rs:{label:'ফল: department মুছল, employee থাকল (dept = NULL)',c:'g'}}}));
-  if(action==='RESTRICT')steps.push(S('Restrict: Database <b>প্রত্যাখ্যান</b> করে: "Sales-এ এখনো employee আছে।" কিছুই মোছা হয় না। আগে employee সরাও, তারপর department।',{mod:{d0:{c:'r',hl:1},rs:{label:'ERROR: foreign key violation, row এখনো referenced',c:'r'}}}));
+  const sql='DELETE FROM departments WHERE id = 10;   -- FK: ON DELETE '+{CASCADE:'CASCADE',SETNULL:'SET NULL',RESTRICT:'RESTRICT'}[action];
+  const fade={o:0.2,dash:1};
+  const steps=[S(intro,{add:base}),S('<b>Department 10 (Sales)</b> মুছতে চাই। Employees-এ Rahim আর Sumon এই department-এ আছে।',{mod:{qq:{label:sql},...rp('d',0,2,ON('r')),...rp('e',0,3,ON('o')),...rp('e',2,3,ON('o'))}})];
+  if(action==='CASCADE')steps.push(S('Cascade: Sales মুছল, সাথে <b>Rahim আর Sumon-ও মুছে গেল</b>। কেউ কোথাও দাঁড়িয়ে নেই (কোনো এতিম row নেই)। সাবধান: ভুলে parent মুছলে অনেক data উড়ে যায়।',{mod:{...rp('d',0,2,fade),...rp('e',0,3,fade),...rp('e',2,3,fade),f1:{o:0},f3:{o:0},rs:{label:'ফল: 1 department + 2 employee মুছল',c:'r'}}}));
+  if(action==='SETNULL')steps.push(S('Set null: Sales মুছল, কিন্তু Rahim আর Sumon <b>থাকল</b>, শুধু তাদের <code>dept_id</code> হল <b>NULL</b> (কোনো department নেই)। FK column NULL-able হতে হবে।',{mod:{...rp('d',0,2,fade),...rp('e',0,3,ON('g')),...rp('e',2,3,ON('g')),...cp('e',0,2,{label:'NULL',c:'o',s:'sm on'}),...cp('e',2,2,{label:'NULL',c:'o',s:'sm on'}),f1:{o:0},f3:{o:0},rs:{label:'ফল: department মুছল, employee থাকল (dept_id = NULL)',c:'g'}}}));
+  if(action==='RESTRICT')steps.push(S('Restrict: Database <b>প্রত্যাখ্যান</b> করে: "Sales-এ এখনো employee আছে।" কিছুই মোছা হয় না। আগে employee সরাও, তারপর department।',{mod:{...rp('e',0,3,ON('r')),...rp('e',2,3,ON('r')),rs:{label:'ERROR: foreign key violation, row এখনো referenced',c:'r'}}}));
   steps.push(S({CASCADE:'<b>কখন:</b> child যার parent ছাড়া অর্থ নেই (order → order_items)। <b>ON UPDATE CASCADE</b>-ও আছে: parent-এর key বদলালে child-এ নিজে বদলায়।',SETNULL:'<b>কখন:</b> child parent ছাড়াও টিকে থাকতে পারে (যেমন employee department ছাড়াও থাকে)।',RESTRICT:'<b>কখন:</b> গুরুত্বপূর্ণ data, যেখানে ভুলে মোছা চলবে না (টাকা-পয়সা, record)। সবচেয়ে নিরাপদ।'}[action],{}));
   return steps;
 }
 
 /* ===== 6. Views ===== */
+const VE=[[1,'Rahim','Sales',50000],[2,'Karim','HR',60000]];
 const VIEWS=[
-  S('<b>View:</b> একটা <b>সংরক্ষিত query</b>, যাকে virtual table-এর মতো ব্যবহার করা যায়। View-তে নিজের কোনো data থাকে না। উদাহরণ: salary লুকিয়ে শুধু name আর dept দেখানো।',{add:[B('bt',20,14,330,112,'employees  (আসল table)\nid | name  | dept  | salary\n1  | Rahim | Sales | 50000\n2  | Karim | HR    | 60000','a',{m:1,s:'sm'}),T('qq',380,170,'',{a:'middle',c:'f',s:'m b'})]}),
-  S('<b>View বানাই:</b> শুধু query মনে রাখা হয়, কোনো data কপি হয় না।',{add:[B('vw',410,14,330,112,'emp_public  (VIEW)\nশুধু query: name, dept\n(নিজের data নেই)','b',{m:1,s:'sm',dash:1})],mod:{qq:{label:'CREATE VIEW emp_public AS SELECT name, dept FROM employees;'}}}),
-  S('<b>View-তে query:</b> <code>SELECT * FROM emp_public</code>। Database ভেতরে আসল table-এর query চালায় আর শুধু name, dept ফেরত দেয়। <b>salary দেখা যায় না</b> (security)।',{add:[A('ar',352,70,408,70,'g')],mod:{qq:{label:'SELECT * FROM emp_public;   →   Rahim | Sales,  Karim | HR'},vw:{label:'emp_public  (VIEW)\nRahim | Sales\nKarim | HR\n(সদ্য চালানো query-র ফল)',c:'g',dash:0,hl:1}}}),
-  S('<b>আসল table বদলাল:</b> Karim-এর dept হল IT। View-তে <b>আপনা-আপনি নতুন মান</b> দেখায়, কারণ প্রতিবার আসল table থেকেই পড়ে। কখনো stale হয় না।',{mod:{bt:{label:'employees  (আসল table)\nid | name  | dept  | salary\n1  | Rahim | Sales | 50000\n2  | Karim | IT    | 60000',c:'o',hl:1},vw:{label:'emp_public  (VIEW)\nRahim | Sales\nKarim | IT   ← নিজে বদলাল\n(সদ্য চালানো query-র ফল)',hl:0},qq:{label:'UPDATE employees SET dept = \'IT\' WHERE id = 2;'}}}),
-  S('<b>কেন view:</b> ১) জটিল query সহজ নামে (simplify)। ২) column/row লুকিয়ে security। ৩) আসল table বদলালেও application-এর interface স্থির (abstraction)।',{mod:{bt:{hl:0}}})
+  S('<b>View:</b> একটা <b>সংরক্ষিত query</b>, যাকে virtual table-এর মতো ব্যবহার করা যায়। View-তে নিজের কোনো data থাকে না। উদাহরণ: salary লুকিয়ে শুধু name আর dept দেখানো।',{add:[T('bt',20,12,'employees  (আসল table)',{c:'a',s:'sm b'}),...cells('b',20,28,['id','name','dept','salary'],[36,80,70,80],VE,'a',28),T('qq',380,170,'',{a:'middle',c:'f',s:'m b'})]}),
+  S('<b>View বানাই:</b> শুধু query মনে রাখা হয়, কোনো data কপি হয় না।',{add:[T('vt',420,12,'emp_public  (VIEW)',{c:'b',s:'sm b'}),...cells('v',420,28,['name','dept'],[100,90],[],'b',28).map(n=>({...n,dash:1})),T('vn',515,84,'(নিজের data নেই, শুধু query)',{a:'middle',c:'n',s:'sm'})],mod:{qq:{label:'CREATE VIEW emp_public AS SELECT name, dept FROM employees;'}}}),
+  S('<b>View-তে query:</b> <code>SELECT * FROM emp_public</code>। Database ভেতরে আসল table-এর query চালায় আর শুধু name, dept ফেরত দেয়। <b>salary দেখা যায় না</b> (security)।',{del:['vn'],add:[...cellRows('v',420,28,[100,90],[['Rahim','Sales'],['Karim','HR']],28),A('ar',290,70,418,70,'g')],mod:{...hp('v',2,{dash:0}),...allp('v',2,2,ON('g')),bh3:{c:'r'},...cp('b',0,3,ON('r')),...cp('b',1,3,ON('r')),qq:{label:'SELECT * FROM emp_public;   →   Rahim | Sales,  Karim | HR'}}}),
+  S('<b>আসল table বদলাল:</b> Karim-এর dept হল IT। View-তে <b>আপনা-আপনি নতুন মান</b> দেখায়, কারণ প্রতিবার আসল table থেকেই পড়ে। কখনো stale হয় না।',{mod:{...cp('b',1,2,{label:'IT',c:'o',s:'sm on'}),...cp('v',1,1,{label:'IT',c:'o',s:'sm on'}),...cp('b',0,3,OFF()),...cp('b',1,3,OFF()),bh3:{c:'a'},qq:{label:'UPDATE employees SET dept = \'IT\' WHERE id = 2;'}}}),
+  S('<b>কেন view:</b> ১) জটিল query সহজ নামে (simplify)। ২) column/row লুকিয়ে security। ৩) আসল table বদলালেও application-এর interface স্থির (abstraction)।',{mod:{...cp('b',1,2,OFF()),...cp('v',1,1,OFF('g'))}})
 ];
 const MATVIEW=[
-  S('<b>Materialized view:</b> সাধারণ view প্রতিবার query চালায়। Materialized view <b>ফলটা সত্যিই সংরক্ষণ</b> করে রাখে। ভারী query-র জন্য খুব দ্রুত, কিন্তু <b>পুরনো (stale) হতে পারে</b>।',{add:[B('bt',20,14,330,112,'orders  (আসল table)\n1000 টা order\ntotal = 52000','a',{m:1,s:'sm'}),B('mv',410,14,330,112,'daily_sales  (MATERIALIZED VIEW)\nসংরক্ষিত ফল\ntotal = 52000','g',{m:1,s:'sm'}),A('ar',352,70,408,70,'g'),T('qq',380,170,'CREATE MATERIALIZED VIEW daily_sales AS SELECT sum(total) FROM orders;',{a:'middle',c:'f',s:'m b'})]}),
-  S('<b>ফল পড়া দ্রুত:</b> আসল 1000 order আবার যোগ করতে হয় না। সংরক্ষিত 52000 সাথে সাথে পাওয়া যায়।',{mod:{mv:{hl:1}}}),
-  S('<b>আসল table বদলাল:</b> নতুন order এল, total এখন 53000। কিন্তু materialized view <b>এখনো 52000</b> দেখায়: <b>stale</b>।',{mod:{bt:{label:'orders  (আসল table)\n1001 টা order\ntotal = 53000',c:'o',hl:1},mv:{label:'daily_sales  (MATERIALIZED VIEW)\nসংরক্ষিত ফল\ntotal = 52000  (পুরনো!)',c:'r',hl:0}}}),
-  S('<b>Refresh:</b> <code>REFRESH MATERIALIZED VIEW daily_sales;</code> চালালে আবার query চলে আর সংরক্ষিত ফল নতুন হয়।',{mod:{bt:{hl:0},mv:{label:'daily_sales  (MATERIALIZED VIEW)\nসংরক্ষিত ফল\ntotal = 53000  ✓ (refresh হয়েছে)',c:'g',hl:1},qq:{label:'REFRESH MATERIALIZED VIEW daily_sales;'}}}),
-  S('<b>সারকথা:</b> সাধারণ view = সবসময় তাজা, প্রতিবার query চলে। Materialized view = দ্রুত, কিন্তু refresh না করলে পুরনো। রিপোর্ট/dashboard-এ materialized view কাজে লাগে।',{mod:{mv:{hl:0}}})
+  S('<b>Materialized view:</b> সাধারণ view প্রতিবার query চালায়। Materialized view <b>ফলটা সত্যিই সংরক্ষণ</b> করে রাখে। ভারী query-র জন্য খুব দ্রুত, কিন্তু <b>পুরনো (stale) হতে পারে</b>।',{add:[T('bt',20,12,'orders  (আসল table)',{c:'a',s:'sm b'}),...cells('b',20,28,['id','total'],[70,90],[[1,500],[2,300],['…','…']],'a',28),T('bn',20,156,'মোট 1000 টা order, sum = 52000',{c:'a',s:'sm'}),
+    T('mt',410,12,'daily_sales  (MATERIALIZED VIEW)',{c:'g',s:'sm b'}),...cells('m',410,28,['metric','value'],[110,190],[['sum(total)',52000]],'g',28),A('ar',182,70,408,70,'g'),T('qq',380,204,'CREATE MATERIALIZED VIEW daily_sales AS SELECT sum(total) FROM orders;',{a:'middle',c:'f',s:'m b'})]}),
+  S('<b>ফল পড়া দ্রুত:</b> আসল 1000 order আবার যোগ করতে হয় না। সংরক্ষিত 52000 সাথে সাথে পাওয়া যায়।',{mod:rp('m',0,2,ON('g'))}),
+  S('<b>আসল table বদলাল:</b> নতুন order এল, total এখন 53000। কিন্তু materialized view <b>এখনো 52000</b> দেখায়: <b>stale</b>।',{mod:{...cp('b',2,0,{label:'1001',c:'o',s:'sm on'}),...cp('b',2,1,{label:'1000',c:'o',s:'sm on'}),bn:{label:'মোট 1001 টা order, sum = 53000',c:'o'},...cp('m',0,0,{c:'r',s:'sm'}),...cp('m',0,1,{label:'52000  (পুরনো!)',c:'r',s:'sm'})}}),
+  S('<b>Refresh:</b> <code>REFRESH MATERIALIZED VIEW daily_sales;</code> চালালে আবার query চলে আর সংরক্ষিত ফল নতুন হয়।',{mod:{...rp('b',2,2,OFF()),...cp('m',0,0,ON('g')),...cp('m',0,1,{label:'53000  ✓ (refresh)',c:'g',s:'sm on'}),qq:{label:'REFRESH MATERIALIZED VIEW daily_sales;'}}}),
+  S('<b>সারকথা:</b> সাধারণ view = সবসময় তাজা, প্রতিবার query চলে। Materialized view = দ্রুত, কিন্তু refresh না করলে পুরনো। রিপোর্ট/dashboard-এ materialized view কাজে লাগে।',{mod:rp('m',0,2,OFF('g'))})
 ];
 const TOPICS=[
 {p:0,q:'Different types of joins (all joins with example)',
