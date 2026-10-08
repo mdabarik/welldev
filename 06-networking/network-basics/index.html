@@ -715,6 +715,17 @@ const TOPICS=[
  pts:['/24 মানে প্রথম ২৪ bit network, শেষ ৮ bit host। বসানো যায় 254টা device।','সূত্র: device সংখ্যা = 2^(32−n) − 2।','Subnetting মানে একটা বড় network ভেঙে ছোট ছোট ভাগ করা।'],
  extra:CLASSES_TBL,
  tabs:[{n:'Subnet mask',steps:SUBNET},{n:'Classful (পুরনো)',steps:CLASSFUL},{n:'CIDR (/24, /26)',steps:CIDR}]},
+{part:1,sub:'8b',q:'CIDR-এ কোন /n বেশি ব্যবহার হয়',
+ ans:'<code>/n</code>-এ ০ থেকে ৩২-এর <b>যেকোনো</b> সংখ্যা বসে (/12, /17, /19 সবই চলে)। বাস্তবে কিছু মাপ বেশি দেখা যায়, সেগুলো মুখস্থ রাখা ভালো। <b>নিয়ম:</b> ছোট সংখ্যা = বড় network (বেশি host), বড় সংখ্যা = ছোট network।',
+ pts:['<b>/8, /12, /16, /24</b> interview-তে সবচেয়ে বেশি আসে। /8, /16, /24 পুরনো Class A, B, C-র মাপ।','মাঝের মাপ (/20, /22, /23) cloud (AWS VPC) ও ISP ব্যবহার করে, ঠিক প্রয়োজন অনুযায়ী মাপ নিতে।'],
+ extra:'<table class="cmp"><tr><th>/n</th><th>কোথায় দেখা যায়</th></tr>'
+  +'<tr><td>/8</td><td>Class A-র মাপ, <code>10.0.0.0/8</code> (বিশাল private network)</td></tr>'
+  +'<tr><td>/12</td><td><code>172.16.0.0/12</code> (private range, 172.16–31.x.x)</td></tr>'
+  +'<tr><td>/16</td><td>Class B-র মাপ, <code>192.168.0.0/16</code> (private range), VPC/cloud network</td></tr>'
+  +'<tr><td>/24</td><td>Class C-র মাপ, বাসা ও office-এর সবচেয়ে সাধারণ LAN, 254 host</td></tr>'
+  +'<tr><td>/25, /26, /27</td><td>/24 ভেঙে ছোট subnet বানাতে</td></tr>'
+  +'<tr><td>/30</td><td>দুই router-এর link, 2 host</td></tr>'
+  +'<tr><td>/32</td><td>একটা মাত্র device</td></tr></table>'},
 {part:1,q:'DHCP কী ও কীভাবে কাজ করে',
  ans:'<b>DHCP</b> হলো network-এর স্বয়ংক্রিয় ঠিকানা-বিলিকারী। নতুন device এলে সে নিজে নিজেই IP ঠিকানা (আর দরকারি সেটিং) দিয়ে দেয়। কাজ হয় চার ধাপে: <b>DORA</b>।',
  pts:['<b>D</b>iscover (কেউ আছো?), <b>O</b>ffer (এই IP নাও), <b>R</b>equest (হ্যাঁ, এটা চাই), <b>A</b>cknowledge (ঠিক আছে)।','IP পাওয়া যায় নির্দিষ্ট সময়ের জন্য ধার হিসেবে (lease)।','WiFi-তে connect করলেই যে IP পাও, সেটা DHCP-র কাজ।'],
@@ -767,11 +778,13 @@ const TOPICS=[
 const app=document.getElementById('app'),partsNav=document.getElementById('parts');
 PARTS.forEach((pt,i)=>{const a=document.createElement('a');a.href='#p'+i;a.innerHTML=`<b>${pt[0]}</b>${pt[1]}`;partsNav.appendChild(a);
   const sec=document.createElement('section');sec.className='part';sec.id='p'+i;sec.innerHTML=`<h2><span>${pt[0]}</span>${pt[1]}</h2>`;app.appendChild(sec);});
+let qn=0;
 TOPICS.forEach((t,i)=>{
-  const card=document.createElement('article');card.className='q';card.id='q'+(i+1);
-  card.innerHTML=`<h3><span class="num">${i+1}</span><span>${t.q}</span></h3><p class="ans">${t.ans}</p>${t.pts&&t.pts.length?'<ul>'+t.pts.map(x=>`<li>${x}</li>`).join('')+'</ul>':''}${t.extra?`<div class="extra">${t.extra}</div>`:''}<div class="viz"></div>`;
+  const lab=t.sub||++qn;
+  const card=document.createElement('article');card.className='q';card.id='q'+lab;
+  card.innerHTML=`<h3><span class="num">${lab}</span><span>${t.q}</span></h3><p class="ans">${t.ans}</p>${t.pts&&t.pts.length?'<ul>'+t.pts.map(x=>`<li>${x}</li>`).join('')+'</ul>':''}${t.extra?`<div class="extra">${t.extra}</div>`:''}<div class="viz"></div>`;
   document.getElementById('p'+t.part).appendChild(card);
-  mount(card.querySelector('.viz'),t);
+  if(t.tabs)mount(card.querySelector('.viz'),t);else card.querySelector('.viz').remove();
 });
 </script>
 </body>
