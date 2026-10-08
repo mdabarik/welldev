@@ -573,7 +573,23 @@ COMMIT;</code></pre>
 আপনি:    PUT {name: Karim}   (retry) → Rahim-এর পরিবর্তন মুছে গেল</code></pre>
 <p class="aa">এটা retry-র নয়, concurrent update-এর সমস্যা। সমাধান: <code>ETag</code> / <code>If-Match</code> বা version number দিয়ে শর্ত দেওয়া। টাকার ব্যালেন্সের মতো জায়গায় তাই সরাসরি PUT না করে "জমা/উত্তোলন" লেনদেন POST + key দিয়ে করা হয়।</p>
 
-<p class="qq">প্রশ্ন ১৬: সব মিলিয়ে সংক্ষেপে কোন কাজে কী করব?</p>
+<p class="qq">প্রশ্ন ১৬: Idempotency key ঠিক কখন লাগে?</p>
+<p class="aa"><b>যখন কাজটা নিজে idempotent না, মানে একই request বারবার চালালে প্রতিবার ফল বদলে যায়</b> (যেমন <code>balance = balance + 100</code>: 600 → 700 → 800)। পরীক্ষা: কাজটা ৩ বার চালালে ফল ১ বারের মতো থাকে? থাকলে key লাগে না, বদলালে লাগে।</p>
+<table class="cmp"><tr><th>কাজ</th><th>প্রতিবার ফল</th><th>key লাগে?</th></tr>
+<tr><td><code>balance = balance + 100</code></td><td>600 → 700 → 800</td><td><b>হ্যাঁ</b></td></tr>
+<tr><td><code>POST /orders</code> (নতুন অর্ডার)</td><td>#1 → #2 → #3</td><td><b>হ্যাঁ</b></td></tr>
+<tr><td>payment charge, টাকা পাঠানো</td><td>বারবার কাটে</td><td><b>হ্যাঁ</b></td></tr>
+<tr><td>ইমেইল / SMS পাঠানো</td><td>বারবার যায়</td><td><b>হ্যাঁ</b></td></tr>
+<tr><td><code>balance = 600</code> (PUT)</td><td>600 → 600 → 600</td><td>না</td></tr>
+<tr><td><code>DELETE</code>, <code>GET</code></td><td>অবস্থা একই</td><td>না</td></tr></table>
+<p class="aa"><b>দুটো সূক্ষ্ম কথা:</b></p>
+<ul>
+<li><b>Retry আসার সম্ভাবনা থাকলেই key দরকার।</b> API, queue, মোবাইল অ্যাপ বা payment-এ retry আসবেই, তাই সেখানে ধরে নিন লাগবে। যেখানে কেউ কখনো retry করবে না (একবার চালানো নিজের script), সেখানে না হলেও চলে।</li>
+<li><b>Key শুধু retry-র জন্য, নতুন কাজের জন্য নতুন key।</b> আজ ১০০ জমা: <code>K1</code>, কাল আরও ১০০ জমা: <code>K2</code>। একই key আবার দিলে server ভাববে এটা আগের কাজেরই retry।</li>
+</ul>
+<p class="aa"><b>Key ছাড়া বিকল্প:</b> কাজের নিজস্ব id থাকলে (<code>order_id</code>) <b>UNIQUE constraint</b>, status এক ধাপ এগোলে (<code>pending → paid</code>) <b>Conditional update</b>, কোনোটাই না থাকলে <b>Idempotency Key</b>।</p>
+
+<p class="qq">প্রশ্ন ১৭: সব মিলিয়ে সংক্ষেপে কোন কাজে কী করব?</p>
 <table class="cmp"><tr><th>কাজ</th><th>Method</th><th>retry করলে</th><th>key লাগে?</th></tr>
 <tr><td>তথ্য দেখা</td><td>GET</td><td>নিরাপদ</td><td>না</td></tr>
 <tr><td>"এই মানে সেট করো"</td><td>PUT</td><td>নিরাপদ</td><td>না</td></tr>
