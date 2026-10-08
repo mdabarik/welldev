@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Synchronous বনাম Asynchronous</title>
+<meta name="description" content="Synchronous ও Asynchronous কীভাবে কাজ করে: minimal thread timeline, blocking I/O, non-blocking, callback / Promise / async-await, Event Loop; ধাপে ধাপে D3 animation-এ।">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<style>
+/* One card per interview question: short answer, 2-3 bullets, and a step-by-step D3 scene.
+   Scenes are plain data (see TOPICS at the bottom): each step adds / modifies / deletes nodes by id
+   and the tiny engine animates the difference. */
+:root{
+  --bg:#f5f7fc; --surface:#ffffff; --surface-2:#f1f4fa; --fg:#0f172a; --muted:#5b6478; --faint:#94a0b8; --line:#e4e8f1;
+  --accent:#6366f1;
+  --a:#4f46e5; --b:#db2777; --g:#059669; --o:#d97706; --r:#e11d48; --s:#0284c7;
+  --hero:linear-gradient(135deg,#4f46e5 0%,#7c3aed 45%,#db2777 100%);
+  --shadow:0 1px 2px rgba(15,23,42,.04),0 10px 30px -12px rgba(15,23,42,.14);
+  --sans:"Inter","Hind Siliguri",system-ui,sans-serif; --bn:"Hind Siliguri","Inter",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0b0f1a; --surface:#121827; --surface-2:#182033; --fg:#e7ecf6; --muted:#9aa6bf; --faint:#66728c; --line:#232c42;
+  --accent:#818cf8; --a:#818cf8; --b:#f472b6; --g:#34d399; --o:#fbbf24; --r:#fb7185; --s:#38bdf8;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6);
+}}
+:root[data-theme="dark"]{
+  --bg:#0b0f1a; --surface:#121827; --surface-2:#182033; --fg:#e7ecf6; --muted:#9aa6bf; --faint:#66728c; --line:#232c42;
+  --accent:#818cf8; --a:#818cf8; --b:#f472b6; --g:#34d399; --o:#fbbf24; --r:#fb7185; --s:#38bdf8;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 var(--bn);-webkit-font-smoothing:antialiased}
+a{color:var(--accent)}
+button{font:inherit;color:inherit}
+code{font-family:var(--mono);font-size:.86em;font-weight:500;background:color-mix(in srgb,var(--accent) 10%,var(--surface));color:color-mix(in srgb,var(--accent) 72%,var(--fg));padding:.1em .4em;border-radius:6px}
+.wrap{max-width:1000px;margin:0 auto;padding:20px 18px 70px}
+
+.topnav{display:flex;align-items:center;gap:10px}
+.brand{display:flex;align-items:center;gap:10px;color:var(--fg);text-decoration:none;font:800 16px var(--sans);letter-spacing:-.02em}
+.logo{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:#fff;font:800 13px var(--mono);background:var(--hero)}
+.topnav .sp{flex:1}
+.pill{border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:6px 14px;font:600 13px var(--sans);cursor:pointer;text-decoration:none}
+.pill:hover{color:var(--fg)}
+
+.hero{margin-top:20px;border-radius:22px;padding:26px 30px;color:#fff;background:var(--hero)}
+.hero .eyebrow{font:600 12px var(--sans);letter-spacing:.1em;text-transform:uppercase;opacity:.85}
+.hero h1{margin:6px 0 8px;font:800 clamp(26px,4.2vw,38px)/1.15 var(--sans);letter-spacing:-.03em}
+.hero p{margin:0;max-width:680px;opacity:.94}
+.jump{display:flex;flex-wrap:wrap;gap:6px;margin-top:16px}
+.jump a{min-width:32px;padding:0 6px;height:32px;display:grid;place-items:center;border-radius:9px;text-decoration:none;font:700 13px var(--sans);color:#fff;background:rgba(255,255,255,.18)}
+.jump a:hover{background:rgba(255,255,255,.34)}
+
+.parts{position:sticky;top:0;z-index:5;margin:14px -18px 0;padding:10px 18px;display:flex;gap:8px;overflow-x:auto;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);scrollbar-width:none}
+.parts a{flex:none;text-decoration:none;font:600 13px var(--sans);color:var(--muted);border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 13px}
+.parts a:hover{color:var(--fg)}
+.parts a b{color:var(--accent);margin-right:4px}
+
+.part{margin-top:44px;scroll-margin-top:60px}
+.part>h2{margin:0;font:800 clamp(20px,2.6vw,25px)/1.25 var(--sans);letter-spacing:-.02em}
+.part>h2 span{color:var(--accent);margin-right:8px}
+
+.q{margin-top:16px;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:20px 22px;box-shadow:var(--shadow);scroll-margin-top:64px}
+.q h3{display:flex;gap:12px;align-items:flex-start;margin:0 0 10px;font:700 18px/1.4 var(--sans);letter-spacing:-.01em}
+.skip{display:inline-block;margin-left:8px;padding:1px 10px;border-radius:999px;font:600 12px var(--sans);font-style:normal;white-space:nowrap;color:var(--muted);background:var(--surface-2);border:1px dashed var(--faint);vertical-align:middle}
+.num{flex:none;min-width:34px;height:34px;padding:0 8px;border-radius:10px;display:grid;place-items:center;color:#fff;font:800 14px var(--sans);background:var(--hero)}
+.ans{margin:0 0 10px;padding:10px 14px;border-left:4px solid var(--accent);border-radius:0 10px 10px 0;background:color-mix(in srgb,var(--accent) 8%,var(--surface))}
+.q ul{margin:0 0 12px;padding-left:20px;color:var(--muted)}
+.q li{margin:2px 0}
+.q li b,.ans b{color:var(--fg)}
+.extra{margin:0 0 12px;overflow-x:auto}
+.extra table{border-collapse:collapse;font:500 13px var(--mono)}
+.extra th,.extra td{border:1px solid var(--line);padding:3px 10px;text-align:center}
+.extra th{background:var(--surface-2)}
+.extra .cmp td,.extra .cmp th{text-align:left;vertical-align:top;font:500 13.5px/1.55 var(--bn);min-width:150px}
+.extra .cmp td:first-child{font-weight:700;white-space:nowrap;min-width:0}
+
+.viz{border:1px solid var(--line);border-radius:14px;background:var(--surface-2);overflow:hidden}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;padding:10px 12px 0}
+.tabs button{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:3px 12px;font:600 12.5px var(--sans);color:var(--muted);cursor:pointer}
+.tabs button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.stage{overflow-x:auto;padding-top:8px}
+.stage svg{display:block;width:100%;min-width:680px;height:auto;cursor:pointer;user-select:none}
+.cap{padding:10px 16px;min-height:3.4em;border-top:1px dashed var(--line);font-size:15px}
+.ctl{display:flex;align-items:center;gap:8px;padding:0 12px 12px}
+.b{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:5px 14px;font:600 13px var(--sans);cursor:pointer}
+.b:hover:not(:disabled){border-color:var(--accent)}
+.b:disabled{opacity:.4;cursor:default}
+.b.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+.cnt{margin-left:auto;font:500 12px var(--mono);color:var(--faint)}
+
+/* svg scene */
+svg text,svg tspan{white-space:pre}
+svg text{font-family:var(--sans);font-size:13px;fill:var(--fg);dominant-baseline:central}
+.c-n{--cc:var(--muted)} .c-a{--cc:var(--a)} .c-b{--cc:var(--b)} .c-g{--cc:var(--g)}
+.c-o{--cc:var(--o)} .c-r{--cc:var(--r)} .c-s{--cc:var(--s)} .c-f{--cc:var(--fg)}
+.box rect,.circ circle{fill:color-mix(in srgb,var(--cc) 14%,var(--surface));stroke:var(--cc);stroke-width:1.6;transition:fill .45s,stroke .45s}
+.dash rect,.dash circle{stroke-dasharray:6 4;fill:color-mix(in srgb,var(--cc) 4%,transparent)}
+.hl rect,.hl circle{stroke-width:3.4;filter:drop-shadow(0 0 7px color-mix(in srgb,var(--cc) 65%,transparent))}
+.text text{fill:var(--cc);transition:fill .45s}
+.text.b text,.text.lg text{font-weight:700}
+.text.lg text{font-size:15px}
+.sm text{font-size:11.5px}
+.box.hd rect{fill:color-mix(in srgb,var(--cc) 28%,var(--surface))}
+.hd text{font-weight:700}
+.box.on rect{fill:color-mix(in srgb,var(--cc) 30%,var(--surface));stroke-width:2.2}
+.m text{font-family:var(--mono);font-size:12px}
+.path path{fill:none;stroke:var(--cc);stroke-width:3.4;stroke-linecap:round}
+.arrow line{stroke:var(--cc);stroke-width:2.2;transition:stroke .4s}
+.arrow.dash line{stroke-dasharray:6 4}
+.arrow.hl line{stroke-width:3.4}
+footer{margin-top:50px;text-align:center;color:var(--faint);font:500 13px var(--sans)}
+
+.q .ans code,.q li code{white-space:nowrap}
+.hero{background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 45%,#db2777 100%)}
+.path.thin path{stroke-width:2.2}
+.part{margin-top:44px;scroll-margin-top:60px}
+.extra .cmp td code,.extra .cmp td{font-size:13px}
+.extra pre{margin:10px 0 0;padding:10px 14px;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;font:500 12.5px/1.6 var(--mono);overflow-x:auto;white-space:pre-wrap}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs id="defs"></defs></svg>
+<div class="wrap">
+  <nav class="topnav">
+    <a class="brand" href="../../index.html"><span class="logo">W</span>WellDev</a>
+    <span class="sp"></span>
+    <button class="pill" id="theme" type="button">Theme</button>
+  </nav>
+  <header class="hero">
+    <div class="eyebrow">Resume Projects · Concurrency</div>
+    <h1>Synchronous বনাম Asynchronous</h1>
+    <p>দুটো কীভাবে কাজ করে, thread-এর timeline-এ সরল ছবিতে: কোথায় কাজ, কোথায় অপেক্ষা। scene-এ ক্লিক করো বা <b>Next</b> চাপো।</p>
+  </header>
+  <nav class="parts" id="parts"></nav>
+  <main id="app"></main>
+  <footer>Resume Projects · Concurrency</footer>
+</div>
+<script>
+/* ---------- theme ---------- */
+(function(){
+  const root=document.documentElement,btn=document.getElementById('theme');
+  try{const t=localStorage.getItem('theme');if(t)root.dataset.theme=t;}catch(e){}
+  const dark=()=>root.dataset.theme?root.dataset.theme==='dark':matchMedia('(prefers-color-scheme:dark)').matches;
+  const label=()=>btn.textContent=dark()?'Light':'Dark';
+  btn.onclick=()=>{root.dataset.theme=dark()?'light':'dark';try{localStorage.setItem('theme',root.dataset.theme);}catch(e){}label();};
+  label();
+})();
+
+/* ---------- scene engine ---------- */
+const COLORS=['n','a','b','g','o','r','s','f'];
+document.getElementById('defs').innerHTML=COLORS.map(c=>
+  `<marker id="ah-${c}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" style="fill:var(--${c==='n'?'muted':c==='f'?'fg':c})"/></marker>`).join('');
+
+const B=(id,x,y,w,h,label,c='n',o={})=>({id,k:'box',x,y,w,h,label,c,...o});
+const T=(id,x,y,label,o={})=>({id,k:'text',x,y,label,c:'n',...o});
+const A=(id,x1,y1,x2,y2,c='n',o={})=>({id,k:'arrow',x:0,y:0,x1,y1,x2,y2,c,...o});
+const C=(id,x,y,r,label,c='n',o={})=>({id,k:'circ',x,y,r,label,c,...o});
+const S=(cap,o={})=>({cap,...o});
+const F=(x1,y1,x2,y2,c='a',o={})=>({x1,y1,x2,y2,c,...o});
+const P=(id,d,c='n',o={})=>({id,k:'path',x:0,y:0,d,c,...o});
+
+function stateAt(steps,i){
+  const m=new Map();
+  for(let k=0;k<=i;k++){
+    const s=steps[k];
+    (s.del||[]).forEach(id=>m.delete(id));
+    (s.add||[]).forEach(n=>m.set(n.id,{...n}));
+    Object.entries(s.mod||{}).forEach(([id,p])=>{if(m.has(id))Object.assign(m.get(id),p);});
+  }
+  return [...m.values()];
+}
+
+function setText(g,cls,str,x,y,anchor,lh=15.5){
+  let tx=g.select('text.'+cls);
+  if(tx.empty())tx=g.append('text').attr('class',cls);
+  const ls=String(str??'').split('\n');
+  tx.attr('text-anchor',anchor);
+  tx.selectAll('tspan').data(ls).join('tspan').attr('x',x).attr('y',(d,i)=>y-(ls.length-1)*lh/2+i*lh).text(d=>d);
+}
+
+function upd(g,d,t){
+  g.attr('class',`n ${d.k} c-${d.c||'n'}${d.dash?' dash':''}${d.hl?' hl':''}${d.s?' '+d.s:''}${d.m?' m':''}`);
+  if(d.k==='box'){
+    let r=g.select('rect');
+    if(r.empty())r=g.insert('rect',':first-child').attr('rx',d.rx??9).attr('width',d.w).attr('height',d.h);
+    r.transition(t).attr('width',d.w).attr('height',d.h);
+    setText(g,'lb',d.label,d.w/2,d.h/2,'middle');
+  }else if(d.k==='circ'){
+    let r=g.select('circle');
+    if(r.empty())r=g.insert('circle',':first-child').attr('r',d.r);
+    r.transition(t).attr('r',d.r);
+    setText(g,'lb',d.label,0,0,'middle');
+  }else if(d.k==='text'){
+    setText(g,'lb',d.label,0,0,d.a||'start');
+  }else if(d.k==='path'){
+    let p=g.select('path');
+    if(p.empty()){p=g.append('path').attr('d',d.d);const L=p.node().getTotalLength();p.attr('stroke-dasharray',L).attr('stroke-dashoffset',L).transition(t).attr('stroke-dashoffset',0);}
+  }else if(d.k==='arrow'){
+    let l=g.select('line');
+    if(l.empty())l=g.append('line').attr('x1',d.x1).attr('y1',d.y1).attr('x2',d.x2).attr('y2',d.y2);
+    l.attr('marker-end',`url(#ah-${d.c||'n'})`).transition(t).attr('x1',d.x1).attr('y1',d.y1).attr('x2',d.x2).attr('y2',d.y2);
+  }
+}
+
+function draw(svg,nodes,dur){
+  const t=d3.transition().duration(dur).ease(d3.easeCubicInOut);
+  svg.select('.layer').selectAll('g.n').data(nodes,d=>d.id).join(
+    en=>en.append('g').attr('opacity',0).attr('transform',d=>`translate(${d.x},${d.y})`),
+    up=>up,
+    ex=>ex.transition(t).attr('opacity',0).remove()
+  ).each(function(d){upd(d3.select(this),d,t);})
+   .transition(t).attr('transform',d=>`translate(${d.x},${d.y})`).attr('opacity',d=>d.o??1);
+}
+
+/* moving dots: step.fly = [F(x1,y1,x2,y2,colour,{n,gap,dur,r,d0,per,once})], they loop until the step changes */
+let flyGen=0;
+function flyRun(svg,list){
+  const my=++flyGen,fx=svg.select('.fx');
+  fx.selectAll('circle').interrupt().remove();
+  (list||[]).forEach(f=>{
+    const n=f.n??3,gap=f.gap??380,dur=f.dur??1200,per=f.per??Math.max(n*gap+300,dur+300),r=f.r??6;
+    const col=f.c==='n'?'muted':f.c==='f'?'fg':(f.c||'a');
+    for(let i=0;i<n;i++){
+      const dot=fx.append('circle').attr('r',r).attr('cx',f.x1).attr('cy',f.y1).attr('opacity',0)
+        .style('fill',`var(--${col})`).style('stroke','var(--surface)').style('stroke-width',1.5);
+      const go=delay=>{
+        if(my!==flyGen)return;
+        dot.attr('cx',f.x1).attr('cy',f.y1).attr('opacity',0)
+          .transition().delay(delay).duration(0).attr('opacity',1)
+          .transition().duration(dur).ease(d3.easeLinear).attr('cx',f.x2).attr('cy',f.y2)
+          .transition().duration(0).attr('opacity',0)
+          .on('end',()=>{if(!f.once)go(per-dur);});
+      };
+      go((f.d0??500)+i*gap);
+    }
+  });
+}
+
+function mount(host,topic){
+  const tabs=topic.tabs||[{n:'',steps:topic.steps}];
+  host.innerHTML='<div class="tabs"></div><div class="stage"><svg viewBox="0 0 760 240" role="img"><g class="layer"></g><g class="fx"></g></svg></div><div class="cap"></div><div class="ctl"><button class="b prev" type="button">◀</button><button class="b pri next" type="button">Next ▶</button><span class="cnt"></span></div>';
+  const svg=d3.select(host).select('svg'),cap=host.querySelector('.cap'),cnt=host.querySelector('.cnt');
+  const prev=host.querySelector('.prev'),next=host.querySelector('.next'),tabBox=host.querySelector('.tabs');
+  let ti=0,si=0,steps;
+  function show(dur){
+    draw(svg,stateAt(steps,si),dur);
+    flyRun(svg,steps[si].fly);
+    cap.innerHTML=steps[si].cap;
+    svg.attr('viewBox','0 0 760 '+(steps.vh||240));
+    cnt.textContent=`${si+1} / ${steps.length}`;
+    prev.disabled=si===0;
+    next.textContent=si===steps.length-1?'↻ আবার':'Next ▶';
+  }
+  function load(i){
+    ti=i;si=0;
+    const tb=tabs[ti];steps=typeof tb.steps==='function'?tb.steps():tb.steps;
+    tabBox.querySelectorAll('button').forEach((b,k)=>b.classList.toggle('on',k===ti));
+    svg.select('.layer').selectAll('*').interrupt().remove(); /* fresh canvas: old tab's lines (same ids) must not leak into the new one */
+    show(0);
+  }
+  if(tabs.length>1){
+    tabs.forEach((tb,i)=>{const b=document.createElement('button');b.type='button';b.textContent=tb.n;b.onclick=()=>load(i);tabBox.appendChild(b);});
+  }else tabBox.remove();
+  const go=()=>{si=si===steps.length-1?0:si+1;show(600);};
+  next.onclick=go;svg.on('click',go);
+  prev.onclick=()=>{if(si>0){si--;show(600);}};
+  load(0);
+}
+
+
+/* ---------- helpers: minimal thread timelines ---------- */
+const L=(id,x1,y1,x2,y2,c='n')=>P(id,`M${x1} ${y1}L${x2} ${y2}`,c,{s:'thin'});
+const VH=(arr,h)=>{arr.vh=h;return arr;};
+const LX=130,K=6,LN=n=>45+n*62;                       // lane x-start, px per time unit, lane y
+const blk=(id,n,a,b,label,c='a',o={})=>B(id,LX+a*K,LN(n),(b-a)*K,34,label,c,{s:'sm',...o});
+const wt=(id,n,a,b,label)=>blk(id,n,a,b,label,'r',{dash:1});     // অপেক্ষা (dashed red)
+const lanes=names=>[...names.flatMap((nm,i)=>[T('ln'+i,14,LN(i)+17,nm,{c:'f',s:'b'}),L('lb'+i,LX,LN(i)+42,740,LN(i)+42,'n')]),T('ax',LX,236,'সময় →',{c:'n'})];
+const cur=t=>P('cur','M0 20L0 226','o',{s:'thin',x:LX+t*K});
+const at=t=>({cur:{x:LX+t*K}});
+
+/* ===== Q1: Synchronous ===== */
+const SYNC1=VH([
+  S('<b>Synchronous (sync)</b> = কাজ <b>একটার পর একটা, ক্রমে</b>। একটা শেষ না হলে পরেরটা শুরু হয় না। উদাহরণ: একটা request-এ ১) validate ২) database থেকে data আনা ৩) page বানানো। উপরে <b>Thread</b> (কাজের একজন কর্মী), নিচে অপেক্ষায় থাকা দ্বিতীয় request।',{add:[...lanes(['Thread','Request 2']),cur(0)]}),
+  S('<b>ধাপ ১: validate</b>: Thread নিজের হাতে কাজ করছে (সবুজ = সত্যিকারের কাজ)। কম সময়ের কাজ।',{add:[blk('v1',0,0,10,'validate','g')],mod:at(10)}),
+  S('<b>ধাপ ২: DB query</b>: query পাঠিয়ে Thread <b>উত্তর না আসা পর্যন্ত দাঁড়িয়ে থাকে</b> (লাল ড্যাশ = অপেক্ষা)। এই সময়টায় সে <b>কিছুই করছে না</b>, শুধু আটকে আছে। এটাই <b>blocking</b>।',{add:[wt('w1',0,10,60,'DB-র উত্তরের অপেক্ষা… (blocked)')],mod:at(60)}),
+  S('<b>এর মধ্যে Request 2 এল</b> (সময় 20-এ)। কিন্তু Thread আটকে, তাই সে <b>লাইনে দাঁড়িয়ে</b> থাকে। কেউ তাকে ছুঁতেও পারছে না।',{add:[blk('r2',1,20,60,'Request 2 অপেক্ষায় (queue)','o',{dash:1})],mod:at(20)}),
+  S('<b>ধাপ ৩: render</b>: উত্তর এল, Thread পাতা বানাল। Request 1 শেষ (সময় 70)।',{add:[blk('rd1',0,60,70,'render','g')],mod:at(70)}),
+  S('<b>এবার Request 2-এর পালা</b>, কিন্তু সেও একই ভাবে ৫০ একক অপেক্ষা করবে। দুটো request শেষ হতে লাগে প্রায় <b>140</b> একক, যার বেশিরভাগই শুধু <b>অপেক্ষা</b>। User-এর কাছে মনে হয় সাইট ধীর।',{add:[blk('v2',0,70,80,'validate','g'),wt('w2',0,80,100,'অপেক্ষা…')],mod:{r2:{c:'g',dash:0,label:'Request 2 চলছে'},...at(100)}})
+],262);
+const SYNC2=VH([
+  S('<b>Blocking মানে ভেতরে কী ঘটে?</b> তোমার thread যখন <code>read()</code> বা <code>db.query()</code> ডাকে, তখন সে OS (kernel)-কে বলে "এই data এনে দাও।"',{add:[B('th',20,50,170,80,'তোমার Thread\nstate: RUNNING','g',{hl:1}),B('os',295,50,170,80,'OS Kernel','a'),B('io',570,50,170,80,'Disk / Network /\nDatabase','o'),A('a1',190,90,295,90,'n'),T('t1',242,35,'read() ডাক',{a:'middle',c:'f'})]}),
+  S('<b>OS thread-কে BLOCKED করে।</b> থ্রেড আর CPU পায় না, সে ঘুমায়। OS I/O device-কে অনুরোধ পাঠায়। (CPU তখন অন্য thread চালাতে পারে, কিন্তু <b>এই thread-এর</b> কাজ থেমে।)',{add:[A('a2',465,90,570,90,'n')],mod:{th:{label:'তোমার Thread\nstate: BLOCKED\n(ঘুমাচ্ছে)',c:'r',hl:0,dash:1},os:{hl:1}}}),
+  S('<b>অপেক্ষা:</b> Disk/network ধীর (CPU-র তুলনায় লক্ষ গুণ ধীর)। Thread-এর ১ms অপেক্ষা মানে CPU-র লাখো cycle বাদ।',{mod:{io:{hl:1,label:'Disk / Network /\nDatabase\nকাজ চলছে…'},os:{hl:0}}}),
+  S('<b>Data এল:</b> device OS-কে interrupt দিয়ে জানায়, OS data thread-এর buffer-এ ভরে thread-কে <b>READY</b> করে।',{add:[A('a3',570,110,465,110,'g')],mod:{io:{hl:0,label:'Disk / Network /\nDatabase\nশেষ ✓'},th:{label:'তোমার Thread\nstate: READY',c:'o',dash:0},os:{hl:1}}}),
+  S('<b>Scheduler</b> আবার thread-কে CPU দেয়, <code>read()</code> return করে, পরের লাইন থেকে চলে। কোড-এ দেখলে মনে হয় "সাধারণ এক লাইন", কিন্তু ভেতরে ঘুম-জাগার পালা চলেছে।',{add:[A('a4',295,110,190,110,'g')],mod:{th:{label:'তোমার Thread\nstate: RUNNING',c:'g',hl:1},os:{hl:0}}})
+],200);
+const SYNC3=VH([
+  S('<b>Sync-এ একসাথে অনেক request কীভাবে সামলায়?</b> সবচেয়ে সোজা উপায়: <b>প্রতি request-এ একটা নতুন thread</b> (thread-per-request)। Apache (পুরনো), Tomcat, traditional Java/.NET এভাবে চলত।',{add:[...lanes(['Thread 1','Thread 2','Thread 3']),cur(0)]}),
+  S('<b>Request 1</b> Thread 1-এ। কোড সেই sync-ই: validate, DB-র জন্য অপেক্ষা, render।',{add:[blk('a1',0,0,10,'validate','g'),wt('a2',0,10,60,'DB অপেক্ষা'),blk('a3',0,60,70,'render','g')],mod:at(70)}),
+  S('<b>Request 2 ও 3</b> আলাদা thread পেল, তাই একসাথে চলছে। একজনের অপেক্ষা অন্যকে আটকাচ্ছে না। কাজ হচ্ছে।',{add:[blk('b1',1,5,15,'validate','g'),wt('b2',1,15,65,'DB অপেক্ষা'),blk('b3',1,65,75,'render','g'),blk('c1',2,10,20,'validate','g'),wt('c2',2,20,70,'DB অপেক্ষা'),blk('c3',2,70,80,'render','g')],mod:at(80)}),
+  S('<b>সমস্যা:</b> প্রতিটা thread ≈ <b>১ MB stack</b> মেমোরি নেয় আর OS-এর context switch-এর খরচ আছে। ১০,০০০ জন একসাথে এলে ১০,০০০ thread = ~১০ GB মেমোরি। আর thread-গুলোর বেশিরভাগ সময় <b>শুধু অপেক্ষায়</b>। এটাই <b>C10K problem</b>, আর এই কারণেই async এসেছে।',{})
+],262);
+
+/* ===== Q2: Asynchronous ===== */
+const ASYNC1=VH([
+  S('<b>Asynchronous (async)</b> = কাজ শুরু করে ফল না আসা পর্যন্ত <b>দাঁড়িয়ে না থেকে</b> অন্য কাজে যাওয়া। ফল এলে তখন ফিরে এসে বাকিটা করা। নিচে একই Thread, কিন্তু এবার নিচের lane-এ <b>OS/I/O</b> অপেক্ষাটা সামলাবে।',{add:[...lanes(['Thread','I/O (R1-এর DB)','I/O (R2-এর DB)']),cur(0)]}),
+  S('<b>Request 1:</b> validate করে DB query <b>শুধু শুরু</b> করল (ছোট কাজ), তারপর অপেক্ষা <b>না করে</b> ছেড়ে দিল। অপেক্ষাটা এখন নিচের lane-এ, Thread-এর নয়।',{add:[blk('v1',0,0,10,'validate','g'),blk('s1',0,10,14,'call','a'),wt('w1',1,14,60,'DB R1 কাজ করছে')],mod:at(14)}),
+  S('<b>Thread মুক্ত!</b> তাই সে সাথে সাথে <b>Request 2</b> ধরল: validate আর DB call। সেই অপেক্ষাও নিচে চলে গেল। দুটো DB কাজ <b>একসাথে</b> চলছে, অথচ Thread একটাই।',{add:[blk('v2',0,14,24,'validate R2','g'),blk('s2',0,24,28,'call','a'),wt('w2',2,28,74,'DB R2 কাজ করছে')],mod:at(28)}),
+  S('<b>R1-এর উত্তর এল (সময় 60):</b> এবার Thread ফিরে এসে R1-এর বাকিটা (callback/continuation) চালায়: render।',{add:[blk('c1',0,60,70,'render R1','g')],mod:at(70)}),
+  S('<b>R2-এর উত্তর (74):</b> Thread আবার ফিরে R2 শেষ করল। দুটো request শেষ হল প্রায় <b>84</b>-এ। Sync-এ লেগেছিল <b>140</b>। Thread-এর অপেক্ষা প্রায় নেই।',{add:[blk('c2',0,74,84,'render R2','g')],mod:at(84)}),
+  S('<b>মূল কথা:</b> Async-এ কাজ দ্রুত হয় না, <b>অপেক্ষার সময় নষ্ট হয় না</b>। এক thread-ই হাজার request ছোট ছোট টুকরোয় সামলায়। Node.js, nginx, Redis এভাবে চলে।',{})
+],262);
+const ASYNC2=VH([
+  S('Async কোড লেখার <b>তিন উপায়</b>, যেগুলো আসলে একই জিনিস। <b>1) Callback:</b> "কাজ শেষ হলে এই function ডেকো।" কিন্তু ধাপ বাড়লে ভেতরে ভেতরে ঢুকতে থাকে (callback hell)।',{add:[B('cb',12,28,235,110,'getUser(id, (user) => {\n  getOrders(user, (orders) => {\n    show(orders);\n  });\n});','a',{m:1,s:'sm'}),T('cl',130,160,'Callback',{a:'middle',c:'a',s:'b'})]}),
+  S('<b>2) Promise:</b> কাজ এখনো শেষ হয়নি, কিন্তু "ভবিষ্যতে ফল দেব" এমন একটা object। <code>.then()</code> দিয়ে সোজা লাইনে জোড়া যায়, <code>.catch()</code> এ error।',{add:[B('pr',262,28,235,110,'getUser(id)\n  .then(u => getOrders(u))\n  .then(o => show(o))\n  .catch(console.error);','g',{m:1,s:'sm'}),T('pl',380,160,'Promise',{a:'middle',c:'g',s:'b'})]}),
+  S('<b>3) async / await:</b> Promise-এরই সুন্দর রূপ। দেখতে <b>sync-এর মতো</b> উপর-নিচ, কিন্তু ভেতরে non-blocking। আজকের সবচেয়ে প্রচলিত।',{add:[B('aw',512,28,235,110,'async function run() {\n  const u = await getUser(id);\n  const o = await getOrders(u);\n  show(o);\n}','o',{m:1,s:'sm'}),T('al',630,160,'async / await',{a:'middle',c:'o',s:'b'})]}),
+  S('<b><code>await</code> আসলে কী করে?</b> ফল না আসা পর্যন্ত <b>function-টা থামে</b> (pause), কিন্তু <b>thread থামে না</b>। Thread অন্য কাজে যায়। ফল এলে function ঠিক ওই লাইন থেকে আবার চলে। তাই <code>await</code> blocking নয়।',{add:[T('nt',380,205,'await = function পাজ, thread মুক্ত',{a:'middle',c:'f',s:'b'})],mod:{aw:{hl:1}}}),
+  S('<b>মনে রাখো:</b> async/await কোনো নতুন ক্ষমতা নয়, শুধু callback/promise-কে পড়তে সহজ করে। ভেতরে সেই একই event loop আর non-blocking I/O।',{mod:{aw:{hl:0}}})
+],235);
+const ASYNC3=VH([
+  S('<b>Async-এ অপেক্ষা কে করে?</b> Thread নয়। তিনটা অংশ কাজ করে: তোমার <b>main thread</b>, <b>OS / I/O</b> (আসল অপেক্ষা), আর মাঝে <b>Event Queue</b>। (বিস্তারিত: <a href="../03-event-loop/index.html">Event Loop</a> পাতা।)',{add:[B('mt',20,30,190,100,'Main thread\n(তোমার JS / C# কোড)','g'),B('io',550,30,190,100,'OS / I/O\n(network, disk, timer)','o'),B('qu',285,160,190,50,'Event Queue: (খালি)','b',{s:'sm'}),T('lp',380,225,'Event Loop: queue দেখে, thread মুক্ত হলে callback চালায়',{a:'middle',c:'f'})]}),
+  S('<b>1.</b> Main thread চালায় <code>fetch(url)</code>: অনুরোধটা <b>OS-কে দিয়ে দেয়</b>, সাথে বলে "শেষ হলে আমাকে জানিও।" নিজে অপেক্ষা করে না।',{add:[A('a1',210,70,550,70,'n'),T('t1',380,52,'fetch(url) + "শেষ হলে বলো"',{a:'middle',c:'f'})],mod:{mt:{hl:1}}}),
+  S('<b>2.</b> Main thread <b>সাথে সাথে পরের কোড</b> চালায়: অন্য request, UI, ইত্যাদি। আর OS ওদিকে network-এর জন্য অপেক্ষা করছে।',{mod:{mt:{label:'Main thread\nঅন্য কোড চালাচ্ছে…',hl:1},io:{hl:1,label:'OS / I/O\nrequest-এর জন্য অপেক্ষা'}}}),
+  S('<b>3.</b> Response এল। OS তোমার callback (বা Promise resolve) <b>Event Queue-তে</b> রাখে। এটা এখনো চলছে না, শুধু লাইনে দাঁড়িয়েছে।',{add:[A('a2',640,130,440,175,'g')],mod:{qu:{label:'Event Queue: [ callback ]',c:'g',hl:1},io:{hl:0,label:'OS / I/O\nশেষ ✓'},mt:{hl:0}}}),
+  S('<b>4.</b> Main thread যখন <b>ফাঁকা হয়</b>, Event Loop queue থেকে callback তুলে main thread-এ চালায়। তাই ভারী sync কাজ (যেমন বড় loop) করলে callback দেরিতে চলে।',{add:[A('a3',285,185,170,135,'g')],mod:{qu:{label:'Event Queue: (খালি)',c:'b',hl:0},mt:{label:'Main thread\ncallback চালাচ্ছে ✓',c:'g',hl:1}}})
+],250);
+const ASYNC4=VH([
+  S('<b>Async ≠ Parallel।</b> প্রথমে <b>Concurrency</b>: এক thread, একাধিক কাজ <b>পালা করে</b>, ছোট ছোট টুকরোয়। একই মুহূর্তে একটাই চলে, কিন্তু দুটোই এগোয়।',{add:[...lanes(['Thread 1']),blk('a1',0,0,15,'A','a'),blk('b1',0,15,30,'B','b'),blk('a2',0,30,45,'A','a'),blk('b2',0,45,60,'B','b')]}),
+  S('<b>Parallelism:</b> একাধিক thread/core, দুটো কাজ <b>সত্যিই একই সময়ে</b>। এর জন্য একাধিক CPU core লাগে। CPU-ভারী কাজে (ছবি প্রসেস, গণনা) এটাই কাজে দেয়।',{del:['a1','b1','a2','b2'],add:[T('ln1',14,LN(1)+17,'Thread 2',{c:'f',s:'b'}),L('lb1',LX,LN(1)+42,740,LN(1)+42,'n'),blk('p1',0,0,60,'কাজ A','a'),blk('p2',1,0,60,'কাজ B','b')]}),
+  S('<b>তফাত এক লাইনে:</b> Async/concurrency = অপেক্ষার সময় <b>কাজে লাগানো</b> (I/O-ভারী কাজে সেরা)। Parallelism = <b>একসাথে কাজ করা</b> (CPU-ভারী কাজে সেরা)। দুটো একসাথেও থাকতে পারে।',{})
+],262);
+const ASYNC5=VH([
+  S('<b>Sync বেছে নাও</b> যখন কাজ ছোট ও দ্রুত, ধাপগুলো একটার ফলের ওপর আরেকটা নির্ভর করে, আর সরলতা জরুরি: ছোট script, গণনা, ফাইল পড়ে একবারই কিছু করা।',{add:[B('s',30,40,330,150,'Synchronous\n\nসহজ কোড, debug সহজ\nCPU-ভারী ছোট কাজ\nscript, CLI, ছোট tool','a',{s:'sm'})]}),
+  S('<b>Async বেছে নাও</b> যখন <b>অপেক্ষা বেশি</b>: network call, database, file I/O, অনেক user একসাথে। Web server, API, chat, real-time app-এ প্রায় সবসময়।',{add:[B('a',400,40,330,150,'Asynchronous\n\nI/O-ভারী, অনেক request\nবেশি user কম thread-এ\nweb server, API, chat','g',{s:'sm'})]}),
+  S('<b>সাবধান:</b> async-এর ভেতরে ভারী CPU কাজ করলে (বড় loop) পুরো event loop আটকে যায়। তখন worker thread/আলাদা process লাগে। আর async কোডে error handling ও ক্রম ঠিক রাখা একটু কঠিন।',{mod:{s:{hl:1},a:{hl:1}}})
+],230);
+
+const TABLE='<table class="cmp"><tr><th></th><th>Synchronous</th><th>Asynchronous</th></tr>'
+ +'<tr><td>কাজের ক্রম</td><td>একটার পর একটা</td><td>শুরু করে ফেলে রেখে এগোনো, ফল এলে ফিরে আসা</td></tr>'
+ +'<tr><td>অপেক্ষার সময়</td><td>Thread <b>আটকে</b> থাকে (blocked)</td><td>Thread <b>মুক্ত</b>, অন্য কাজ করে</td></tr>'
+ +'<tr><td>কোড</td><td>সরল, উপর-নিচ</td><td>callback / Promise / async-await</td></tr>'
+ +'<tr><td>বেশি request</td><td>বেশি thread লাগে (মেমোরি, context switch)</td><td>কম thread-এ হাজার request</td></tr>'
+ +'<tr><td>সেরা</td><td>ছোট, ক্রমিক, CPU-ভারী কাজ</td><td>I/O-ভারী, অনেক user</td></tr>'
+ +'<tr><td>উদাহরণ</td><td>Python script, পুরনো Tomcat, <code>File.ReadAllText</code></td><td>Node.js, nginx, <code>await HttpClient.GetAsync</code></td></tr></table>';
+const CODE_ASYNC='<pre>// C#\nvar data = File.ReadAllText("a.txt");              // sync: thread আটকে থাকে\nvar data = await File.ReadAllTextAsync("a.txt");   // async: অপেক্ষায় thread মুক্ত\n\n// JavaScript (Node)\nconst data = fs.readFileSync("a.txt");              // sync: blocking\nconst data = await fs.promises.readFile("a.txt");  // async: non-blocking</pre>';
+
+const PARTS=[['1','Synchronous'],['2','Asynchronous']];
+const TOPICS=[
+{q:'Synchronous কীভাবে কাজ করে',
+ ans:'<b>Synchronous (sync)</b> মানে কাজ <b>একটার পর একটা, ক্রমে</b> হয়। একটা কাজ শেষ না হলে পরেরটা শুরু হয় না। কাজটা অপেক্ষার (DB, network, file) হলে <b>thread আটকে থাকে</b>, এটাকে বলে <b>blocking</b>। উপমা: রেস্টুরেন্টে waiter order নিয়ে রান্নাঘরের সামনে দাঁড়িয়ে থাকে, খাবার না হওয়া পর্যন্ত অন্য কোনো টেবিলে যায় না।',
+ pts:['<b>Thread</b> = কাজের একজন কর্মী। Sync-এ সে অপেক্ষার সময়েও দাঁড়িয়ে থাকে, তাই অন্য request পেছনে লাইনে।','ভেতরে: OS thread-কে <b>BLOCKED</b> করে ঘুম পাড়ায়, data এলে <b>READY</b> করে জাগায়।','একসাথে অনেক request সামলাতে <b>thread-per-request</b>, কিন্তু প্রতি thread-এ মেমোরি খরচ (C10K সমস্যা)।'],
+ extra:TABLE,
+ tabs:[{n:'এক thread, ক্রমে',steps:SYNC1},{n:'ভেতরে কী ঘটে (Blocking I/O)',steps:SYNC2},{n:'Thread-per-request',steps:SYNC3}]},
+{q:'Asynchronous কীভাবে কাজ করে',
+ ans:'<b>Asynchronous (async)</b> মানে কাজ <b>শুরু করে ফল না আসা পর্যন্ত দাঁড়িয়ে না থেকে</b> অন্য কাজে যাওয়া, ফল এলে ফিরে এসে বাকিটা করা (<b>non-blocking</b>)। উপমা: waiter order রান্নাঘরে দিয়ে অন্য টেবিলে যায়, খাবার তৈরি হলে বেল বাজে, তখন এসে পরিবেশন করে। একজন waiter-ই অনেক টেবিল সামলায়।',
+ pts:['<b>অপেক্ষা করে OS/I/O</b>, thread নয়। ফল এলে callback <b>Event Queue</b>-তে যায়, <b>Event Loop</b> thread মুক্ত হলে সেটা চালায়।','লেখার ধরন: <b>callback → Promise → async/await</b> (একই জিনিস, ক্রমে সহজ)।','Async কাজ দ্রুত করে না, <b>অপেক্ষার সময় বাঁচায়</b>। CPU-ভারী কাজে লাগে <b>parallelism</b> (একাধিক core)।'],
+ extra:CODE_ASYNC,
+ tabs:[{n:'Non-blocking, এক thread',steps:ASYNC1},{n:'Callback / Promise / async-await',steps:ASYNC2},{n:'কে অপেক্ষা করে (Event Loop)',steps:ASYNC3},{n:'Async বনাম Parallel',steps:ASYNC4},{n:'কখন কোনটা',steps:ASYNC5}]}
+];
+
+const app=document.getElementById('app'),partsNav=document.getElementById('parts');
+TOPICS.forEach((t,i)=>{
+  const a=document.createElement('a');a.href='#q'+(i+1);a.innerHTML=`<b>${i+1}</b>${PARTS[i][1]}`;partsNav.appendChild(a);
+  const card=document.createElement('article');card.className='q';card.id='q'+(i+1);
+  card.innerHTML=`<h3><span class="num">${i+1}</span><span>${t.q}</span></h3><p class="ans">${t.ans}</p>${t.pts&&t.pts.length?'<ul>'+t.pts.map(x=>`<li>${x}</li>`).join('')+'</ul>':''}${t.extra?`<div class="extra">${t.extra}</div>`:''}<div class="viz"></div>`;
+  app.appendChild(card);
+  mount(card.querySelector('.viz'),t);
+});
+</script>
+</body>
+</html>

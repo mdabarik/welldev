@@ -40,6 +40,7 @@ Software engineering interview prep — বাংলায় ব্যাখ্
 - [Event Loop — Browser ও Node.js Interactive](04-resume-projects/03-event-loop/index.html) — call stack, microtask, task queue, Node-এর phase, D3 animation-এ
 - ★ **Core** · [System Design Basics](04-resume-projects/04-system-design/index.html) - ১৩টি প্রশ্ন (Client-Server, Functional vs Non-functional, Latency, Bandwidth, Throughput, Scalability, Vertical/Horizontal, Reliability, Availability, SPOF, Maintainability, Partition Tolerance, CAP): প্রতিটির সংক্ষিপ্ত উত্তর ও step-by-step D3 animation
 - ★ **Core** · [SDLC ও SDLC Model](04-resume-projects/05-sdlc/index.html) - SDLC কী, ৭টি ধাপ, Waterfall / Agile / Iterative / Incremental: সংক্ষিপ্ত উত্তর, তুলনার table ও step-by-step D3 animation
+- [Synchronous বনাম Asynchronous](04-resume-projects/06-sync-async/index.html) - দুটো কীভাবে কাজ করে: thread timeline, blocking / non-blocking, callback / Promise / async-await, Event Loop; ধাপে ধাপে D3 animation
 
 ## 05 · Operating System
 
