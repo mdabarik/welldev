@@ -4,50 +4,41 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>N+1, Race Condition, Deadlock</title>
-<meta name="description" content="N+1 query problem, database-এর race condition (overselling, duplicate insert, double booking) আর deadlock — PostgreSQL 18-এ চালানো আসল output, fix আর তিনটা D3 animation সহ।">
+<meta name="description" content="Database-এর তিনটা পরিচিত সমস্যা: N+1 query, race condition আর deadlock, প্রতিটা ধাপে ধাপে D3 animation-এ।">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
 <style>
-/* Layout: N+1 → race condition → deadlock → summary → Q&A. Each section: explain, real PostgreSQL output, fix, D3 simulator. */
+/* One card per interview question: short answer, 2-3 bullets, and a step-by-step D3 scene.
+   Scenes are plain data (see TOPICS at the bottom): each step adds / modifies / deletes nodes by id
+   and the tiny engine animates the difference. */
 :root{
   --bg:#f5f7fc; --surface:#ffffff; --surface-2:#f1f4fa; --fg:#0f172a; --muted:#5b6478; --faint:#94a0b8; --line:#e4e8f1;
-  --accent:#6366f1; --sa:#4f46e5; --sb:#db2777;
-  --pa:#e11d48; --pc:#d97706; --pi:#0284c7; --pd:#059669;
-  --ok:#059669; --bad:#e11d48; --warn:#d97706;
+  --accent:#6366f1;
+  --a:#4f46e5; --b:#db2777; --g:#059669; --o:#d97706; --r:#e11d48; --s:#0284c7;
   --hero:linear-gradient(135deg,#4f46e5 0%,#7c3aed 45%,#db2777 100%);
   --shadow:0 1px 2px rgba(15,23,42,.04),0 10px 30px -12px rgba(15,23,42,.14);
-  --code-bg:#ffffff; --code-line:#e6e9f1;
-  --t-kw:#0000ff; --t-str:#a31515; --t-num:#098658; --t-com:#008000; --t-type:#267f99;
   --sans:"Inter","Hind Siliguri",system-ui,sans-serif; --bn:"Hind Siliguri","Inter",system-ui,sans-serif;
   --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#0b0f1a; --surface:#121827; --surface-2:#182033; --fg:#e7ecf6; --muted:#9aa6bf; --faint:#66728c; --line:#232c42;
-  --accent:#818cf8; --sa:#818cf8; --sb:#f472b6; --pa:#fb7185; --pc:#fbbf24; --pi:#38bdf8; --pd:#34d399;
-  --ok:#34d399; --bad:#fb7185; --warn:#fbbf24;
+  --accent:#818cf8; --a:#818cf8; --b:#f472b6; --g:#34d399; --o:#fbbf24; --r:#fb7185; --s:#38bdf8;
   --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6);
-  --code-bg:#1e1e1e; --code-line:#2d2d30; --t-kw:#569cd6; --t-str:#ce9178; --t-num:#b5cea8; --t-com:#6a9955; --t-type:#4ec9b0;
 }}
 :root[data-theme="dark"]{
   --bg:#0b0f1a; --surface:#121827; --surface-2:#182033; --fg:#e7ecf6; --muted:#9aa6bf; --faint:#66728c; --line:#232c42;
-  --accent:#818cf8; --sa:#818cf8; --sb:#f472b6; --pa:#fb7185; --pc:#fbbf24; --pi:#38bdf8; --pd:#34d399;
-  --ok:#34d399; --bad:#fb7185; --warn:#fbbf24;
+  --accent:#818cf8; --a:#818cf8; --b:#f472b6; --g:#34d399; --o:#fbbf24; --r:#fb7185; --s:#38bdf8;
   --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6);
-  --code-bg:#1e1e1e; --code-line:#2d2d30; --t-kw:#569cd6; --t-str:#ce9178; --t-num:#b5cea8; --t-com:#6a9955; --t-type:#4ec9b0;
 }
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
 body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 var(--bn);-webkit-font-smoothing:antialiased}
-body::before{content:"";position:fixed;inset:0 0 auto 0;height:420px;z-index:-1;pointer-events:none;
-  background:radial-gradient(620px 260px at 20% -40px,color-mix(in srgb,#6366f1 14%,transparent),transparent 70%),
-             radial-gradient(540px 240px at 90% -60px,color-mix(in srgb,#ec4899 11%,transparent),transparent 70%)}
 a{color:var(--accent)}
 button{font:inherit;color:inherit}
 code{font-family:var(--mono);font-size:.86em;font-weight:500;background:color-mix(in srgb,var(--accent) 10%,var(--surface));color:color-mix(in srgb,var(--accent) 72%,var(--fg));padding:.1em .4em;border-radius:6px}
-.wrap{max-width:1040px;margin:0 auto;padding:20px 18px 70px}
-section{margin-top:56px;scroll-margin-top:16px}
+.wrap{max-width:1000px;margin:0 auto;padding:20px 18px 70px}
 
 .topnav{display:flex;align-items:center;gap:10px}
 .brand{display:flex;align-items:center;gap:10px;color:var(--fg);text-decoration:none;font:800 16px var(--sans);letter-spacing:-.02em}
@@ -56,1407 +47,294 @@ section{margin-top:56px;scroll-margin-top:16px}
 .pill{border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:6px 14px;font:600 13px var(--sans);cursor:pointer;text-decoration:none}
 .pill:hover{color:var(--fg)}
 
-.hero{margin-top:22px;border-radius:22px;padding:30px 32px;color:#fff;background:var(--hero);position:relative;overflow:hidden}
-.hero::after{content:"";position:absolute;right:-70px;top:-90px;width:320px;height:320px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.2),transparent 65%);pointer-events:none}
-.eyebrow{font:600 12px var(--sans);letter-spacing:.1em;text-transform:uppercase;opacity:.85}
-.hero h1{margin:8px 0 10px;font:800 clamp(28px,4.4vw,42px)/1.12 var(--sans);letter-spacing:-.03em}
-.hero p{margin:0;max-width:720px;font-size:16.5px;opacity:.94}
+.hero{margin-top:20px;border-radius:22px;padding:26px 30px;color:#fff;background:var(--hero)}
+.hero .eyebrow{font:600 12px var(--sans);letter-spacing:.1em;text-transform:uppercase;opacity:.85}
+.hero h1{margin:6px 0 8px;font:800 clamp(26px,4.2vw,38px)/1.15 var(--sans);letter-spacing:-.03em}
+.hero p{margin:0;max-width:680px;opacity:.94}
+.jump{display:flex;flex-wrap:wrap;gap:6px;margin-top:16px}
+.jump a{min-width:32px;padding:0 6px;height:32px;display:grid;place-items:center;border-radius:9px;text-decoration:none;font:700 13px var(--sans);color:#fff;background:rgba(255,255,255,.18)}
+.jump a:hover{background:rgba(255,255,255,.34)}
 
-/* the four letters */
-.letters{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:22px}
-@media (max-width:860px){.letters{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media (max-width:480px){.letters{grid-template-columns:minmax(0,1fr)}}
-.letter{display:block;text-decoration:none;color:inherit;padding:16px 18px;border-top:3px solid var(--c)}
-.letter .big{font:800 34px/1 var(--sans);color:var(--c)}
-.letter b{display:block;margin-top:8px;font:700 15.5px var(--sans)}
-.letter p{margin:4px 0 0;font-size:14.5px;color:var(--muted);line-height:1.55}
-.letter small{display:block;margin-top:10px;font:500 11.5px var(--mono);color:var(--faint)}
-.letter:hover{border-color:var(--c)}
+.parts{position:sticky;top:0;z-index:5;margin:14px -18px 0;padding:10px 18px;display:flex;gap:8px;overflow-x:auto;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);scrollbar-width:none}
+.parts a{flex:none;text-decoration:none;font:600 13px var(--sans);color:var(--muted);border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 13px}
+.parts a:hover{color:var(--fg)}
+.parts a b{color:var(--accent);margin-right:4px}
 
-h2{display:flex;align-items:center;gap:12px;margin:0 0 6px;font:800 clamp(21px,2.8vw,26px)/1.25 var(--sans);letter-spacing:-.025em}
-.num{flex:none;width:38px;height:38px;border-radius:11px;display:grid;place-items:center;color:#fff;font:800 17px var(--sans);background:var(--c,var(--accent))}
-.motto{display:inline-block;margin:2px 0 14px;font:600 13.5px var(--sans);color:var(--c);background:color-mix(in srgb,var(--c) 10%,transparent);padding:4px 12px;border-radius:999px}
-.lead{margin:0 0 18px;color:var(--muted);max-width:820px}
-.lead b{color:var(--fg)}
-h3{margin:26px 0 10px;font:700 17px var(--sans);letter-spacing:-.015em}
+.part{margin-top:44px;scroll-margin-top:60px}
+.part>h2{margin:0;font:800 clamp(20px,2.6vw,25px)/1.25 var(--sans);letter-spacing:-.02em}
+.part>h2 span{color:var(--accent);margin-right:8px}
 
-.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow)}
-.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:start}
-@media (max-width:760px){.grid2{grid-template-columns:minmax(0,1fr)}}
+.q{margin-top:16px;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:20px 22px;box-shadow:var(--shadow);scroll-margin-top:64px}
+.q h3{display:flex;gap:12px;align-items:flex-start;margin:0 0 10px;font:700 18px/1.4 var(--sans);letter-spacing:-.01em}
+.skip{display:inline-block;margin-left:8px;padding:1px 10px;border-radius:999px;font:600 12px var(--sans);font-style:normal;white-space:nowrap;color:var(--muted);background:var(--surface-2);border:1px dashed var(--faint);vertical-align:middle}
+.num{flex:none;min-width:34px;height:34px;padding:0 8px;border-radius:10px;display:grid;place-items:center;color:#fff;font:800 14px var(--sans);background:var(--hero)}
+.ans{margin:0 0 10px;padding:10px 14px;border-left:4px solid var(--accent);border-radius:0 10px 10px 0;background:color-mix(in srgb,var(--accent) 8%,var(--surface))}
+.q ul{margin:0 0 12px;padding-left:20px;color:var(--muted)}
+.q li{margin:2px 0}
+.q li b,.ans b{color:var(--fg)}
+.extra{margin:0 0 12px;overflow-x:auto}
+.extra table{border-collapse:collapse;font:500 13px var(--mono)}
+.extra th,.extra td{border:1px solid var(--line);padding:3px 10px;text-align:center}
+.extra th{background:var(--surface-2)}
+.extra .cmp td,.extra .cmp th{text-align:left;vertical-align:top;font:500 13.5px/1.55 var(--bn);min-width:150px}
+.extra .cmp td:first-child{font-weight:700;white-space:nowrap;min-width:0}
 
-.story{padding:14px 16px;font-size:15px;border-left:4px solid var(--c)}
-.story b{color:var(--fg)}
-.story p{margin:0;color:var(--muted)}
+.viz{border:1px solid var(--line);border-radius:14px;background:var(--surface-2);overflow:hidden}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;padding:10px 12px 0}
+.tabs button{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:3px 12px;font:600 12.5px var(--sans);color:var(--muted);cursor:pointer}
+.tabs button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.stage{overflow-x:auto;padding-top:8px}
+.stage svg{display:block;width:100%;min-width:680px;height:auto;cursor:pointer;user-select:none}
+.cap{padding:10px 16px;min-height:3.4em;border-top:1px dashed var(--line);font-size:15px}
+.ctl{display:flex;align-items:center;gap:8px;padding:0 12px 12px}
+.b{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:5px 14px;font:600 13px var(--sans);cursor:pointer}
+.b:hover:not(:disabled){border-color:var(--accent)}
+.b:disabled{opacity:.4;cursor:default}
+.b.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+.cnt{margin-left:auto;font:500 12px var(--mono);color:var(--faint)}
 
-pre.code{margin:0;padding:12px 14px;border-radius:12px;background:var(--code-bg);border:1px solid var(--code-line);font:13px/1.65 var(--mono);white-space:pre-wrap;word-break:break-word;font-variant-ligatures:none;overflow-x:auto}
-.k{color:var(--t-kw);font-weight:600}.s{color:var(--t-str)}.d{color:var(--t-num)}.c{color:var(--t-com);font-style:italic}.t{color:var(--t-type)}
-pre.code .o{color:var(--muted);font-style:normal}
-pre.code .e{color:var(--bad);font-style:normal}
-pre.code .g{color:var(--ok);font-style:normal;font-weight:600}
-.file{display:flex;align-items:center;gap:8px;margin:0 0 6px;font:600 12px var(--mono);color:var(--muted)}
-.file i{width:8px;height:8px;border-radius:50%;background:var(--dot,var(--accent))}
-.file .r{margin-left:auto;font:600 11px var(--sans);padding:1px 8px;border-radius:6px;color:var(--tc);background:color-mix(in srgb,var(--tc) 12%,transparent)}
+/* svg scene */
+svg text,svg tspan{white-space:pre}
+svg text{font-family:var(--sans);font-size:13px;fill:var(--fg);dominant-baseline:central}
+.c-n{--cc:var(--muted)} .c-a{--cc:var(--a)} .c-b{--cc:var(--b)} .c-g{--cc:var(--g)}
+.c-o{--cc:var(--o)} .c-r{--cc:var(--r)} .c-s{--cc:var(--s)} .c-f{--cc:var(--fg)}
+.box rect,.circ circle{fill:color-mix(in srgb,var(--cc) 14%,var(--surface));stroke:var(--cc);stroke-width:1.6;transition:fill .45s,stroke .45s}
+.dash rect,.dash circle{stroke-dasharray:6 4;fill:color-mix(in srgb,var(--cc) 4%,transparent)}
+.hl rect,.hl circle{stroke-width:3.4;filter:drop-shadow(0 0 7px color-mix(in srgb,var(--cc) 65%,transparent))}
+.text text{fill:var(--cc);transition:fill .45s}
+.text.b text,.text.lg text{font-weight:700}
+.text.lg text{font-size:15px}
+.sm text{font-size:11.5px}
+.m text{font-family:var(--mono);font-size:12px}
+.path path{fill:none;stroke:var(--cc);stroke-width:3.4;stroke-linecap:round}
+.arrow line{stroke:var(--cc);stroke-width:2.2;transition:stroke .4s}
+.arrow.dash line{stroke-dasharray:6 4}
+.arrow.hl line{stroke-width:3.4}
+footer{margin-top:50px;text-align:center;color:var(--faint);font:500 13px var(--sans)}
 
-.how{margin-top:14px;padding:14px 16px;border-radius:12px;background:color-mix(in srgb,var(--c) 7%,var(--surface));border:1px solid color-mix(in srgb,var(--c) 22%,var(--line));font-size:15px}
-.how b{color:var(--fg)}
-.how ul{margin:6px 0 0;padding-left:20px;color:var(--muted)}
-.how li{margin:3px 0}
-
-/* timeline (isolation + durability) */
-.tl{overflow:hidden}
-.tl-head,.row{display:grid;grid-template-columns:40px minmax(0,1fr) minmax(0,1fr)}
-.tl-head{background:var(--surface-2);border-bottom:1px solid var(--line);font:700 12.5px var(--sans)}
-.tl-head span{padding:10px 14px}
-.tl-head .a{color:var(--sa)} .tl-head .b{color:var(--sb);border-left:1px solid var(--line)}
-.row{border-bottom:1px solid var(--line)}
-.row:last-child{border-bottom:0}
-.row .n{display:grid;place-items:start center;padding-top:13px;font:600 11.5px var(--mono);color:var(--faint)}
-.cell{padding:10px 14px;min-width:0}
-.cell + .cell{border-left:1px solid var(--line)}
-.cell.on{background:color-mix(in srgb,var(--who) 4%,transparent)}
-.cell.a{--who:var(--sa)} .cell.b{--who:var(--sb)}
-.cell pre{margin:0;font:12.8px/1.6 var(--mono);white-space:pre-wrap;word-break:break-word;font-variant-ligatures:none}
-.out{margin-top:6px;font:12.5px/1.55 var(--mono);color:var(--muted)}
-.out b{color:var(--fg)}
-.tag{display:inline-block;margin-top:6px;font:600 12px var(--sans);padding:2px 9px;border-radius:7px;background:color-mix(in srgb,var(--tc) 12%,transparent);color:var(--tc)}
-.tag.ok{--tc:var(--ok)} .tag.bad{--tc:var(--bad)} .tag.info{--tc:var(--muted)}
-@media (max-width:700px){
-  .tl-head{display:none}
-  .row{grid-template-columns:30px minmax(0,1fr)}
-  .cell:not(.on){display:none}
-  .cell + .cell{border-left:0}
-  .cell.on::before{content:attr(data-who);display:inline-block;margin-bottom:4px;font:700 11px var(--sans);color:#fff;background:var(--who);padding:1px 8px;border-radius:6px}
-}
-
-.tscroll{overflow-x:auto}
-table{border-collapse:collapse;width:100%;min-width:640px;font-size:14.5px}
-th,td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:top}
-th{font:600 12px var(--sans);text-transform:uppercase;letter-spacing:.05em;color:var(--muted);background:var(--surface-2)}
-tr:last-child td{border-bottom:0}
-td.p{font:700 14px var(--sans);white-space:nowrap}
-td.p span{display:inline-grid;place-items:center;width:24px;height:24px;margin-right:8px;border-radius:7px;color:#fff;font-size:12px;background:var(--c)}
-.foot{margin:10px 2px 0;font-size:13.5px;color:var(--muted)}
-
-details{border-bottom:1px solid var(--line);padding:12px 2px}
-details:last-child{border-bottom:0}
-summary{cursor:pointer;font:600 15.5px var(--bn);list-style:none;display:flex;gap:10px}
-summary::before{content:"+";font:700 15px var(--mono);color:var(--accent);width:14px}
-details[open] summary::before{content:"−"}
-details p{margin:8px 0 0 24px;color:var(--muted);font-size:15px}
-
-footer{margin-top:56px;padding-top:16px;border-top:1px solid var(--line);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;font-size:13px;color:var(--faint)}
-@media (max-width:640px){.hero{padding:24px 20px;border-radius:18px}}
-@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
-/* simulator */
-.sim{padding:14px;display:grid;gap:12px}
-.modes{display:flex;flex-wrap:wrap;gap:6px}
-.modes button{border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:6px 13px;font:600 13px var(--sans);cursor:pointer}
-.modes button.on{color:#fff;border-color:transparent;background:var(--mc)}
-.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-.bar .sp{flex:1}
-.btn{border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:10px;padding:7px 12px;font:600 13px var(--sans);cursor:pointer}
-.btn:hover:not(:disabled){border-color:var(--accent)}
-.btn:disabled{opacity:.4;cursor:not-allowed}
-.btn.primary{border-color:transparent;color:#fff;background:linear-gradient(135deg,#6366f1,#8b5cf6 55%,#ec4899);min-width:104px}
-.prog{font:600 12.5px var(--mono);color:var(--muted)}
-.stage{border-radius:14px;background:var(--surface-2);overflow-x:auto;-webkit-overflow-scrolling:touch}
-.stage svg{display:block;width:100%;height:auto;min-width:720px}
-.stage text{font-family:var(--sans)}
-.sbox{fill:var(--surface);stroke:color-mix(in srgb,var(--who) 35%,var(--line));stroke-width:1.5}
-.sbox.busy{stroke:var(--who);stroke-width:2.5}
-.sbox.wait{stroke:var(--warn);stroke-width:2.5;stroke-dasharray:7 5}
-.sbox.err{stroke:var(--bad);stroke-width:2.5}
-.s-title{font:800 16px var(--sans);fill:var(--who)}
-.s-sub{font:600 10.5px var(--mono);fill:var(--muted)}
-.s-line{font:600 12.5px var(--bn);fill:var(--fg)}
-.s-mem{font:500 12px var(--mono);fill:var(--fg)}
-.s-lbl{font:600 10.5px var(--bn);fill:var(--faint)}
-.s-res{font:700 13.5px var(--mono);fill:var(--fg)} .s-res.err{fill:var(--bad)} .s-res.wait{fill:var(--warn)} .s-res.zero{fill:var(--warn)}
-.db{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
-.db.locked{stroke:var(--lk);stroke-width:2.5}
-.db-t{font:800 14px var(--mono);fill:var(--fg)}
-.db-k{font:600 11px var(--sans);fill:var(--faint);text-transform:uppercase;letter-spacing:.05em}
-.db-v{font:800 34px var(--mono);fill:var(--fg)}
-.db-ver{font:700 18px var(--mono);fill:var(--fg)}
-.db-ver.off{fill:var(--faint);opacity:.45}
-.db-pend{font:600 12px var(--mono)}
-.db-lock{font:700 12.5px var(--sans)}
-.db-goal{font:600 11.5px var(--bn);fill:var(--muted)}
-.pkt rect{fill:var(--muted)} .pkt.a rect{fill:var(--sa)} .pkt.b rect{fill:var(--sb)}
-.pkt.ok rect{fill:var(--ok)} .pkt.err rect{fill:var(--bad)} .pkt.wait rect,.pkt.zero rect{fill:var(--warn)}
-.pkt text{fill:#fff;font:700 11px var(--mono);text-anchor:middle;dominant-baseline:central}
-.waitline{fill:none;stroke:var(--warn);stroke-width:2;stroke-dasharray:6 5;animation:dash 1s linear infinite}
-@keyframes dash{to{stroke-dashoffset:-22}}
-.explain{display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border-radius:12px;background:var(--surface-2);font-size:15px;min-height:52px}
-.explain b{flex:none;width:24px;height:24px;border-radius:7px;display:grid;place-items:center;color:#fff;font:700 12px var(--sans)}
-.verdict{padding:12px 14px;border-radius:12px;font-size:15px;border-left:4px solid var(--vc,var(--line));background:color-mix(in srgb,var(--vc,var(--line)) 8%,var(--surface))}
-.verdict:empty{display:none}
-.log{max-height:420px;overflow-y:auto;border:1px solid var(--line);border-radius:12px}
-.log .empty{margin:0;padding:14px;color:var(--faint);font-size:14px}
-.out .err{color:var(--bad)}
-.tag.wait{--tc:var(--warn)}
-.cmp td b{color:var(--fg)}
-
-/* --- additions for this guide --- */
-.hero p b{color:#fde68a}
-figure.fig{margin:0;padding:12px;overflow:hidden}
-figure.fig .imgwrap{overflow-x:auto;border-radius:10px;border:1px solid var(--line);background:#fff}
-figure.fig img{display:block;width:100%;height:auto}
-figure.fig figcaption{margin:10px 2px 0;font-size:13.5px;color:var(--muted)}
-.stats{display:flex;flex-wrap:wrap;gap:8px}
-.chip{padding:8px 12px;border-radius:12px;background:var(--surface-2);border:1px solid var(--line);font:600 12.5px var(--sans);color:var(--muted)}
-.chip b{display:block;font:800 19px var(--mono);color:var(--fg);letter-spacing:-.02em}
-.chip.model b{color:var(--warn)}
-.slider{display:flex;align-items:center;gap:10px;font:600 13px var(--sans);color:var(--muted)}
-.slider input{accent-color:var(--accent);width:min(260px,48vw)}
-.slider output{font:800 15px var(--mono);color:var(--fg);min-width:34px}
-.cmpbars{display:grid;gap:6px}
-.cb{display:grid;grid-template-columns:92px minmax(0,1fr) 84px;gap:8px;align-items:center;font:600 12.5px var(--sans);color:var(--muted)}
-.cb i{display:block;height:12px;border-radius:6px;background:var(--bc);min-width:3px;transition:width .3s}
-.cb span:last-child{font-family:var(--mono);color:var(--fg);text-align:right}
-.rtable{max-height:210px;overflow:auto;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
-.rtable table{min-width:0;font-size:13.5px}
-.rtable th,.rtable td{padding:6px 12px}
-.rtable td.new{background:color-mix(in srgb,var(--ok) 14%,transparent)}
-.rtable td.pend{color:var(--faint)}
-.sqlbar{padding:10px 14px;border-radius:12px;background:var(--code-bg);border:1px solid var(--code-line);font:12.8px/1.6 var(--mono);min-height:44px;white-space:pre-wrap;word-break:break-word;overflow:hidden}
-.nodeT{fill:var(--surface);stroke:var(--who);stroke-width:2.5}
-.nodeT.wait{stroke:var(--warn);stroke-dasharray:7 5}
-.nodeT.abort{stroke:var(--bad);fill:color-mix(in srgb,var(--bad) 12%,var(--surface))}
-.nodeT.done{stroke:var(--ok)}
-.nodeR{fill:var(--surface);stroke:var(--line);stroke-width:2}
-.nodeR.held{stroke:var(--who);stroke-width:2.5}
-.n-t{font:800 20px var(--sans);fill:var(--who);text-anchor:middle}
-.n-s{font:600 11px var(--bn);fill:var(--muted);text-anchor:middle}
-.n-r{font:800 15px var(--mono);fill:var(--fg);text-anchor:middle}
-.e-hold{fill:none;stroke:var(--who);stroke-width:2.5}
-.e-wait{fill:none;stroke:var(--warn);stroke-width:2.5;stroke-dasharray:8 6;animation:dash 1s linear infinite}
-.cyc .e-hold,.cyc .e-wait{stroke:var(--bad)}
-.e-lbl{font:700 11px var(--bn);fill:var(--muted);text-anchor:middle}
-.cyc-t{font:800 15px var(--sans);fill:var(--bad);text-anchor:middle}
-.det{fill:none;stroke:var(--bad);stroke-width:3}
-.mk-h1{fill:var(--sa)}.mk-h2{fill:var(--sb)}.mk-w{fill:var(--warn)}.mk-c{fill:var(--bad)}
-.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font:600 12.5px var(--sans);color:var(--muted)}
-.legend span::before{content:"";display:inline-block;width:22px;height:0;border-top:3px solid var(--lc);margin-right:6px;vertical-align:middle}
-.legend .dash::before{border-top-style:dashed}
-.sumtable{min-width:760px}
-.sumtable td b{color:var(--fg)}
-.cell.srv{--who:var(--muted)}
-.cell.srv.on{grid-column:2/4}
-.cell.srv.on::before{background:var(--muted)}
-@media (max-width:700px){.cell.srv.on{grid-column:auto}}
+.q .ans code,.q li code{white-space:nowrap}
+.hero{background:linear-gradient(135deg,#e11d48 0%,#7c3aed 55%,#4f46e5 100%)}
 </style>
 </head>
 <body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs id="defs"></defs></svg>
 <div class="wrap">
   <nav class="topnav">
     <a class="brand" href="../../index.html"><span class="logo">W</span>WellDev</a>
     <span class="sp"></span>
-    <a class="pill" href="../transactions/index.html">Isolation →</a>
     <button class="pill" id="theme" type="button">Theme</button>
   </nav>
-
   <header class="hero">
-    <div class="eyebrow">DBMS · PostgreSQL</div>
-    <h1>N+1, Race Condition আর Deadlock — database-এ তিনটা পরিচিত বিপদ</h1>
-    <p>একটা শুধু <b>ধীর</b> (N+1: একটা list দেখাতে শত শত query), একটা <b>নীরবে ভুল</b> (race condition: দুজনেই শেষ Laptop-টা বিক্রি করে ফেলল), আরেকটা <b>আটকে যাওয়া</b> (deadlock: দুই transaction একে অপরের জন্য অপেক্ষায়)। প্রতিটার জন্য কারণ, PostgreSQL 18-এ চালানো আসল output, fix আর নিজে চালিয়ে দেখার D3 animation।</p>
+    <div class="eyebrow">DBMS · Interactive</div>
+    <h1>N+1, Race Condition আর Deadlock</h1>
+    <p>Database-এর তিনটা পরিচিত বিপদ। একটা <b>ধীর</b>, একটা <b>নীরবে ভুল</b>, একটা <b>আটকে যায়</b>। প্রতিটা ধাপে ধাপে animation-এ: scene-এ ক্লিক করো বা <b>Next</b> চাপো।</p>
   </header>
-
-  <div class="letters">
-    <a class="card letter" href="#n1" style="--c:var(--pc)"><span class="big">N+1</span><b>N+1 Query</b><p>১টা list-এর জন্য ১ + N টা query — ধীর, কিন্তু ভুল না।</p><small>JOIN · IN-batch · eager load</small></a>
-    <a class="card letter" href="#race" style="--c:var(--pa)"><span class="big">⚡</span><b>Race Condition</b><p>Timing বদলালে ফল বদলায় — stock −1, duplicate, double booking।</p><small>constraint · lock · retry</small></a>
-    <a class="card letter" href="#deadlock" style="--c:var(--sa)"><span class="big">🔒</span><b>Deadlock</b><p>T1 ধরে R1, চায় R2; T2 ধরে R2, চায় R1 — চক্র।</p><small>40P01 · lock order</small></a>
-    <a class="card letter" href="#summary" style="--c:var(--pd)"><span class="big">≡</span><b>সারসংক্ষেপ + Q&amp;A</b><p>তিনটার তুলনা আর interview-এর উত্তর।</p><small>cheat sheet</small></a>
-  </div>
-
-  <!-- ================= 1. N+1 ================= -->
-  <section id="n1" style="--c:var(--pc)">
-    <h2><span class="num">1</span>N+1 Query Problem</h2>
-    <span class="motto">১টা query list-এর জন্য + N টা query প্রতিটা item-এর জন্য</span>
-    <p class="lead">সব <code>users</code> এনে তারপর <b>প্রতিটা user-এর</b> <code>posts</code> আলাদা আলাদা query-তে আনলে মোট হয় <b>1 + N</b> টা query। Result ঠিকই আসে — তাই bug চোখে পড়ে না; ধরা পড়ে তখন, যখন N বড় হয় আর page ধীর হয়ে যায়।</p>
-
-    <figure class="card fig">
-      <div class="imgwrap"><img src="n%2B1%20query.png" alt="N+1 Query Problem-এর বাংলা infographic: users ও posts table, ৪টা query, Laravel Eloquent lazy বনাম eager loading, raw SQL loop বনাম WHERE user_id IN (1,2,3)" loading="lazy" decoding="async"></div>
-      <figcaption>Infographic: 3 জন user (Rahim 2টা post, Karima 1টা, Sumon 1টা) হলে মোট query = 1 + 3 = 4। Eager loading-এ মাত্র 2টা।</figcaption>
-    </figure>
-
-    <h3>উদাহরণের data</h3>
-<pre class="code" data-lang="sql">CREATE TABLE users (id int PRIMARY KEY, name text NOT NULL);
-CREATE TABLE posts (id int PRIMARY KEY, title text NOT NULL, user_id int NOT NULL REFERENCES users(id));
-INSERT INTO users VALUES (1,'Rahim'),(2,'Karima'),(3,'Sumon');
-INSERT INTO posts VALUES (1,'First Post',1),(2,'Another Post',1),(3,'Hello World',2),(4,'Laravel Tips',3);</pre>
-
-    <h3>সমস্যা — loop-এর ভেতরে query</h3>
-    <div class="grid2">
-<pre class="code" data-lang="sql"><span class="c">-- query 1: সব user</span>
-SELECT * FROM users;
-<span class="o"> id |  name
-----+--------
-  1 | Rahim
-  2 | Karima
-  3 | Sumon
-(3 rows)</span>
-
-<span class="c">-- query 2..N+1: প্রতি user-এর জন্য আলাদা</span>
-SELECT * FROM posts WHERE user_id = 1;
-SELECT * FROM posts WHERE user_id = 2;
-SELECT * FROM posts WHERE user_id = 3;</pre>
-<pre class="code" data-lang="sql">SELECT * FROM posts WHERE user_id = 1;
-<span class="o"> id |    title     | user_id
-----+--------------+---------
-  1 | First Post   |       1
-  2 | Another Post |       1
-(2 rows)</span>
-SELECT * FROM posts WHERE user_id = 2;
-<span class="o">  3 | Hello World  |       2   <span class="c">(1 row)</span></span>
-SELECT * FROM posts WHERE user_id = 3;
-<span class="o">  4 | Laravel Tips |       3   <span class="c">(1 row)</span></span></pre>
-    </div>
-    <p class="foot">মোট 4টা query, 4টা round trip। 3 জন user-এ কিছুই না — কিন্তু 1000 জন হলে 1001টা।</p>
-
-    <h3>কেন ক্ষতি করে</h3>
-    <div class="grid2">
-      <div class="card story" style="--c:var(--pa)"><p><b>N বার network round trip।</b> প্রতিটা query app → DB → app যাতায়াত। Same machine-এ ~0.1 ms, কিন্তু আলাদা server বা cloud region-এ 1–5 ms। 1001 × 2 ms ≈ 2 সেকেন্ড শুধু অপেক্ষায়।</p></div>
-      <div class="card story" style="--c:var(--pc)"><p><b>প্রতিবার parse/plan/execute।</b> Database প্রতিটা statement আলাদা করে parse, plan করে (prepared statement হলে plan cache কিছুটা বাঁচায়)। আর foreign key column-এ index না থাকলে প্রতিটা query পুরো table scan।</p></div>
-      <div class="card story" style="--c:var(--sa)"><p><b>Connection pool-এ চাপ।</b> একটা request অনেকক্ষণ connection ধরে রাখে; ১০০ জন একসাথে এলে pool শেষ, বাকিরা লাইনে — পুরো app ধীর।</p></div>
-      <div class="card story" style="--c:var(--sb)"><p><b>লুকিয়ে থাকে।</b> Dev data-তে ১০টা row, তাই দ্রুত। Production-এ ১০,০০০ row-এ হঠাৎ timeout। Result ঠিক থাকে বলে test-ও pass করে।</p></div>
-    </div>
-
-    <h3>ORM-এ কেন ঘটে — lazy loading</h3>
-    <p class="lead">ORM-এ <code>$user-&gt;posts</code> লিখলেই মনে হয় সাধারণ property। আসলে প্রথমবার access করার সময় ORM চুপচাপ একটা query চালায় (lazy loading)। Loop-এর ভেতরে সেটাই N বার।</p>
-    <div class="grid2">
-      <div>
-        <div class="file" style="--dot:var(--pc)"><i></i>Laravel Eloquent<span class="r" style="--tc:var(--warn)">illustrative — চালানো হয়নি</span></div>
-<pre class="code" data-lang="php">// ✗ N+1
-$users = User::all();                       // query 1
-foreach ($users as $user) {
-    echo $user-&gt;posts-&gt;count();            // প্রতিবার 1 query (lazy load)
-}
-
-// ✓ eager loading — মোট 2 query
-$users = User::with('posts')-&gt;get();
-// ✓ শুধু count লাগলে — 1 query (subquery count)
-$users = User::withCount('posts')-&gt;get();</pre>
-      </div>
-      <div>
-        <div class="file" style="--dot:var(--sa)"><i></i>EF Core (C#)<span class="r" style="--tc:var(--warn)">illustrative — চালানো হয়নি</span></div>
-<pre class="code" data-lang="cs">// ✗ N+1
-var users = await db.Users.ToListAsync();           // query 1
-foreach (var u in users)
-{
-    var n = await db.Posts.CountAsync(p =&gt; p.UserId == u.Id);   // N টা query
-    // lazy-loading proxy চালু থাকলে u.Posts.Count-ও একই
-}
-
-// ✓ Include — JOIN (বা AsSplitQuery() দিলে 2 query)
-var users = await db.Users.Include(u =&gt; u.Posts).ToListAsync();
-// ✓ শুধু count — 1 query
-var rows = await db.Users
-    .Select(u =&gt; new { u.Name, Count = u.Posts.Count })
-    .ToListAsync();</pre>
-      </div>
-    </div>
-    <div class="how"><b>শুধু ORM-এর দোষ না:</b> raw SQL-এ loop লিখলেও (ছবির শেষ box), GraphQL resolver-এ, serializer-এ, বা একটা microservice N বার আরেকটাকে call করলেও একই N+1। কারণ ORM না — কারণ <b>loop-এর ভেতরে I/O</b>।</div>
-
-    <h3>Fix-গুলো — PostgreSQL-এ আসল output</h3>
-    <div class="file" style="--dot:var(--ok)"><i></i>(a) JOIN + GROUP BY — শুধু count লাগলে<span class="r" style="--tc:var(--ok)">1 query</span></div>
-<pre class="code" data-lang="sql">SELECT u.name, count(p.id) AS post_count
-FROM users u LEFT JOIN posts p ON p.user_id = u.id
-GROUP BY u.id, u.name ORDER BY u.id;
-<span class="o">  name  | post_count
---------+------------
- Rahim  |          2
- Karima |          1
- Sumon  |          1</span></pre>
-    <p class="foot"><code>LEFT JOIN</code> দিয়েছি যাতে post ছাড়া user-ও (count 0) আসে; <code>count(p.id)</code> NULL গোনে না।</p>
-
-    <div class="file" style="--dot:var(--ok);margin-top:14px"><i></i>(b) Batch — <code>IN</code> / <code>= ANY(...)</code> (এটাই ORM-এর eager loading)<span class="r" style="--tc:var(--ok)">2 query</span></div>
-<pre class="code" data-lang="sql"><span class="c">-- query 1: SELECT * FROM users;  (ID: 1, 2, 3)  → query 2:</span>
-SELECT * FROM posts WHERE user_id IN (1, 2, 3);          <span class="c">-- বা  = ANY(ARRAY[1,2,3])</span>
-<span class="o"> id |    title     | user_id
-----+--------------+---------
-  1 | First Post   |       1
-  2 | Another Post |       1
-  3 | Hello World  |       2
-  4 | Laravel Tips |       3</span></pre>
-    <p class="foot">ORM তারপর memory-তে <code>user_id</code> ধরে posts-গুলো সঠিক user-এর সাথে জুড়ে দেয়। Application-এ ID list parameter হিসেবে পাঠানোই ভালো; <code>= ANY($1)</code> (array parameter) লিখলে statement text বদলায় না, তাই plan/statistics একটাই থাকে।</p>
-
-    <div class="file" style="--dot:var(--ok);margin-top:14px"><i></i>(c) Nested data একসাথে — <code>json_agg</code> বা <code>LEFT JOIN LATERAL</code><span class="r" style="--tc:var(--ok)">1 query</span></div>
-<pre class="code" data-lang="sql">SELECT u.id, u.name, json_agg(p.title ORDER BY p.id) AS titles
-FROM users u LEFT JOIN posts p ON p.user_id = u.id
-GROUP BY u.id ORDER BY u.id;
-<span class="o"> id |  name  |             titles
-----+--------+--------------------------------
-  1 | Rahim  | ["First Post", "Another Post"]
-  2 | Karima | ["Hello World"]
-  3 | Sumon  | ["Laravel Tips"]</span>
-
-SELECT u.id, u.name, t.titles
-FROM users u
-LEFT JOIN LATERAL (
-  SELECT json_agg(json_build_object('id', p.id, 'title', p.title) ORDER BY p.id) AS titles
-  FROM posts p WHERE p.user_id = u.id
-) t ON true
-ORDER BY u.id;
-<span class="o"> id |  name  |                                   titles
-----+--------+----------------------------------------------------------------------------
-  1 | Rahim  | [{"id" : 1, "title" : "First Post"}, {"id" : 2, "title" : "Another Post"}]
-  2 | Karima | [{"id" : 3, "title" : "Hello World"}]
-  3 | Sumon  | [{"id" : 4, "title" : "Laravel Tips"}]</span></pre>
-    <p class="foot"><code>LATERAL</code> subquery প্রতিটা user-এর row-এর জন্য চলে (ভেতরে <code>u.id</code> ব্যবহার করা যায়) — তাই "প্রতি user-এর সর্বশেষ ৩টা post" ধরনের <code>LIMIT</code> ও এখানে সহজ। এটা N+1 না: পুরোটা একটাই statement, DB-এর ভেতরে।</p>
-
-    <div class="file" style="--dot:var(--warn);margin-top:14px"><i></i>(d) Pagination-এর ফাঁদ — JOIN row বাড়িয়ে দেয়<span class="r" style="--tc:var(--warn)">1000 user · 5000 post</span></div>
-<pre class="code" data-lang="sql"><span class="c">-- ✗ "প্রথম ১০ জন user" চেয়েছিলাম, পেলাম ১০টা row = মাত্র ২ জন user</span>
-SELECT u.id, u.name, p.title FROM users u JOIN posts p ON p.user_id = u.id
-ORDER BY u.id, p.id LIMIT 10;
-<span class="o"> id | name  |   title
-----+-------+-----------
-  1 | user1 | post 1000
-  1 | user1 | post 2000
-  1 | user1 | post 3000
-  1 | user1 | post 4000
-  1 | user1 | post 5000
-  2 | user2 | post 679
-  ...  (id 2-এর আরও ৪টা, মোট ১০ row)</span>
-
-<span class="c">-- ✓ দুই ধাপ: আগে parent-এর ID, তারপর শুধু তাদের child</span>
-SELECT id FROM users ORDER BY id LIMIT 10 OFFSET 0;                           <span class="c">-- ১০টা user ID</span>
-SELECT user_id, count(*) FROM posts WHERE user_id IN (1,2,3,4,5,6,7,8,9,10)
-GROUP BY user_id ORDER BY user_id;
-<span class="o"> user_id | count
----------+-------
-       1 |     5
-       2 |     5
-     ...  (10টা user, প্রতিটায় 5)</span></pre>
-    <p class="foot">1000 user × 5 post = JOIN-এর পর 5000 row — <code>LIMIT</code> row-এ কাজ করে, user-এ না। তাই paginate করা list-এ ORM-ও এই দুই ধাপই করে (parent paginate → <code>whereIn</code> eager load)। বড় table-এ <code>OFFSET</code>-এর বদলে keyset pagination ভালো।</p>
-
-    <h3>প্রমাণ — 1000 user · 5000 post (প্রতি user-এ 5টা)</h3>
-    <p class="lead">Data: <code>generate_series</code>-এ 1000 user, 5000 post। তিনটা পদ্ধতি psql-এ <code>-f file.sql</code> দিয়ে চালিয়ে wall-clock সময় নিয়েছি — psql প্রতিটা statement আলাদা করে server-এ পাঠায়, মানে loop-এ সত্যিই 1001 round trip (loopback TCP-তে)। <b>pg_stat_statements</b> দিয়ে query সংখ্যা গুনেছি:</p>
-<pre class="code" data-lang="sql">SELECT calls, rows, left(query,45) AS query FROM pg_stat_statements
-WHERE query ILIKE '%FROM posts%' OR query ILIKE '%FROM users%' ORDER BY calls DESC;
-<span class="o"> calls | rows |                 query
--------+------+----------------------------------------
-  1000 | 5000 | SELECT * FROM posts WHERE user_id = $1
-     1 | 1000 | SELECT * FROM users</span>     <span class="c">-- 1 + N = 1001 query; constant বদলে $1 — একই query ১০০০ বার</span></pre>
-    <div class="card tscroll" style="margin-top:12px">
-      <table>
-        <thead><tr><th>পদ্ধতি</th><th>query সংখ্যা</th><th>FK-তে index নেই</th><th>posts(user_id)-এ index আছে</th></tr></thead>
-        <tbody>
-          <tr><td><b>N+1 loop</b></td><td>1001</td><td>≈ <b>0.54 s</b></td><td>≈ <b>0.10 s</b></td></tr>
-          <tr><td><b>JOIN + GROUP BY</b></td><td>1</td><td>≈ 0.03 s</td><td>≈ 0.03 s</td></tr>
-          <tr><td><b>IN-batch</b> (2 query)</td><td>2</td><td>≈ 0.04 s</td><td>≈ 0.04 s</td></tr>
-        </tbody>
-      </table>
-    </div>
-    <p class="foot"><b>সৎ কথা:</b> এগুলো এই Mac-এ loopback-এ মাপা (প্রতিবার ৩ run, ফল স্থির)। শুধু <code>SELECT 1</code>-এর psql process শুরুর সময়ই ≈ 0.02–0.03 s, তাই JOIN/IN-এর সংখ্যাগুলো আসলে "মাপার নিচের সীমায়"। আসল ক্ষতি network-এ: loopback-এ round trip ≈ 0.1 ms, কিন্তু app আর DB আলাদা machine-এ 1–2 ms হলে 1001 round trip = <b>1–2 সেকেন্ড শুধু অপেক্ষা</b> (এটা গাণিতিক হিসাব, মাপা না) — আর JOIN/IN-এ সেই খরচ ১–২ বারই। তাই psql-local সংখ্যা N+1-এর ক্ষতি <b>কম করে</b> দেখায়।</p>
-
-    <h3>Index-এর ভূমিকা — FK column-এ index দিতে হয়</h3>
-    <p class="lead">PostgreSQL <code>REFERENCES users(id)</code> দিলে <b>parent-এর</b> (users.id) PK index আছে, কিন্তু child-এর <code>posts.user_id</code>-এ <b>নিজে থেকে index বানায় না</b>। তাই <code>WHERE user_id = ?</code> পুরো table পড়ে। IN/JOIN-ও এই index-এ নির্ভর করে। (বিস্তারিত: <a href="../dbms/indexing/index.html">Indexing গাইড</a>)</p>
-    <div class="grid2">
-<pre class="code" data-lang="sql">EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF)
-SELECT * FROM posts WHERE user_id = 42;
-<span class="o"> Seq Scan on posts (actual rows=5.00 loops=1)
-   Filter: (user_id = 42)
-   Rows Removed by Filter: 4995
-   Buffers: shared hit=32
- Execution Time: 0.506 ms</span>   <span class="c">-- index ছাড়া</span></pre>
-<pre class="code" data-lang="sql">CREATE INDEX posts_user_id_idx ON posts(user_id);
-EXPLAIN (ANALYZE, COSTS OFF, TIMING OFF)
-SELECT * FROM posts WHERE user_id = 42;
-<span class="o"> Bitmap Heap Scan on posts (actual rows=5.00 loops=1)
-   Recheck Cond: (user_id = 42)
-   -&gt;  Bitmap Index Scan on posts_user_id_idx
-         Index Cond: (user_id = 42)
- Execution Time: 0.039 ms</span>   <span class="c">-- index সহ</span></pre>
-    </div>
-    <p class="foot">Batch query-তে একই index: <code>WHERE user_id = ANY('{1,...,10}')</code> একটাই <code>Bitmap Index Scan</code>-এ 50 row আনে (Execution Time 0.029 ms)। Index থাকলে N+1-ও 5× দ্রুত (0.54 → 0.10 s) — কিন্তু 1001 round trip তবু থেকে যায়। Index N+1-এর <b>ওষুধ না, উপশম</b>।</p>
-
-    <h3>ধরবে কীভাবে</h3>
-    <div class="card tscroll">
-      <table>
-        <thead><tr><th>উপায়</th><th>কী দেখবে</th><th>নোট</th></tr></thead>
-        <tbody>
-          <tr><td><b>pg_stat_statements</b></td><td>একই normalized query-র <code>calls</code> অস্বাভাবিক বেশি (উপরে: 1000)</td><td>আমি এটাই ব্যবহার করেছি। <code>shared_preload_libraries = 'pg_stat_statements'</code> + restart, তারপর <code>CREATE EXTENSION pg_stat_statements</code>।</td></tr>
-          <tr><td><b>Query log</b></td><td><code>log_statement = 'all'</code> বা <code>log_min_duration_statement = 0</code> দিয়ে একটা request-এর log গোনো</td><td>এখানে চালাইনি; test/dev-এ ভালো, production-এ বন্যা।</td></tr>
-          <tr><td><b>Laravel</b></td><td>Debugbar / Telescope-এ query সংখ্যা ও duplicate query; <code>DB::listen()</code></td><td>tool-গুলো চালাইনি।</td></tr>
-          <tr><td><b>EF Core</b></td><td><code>LogTo(Console.WriteLine, LogLevel.Information)</code>-এ প্রতিটা SQL</td><td>চালাইনি।</td></tr>
-          <tr><td><b>APM</b> (Datadog, New Relic, Application Insights…)</td><td>এক trace-এ একই SQL ডজন ডজন বার</td><td>production-এ সবচেয়ে কাজের।</td></tr>
-        </tbody>
-      </table>
-    </div>
-    <div class="how"><b>ঠেকাবে কীভাবে:</b>
-      <ul>
-        <li><b>Eager loading</b> (<code>with()</code> / <code>Include()</code>) যেখানে related data লাগবেই; শুধু count/sum হলে <code>withCount</code> বা <code>Select</code> projection।</li>
-        <li><b>Laravel:</b> <code>Model::preventLazyLoading(! app()-&gt;isProduction())</code> — dev/test-এ lazy load হলেই exception (strict mode)। <span class="c">(ফিচারের নাম মনে থেকে লেখা, চালিয়ে দেখিনি)</span></li>
-        <li><b>GraphQL:</b> DataLoader / batching — একই tick-এর সব <code>user_id</code> জমিয়ে একটা <code>IN</code> query।</li>
-        <li><b>Test-এ query সংখ্যা assert</b> করো (<code>assertQueryCount</code>-ধরনের helper) — N বাড়লে test ফেল করবে।</li>
-        <li>Child table-এর FK column-এ <b>index</b> দাও।</li>
-      </ul>
-    </div>
-  </section>
-
-  <!-- N+1 simulator -->
-  <section id="sim1">
-    <h2><span class="num" style="--c:var(--pc)">▶</span>Simulation — query গুলো উড়ে যাচ্ছে</h2>
-    <p class="lead">User সংখ্যা N আর পদ্ধতি বেছে <b>▶ চালাও</b> / <b>⏭ এক ধাপ</b> চাপো। বাঁয়ে App, ডানে Database; প্রতিটা query একটা round trip। নিচের সময়টা একটা <b>MODEL</b> — মাপা না: প্রতি query-তে 1 ms round trip + 0.1 ms execute ধরা হয়েছে (JOIN-এর কাজ বেশি হলেও model-এ একই ধরেছি)।</p>
-    <div class="card sim">
-      <div class="modes" id="n1modes"></div>
-      <div class="bar">
-        <label class="slider">users (N)<input type="range" id="n1n" min="3" max="100" value="3" step="1"><output id="n1nv">3</output></label>
-        <span class="sp"></span>
-        <button type="button" class="btn primary" id="n1play">▶ চালাও</button>
-        <button type="button" class="btn" id="n1step">⏭ এক ধাপ</button>
-        <button type="button" class="btn" id="n1end">⏩ শেষে যাও</button>
-        <button type="button" class="btn" id="n1reset">↺ Reset</button>
-      </div>
-      <div class="stage"><svg id="n1svg" viewBox="0 0 1000 220" role="img" aria-label="App আর Database-এর মাঝে query উড়ছে"></svg></div>
-      <div class="sqlbar" id="n1sql"></div>
-      <div class="stats">
-        <div class="chip">পাঠানো query<b id="n1q">0 / 4</b></div>
-        <div class="chip">হিসাব<b id="n1f">1 + N = 4</b></div>
-        <div class="chip model">MODEL সময় এখন<b id="n1ms">0 ms</b></div>
-        <div class="chip model">MODEL মোট<b id="n1tot">4.4 ms</b></div>
-      </div>
-      <div class="cmpbars" id="n1cmp" aria-label="তিন পদ্ধতির MODEL সময়ের তুলনা"></div>
-      <div class="explain" id="n1explain"></div>
-      <div class="rtable"><table><thead><tr><th>id</th><th>User</th><th>Post Count</th></tr></thead><tbody id="n1rows"></tbody></table></div>
-    </div>
-  </section>
-
-  <!-- ================= 2. RACE ================= -->
-  <section id="race" style="--c:var(--pa)">
-    <h2><span class="num">2</span>Race Condition</h2>
-    <span class="motto">ফল নির্ভর করে concurrent transaction-গুলোর timing-এর উপর</span>
-    <p class="lead">Race condition মানে: একই data-য় দুটো transaction একসাথে চললে, কে আগে কে পরে — তার উপর ফল বদলায়। দুটো চেনা ছাঁচ: <b>check-then-act</b> ("আছে কি দেখি → নেই → তৈরি করি") আর <b>read-modify-write</b> ("পড়ি → app-এ হিসাব → লিখি")। দুটোতেই "check/read" আর "act/write"-এর মাঝে একটা ফাঁক থাকে, সেই ফাঁকে অন্য transaction ঢুকে পড়ে। কোনো error আসে না — data নীরবে ভুল হয়। Default <code>READ COMMITTED</code> এটা আটকায় না।</p>
-    <div class="how" style="margin-top:0"><b>পরের তিনটা demo PostgreSQL 18.6-এ দুটো আসল psql session দিয়ে চালানো।</b> "⏳" মানে ওই statement সত্যিই block হয়ে ছিল (Python script timeout দিয়ে ধরেছে)। Lost update-এর বিস্তারিত (read → হিসাব → write, version column) আলাদা গাইডে: <a href="../optimistic-pessimistic/index.html">Optimistic vs Pessimistic Locking</a>।</div>
-
-    <h3>(a) Overselling — stock শেষ, তবু বিক্রি</h3>
-    <p class="lead">Laptop-এর stock <b>1</b>, <code>CHECK</code> ছাড়া। দুজন customer একসাথে 1টা করে কিনছে। দুজনেই "stock ≥ 1" দেখে সিদ্ধান্ত নিল; তারপর <code>stock = stock - 1</code>।</p>
-<pre class="code" data-lang="sql">CREATE TABLE products (id int PRIMARY KEY, name text, stock int NOT NULL);
-INSERT INTO products VALUES (1, 'Laptop', 1);</pre>
-    <div class="card tl" data-tl="os"></div>
-    <div class="how"><b>কী হলো:</b> দুজনেই <code>SELECT</code>-এ 1 দেখেছে (সাধারণ SELECT কোনো lock নেয় না)। B-এর UPDATE row lock-এর জন্য অপেক্ষা করল ঠিকই, কিন্তু A commit করলে <code>stock = stock - 1</code> <b>নতুন মান 0-এর উপর</b> চলল → <b>−1</b>। একটা Laptop, দুটো বিক্রি। এখানে UPDATE নিজে atomic — ভুলটা "stock ≥ 1 দেখে সিদ্ধান্ত নেওয়া" আর "বিয়োগ করা" আলাদা statement হওয়ায়।</div>
-    <div class="grid2" style="margin-top:12px">
-<pre class="code" data-lang="sql"><span class="c">-- safety net: CHECK (stock &gt;= 0) থাকলে</span>
-ALTER TABLE products ADD CHECK (stock &gt;= 0);
-<span class="c">-- একই scenario-তে B-এর UPDATE (A commit-এর পর):</span>
-<span class="e">ERROR:  new row for relation "products" violates check constraint "products_stock_check"
-DETAIL:  Failing row contains (1, Laptop, -1).</span>
-COMMIT;   <span class="o">ROLLBACK</span>     <span class="c">-- শেষে stock = 0</span></pre>
-      <div class="card story" style="--c:var(--pd)"><p><b>CHECK data বাঁচায়, UX না।</b> stock আর −1 হয় না, কিন্তু B একটা error পায় — app-কে সেটা ধরে "sold out" বলতে হবে। তাছাড়া CHECK শুধু "সীমা" জানে; "এই seat একজনেরই" ধরনের নিয়ম UNIQUE/EXCLUDE দিয়ে। আসল fix নিচের (fix table) — শর্তটা <code>UPDATE ... WHERE stock &gt;= 1</code>-এ নিয়ে যাওয়া।</p></div>
-    </div>
-
-    <h3>(b) Check-then-insert — duplicate row</h3>
-    <p class="lead">"এই email-এ user আছে? নেই → তাহলে insert"। দুই request একসাথে এলে দুজনেই "নেই" দেখে।</p>
-<pre class="code" data-lang="sql">CREATE TABLE app_users (id serial PRIMARY KEY, email text NOT NULL);   <span class="c">-- UNIQUE নেই</span></pre>
-    <div class="card tl" data-tl="dup"></div>
-    <div class="how"><b>কী হলো:</b> কেউ কাউকে block করেনি (দুটো INSERT আলাদা row তৈরি করে, conflict নেই) — তাই দুটোই সফল; <code>app_users</code>-এ <code>rahim@example.com</code> <b>দুইবার</b> (id 1, 2)। এখন login, report, "email দিয়ে user খোঁজা" — সব ভাঙবে। <code>UNIQUE</code> থাকলে?</div>
-    <div class="card tl" data-tl="dupu"></div>
-    <div class="how"><b>লক্ষ্য করো:</b> B-এর INSERT <b>⏳ block</b> হলো — কারণ unique index-এ একই key-র আগের (uncommitted) insert আছে; A-র ফলাফল না জেনে B এগোতে পারে না। A commit করলে B পায় <code>duplicate key</code> error (<code>23505</code>); A rollback করলে B সফল হতো। Error না চাইলে <code>ON CONFLICT</code>:
-<pre class="code" data-lang="sql" style="margin-top:8px">INSERT INTO app_users (email) VALUES ('rahim@example.com') ON CONFLICT (email) DO NOTHING;
-<span class="c">-- B (A commit-এর পর unblock হয়ে):</span>
-<span class="o">INSERT 0 0</span>        <span class="c">-- 0 row insert; error নেই; app "আগেই আছে" ধরে নেয়। শেষে 1 row</span></pre></div>
-
-    <h3>(c) Double booking — একই seat / একই সময়</h3>
-    <p class="lead">Seat 12-র booking: আগে <code>SELECT count(*)</code>, 0 হলে INSERT। Constraint না থাকলে (b)-এর মতোই:</p>
-<pre class="code" data-lang="sql">CREATE TABLE bookings (id serial PRIMARY KEY, seat_no int NOT NULL, passenger text NOT NULL);
-<span class="c">-- A, B দুজনেই: SELECT count(*) FROM bookings WHERE seat_no = 12;  → 0</span>
-<span class="c">-- A: INSERT ... (12, 'Rahim');   B: INSERT ... (12, 'Karima');   দুজনেই COMMIT</span>
-SELECT * FROM bookings ORDER BY id;
-<span class="o"> id | seat_no | passenger
-----+---------+-----------
-  1 |      12 | Rahim
-  2 |      12 | Karima</span>     <span class="e">-- একই seat দুজনের!</span></pre>
-    <p class="foot">Fix ১ — <code>UNIQUE (seat_no)</code>: B-এর INSERT block হয়ে A commit-এর পর <span class="c">ERROR: duplicate key value violates unique constraint "bookings_seat_no_key" / Key (seat_no)=(12) already exists</span> পায় — আসল run-এ ঠিক এটাই হয়েছে, শেষে শুধু Rahim।</p>
-
-    <p class="lead" style="margin-top:16px">Fix ২ — আগে থেকে seat-এর row থাকলে (<code>seats</code> table, <code>passenger</code> NULL = খালি), <b>pessimistic</b>: <code>SELECT … FOR UPDATE</code>।</p>
-    <div class="card tl" data-tl="seatfu"></div>
-    <div class="how"><b>লক্ষ্য করো:</b> B-এর <code>FOR UPDATE</code> ⏳ আটকে ছিল; A commit করার পর PostgreSQL <code>WHERE passenger IS NULL</code> শর্ত <b>নতুন করে যাচাই</b> করল — row আর মেলে না, তাই <code>(0 rows)</code>। App বোঝে seat নেওয়া হয়ে গেছে।</div>
-
-    <p class="lead" style="margin-top:16px">Fix ৩ — <b>সময়ের range</b> (meeting room, doctor slot): "একই room-এ overlapping সময় নয়"। UNIQUE এটা পারে না; <code>EXCLUDE USING gist</code> পারে (<code>btree_gist</code> extension লাগে — আমার cluster-এ চালিয়ে verified):</p>
-<pre class="code" data-lang="sql">CREATE EXTENSION btree_gist;
-CREATE TABLE room_bookings (
-  id serial PRIMARY KEY, room int NOT NULL, during tstzrange NOT NULL,
-  EXCLUDE USING gist (room WITH =, during WITH &amp;&amp;)       <span class="c">-- একই room + overlapping সময় = নিষেধ</span>
-);</pre>
-    <div class="card tl" data-tl="excl"></div>
-    <div class="how"><b>লক্ষ্য করো:</b> 10:30–11:30 আর 10:00–11:00 overlap করে → B ⏳ block হয়ে A commit-এর পর <code>conflicting key value violates exclusion constraint</code>। কিন্তু <code>11:00–12:00</code> (range <code>[)</code> — শেষ সীমা বাদ) আর অন্য room-এর একই সময় সফল হলো।</div>
-
-    <h3>Fix-গুলো — কখন কোনটা</h3>
-    <div class="card tscroll">
-      <table class="cmp">
-        <thead><tr><th>Fix</th><th>কীভাবে</th><th>কখন</th><th>খেয়াল রাখো</th></tr></thead>
-        <tbody>
-          <tr><td><b>Atomic UPDATE + WHERE guard</b></td><td><code>UPDATE products SET stock = stock - 1 WHERE id = 1 AND stock &gt;= 1</code> → <code>UPDATE 0</code> মানে sold out</td><td>নিয়ম একটা row-এর ভেতরে (stock, balance, counter) — <b>প্রথম পছন্দ</b></td><td>Check আর act একটাই statement; <code>UPDATE 0</code> handle করো</td></tr>
-          <tr><td><b>UNIQUE / EXCLUDE + <code>ON CONFLICT</code></b></td><td>Database নিজেই নিয়ম বলবৎ করে; <code>ON CONFLICT DO NOTHING / DO UPDATE</code></td><td>"একজনই", "overlap নয়", idempotent insert</td><td>Constraint-ই সবচেয়ে শক্ত — app code ভুল করলেও আটকায়</td></tr>
-          <tr><td><b><code>SELECT … FOR UPDATE</code></b> (pessimistic)</td><td>পড়ার সময় row lock; বাকিরা লাইনে। WHERE আবার যাচাই হয়</td><td>পড়ে জটিল সিদ্ধান্ত, একাধিক row, row আগে থেকে আছে</td><td>Transaction ছোট রাখো; একাধিক row-এ সবসময় একই ক্রম (নইলে <a href="#deadlock">deadlock</a>)</td></tr>
-          <tr><td><b>Optimistic (version column)</b></td><td><code>UPDATE … WHERE id = ? AND version = ?</code> → 0 rows হলে retry</td><td>Conflict কম, user "think time" লম্বা (form edit, REST <code>If-Match</code>)</td><td>বিস্তারিত: <a href="../optimistic-pessimistic/index.html">optimistic-pessimistic</a></td></tr>
-          <tr><td><b>SERIALIZABLE / REPEATABLE READ + retry</b></td><td>Database নিজে conflict ধরে একজনকে fail করায় (<code>40001</code>)</td><td>নিয়ম জটিল, একাধিক table/row জুড়ে, constraint বানানো কঠিন</td><td><b>Retry বাধ্যতামূলক</b> — পুরো transaction আবার চালাতে হবে</td></tr>
-          <tr><td><b>Advisory lock</b> <code>pg_advisory_xact_lock</code></td><td>নিজের বানানো নামে (key) app-level critical section</td><td>Lock করার মতো row নেই (এখনও insert হয়নি), বা row-এর বাইরের resource</td><td>Database এই lock-এর অর্থ জানে না — সব code path-এ একই key দিতে হবে</td></tr>
-        </tbody>
-      </table>
-    </div>
-
-    <h3>SERIALIZABLE আর advisory lock — আসল output</h3>
-    <div class="grid2">
-<pre class="code" data-lang="sql"><span class="c">-- oversell scenario, দুজনেই BEGIN ISOLATION LEVEL SERIALIZABLE</span>
-<span class="c">-- A: SELECT stock …; B: SELECT stock …</span>
-<span class="c">-- A: UPDATE … stock = stock - 1;  B: UPDATE … ⏳</span>
-<span class="c">-- A: COMMIT;</span>
-<span class="e">ERROR:  could not serialize access due to concurrent update</span>   <span class="c">-- B-তে (SQLSTATE 40001)</span>
-<span class="c">-- B: ROLLBACK; app পুরো transaction আবার চালায় → এবার stock 0 দেখে "sold out"</span></pre>
-<pre class="code" data-lang="sql"><span class="c">-- duplicate email, UNIQUE ছাড়া, দুজনেই SERIALIZABLE:</span>
-<span class="c">-- A: SELECT (0 rows); B: SELECT (0 rows); A: INSERT; B: INSERT (দুটোই সফল)</span>
-<span class="c">-- A: COMMIT;  B: COMMIT;</span>
-<span class="e">ERROR:  could not serialize access due to read/write dependencies among transactions
-DETAIL:  Reason code: Canceled on identification as a pivot, during commit attempt.
-HINT:  The transaction might succeed if retried.</span>
-<span class="o">-- শেষে app_users-এ 1 row (A-র)</span></pre>
-    </div>
-    <div class="card tl" data-tl="adv" style="margin-top:12px"></div>
-    <div class="how"><b>SERIALIZABLE race condition আটকায় না — ধরে ফেলে।</b> সবাইকে একসাথে চলতে দেয়, তারপর যে ফল "কোনো serial order-এর সাথে মেলে না" তার একজনকে <code>40001</code> দিয়ে বাতিল করে। তাই "SERIALIZABLE দিলে আর কিছু লাগে না" ভুল — <b>retry loop</b> ছাড়া user error পাবে। Advisory lock-এ B ⏳ থেমে ছিল, A commit করলে ছাড়া পেল এবং এবার email-টা <b>দেখতে পেল</b> (id 1) — তাই insert-এর দরকার পড়ল না। Key-র জন্য <code>hashtext('email:…')</code> ব্যবহার করেছি; <code>_xact_</code> সংস্করণ transaction শেষে নিজেই ছাড়ে।</div>
-
-<pre class="code" data-lang="cs" style="margin-top:12px">// illustrative — retry on serialization failure / deadlock (Npgsql); চালানো হয়নি
-for (var attempt = 1; attempt &lt;= 5; attempt++)
-{
-    try { await RunTransactionAsync(db); return; }
-    catch (PostgresException ex) when (ex.SqlState is "40001" or "40P01")
-    {
-        await Task.Delay(Random.Shared.Next(10, 50) * attempt);   // backoff + jitter, তারপর পুরো transaction আবার
-    }
-}
-throw new Exception("Too much contention");</pre>
-  </section>
-
-  <!-- Race simulator -->
-  <section id="sim2">
-    <h2><span class="num" style="--c:var(--pc)">▶</span>Simulation — শেষ Laptop-টা কার?</h2>
-    <p class="lead">Stock <b>1</b>, A আর B দুজনেই <b>1টা</b> কিনতে চায়। সুরক্ষা বেছে ধাপে ধাপে চালাও — প্রতিটা ধাপের ফল উপরের আসল run-এর সাথে মেলানো (shared row, প্রত্যেক session-এর memory, lock আর শেষে verdict)।</p>
-    <div class="card sim">
-      <div class="modes" id="rmodes"></div>
-      <div class="bar">
-        <button type="button" class="btn primary" id="rplay">▶ চালাও</button>
-        <button type="button" class="btn" id="rstep">⏭ এক ধাপ</button>
-        <button type="button" class="btn" id="rreset">↺ Reset</button>
-        <span class="sp"></span>
-        <span class="prog" id="rprog"></span>
-      </div>
-      <div class="stage"><svg id="rsvg" viewBox="0 0 1000 300" role="img" aria-label="Session A, Session B আর shared row"></svg></div>
-      <div class="explain" id="rexplain"></div>
-      <div class="verdict" id="rverdict"></div>
-      <div class="tl log" id="rlog"></div>
-    </div>
-  </section>
-
-  <!-- ================= 3. DEADLOCK ================= -->
-  <section id="deadlock" style="--c:var(--sa)">
-    <h2><span class="num">3</span>Deadlock</h2>
-    <span class="motto">T1 ধরে আছে R1, চায় R2 — T2 ধরে আছে R2, চায় R1</span>
-    <p class="lead">দুই (বা বেশি) transaction প্রত্যেকে এমন lock ধরে আছে যেটা অন্যজনের লাগবে — <b>wait-for graph-এ চক্র</b> (T1 → T2 → T1)। কেউ এগোতে পারে না, কেউ ছাড়েও না; নিজে থেকে কখনো মীমাংসা হবে না। Race condition নীরবে ভুল করে; deadlock <b>জোরে চেঁচায়</b> — PostgreSQL একজনকে error দিয়ে বাতিল করে দেয়।</p>
-
-    <h3>Demo ১ — টাকা transfer, উল্টো ক্রমে</h3>
-    <p class="lead">Rahim (id 1) আর Karima (id 2), দুজনেরই 1000। T1: Rahim → Karima 100; T2: Karima → Rahim 50 — দুটো একসাথে, কিন্তু প্রথমে নিজের account কেটে তারপর অন্যেরটায় যোগ।</p>
-<pre class="code" data-lang="sql">CREATE TABLE accounts (id int PRIMARY KEY, owner text, balance int NOT NULL);
-INSERT INTO accounts VALUES (1,'Rahim',1000),(2,'Karima',1000);</pre>
-    <div class="card tl" data-tl="dl1"></div>
-    <div class="how"><b>কী হলো:</b> t5-এ T1 আটকাল (T2 row 2 ধরে আছে), t6-এ T2 row 1 চাইল — চক্র সম্পূর্ণ। <code>deadlock_timeout</code> (default <b>1s</b>) পরে T2-এর wait-এর সময় PostgreSQL wait-for graph খুঁজে চক্র পেল, <b>T2-কে বাতিল</b> করল (SQLSTATE <code>40P01</code>); T2-এর lock ছাড়তেই T1-এর আটকে থাকা UPDATE শেষ হলো। শেষ ফল: শুধু T1-এর transfer (900 / 1100)। এই run-এ victim T2 হয়েছে কারণ চক্র পুরো হওয়ার পর <i>তার</i> timeout-এই graph check হয়েছে; কে victim হবে তা নির্ধারিত নিয়ম না — ধরে নাও যেকোনো একজন।</div>
-
-    <h3>PostgreSQL আসলে কী করে</h3>
-    <div class="grid2">
-      <div class="card story" style="--c:var(--sa)"><p><b>১. আগে শুধু অপেক্ষা।</b> Lock না পেলে process ঘুমায়। Deadlock check খরচের কাজ, আর বেশিরভাগ অপেক্ষা অল্পেই শেষ — তাই <code>deadlock_timeout</code> (1s) পার না হলে check-ই করে না।</p></div>
-      <div class="card story" style="--c:var(--sb)"><p><b>২. Timeout-এ graph খোঁজে।</b> কে কার জন্য অপেক্ষা করছে তার graph বানিয়ে চক্র আছে কিনা দেখে। চক্র পেলে <b>যে process check চালাচ্ছিল</b> সে নিজের statement বাতিল করে: <code>ERROR: deadlock detected</code>।</p></div>
-      <div class="card story" style="--c:var(--pc)"><p><b>৩. বাকিরা চলে।</b> Victim-এর transaction abort — তার lock সব ছাড়ে; অন্যজন এগোয়। PostgreSQL victim-কে <b>নিজে retry করে না</b>; app-কে <code>40P01</code> ধরে পুরো transaction আবার চালাতে হয়।</p></div>
-      <div class="card story" style="--c:var(--pa)"><p><b>৪. Server log-এ বিস্তারিত।</b> Client শুধু DETAIL পায়, কোন query কার ছিল তা "See server log" — log-এ দুই process-এর SQL-ই থাকে।</p></div>
-    </div>
-<pre class="code" data-lang="sql" style="margin-top:12px"><span class="c">-- Server log (demo ১-এর ঐ run থেকে)</span>
-<span class="e">ERROR:  deadlock detected
-DETAIL:  Process 56522 waits for ShareLock on transaction 887; blocked by process 56521.
-	Process 56521 waits for ShareLock on transaction 888; blocked by process 56522.
-	Process 56522: UPDATE accounts SET balance = balance + 50 WHERE id = 1;
-	Process 56521: UPDATE accounts SET balance = balance + 100 WHERE id = 2;
-HINT:  See server log for query details.
-CONTEXT:  while updating tuple (0,1) in relation "accounts"</span></pre>
-    <p class="foot">"ShareLock on transaction 887" — row update-এ আসলে অপেক্ষা হয় <b>অন্য transaction শেষ হওয়ার</b> উপর (তার ID-র lock), row-এর উপর নয়; তাই output-এ row না, transaction number।</p>
-
-    <h3>কে কাকে আটকে রেখেছে — <code>pg_blocking_pids()</code>, <code>pg_locks</code></h3>
-    <p class="lead">Production-এ "query আটকে আছে" শুনলে প্রথম কাজ। নিচে আসল run: demo ১-এর t5-এর পর (T1 আটকে আছে) অন্য session থেকে:</p>
-<pre class="code" data-lang="sql">SELECT a.pid, a.application_name, pg_blocking_pids(a.pid) AS blocked_by,
-       a.wait_event_type, a.wait_event, left(a.query,50) AS query
-FROM pg_stat_activity a
-WHERE a.datname = 'theory' AND cardinality(pg_blocking_pids(a.pid)) &gt; 0;
-<span class="o">  pid  | application_name | blocked_by | wait_event_type |  wait_event   |                       query
--------+------------------+------------+-----------------+---------------+----------------------------------------------------
- 56521 | psql             | {56522}    | Lock            | transactionid | UPDATE accounts SET balance = balance + 100 WHERE
-(1 row)</span></pre>
-    <p class="lead" style="margin-top:14px">সবচেয়ে সহজ ক্ষেত্রে (T1 row 1 update করে বসে আছে, T2 একই row চাইছে) <code>pg_locks</code>-এ ছবিটা — <code>granted = f</code> মানে অপেক্ষায়:</p>
-<pre class="code" data-lang="sql">SELECT a.pid, left(a.query,40) AS query, l.locktype, l.mode, l.granted, l.transactionid
-FROM pg_locks l JOIN pg_stat_activity a USING (pid)
-WHERE a.datname = 'theory' AND a.pid &lt;&gt; pg_backend_pid() AND l.locktype IN ('transactionid','tuple')
-ORDER BY a.pid, l.locktype;
-<span class="o">  pid  |                  query                   |   locktype    |     mode      | granted | transactionid
--------+------------------------------------------+---------------+---------------+---------+---------------
- 56555 | UPDATE accounts SET balance = balance -… | transactionid | ExclusiveLock | t       |           891
- 56556 | UPDATE accounts SET balance = balance +… | transactionid | ShareLock     | f       |           891
- 56556 | UPDATE accounts SET balance = balance +… | transactionid | ExclusiveLock | t       |           892
- 56556 | UPDATE accounts SET balance = balance +… | tuple         | ExclusiveLock | t       |</span>
-
-<span class="c">-- blocker-কে নাম ধরে দেখতে</span>
-SELECT blocked.pid AS blocked_pid, blocker.pid AS blocker_pid, blocker.state AS blocker_state,
-       left(blocker.query,45) AS blocker_last_query
-FROM pg_stat_activity blocked
-JOIN LATERAL unnest(pg_blocking_pids(blocked.pid)) AS bp(pid) ON true
-JOIN pg_stat_activity blocker ON blocker.pid = bp.pid;
-<span class="o"> blocked_pid | blocker_pid |    blocker_state    |              blocker_last_query
--------------+-------------+---------------------+-----------------------------------------------
-       56556 |       56555 | idle in transaction | UPDATE accounts SET balance = balance - 100 W</span></pre>
-    <div class="how"><b>পড়ার কৌশল:</b> <code>56556</code> ShareLock চাইছে transaction 891-এ (<code>granted = f</code>), আর 891-এর মালিক <code>56555</code> — <code>idle in transaction</code> অবস্থায় বসে আছে (BEGIN করে কিছু না করে!)। এই "idle in transaction" blocker-ই production-এর সবচেয়ে সাধারণ চোর: কেউ transaction খুলে ভুলে গেছে বা app user input/HTTP call-এর জন্য অপেক্ষা করছে। <code>log_lock_waits = on</code> দিলে deadlock না হলেও <code>deadlock_timeout</code>-এর বেশি অপেক্ষার log পাবে — আমার cluster-এ default off ছিল, চালু করে এই line পেয়েছি:
-<pre class="code" data-lang="sql" style="margin-top:8px"><span class="o">LOG:  process 56582 still waiting for ShareLock on transaction 902 after 1001.101 ms
-LOG:  process 56582 acquired ShareLock on transaction 902 after 2615.728 ms</span></pre></div>
-
-    <h3>আরও তিনটা বাস্তব রূপ</h3>
-    <p class="lead">শুধু "দুই account"-এই না। তিনটা variant-ই আমি আসলে reproduce করেছি:</p>
-
-    <div class="file" style="--dot:var(--sa)"><i></i>Variant A — unique index-এ উল্টো ক্রমে INSERT<span class="r" style="--tc:var(--bad)">deadlock</span></div>
-<pre class="code" data-lang="sql">CREATE TABLE kv (k text PRIMARY KEY, v int);
-<span class="c">-- T1: BEGIN; INSERT INTO kv VALUES ('a', 1);        T2: BEGIN; INSERT INTO kv VALUES ('b', 2);</span>
-<span class="c">-- T1: INSERT INTO kv VALUES ('b', 3);  ⏳ (T2-র 'b' uncommitted — duplicate হবে কিনা জানতে অপেক্ষা)</span>
-<span class="c">-- T2: INSERT INTO kv VALUES ('a', 4);</span>
-<span class="e">ERROR:  deadlock detected
-DETAIL:  Process 56583 waits for ShareLock on transaction 901; blocked by process 56582.
-Process 56582 waits for ShareLock on transaction 902; blocked by process 56583.
-HINT:  See server log for query details.
-CONTEXT:  while inserting index tuple (0,4) in relation "kv_pkey"</span></pre>
-    <p class="foot">Batch import, "upsert" loop, একই unique key-তে একাধিক worker — key-গুলো ভিন্ন ক্রমে পেলে এটাই হয়।</p>
-
-    <div class="file" style="--dot:var(--sb);margin-top:14px"><i></i>Variant B — দুটো batch UPDATE, row-এর ক্রম উল্টো<span class="r" style="--tc:var(--bad)">deadlock</span></div>
-<pre class="code" data-lang="sql"><span class="c">-- accounts-এ id 1,2,3। দুই session একসাথে একই দুই row batch-এ update করে, ক্রম ASC বনাম DESC।</span>
-<span class="c">-- pg_sleep শুধু window বড় করতে (production-এ load-ই এই কাজ করে):</span>
-<span class="c">-- Session A:</span>
-UPDATE accounts a SET balance = balance + 1 + 0*length(pg_sleep(1)::text)
-FROM (SELECT id FROM accounts WHERE id IN (1,2) ORDER BY id ASC  OFFSET 0) s WHERE a.id = s.id;
-<span class="c">-- Session B: একই, কিন্তু ORDER BY id DESC</span>
-<span class="e">ERROR:  deadlock detected      <span class="c">-- A-তে; B-র UPDATE 2 সফল</span>
-DETAIL:  Process 56600 waits for ShareLock on transaction 910; blocked by process 56599.
-Process 56599 waits for ShareLock on transaction 909; blocked by process 56600.
-CONTEXT:  while updating tuple (0,2) in relation "accounts"</span></pre>
-    <p class="foot">Single statement-এর ভেতরেও deadlock হয়: প্রতিটা row একে একে lock হয়, তাই দুই batch উল্টো ক্রমে row ছুঁলেই চক্র।</p>
-
-    <div class="file" style="--dot:var(--pc);margin-top:14px"><i></i>Variant C — একই row, কিন্তু lock-upgrade (<code>FOR SHARE</code> → <code>UPDATE</code>)<span class="r" style="--tc:var(--bad)">এক row-এও deadlock</span></div>
-<pre class="code" data-lang="sql"><span class="c">-- T1 ও T2 দুজনেই:  BEGIN; SELECT balance FROM accounts WHERE id = 1 FOR SHARE;   (দুজনেই 1000 পেল, share lock সামঞ্জস্যপূর্ণ)</span>
-<span class="c">-- T1: UPDATE accounts SET balance = balance - 100 WHERE id = 1;  ⏳ (T2-র share lock ছাড়ার অপেক্ষা)</span>
-<span class="c">-- T2: UPDATE accounts SET balance = balance - 50  WHERE id = 1;</span>
-<span class="e">ERROR:  deadlock detected
-DETAIL:  Process 56590 waits for ShareLock on transaction 905; blocked by process 56591.
-Process 56591 waits for ShareLock on transaction 906; blocked by process 56590.
-CONTEXT:  while updating tuple (0,1) in relation "accounts"</span></pre>
-    <p class="foot">Row একটাই, তবু deadlock: দুজনেই <b>নিচু lock (SHARE) ধরে উঁচু lock (UPDATE) চাইছে</b>। শুরুতেই <code>FOR UPDATE</code> নিলে (বা সরাসরি atomic UPDATE) এটা হতো না। Foreign key-র লুকানো <code>FOR KEY SHARE</code> থেকেও একই ধাঁচ আসতে পারে।</p>
-
-    <h3>Fix — নিয়ম মেনে lock নাও</h3>
-    <p class="lead"><b>সবচেয়ে বড় fix: consistent lock order।</b> সবাই row-গুলো একই ক্রমে (যেমন id অনুযায়ী) lock করলে চক্র বানানো অসম্ভব — দেরি হতে পারে, deadlock না। এবং সবগুলো একসাথে আগেই নাও: <code>SELECT … WHERE id IN (…) ORDER BY id FOR UPDATE</code>। (Demo ১-ই এভাবে, আসল run:)</p>
-    <div class="card tl" data-tl="dlfix"></div>
-    <div class="how"><b>কী হলো:</b> T2-এর SELECT ⏳ থামল (row 1 পাওয়ার আগেই), কিন্তু T2 <b>কিছুই ধরে নেই</b> — তাই চক্র নেই। T1 commit করলে T2 এগোয় এবং নতুন মান (900, 1100) পড়ে। শেষে 950 / 1050 — দুই transfer-ই সঠিক, error নেই।</div>
-    <div class="card tscroll" style="margin-top:14px">
-      <table>
-        <thead><tr><th>Fix</th><th>কীভাবে / কেন</th></tr></thead>
-        <tbody>
-          <tr><td><b>Consistent lock order</b></td><td>সব code path একই ক্রমে lock নেয় (<code>ORDER BY id FOR UPDATE</code>)। Cycle-এর পূর্বশর্তই ভাঙে।</td></tr>
-          <tr><td><b>পুরো set আগেই lock</b></td><td>এক statement-এ সব row; মাঝপথে নতুন lock চাওয়া নেই (variant C-এর lock-upgrade-ও আসে না)।</td></tr>
-          <tr><td><b>Transaction ছোট</b></td><td>যত কম সময় lock ধরে, তত কম overlap। <b>Transaction-এর ভেতরে user input, HTTP call, sleep নয়</b>।</td></tr>
-          <tr><td><b>Lock-এর পরিধি কমাও</b></td><td>পুরো table না, দরকারি row; <code>WHERE</code> index-ওয়ালা যাতে বাড়তি row lock না হয়; অকারণে বড় batch ভেঙে ছোট করো।</td></tr>
-          <tr><td><b><code>NOWAIT</code> / <code>lock_timeout</code></b></td><td>অনির্দিষ্ট অপেক্ষার বদলে দ্রুত fail (নিচে output)। Deadlock ঠেকায় না, কিন্তু আটকে থাকা কমায়।</td></tr>
-          <tr><td><b>Retry on <code>40P01</code></b></td><td>ঠেকানো না গেলেও ধরো: পুরো transaction আবার চালাও (backoff + jitter)। PostgreSQL নিজে retry করে না।</td></tr>
-        </tbody>
-      </table>
-    </div>
-<pre class="code" data-lang="sql" style="margin-top:12px"><span class="c">-- A একটা row update করে আছে; B:</span>
-SELECT * FROM accounts WHERE id = 1 FOR UPDATE NOWAIT;
-<span class="e">ERROR:  could not obtain lock on row in relation "accounts"</span>
-
-SET lock_timeout = '500ms';
-UPDATE accounts SET balance = 1 WHERE id = 1;
-<span class="e">ERROR:  canceling statement due to lock timeout
-CONTEXT:  while updating tuple (0,4) in relation "accounts"</span></pre>
-    <div class="how"><b>OS-এর deadlock-এর সাথে পার্থক্য:</b> Coffman-এর চার শর্ত (mutual exclusion, hold &amp; wait, no preemption, circular wait) আর Banker's algorithm-এর তত্ত্ব আলাদা গাইডে: <a href="../../05-operating-system/deadlock/index.html">OS Deadlock</a>। Database "prevention/avoidance"-এ যায় না; <b>detect করে একজনকে rollback</b> করে (কারণ transaction rollback সস্তা আর নিরাপদ) — আর "circular wait" ভাঙার দায়িত্ব দেয় তোমাকে (lock order) ।</div>
-  </section>
-
-  <!-- Deadlock simulator -->
-  <section id="sim3">
-    <h2><span class="num" style="--c:var(--pc)">▶</span>Simulation — Wait-for graph</h2>
-    <p class="lead">T1, T2 হলো transaction; R1, R2 হলো <code>accounts</code>-এর row 1 আর 2। <b>solid</b> রেখা = lock ধরে আছে, <b>dashed</b> = অপেক্ষায়। চক্র তৈরি হলে লাল। Toggle দিয়ে "consistent lock order" চালু করে একই কাজ আবার চালাও।</p>
-    <div class="card sim">
-      <div class="modes" id="dmodes"></div>
-      <div class="bar">
-        <button type="button" class="btn primary" id="dplay">▶ চালাও</button>
-        <button type="button" class="btn" id="dstep">⏭ এক ধাপ</button>
-        <button type="button" class="btn" id="dreset">↺ Reset</button>
-        <span class="sp"></span>
-        <span class="prog" id="dprog"></span>
-      </div>
-      <div class="legend"><span style="--lc:var(--sa)">T1 ধরে আছে</span><span style="--lc:var(--sb)">T2 ধরে আছে</span><span class="dash" style="--lc:var(--warn)">অপেক্ষা (waits for)</span><span style="--lc:var(--bad)">চক্র = deadlock</span></div>
-      <div class="stage"><svg id="dsvg" viewBox="0 0 1000 310" role="img" aria-label="T1, T2, R1, R2-এর wait-for graph"></svg></div>
-      <div class="sqlbar" id="dsql"></div>
-      <div class="explain" id="dexplain"></div>
-      <div class="verdict" id="dverdict"></div>
-      <div class="tl log" id="dlog"></div>
-    </div>
-  </section>
-
-  <!-- ================= 4. SUMMARY ================= -->
-  <section id="summary">
-    <h2><span class="num" style="--c:var(--pd)">≡</span>তিনটার তুলনা</h2>
-    <div class="card tscroll">
-      <table class="sumtable">
-        <thead><tr><th></th><th>N+1</th><th>Race condition</th><th>Deadlock</th></tr></thead>
-        <tbody>
-          <tr><td><b>লক্ষণ</b></td><td>Page/API ধীর; data বাড়লে আরও ধীর। Result ঠিক।</td><td>Data নীরবে ভুল: stock −1, duplicate row, double booking। Error নেই।</td><td>Request আটকে; <code>deadlock detected</code> error; মাঝে মাঝে, load-এ।</td></tr>
-          <tr><td><b>কারণ</b></td><td>Loop-এর ভেতরে query (lazy loading) — 1 + N round trip</td><td>Check/read আর act/write-এর মাঝে ফাঁক; concurrent transaction ঢোকে</td><td>দুই transaction উল্টো ক্রমে lock চায় — wait-for graph-এ চক্র</td></tr>
-          <tr><td><b>ধরবে কীভাবে</b></td><td><code>pg_stat_statements</code> <code>calls</code>, query log, Debugbar/Telescope, APM</td><td>Invariant ভাঙা (stock &lt; 0, duplicate), concurrent test, audit/report mismatch</td><td>Log-এর <code>40P01</code>, <code>pg_blocking_pids()</code>, <code>pg_locks</code>, <code>log_lock_waits</code></td></tr>
-          <tr><td><b>Fix</b></td><td>Eager loading (<code>with</code>/<code>Include</code>), JOIN / <code>IN</code>-batch, <code>json_agg</code>, FK-তে index</td><td>Atomic UPDATE + guard, UNIQUE/EXCLUDE, <code>FOR UPDATE</code>, version column, SERIALIZABLE + retry, advisory lock</td><td>Consistent lock order, ছোট transaction, পুরো set আগে lock, <code>NOWAIT</code>/<code>lock_timeout</code>, retry <code>40P01</code></td></tr>
-          <tr><td><b>Interview-এ কী বলবে</b></td><td>"1টা query list-এর, N টা প্রতিটা item-এর — fix হলো eager loading বা batch করে 2টা query-তে নামানো।"</td><td>"Check আর act আলাদা হলে ফাঁক থাকে — নিয়মটা database-এর ভেতরে নিয়ে যাই: atomic UPDATE, constraint, lock।"</td><td>"চক্রাকার lock-wait; Postgres detect করে একজনকে 40P01-এ বাতিল করে — আমি lock order ঠিক রাখি আর retry করি।"</td></tr>
-        </tbody>
-      </table>
-    </div>
-    <p class="foot">আরও পড়ো: <a href="../transactions/index.html">Transaction Isolation + playground</a> · <a href="../optimistic-pessimistic/index.html">Optimistic vs Pessimistic</a> · <a href="../acid/index.html">ACID</a> · <a href="../dbms/indexing/index.html">Indexing</a> · <a href="../../05-operating-system/deadlock/index.html">OS Deadlock (তত্ত্ব)</a></p>
-  </section>
-
-  <!-- ================= 5. QA ================= -->
-  <section id="qa">
-    <h2><span class="num" style="--c:var(--accent)">Q</span>Interview-এ যা আসে</h2>
-    <div class="card" style="padding:4px 18px">
-      <details><summary>N+1 query problem কী, আর ORM-এ কীভাবে ঠিক করবে?</summary><p>একটা list আনতে ১টা query, তারপর list-এর প্রতিটা item-এর related data আনতে আরও N টা — মোট 1 + N। ORM-এ কারণ lazy loading: loop-এ <code>$user-&gt;posts</code> প্রতিবার query চালায়। Fix: eager loading (Laravel <code>with('posts')</code>, EF Core <code>Include</code>, Hibernate <code>JOIN FETCH</code>/<code>@BatchSize</code>) যাতে ২টা query-তে নামে; শুধু count লাগলে <code>withCount</code>/projection। ঠেকাতে Laravel-এ strict mode (<code>preventLazyLoading</code>) আর test-এ query সংখ্যা assert।</p></details>
-      <details><summary>JOIN বনাম IN-batch (eager loading) — trade-off কী?</summary><p><b>JOIN:</b> ১টা query, aggregate (count/sum) হলে সবচেয়ে ভালো; কিন্তু parent-এর column প্রতিটা child row-এর সাথে বারবার আসে (width × rows বাড়ে), আর <code>LIMIT</code>/pagination parent-এ না লেগে JOIN-এর row-এ লাগে (উপরের (d): ১০ row = ২ জন user)। <b>IN-batch:</b> ২টা query, কোনো duplication নেই, paginate করা parent-এ সহজ (আগে ID, তারপর <code>IN</code>); কিন্তু বিশাল IN list (হাজার হাজার ID) chunk করতে হয়, আর দুটো query-র মাঝে data বদলাতে পারে। ORM default-এ IN-batch-ই করে; দুই ক্ষেত্রেই FK-তে index লাগে।</p></details>
-      <details><summary>N+1 কি শুধু ORM-এর সমস্যা?</summary><p>না। Raw SQL-এ loop লিখলে, GraphQL resolver প্রতি node-এর জন্য query করলে, serializer/view-তে লুকানো query থাকলে, বা একটা microservice N বার আরেকটাকে HTTP call করলে একই। মূল কারণ "loop-এর ভেতরে I/O"। ORM শুধু lazy loading দিয়ে এটাকে অদৃশ্য করে দেয়।</p></details>
-      <details><summary>Race condition আর deadlock-এর পার্থক্য কী?</summary><p>Race condition-এ কেউ আটকায় না, সবাই চলে — কিন্তু timing-এর কারণে ফল ভুল (stock −1)। নীরব, তাই বিপজ্জনক। Deadlock-এ ঠিক উল্টো: সবাই আটকে চক্রে, কেউ এগোয় না — database একজনকে error দিয়ে বাতিল করে, তাই জোরে ধরা পড়ে। Lock যোগ করলে race কমে, কিন্তু ভুল ক্রমে lock নিলে deadlock আসে — দুটো পরস্পরের সাথে জড়িত।</p></details>
-      <details><summary>শুধু একটা row নিয়েও কি deadlock হতে পারে?</summary><p>হ্যাঁ — আমি reproduce করেছি: দুই transaction দুজনেই একই row-এ <code>SELECT … FOR SHARE</code> (দুজনেই পেল), তারপর দুজনেই সেই row <code>UPDATE</code> করতে চাইলে প্রত্যেকে অন্যের share lock ছাড়ার অপেক্ষায় — চক্র, <code>deadlock detected</code>। Lock-upgrade (নিচু → উঁচু) এর কারণ। শুরুতেই <code>FOR UPDATE</code> নিলে বা atomic UPDATE করলে হতো না।</p></details>
-      <details><summary>SERIALIZABLE দিলে কি race condition আর হবে না?</summary><p>Anomaly ঘটবে না — কিন্তু আটকে নয়, <b>ধরে ফেলে</b>। Transaction-গুলো একসাথে চলে, তারপর যে ফল কোনো serial order-এর সাথে মেলে না তার একজনকে <code>40001</code> (<code>could not serialize access…</code>) দিয়ে বাতিল করে — উপরের run-এ দুই ক্ষেত্রেই দেখিয়েছি। তাই retry loop বাধ্যতামূলক; আর সম্ভব হলে UNIQUE/atomic UPDATE এর মতো সস্তা ও নির্ভরযোগ্য উপায় আগে। Serializable-এ বেশি conflict হলে retry-র ঝড়ও আসে।</p></details>
-      <details><summary>Test-এ race condition কীভাবে reproduce করবে?</summary><p>দুটো আলাদা connection/transaction নিয়ে ধাপগুলো ইচ্ছেমতো interleave করো — আমি দুটো psql session script দিয়ে চালিয়েছি, block হওয়া ধরতে timeout দিয়ে। Application test-এ <code>Task.WhenAll</code>/thread + barrier (সবাই এক সাথে শুরু), অনেক iteration, শেষে invariant check (stock ≥ 0, email unique)। Window বড় করতে <code>pg_sleep</code> বা advisory lock দিয়ে "gate" বানাও। Test pass মানে race নেই না — তাই constraint-ই আসল সুরক্ষা।</p></details>
-      <details><summary>PostgreSQL কি deadlock-এর victim-কে নিজে retry করে?</summary><p>না। Victim-এর statement <code>ERROR 40P01</code> পায় এবং পুরো transaction abort (rollback) হয়ে যায়। App-কে error ধরে transaction <b>শুরু থেকে</b> আবার চালাতে হবে (backoff + jitter সহ, সীমিত বার)। একইভাবে <code>40001</code> serialization failure-ও।</p></details>
-      <details><summary>Deadlock detect হতে ১ সেকেন্ড লাগে কেন? সেটা কি বদলানো যায়?</summary><p>Deadlock check ব্যয়বহুল, আর বেশিরভাগ lock-wait অল্পেই শেষ হয় — তাই PostgreSQL আগে <code>deadlock_timeout</code> (default 1s) অপেক্ষা করে, তারপর check করে। কমালে deadlock দ্রুত ধরা পড়ে কিন্তু বাড়তি check-এর খরচ; বাড়ালে উল্টো। সাধারণত default-ই রাখা হয়। <code>lock_timeout</code> আলাদা জিনিস — কোনো lock-ই না পেলে (deadlock না হলেও) কতক্ষণ পর হাল ছাড়বে।</p></details>
-      <details><summary>Foreign key column-এ কি index লাগে?</summary><p>PostgreSQL parent-এর PK/unique-এ index পায়, কিন্তু <b>child-এর FK column-এ (posts.user_id) নিজে index বানায় না</b> — উপরের EXPLAIN-এ index ছাড়া Seq Scan (0.506 ms, 4995 row ফেলা), index দিয়ে Bitmap Index Scan (0.039 ms)। এই index ছাড়া N+1 আরও খারাপ (0.54 s বনাম 0.10 s), JOIN/IN ধীর, আর parent row delete করলেও child-এ scan হয় (FK check)। তাই child-এর FK column-এ index দেওয়াই নিয়ম।</p></details>
-    </div>
-  </section>
-
-  <footer><span>WellDev · DBMS &amp; SQL</span><a href="../transactions/index.html">Transaction Isolation গাইড →</a></footer>
+  <nav class="parts" id="parts"></nav>
+  <main id="app"></main>
+  <footer>DBMS · N+1, Race Condition, Deadlock</footer>
 </div>
 <script>
-// ---------- shared helpers: SQL highlighter + two-lane rows ----------
-const esc = s => s.replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
-const KW = {
-  sql: "BEGIN|COMMIT|ROLLBACK|SELECT|FROM|WHERE|UPDATE|SET|INSERT|INTO|VALUES|CREATE|TABLE|PRIMARY|KEY|NOT|NULL|CHECK|DEFAULT|AND|FOR|NOWAIT|SHARE|ORDER|BY|LIMIT|OFFSET|RETURNING|IN|ANY|JOIN|LEFT|LATERAL|ON|GROUP|AS|EXPLAIN|ANALYZE|UNIQUE|EXCLUDE|USING|CONFLICT|DO|NOTHING|ISOLATION|LEVEL|SERIALIZABLE|REFERENCES|INDEX|EXTENSION|ALTER|ADD|IS|DESC|ASC|int|text|serial|tstzrange|gist",
-  cs: "async|await|using|var|for|if|throw|return|new|int|catch|try|when|is|or|foreach|in",
-  php: "foreach|as|echo|function|fn|return|new",
-};
-function highlight(src, lang) {
-  const com = lang === "sql" ? "--[^\\n]*" : "\\/\\/[^\\n]*";
-  const str = lang === "cs" ? '"(?:[^"\\\\]|\\\\.)*"' : lang === "php" ? "'(?:[^'\\\\]|\\\\.)*'" : "'(?:[^']|'')*'";
-  const re = new RegExp(`(${com})|(${str})|\\b(\\d+)\\b|\\b(${KW[lang]})\\b|\\b([A-Z][a-z]+[A-Z]\\w*|[A-Z][a-z]+(?=::))`, "g");
-  return esc(src).replace(re, (m, c, s, d, k, t) =>
-    c ? `<span class="c">${c}</span>` : s ? `<span class="s">${s}</span>` : d ? `<span class="d">${d}</span>` :
-    k ? `<span class="k">${k}</span>` : lang === "sql" ? t : `<span class="t">${t}</span>`);
+/* ---------- theme ---------- */
+(function(){
+  const root=document.documentElement,btn=document.getElementById('theme');
+  try{const t=localStorage.getItem('theme');if(t)root.dataset.theme=t;}catch(e){}
+  const dark=()=>root.dataset.theme?root.dataset.theme==='dark':matchMedia('(prefers-color-scheme:dark)').matches;
+  const label=()=>btn.textContent=dark()?'Light':'Dark';
+  btn.onclick=()=>{root.dataset.theme=dark()?'light':'dark';try{localStorage.setItem('theme',root.dataset.theme);}catch(e){}label();};
+  label();
+})();
+
+/* ---------- scene engine ---------- */
+const COLORS=['n','a','b','g','o','r','s','f'];
+document.getElementById('defs').innerHTML=COLORS.map(c=>
+  `<marker id="ah-${c}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" style="fill:var(--${c==='n'?'muted':c==='f'?'fg':c})"/></marker>`).join('');
+
+const B=(id,x,y,w,h,label,c='n',o={})=>({id,k:'box',x,y,w,h,label,c,...o});
+const T=(id,x,y,label,o={})=>({id,k:'text',x,y,label,c:'n',...o});
+const A=(id,x1,y1,x2,y2,c='n',o={})=>({id,k:'arrow',x:0,y:0,x1,y1,x2,y2,c,...o});
+const C=(id,x,y,r,label,c='n',o={})=>({id,k:'circ',x,y,r,label,c,...o});
+const S=(cap,o={})=>({cap,...o});
+const P=(id,d,c='n',o={})=>({id,k:'path',x:0,y:0,d,c,...o});
+
+function stateAt(steps,i){
+  const m=new Map();
+  for(let k=0;k<=i;k++){
+    const s=steps[k];
+    (s.del||[]).forEach(id=>m.delete(id));
+    (s.add||[]).forEach(n=>m.set(n.id,{...n}));
+    Object.entries(s.mod||{}).forEach(([id,p])=>{if(m.has(id))Object.assign(m.get(id),p);});
+  }
+  return [...m.values()];
 }
-document.querySelectorAll("pre.code").forEach(pre => {
-  const lang = pre.dataset.lang;
-  if (!KW[lang]) return;
-  [...pre.childNodes].forEach(node => {
-    if (node.nodeType !== 3) return;
-    const span = document.createElement("span");
-    span.innerHTML = highlight(node.textContent, lang);
-    node.replaceWith(...span.childNodes);
-  });
+
+function setText(g,cls,str,x,y,anchor,lh=15.5){
+  let tx=g.select('text.'+cls);
+  if(tx.empty())tx=g.append('text').attr('class',cls);
+  const ls=String(str??'').split('\n');
+  tx.attr('text-anchor',anchor);
+  tx.selectAll('tspan').data(ls).join('tspan').attr('x',x).attr('y',(d,i)=>y-(ls.length-1)*lh/2+i*lh).text(d=>d);
+}
+
+function upd(g,d,t){
+  g.attr('class',`n ${d.k} c-${d.c||'n'}${d.dash?' dash':''}${d.hl?' hl':''}${d.s?' '+d.s:''}${d.m?' m':''}`);
+  if(d.k==='box'){
+    let r=g.select('rect');
+    if(r.empty())r=g.insert('rect',':first-child').attr('rx',9).attr('width',d.w).attr('height',d.h);
+    r.transition(t).attr('width',d.w).attr('height',d.h);
+    setText(g,'lb',d.label,d.w/2,d.h/2,'middle');
+  }else if(d.k==='circ'){
+    let r=g.select('circle');
+    if(r.empty())r=g.insert('circle',':first-child').attr('r',d.r);
+    r.transition(t).attr('r',d.r);
+    setText(g,'lb',d.label,0,0,'middle');
+  }else if(d.k==='text'){
+    setText(g,'lb',d.label,0,0,d.a||'start');
+  }else if(d.k==='path'){
+    let p=g.select('path');
+    if(p.empty()){p=g.append('path').attr('d',d.d);const L=p.node().getTotalLength();p.attr('stroke-dasharray',L).attr('stroke-dashoffset',L).transition(t).attr('stroke-dashoffset',0);}
+  }else if(d.k==='arrow'){
+    let l=g.select('line');
+    if(l.empty())l=g.append('line').attr('x1',d.x1).attr('y1',d.y1).attr('x2',d.x2).attr('y2',d.y2);
+    l.attr('marker-end',`url(#ah-${d.c||'n'})`).transition(t).attr('x1',d.x1).attr('y1',d.y1).attr('x2',d.x2).attr('y2',d.y2);
+  }
+}
+
+function draw(svg,nodes,dur){
+  const t=d3.transition().duration(dur).ease(d3.easeCubicInOut);
+  svg.select('.layer').selectAll('g.n').data(nodes,d=>d.id).join(
+    en=>en.append('g').attr('opacity',0).attr('transform',d=>`translate(${d.x},${d.y})`),
+    up=>up,
+    ex=>ex.transition(t).attr('opacity',0).remove()
+  ).each(function(d){upd(d3.select(this),d,t);})
+   .transition(t).attr('transform',d=>`translate(${d.x},${d.y})`).attr('opacity',d=>d.o??1);
+}
+
+function mount(host,topic){
+  const tabs=topic.tabs||[{n:'',steps:topic.steps}];
+  host.innerHTML='<div class="tabs"></div><div class="stage"><svg viewBox="0 0 760 240" role="img"><g class="layer"></g></svg></div><div class="cap"></div><div class="ctl"><button class="b prev" type="button">◀</button><button class="b pri next" type="button">Next ▶</button><span class="cnt"></span></div>';
+  const svg=d3.select(host).select('svg'),cap=host.querySelector('.cap'),cnt=host.querySelector('.cnt');
+  const prev=host.querySelector('.prev'),next=host.querySelector('.next'),tabBox=host.querySelector('.tabs');
+  let ti=0,si=0,steps;
+  function show(dur){
+    draw(svg,stateAt(steps,si),dur);
+    cap.innerHTML=steps[si].cap;
+    cnt.textContent=`${si+1} / ${steps.length}`;
+    prev.disabled=si===0;
+    next.textContent=si===steps.length-1?'↻ আবার':'Next ▶';
+  }
+  function load(i){
+    ti=i;si=0;
+    const tb=tabs[ti];steps=typeof tb.steps==='function'?tb.steps():tb.steps;
+    tabBox.querySelectorAll('button').forEach((b,k)=>b.classList.toggle('on',k===ti));
+    show(0);
+  }
+  if(tabs.length>1){
+    tabs.forEach((tb,i)=>{const b=document.createElement('button');b.type='button';b.textContent=tb.n;b.onclick=()=>load(i);tabBox.appendChild(b);});
+  }else tabBox.remove();
+  const go=()=>{si=si===steps.length-1?0:si+1;show(600);};
+  next.onclick=go;svg.on('click',go);
+  prev.onclick=()=>{if(si>0){si--;show(600);}};
+  load(0);
+}
+
+
+/* ---------- content ---------- */
+const PARTS=[['1','N+1 Query'],['2','Race Condition'],['3','Deadlock'],['4','এক নজরে']];
+const TOPICS=[
+{p:0,q:'N+1 Query Problem',
+ ans:'একটা list আনতে <b>১টা query</b>, তারপর list-এর <b>প্রতিটা item-এর জন্য আলাদা ১টা query</b>। N জন user হলে মোট <b>1 + N</b> টা query। প্রতিটা query একটা network round trip, তাই N বাড়লে সময় লাইনের মতো বাড়ে।',
+ pts:['<b>কোথায় হয়:</b> ORM-এর lazy loading, loop-এ query, GraphQL resolver।','<b>সমাধান:</b> সব একসাথে আনা: <code>WHERE user_id IN (...)</code>, <code>JOIN</code>, বা ORM-এর eager loading (<code>with()</code>, <code>Include()</code>)।'],
+ tabs:[
+  {n:'1. সমস্যা',steps:[
+    S('কাজ: সব user আর প্রতিটার post-এর সংখ্যা দেখাতে হবে। ৩ জন user আছে।',{add:[B('app',20,70,150,90,'Application\n(ORM / loop)','a'),B('db',590,70,150,90,'Database\n(PostgreSQL)','g'),T('cnt',380,226,'query = 0',{a:'middle',c:'f',s:'lg'})]}),
+    S('<b>Query 1:</b> সব user আনা। ১টা query, ৩টা row ফেরত।',{add:[B('q0',200,14,350,36,'Q1   SELECT * FROM users','a',{m:1}),A('a0',172,100,198,32,'a')],mod:{cnt:{label:'query = 1'}}}),
+    S('এবার loop: প্রতিটা user-এর post লাগবে। <b>Query 2:</b> user 1-এর post।',{add:[B('q1',200,58,350,36,'Q2   ...FROM posts WHERE user_id = 1','o',{m:1})],mod:{cnt:{label:'query = 2'}}}),
+    S('<b>Query 3:</b> user 2-এর post। আবার একটা আলাদা round trip।',{add:[B('q2',200,102,350,36,'Q3   ...FROM posts WHERE user_id = 2','o',{m:1})],mod:{cnt:{label:'query = 3'}}}),
+    S('<b>Query 4:</b> user 3-এর post। মোট <b>1 + N = 1 + 3 = 4</b> টা query।',{add:[B('q3',200,146,350,36,'Q4   ...FROM posts WHERE user_id = 3','o',{m:1})],mod:{cnt:{label:'query = 4  (1 + 3)',c:'r'}}}),
+    S('<b>N = 100</b> হলে? <b>101</b> টা query! প্রতিটা network round trip, তাই পেজ ধীর হয়ে যায়।',{add:[T('dots',375,200,'Q5, Q6 ... Q101',{a:'middle',c:'r',s:'m b'})],mod:{cnt:{label:'query = 101  (1 + 100)',c:'r'},q3:{c:'r'},q2:{c:'r'},q1:{c:'r'}}})
+  ]},
+  {n:'2. সমাধান',steps:[
+    S('সমাধান: user-দের post <b>একসাথে</b> এনে ফেলো। তিনটা পথ: <code>IN</code>, ORM eager loading, <code>JOIN</code>।',{add:[B('app',20,70,150,90,'Application','a'),B('db',590,70,150,90,'Database','g'),T('cnt',380,226,'query = 0',{a:'middle',c:'f',s:'lg'})]}),
+    S('<b>Query 1:</b> সব user (আগের মতোই)।',{add:[B('q0',200,30,350,36,'Q1   SELECT * FROM users','a',{m:1}),A('a0',172,100,198,48,'a')],mod:{cnt:{label:'query = 1'}}}),
+    S('<b>Query 2:</b> ওই সব user-এর post <b>একটাই query-তে</b>, <code>IN</code> দিয়ে।',{add:[B('q1',200,84,350,52,'Q2   ...FROM posts\n       WHERE user_id IN (1, 2, 3)','g',{m:1})],mod:{cnt:{label:'query = 2'}}}),
+    S('Application নিজের memory-তে post-গুলো user-এর সাথে মিলিয়ে নেয়। ORM-এ এটাই <b>eager loading</b> (<code>with()</code>, <code>Include()</code>)। N যতই হোক, query <b>২টা</b>।',{add:[T('mem',375,160,'memory-তে user ↔ post মেলানো',{a:'middle',c:'g',s:'sm b'})],mod:{cnt:{label:'query = 2  (N যাই হোক)',c:'g'}}}),
+    S('অথবা <code>JOIN</code>: সব তথ্য <b>১টাই query-তে</b>। এক round trip, ফল আসে একসাথে।',{del:['q0','q1','a0','mem'],add:[B('qj',200,70,350,70,'SELECT u.name, COUNT(p.id)\nFROM users u\nLEFT JOIN posts p ON p.user_id = u.id\nGROUP BY u.id','g',{m:1,s:'sm'}),A('aj',172,100,198,100,'g')],mod:{cnt:{label:'query = 1',c:'g'}}})
+  ]},
+  {n:'3. N বাড়লে',steps:[
+    S('ধরো প্রতিটা query-র round trip <b>১ ms</b> (আন্দাজ)। লাল = N+1, সবুজ = batch (২টা query)।',{add:[T('l1',20,30,'N = 10',{c:'f',s:'b'}),T('l2',20,100,'N = 100',{c:'f',s:'b'}),T('l3',20,170,'N = 1000',{c:'f',s:'b'})]}),
+    S('<b>N = 10:</b> N+1 → 11 query (11 ms)। Batch → 2 query (2 ms)। এখনো তফাত কম।',{add:[B('r1',110,14,11*0.5+6,22,'11','r',{s:'sm'}),B('g1',110,40,6+2*0.5,22,'2','g',{s:'sm'})]}),
+    S('<b>N = 100:</b> N+1 → 101 query (101 ms)। Batch এখনো 2 (2 ms)।',{add:[B('r2',110,84,101*0.5+6,22,'101','r',{s:'sm'}),B('g2',110,110,6+2*0.5,22,'2','g',{s:'sm'})]}),
+    S('<b>N = 1000:</b> N+1 → 1001 query (প্রায় ১ সেকেন্ড)। Batch তবু 2। N+1 লাইনের মতো বাড়ে, batch স্থির।',{add:[B('r3',110,154,1001*0.5+6,22,'1001','r',{s:'sm'}),B('g3',110,180,6+2*0.5,22,'2','g',{s:'sm'})]})
+  ]}
+ ]},
+
+{p:1,q:'Race Condition (overselling)',
+ ans:'দুটো session একই data <b>পড়ে</b> সিদ্ধান্ত নেয়, তারপর <b>লেখে</b>। মাঝখানে অন্যজন বদলে দিলে প্রথমজনের সিদ্ধান্ত পুরনো। এটাই <b>check-then-act</b> race: পড়া আর লেখা আলাদা ধাপ বলেই ভুল হয়।',
+ pts:['<b>ফল:</b> overselling (১ item, ২ order), duplicate insert, double booking। কোনো error আসে না, data নীরবে ভুল হয়।','<b>সমাধান ১:</b> একটাই atomic <code>UPDATE ... WHERE stock &gt; 0</code>।','<b>সমাধান ২:</b> <code>SELECT ... FOR UPDATE</code> দিয়ে row lock।'],
+ tabs:[
+  {n:'1. সমস্যা',steps:[
+    S('Stock-এ মাত্র <b>১টা</b> item। দুজন ক্রেতা (Session A, B) একসাথে কিনতে চায়।',{add:[B('row',300,8,160,48,'products\nstock = 1','o'),B('ta',30,96,200,80,'Session A','a'),B('tb',530,96,200,80,'Session B','b'),B('ord',300,190,160,40,'orders: 0','n')]}),
+    S('<b>A:</b> <code>SELECT stock</code> → 1। "আছে, কেনা যাবে।"',{add:[A('r1',230,110,298,40,'a')],mod:{ta:{label:'Session A\nstock পড়ল = 1 ✓',hl:1}}}),
+    S('<b>B:</b> <code>SELECT stock</code> → 1। A এখনো কিছু বদলায়নি, তাই B-ও <b>1</b> দেখল।',{add:[A('r2',530,110,462,40,'b')],mod:{tb:{label:'Session B\nstock পড়ল = 1 ✓',hl:1},ta:{hl:0}}}),
+    S('<b>A:</b> সিদ্ধান্ত নিল, <code>UPDATE stock = 0</code>, order তৈরি।',{del:['r1','r2'],add:[A('w1',232,150,298,56,'a')],mod:{row:{label:'products\nstock = 0',c:'g'},ord:{label:'orders: 1',c:'a'},tb:{hl:0}}}),
+    S('<b>B:</b> সে পুরনো <b>1</b> দেখেছিল, তাই সেও update করে, order তৈরি। <b>১ item, ২ order: overselling!</b>',{del:['w1'],add:[A('w2',528,150,462,56,'b')],mod:{ord:{label:'orders: 2 ✗',c:'r',hl:1},row:{c:'r'}}})
+  ]},
+  {n:'2. সমাধান: atomic UPDATE',steps:[
+    S('পড়া আর লেখা এক ধাপে করো: <code>UPDATE products SET stock = stock - 1 WHERE id = 1 AND stock &gt; 0</code>। DB-ই একসাথে শর্ত দেখে আর কমায়।',{add:[B('row',300,8,160,48,'products\nstock = 1','o'),B('ta',30,96,200,80,'Session A','a'),B('tb',530,96,200,80,'Session B','b'),B('ord',300,190,160,40,'orders: 0','n')]}),
+    S('<b>A:</b> UPDATE চালাল। শর্ত ঠিক (stock = 1 &gt; 0), stock হল 0। <b>1 row affected</b> → order তৈরি।',{add:[A('w1',232,130,298,40,'a')],mod:{row:{label:'products\nstock = 0',c:'g'},ta:{label:'Session A\n1 row affected ✓',c:'g'},ord:{label:'orders: 1',c:'a'}}}),
+    S('<b>B:</b> একই UPDATE। এবার stock = 0, শর্ত <code>stock &gt; 0</code> মেলে না। <b>0 row affected</b> → B বুঝে যায়: "sold out"।',{del:['w1'],add:[A('w2',528,130,462,40,'b',{dash:1})],mod:{tb:{label:'Session B\n0 row affected ✗\nsold out',c:'r'}}}),
+    S('ফল: ১ item, <b>১ order</b>। Race নেই, কোনো lock কোডে লাগেনি। সবচেয়ে সহজ ও দ্রুত সমাধান।',{mod:{ord:{hl:1,c:'g'}}})
+  ]},
+  {n:'3. সমাধান: row lock',steps:[
+    S('অথবা আগে row-টা <b>lock</b> করো: <code>SELECT ... FOR UPDATE</code>। যে lock পায় সে একা এগোয়, অন্যজন অপেক্ষা করে।',{add:[B('row',300,8,160,48,'products\nstock = 1','o'),B('ta',30,96,200,80,'Session A','a'),B('tb',530,96,200,80,'Session B','b'),B('ord',300,190,160,40,'orders: 0','n')]}),
+    S('<b>A:</b> <code>BEGIN; SELECT ... FOR UPDATE</code>। row-এ <b>lock</b> পেল, stock = 1 দেখল।',{add:[A('l1',232,110,298,40,'a')],mod:{row:{label:'products\nstock = 1\nlocked by A',c:'r'},ta:{label:'Session A\nlock আছে ✓',c:'g'}}}),
+    S('<b>B:</b> একই <code>FOR UPDATE</code>। row locked, তাই B <b>অপেক্ষা করে</b> (blocked)।',{add:[A('l2',528,110,462,40,'b',{dash:1})],mod:{tb:{label:'Session B\nঅপেক্ষায় (blocked)',c:'o'}}}),
+    S('<b>A:</b> stock = 0 করে, order তৈরি, <code>COMMIT</code>। lock ছেড়ে দিল।',{del:['l1'],mod:{row:{label:'products\nstock = 0',c:'g'},ta:{label:'Session A\ncommit ✓',c:'g'},ord:{label:'orders: 1',c:'a'}}}),
+    S('এবার <b>B</b> lock পায়, কিন্তু এখন stock = <b>0</b> দেখে। "sold out", কোনো order নেই। কেউ পুরনো data দেখেনি।',{del:['l2'],mod:{tb:{label:'Session B\nstock = 0 দেখল\nsold out',c:'r'},ord:{hl:1,c:'g'}}})
+  ]}
+ ]},
+
+{p:2,q:'Deadlock',
+ ans:'দুটো transaction <b>উল্টো ক্রমে</b> দুটো row lock করতে গেলে প্রত্যেকে অন্যের হাতে থাকা lock-এর জন্য অপেক্ষা করে, কেউ এগোয় না। এটাই <b>deadlock</b>। PostgreSQL এটা নিজে ধরে একটা transaction-কে <b>abort</b> করে।',
+ pts:['<b>Error:</b> <code>ERROR: deadlock detected</code> (SQLSTATE <code>40P01</code>)। Application-এ retry করতে হয়।','<b>সমাধান:</b> সবাই <b>একই ক্রমে</b> lock নাও (যেমন id ছোট থেকে বড়)। তাহলে cycle হয় না।'],
+ tabs:[
+  {n:'1. সমস্যা',steps:[
+    S('দুটো transaction, দুটো row। <b>T1:</b> আগে row 1, তারপর row 2। <b>T2:</b> আগে row 2, তারপর row 1 (<b>উল্টো ক্রম</b>)।',{add:[B('t1',20,76,170,80,'Transaction T1\nrow 1 → row 2','a'),B('t2',570,76,170,80,'Transaction T2\nrow 2 → row 1','b'),B('r1',300,10,160,44,'Row 1','o'),B('r2',300,186,160,44,'Row 2','o')]}),
+    S('<b>T1:</b> <code>UPDATE row 1</code>। lock পেল।',{add:[A('h1',160,78,298,44,'g'),T('h1l',200,50,'lock ✓',{c:'g',s:'sm b'})],mod:{r1:{c:'g'}}}),
+    S('<b>T2:</b> <code>UPDATE row 2</code>। lock পেল।',{add:[A('h2',600,154,462,198,'g'),T('h2l',560,200,'lock ✓',{c:'g',s:'sm b'})],mod:{r2:{c:'g'}}}),
+    S('<b>T1:</b> এবার row 2 চায়, কিন্তু সেটা T2-এর হাতে। T1 <b>অপেক্ষা করে</b>।',{add:[A('w1',160,140,298,200,'r',{dash:1})],mod:{t1:{label:'T1\nrow 2-এর অপেক্ষা',c:'o'}}}),
+    S('<b>T2:</b> এবার row 1 চায়, সেটা T1-এর হাতে। T2-ও অপেক্ষা করে। <b>Cycle: কেউ এগোতে পারে না = DEADLOCK।</b>',{add:[A('w2',600,92,462,32,'r',{dash:1}),T('dl',380,120,'DEADLOCK',{a:'middle',c:'r',s:'lg'})],mod:{t2:{label:'T2\nrow 1-এর অপেক্ষা',c:'o'}}}),
+    S('PostgreSQL <code>deadlock_timeout</code> (ডিফল্ট 1s) পর cycle ধরে একটা transaction-কে (victim) <b>abort</b> করে: <code>ERROR: deadlock detected</code>। অন্যটা এগোয়।',{del:['dl'],mod:{t2:{label:'T2 abort ✗\ndeadlock detected',c:'r',dash:1},t1:{label:'T1\nএগিয়ে গেল ✓',c:'g'}}})
+  ]},
+  {n:'2. সমাধান: একই ক্রম',steps:[
+    S('নিয়ম: <b>সবাই আগে row 1, তারপর row 2</b>। ক্রম একই হলে cycle তৈরিই হয় না।',{add:[B('t1',20,76,170,80,'T1\nrow 1 → row 2','a'),B('t2',570,76,170,80,'T2\nrow 1 → row 2','b'),B('r1',300,10,160,44,'Row 1','o'),B('r2',300,186,160,44,'Row 2','o')]}),
+    S('<b>T1:</b> row 1-এর lock নিল।',{add:[A('h1',160,78,298,44,'g')],mod:{r1:{c:'g'}}}),
+    S('<b>T2:</b> সেও আগে row 1 চায়, T1-এর হাতে। T2 <b>অপেক্ষা করে</b>, কিন্তু কিছু ধরে রাখেনি, তাই কাউকে আটকায় না।',{add:[A('w2',600,92,462,32,'r',{dash:1})],mod:{t2:{label:'T2\nrow 1-এর অপেক্ষা',c:'o'}}}),
+    S('<b>T1:</b> row 2-ও নেয়, কাজ শেষ, <code>COMMIT</code>। দুটো lock ছাড়ল।',{add:[A('h1b',160,140,298,200,'g')],mod:{r2:{c:'g'},t1:{label:'T1\ncommit ✓',c:'g'}}}),
+    S('এবার <b>T2</b> row 1, তারপর row 2 পায়। কোনো deadlock হয়নি। সবাই একই ক্রমে lock নিলে deadlock হয় না।',{del:['w2','h1','h1b'],mod:{r1:{c:'o'},r2:{c:'o'},t2:{label:'T2\nএগোল ✓',c:'g'}}})
+  ]}
+ ]},
+
+{p:3,q:'এক নজরে',
+ ans:'তিনটা সমস্যার তুলনা: কী ঘটে, কেমন বোঝা যায়, আর সমাধান কী।',
+ pts:[],
+ extra:'<table class="cmp"><tr><th></th><th>N+1 Query</th><th>Race Condition</th><th>Deadlock</th></tr>'
+  +'<tr><td>কী ঘটে</td><td>১টা list-এর জন্য 1 + N টা query</td><td>পড়া আর লেখার মাঝে অন্যজন বদলে দেয়</td><td>দুজন উল্টো ক্রমে lock নিয়ে একে অপরের জন্য অপেক্ষা করে</td></tr>'
+  +'<tr><td>লক্ষণ</td><td>পেজ ধীর, query-র সংখ্যা অনেক</td><td>নীরবে ভুল data (কোনো error নেই)</td><td>transaction আটকে যায়, তারপর <code>deadlock detected</code> error</td></tr>'
+  +'<tr><td>সমাধান</td><td><code>IN</code> / <code>JOIN</code> / eager loading</td><td>atomic <code>UPDATE ... WHERE</code> বা <code>FOR UPDATE</code></td><td>সবাই একই ক্রমে lock নেয়, retry রাখো</td></tr></table>',
+ steps:null}
+];
+
+/* ---------- build page ---------- */
+const app=document.getElementById('app'),partsNav=document.getElementById('parts');
+PARTS.forEach((pt,i)=>{const a=document.createElement('a');a.href='#s'+i;a.innerHTML=`<b>${pt[0]}</b>${pt[1]}`;partsNav.appendChild(a);});
+TOPICS.forEach((t,i)=>{
+  const card=document.createElement('article');card.className='q';card.id='s'+i;
+  card.innerHTML=`<h3><span class="num">${t.p+1}</span><span>${t.q}</span></h3><p class="ans">${t.ans}</p>${t.pts&&t.pts.length?'<ul>'+t.pts.map(x=>`<li>${x}</li>`).join('')+'</ul>':''}${t.extra?`<div class="extra">${t.extra}</div>`:''}${t.tabs?'<div class="viz"></div>':''}`;
+  app.appendChild(card);
+  if(t.tabs)mount(card.querySelector('.viz'),t);
 });
-const cellHTML = (who, step) => {
-  if (who === "S") return "";
-  if (step[0] !== who) return `<div class="cell ${who.toLowerCase()}"></div>`;
-  const [, sql, out, tag] = step;
-  return `<div class="cell ${who.toLowerCase()} on" data-who="${who}"><pre>${highlight(sql, "sql")}</pre>
-    ${out ? `<div class="out">${out.replace(/\n/g, "<br>")}</div>` : ""}${tag ? `<span class="tag ${tag[0]}">${tag[1]}</span>` : ""}</div>`;
-};
-const rowHTML = (i, step) => step[0] === "S"
-  ? `<div class="row"><span class="n">${i}</span><div class="cell srv on" data-who="Server"><pre>${highlight(step[1], "sql")}</pre>${step[2] ? `<div class="out">${step[2].replace(/\n/g, "<br>")}</div>` : ""}${step[3] ? `<span class="tag ${step[3][0]}">${step[3][1]}</span>` : ""}</div></div>`
-  : `<div class="row"><span class="n">${i}</span>${cellHTML("A", step)}${cellHTML("B", step)}</div>`;
-const headHTML = (a, b) => `<div class="tl-head"><span></span><span class="a">${a}</span><span class="b">${b}</span></div>`;
-const E = t => `<span class="err">${t}</span>`;
 
-// ---------- static timelines: [who, sql, output, [tag-class, tag-text]] — every output below is from a real PostgreSQL 18.6 run ----------
-const HEADS = {
-  os: ["Session A · 1টা কিনছে", "Session B · 1টা কিনছে"], dup: ["Session A · signup", "Session B · signup"], dupu: ["Session A · signup", "Session B · signup"],
-  seatfu: ["Session A · Rahim", "Session B · Karima"], excl: ["Session A · 10:00–11:00", "Session B · 10:30–11:30"], adv: ["Session A · signup", "Session B · signup"],
-  dl1: ["T1 · Rahim → Karima 100", "T2 · Karima → Rahim 50"], dlfix: ["T1 · Rahim → Karima 100", "T2 · Karima → Rahim 50"],
-};
-const STEPS = {
-  os: [
-    ["A", "BEGIN;", "BEGIN"], ["B", "BEGIN;", "BEGIN"],
-    ["A", "SELECT stock FROM products WHERE id = 1;", "stock → <b>1</b>", ["info", "app: 1 আছে → বিক্রি করব"]],
-    ["B", "SELECT stock FROM products WHERE id = 1;", "stock → <b>1</b>", ["info", "app: 1 আছে → বিক্রি করব"]],
-    ["A", "UPDATE products SET stock = stock - 1\nWHERE id = 1;", "UPDATE 1", ["info", "row lock নিল"]],
-    ["B", "UPDATE products SET stock = stock - 1\nWHERE id = 1;", "", ["wait", "⏳ A-র lock-এ আটকে"]],
-    ["A", "COMMIT;", "COMMIT", ["info", "stock এখন 0"]],
-    ["B", "-- আটকে থাকা UPDATE এখন চলল", "UPDATE 1", ["bad", "0 − 1 = −1"]],
-    ["B", "COMMIT;", "COMMIT"],
-    ["A", "SELECT stock FROM products WHERE id = 1;", "stock → <b>-1</b>", ["bad", "১টা Laptop, ২টা বিক্রি"]],
-  ],
-  dup: [
-    ["A", "BEGIN;", "BEGIN"], ["B", "BEGIN;", "BEGIN"],
-    ["A", "SELECT id FROM app_users\nWHERE email = 'rahim@example.com';", "(0 rows)", ["info", "নেই → insert করব"]],
-    ["B", "SELECT id FROM app_users\nWHERE email = 'rahim@example.com';", "(0 rows)", ["info", "নেই → insert করব"]],
-    ["A", "INSERT INTO app_users (email)\nVALUES ('rahim@example.com');", "INSERT 0 1"],
-    ["B", "INSERT INTO app_users (email)\nVALUES ('rahim@example.com');", "INSERT 0 1", ["bad", "কেউ আটকায়নি — দুটোই সফল"]],
-    ["A", "COMMIT;", "COMMIT"], ["B", "COMMIT;", "COMMIT"],
-    ["A", "SELECT * FROM app_users ORDER BY id;", "1 | rahim@example.com<br>2 | rahim@example.com<br>(2 rows)", ["bad", "একই email দুইবার"]],
-  ],
-  dupu: [
-    ["A", "BEGIN;", "BEGIN"], ["B", "BEGIN;", "BEGIN"],
-    ["A", "SELECT id FROM app_users\nWHERE email = 'rahim@example.com';", "(0 rows)"],
-    ["B", "SELECT id FROM app_users\nWHERE email = 'rahim@example.com';", "(0 rows)"],
-    ["A", "INSERT INTO app_users (email)\nVALUES ('rahim@example.com');", "INSERT 0 1"],
-    ["B", "INSERT INTO app_users (email)\nVALUES ('rahim@example.com');", "", ["wait", "⏳ unique index-এ A-র uncommitted key"]],
-    ["A", "COMMIT;", "COMMIT"],
-    ["B", "-- আটকে থাকা INSERT এখন ফেরে", E('ERROR:  duplicate key value violates unique constraint "app_users_email_key"') + "<br>DETAIL:  Key (email)=(rahim@example.com) already exists.", ["ok", "database আটকাল"]],
-    ["B", "COMMIT;", "ROLLBACK", ["info", "aborted transaction-এ COMMIT = ROLLBACK"]],
-  ],
-  seatfu: [
-    ["A", "BEGIN;", "BEGIN"], ["B", "BEGIN;", "BEGIN"],
-    ["A", "SELECT seat_no FROM seats\nWHERE seat_no = 12 AND passenger IS NULL\nFOR UPDATE;", "seat_no → <b>12</b>", ["info", "🔒 seat 12 A-র"]],
-    ["B", "SELECT seat_no FROM seats\nWHERE seat_no = 12 AND passenger IS NULL\nFOR UPDATE;", "", ["wait", "⏳ A-র lock-এ আটকে"]],
-    ["A", "UPDATE seats SET passenger = 'Rahim'\nWHERE seat_no = 12;", "UPDATE 1"],
-    ["A", "COMMIT;", "COMMIT"],
-    ["B", "-- আটকে থাকা SELECT এখন ফেরে", "(0 rows)", ["ok", "WHERE নতুন করে যাচাই — seat আর খালি নেই"]],
-    ["B", "COMMIT;", "COMMIT", ["info", "app: \"seat নেওয়া হয়ে গেছে\""]],
-  ],
-  excl: [
-    ["A", "BEGIN;", "BEGIN"], ["B", "BEGIN;", "BEGIN"],
-    ["A", "INSERT INTO room_bookings (room, during)\nVALUES (1, tstzrange('2026-10-07 10:00+06',\n                    '2026-10-07 11:00+06'));", "INSERT 0 1"],
-    ["B", "INSERT INTO room_bookings (room, during)\nVALUES (1, tstzrange('2026-10-07 10:30+06',\n                    '2026-10-07 11:30+06'));", "", ["wait", "⏳ overlap হতে পারে — A-র ফল না জেনে এগোবে না"]],
-    ["A", "COMMIT;", "COMMIT"],
-    ["B", "-- আটকে থাকা INSERT এখন ফেরে", E('ERROR:  conflicting key value violates exclusion constraint "room_bookings_room_during_excl"') + "<br>DETAIL:  Key (room, during)=(1, [\"2026-10-07 10:30:00+06\",\"2026-10-07 11:30:00+06\")) conflicts with existing key (room, during)=(1, [\"2026-10-07 10:00:00+06\",\"2026-10-07 11:00:00+06\")).", ["ok", "overlap আটকাল"]],
-    ["B", "ROLLBACK;", "ROLLBACK"],
-    ["B", "INSERT INTO room_bookings (room, during)\nVALUES (1, tstzrange('2026-10-07 11:00+06',\n                    '2026-10-07 12:00+06'));", "INSERT 0 1", ["ok", "পরের slot (11:00–12:00) সফল"]],
-    ["B", "INSERT INTO room_bookings (room, during)\nVALUES (2, tstzrange('2026-10-07 10:30+06',\n                    '2026-10-07 11:30+06'));", "INSERT 0 1", ["ok", "অন্য room — সফল"]],
-  ],
-  adv: [
-    ["A", "BEGIN;", "BEGIN"], ["B", "BEGIN;", "BEGIN"],
-    ["A", "SELECT pg_advisory_xact_lock(\n  hashtext('email:rahim@example.com'));", "(1 row)", ["info", "🔒 app-level lock A-র"]],
-    ["B", "SELECT pg_advisory_xact_lock(\n  hashtext('email:rahim@example.com'));", "", ["wait", "⏳ একই key — আটকে"]],
-    ["A", "SELECT id FROM app_users\nWHERE email = 'rahim@example.com';", "(0 rows)"],
-    ["A", "INSERT INTO app_users (email)\nVALUES ('rahim@example.com');", "INSERT 0 1"],
-    ["A", "COMMIT;", "COMMIT", ["info", "lock নিজে ছাড়ল (_xact_)"]],
-    ["B", "-- আটকে থাকা lock এখন পেল", "(1 row)"],
-    ["B", "SELECT id FROM app_users\nWHERE email = 'rahim@example.com';", "id → <b>1</b>", ["ok", "এবার দেখতে পেল — insert লাগল না"]],
-    ["B", "COMMIT;", "COMMIT"],
-  ],
-  dl1: [
-    ["A", "BEGIN;", "BEGIN"], ["B", "BEGIN;", "BEGIN"],
-    ["A", "UPDATE accounts SET balance = balance - 100\nWHERE id = 1;", "UPDATE 1", ["info", "🔒 R1 (Rahim) T1-এর"]],
-    ["B", "UPDATE accounts SET balance = balance - 50\nWHERE id = 2;", "UPDATE 1", ["info", "🔒 R2 (Karima) T2-র"]],
-    ["A", "UPDATE accounts SET balance = balance + 100\nWHERE id = 2;", "", ["wait", "⏳ T2-র R2-র অপেক্ষা"]],
-    ["B", "UPDATE accounts SET balance = balance + 50\nWHERE id = 1;", E("ERROR:  deadlock detected") + "<br>DETAIL:  Process 56522 waits for ShareLock on transaction 887; blocked by process 56521.<br>Process 56521 waits for ShareLock on transaction 888; blocked by process 56522.<br>HINT:  See server log for query details.<br>CONTEXT:  while updating tuple (0,1) in relation \"accounts\"", ["bad", "চক্র! ~1s পর T2 victim (40P01)"]],
-    ["A", "-- আটকে থাকা UPDATE এখন ফেরে", "UPDATE 1", ["ok", "T2-র lock ছাড়তেই এগোল"]],
-    ["A", "COMMIT;", "COMMIT"],
-    ["B", "ROLLBACK;", "ROLLBACK"],
-    ["A", "SELECT * FROM accounts ORDER BY id;", "1 | Rahim | <b>900</b><br>2 | Karima | <b>1100</b>", ["info", "শুধু T1-এর transfer টিকল"]],
-  ],
-  dlfix: [
-    ["A", "BEGIN;", "BEGIN"], ["B", "BEGIN;", "BEGIN"],
-    ["A", "SELECT id, balance FROM accounts\nWHERE id IN (1, 2)\nORDER BY id FOR UPDATE;", "1 | 1000<br>2 | 1000<br>(2 rows)", ["info", "🔒 দুটো row-ই, id-ক্রমে"]],
-    ["B", "SELECT id, balance FROM accounts\nWHERE id IN (1, 2)\nORDER BY id FOR UPDATE;", "", ["wait", "⏳ R1-এ আটকে — কিছুই ধরেনি, চক্র নেই"]],
-    ["A", "UPDATE accounts SET balance = balance - 100\nWHERE id = 1;", "UPDATE 1"],
-    ["A", "UPDATE accounts SET balance = balance + 100\nWHERE id = 2;", "UPDATE 1"],
-    ["A", "COMMIT;", "COMMIT"],
-    ["B", "-- আটকে থাকা SELECT এখন ফেরে", "1 | <b>900</b><br>2 | <b>1100</b><br>(2 rows)", ["ok", "নতুন মান পেল"]],
-    ["B", "UPDATE accounts SET balance = balance + 50\nWHERE id = 1;", "UPDATE 1"],
-    ["B", "UPDATE accounts SET balance = balance - 50\nWHERE id = 2;", "UPDATE 1"],
-    ["B", "COMMIT;", "COMMIT"],
-    ["A", "SELECT * FROM accounts ORDER BY id;", "1 | Rahim | <b>950</b><br>2 | Karima | <b>1050</b>", ["ok", "দুই transfer-ই ঠিক"]],
-  ],
-};
-document.querySelectorAll("[data-tl]").forEach(box => {
-  const k = box.dataset.tl;
-  box.innerHTML = headHTML(...HEADS[k]) + STEPS[k].map((s, i) => rowHTML(`t${i + 1}`, s)).join("");
-});
-
-const sleep = ms => new Promise(r => setTimeout(r, ms));
-const wordOf = sql => sql.trim().split(/\s/)[0].replace(";", "");
-
-// ====================================================================
-// Simulator 1 — N+1 (app ⇄ db). Timing is a MODEL (1 ms round trip + 0.1 ms exec per query), not a measurement.
-// ====================================================================
-(() => {
-  const MODES = {
-    n1: { name: "N+1 (loop-এ query)", c: "var(--bad)" },
-    join: { name: "JOIN + GROUP BY", c: "var(--ok)" },
-    inb: { name: "IN-batch (eager loading)", c: "var(--pi)" },
-  };
-  const RT = 1, EX = 0.1, PER = RT + EX;
-  const NAMES = ["Rahim", "Karima", "Sumon"];
-  const uname = i => NAMES[i - 1] || `user${i}`;
-  const cnt = i => i === 1 ? 2 : i <= 3 ? 1 : 1 + (i % 3);
-  let mode = "n1", N = 3, cursor = 0, busy = false, playing = false, gen = 0;
-  let usersShown = false, known = new Set(), fresh = new Set(), sent = 0;
-  const $ = id => document.getElementById(id);
-  const total = m => m === "n1" ? 1 + N : m === "join" ? 1 : 2;
-  const fmt = ms => (Math.round(ms * 10) / 10).toString().replace(/\.0$/, "") + " ms";
-  const idList = () => N <= 6 ? Array.from({ length: N }, (_, i) => i + 1).join(", ") : `1, 2, 3, … ${N}`;
-
-  function steps() {
-    if (mode === "n1") {
-      const a = [{ sql: "SELECT * FROM users;", fill: "users", label: "users", msg: `Query 1: সব user (${N} জন)। এখন app loop শুরু করবে।` }];
-      for (let i = 1; i <= N; i++) a.push({ sql: `SELECT * FROM posts WHERE user_id = ${i};`, fill: i, label: `Q${i + 1}`, msg: `Query ${i + 1}: শুধু ${uname(i)}-এর posts (${cnt(i)}টা)। আবার একটা পুরো round trip।` });
-      return a;
-    }
-    if (mode === "join") return [{ sql: "SELECT u.id, u.name, count(p.id)\nFROM users u LEFT JOIN posts p ON p.user_id = u.id\nGROUP BY u.id, u.name;", fill: "all", label: "Q1", msg: `মাত্র ১টা query — DB-ই join করে count বের করল, ${N} জনের ফল একসাথে ফিরল।` }];
-    return [
-      { sql: "SELECT * FROM users;", fill: "users", label: "Q1", msg: `Query 1: সব user (${N} জন)।` },
-      { sql: `SELECT * FROM posts WHERE user_id IN (${idList()});`, fill: "all", label: "Q2", msg: `Query 2: সব user-এর posts একসাথে। ORM এবার memory-তে user_id ধরে জুড়ে দেয় — মোট ২টা query, N যতই হোক।` },
-    ];
-  }
-
-  const svg = d3.select("#n1svg");
-  const LX0 = 230, LX1 = 770, LY = 110;
-  svg.append("line").attr("x1", LX0).attr("x2", LX1).attr("y1", LY).attr("y2", LY).attr("stroke", "var(--line)").attr("stroke-width", 2).attr("stroke-dasharray", "6 6");
-  for (const [x, t1, t2] of [[30, "App", "Laravel / .NET"], [770, "Database", "PostgreSQL"]]) {
-    const g = svg.append("g").attr("transform", `translate(${x},30)`);
-    g.append("rect").attr("width", 200).attr("height", 160).attr("rx", 16).attr("fill", "var(--surface)").attr("stroke", "var(--line)").attr("stroke-width", 1.5);
-    g.append("text").attr("x", 18).attr("y", 36).attr("font-size", 18).attr("font-weight", 800).attr("fill", "var(--fg)").text(t1);
-    g.append("text").attr("x", 18).attr("y", 56).attr("font-size", 11).attr("font-family", "var(--mono)").attr("fill", "var(--muted)").text(t2);
-  }
-  const appTxt = svg.append("text").attr("x", 48).attr("y", 130).attr("font-size", 13).attr("font-family", "var(--mono)").attr("fill", "var(--fg)");
-  const appTxt2 = svg.append("text").attr("x", 48).attr("y", 152).attr("font-size", 12).attr("font-family", "var(--mono)").attr("fill", "var(--muted)");
-  const dbTxt = svg.append("text").attr("x", 788).attr("y", 130).attr("font-size", 13).attr("font-family", "var(--mono)").attr("fill", "var(--fg)");
-  const dbTxt2 = svg.append("text").attr("x", 788).attr("y", 152).attr("font-size", 12).attr("font-family", "var(--mono)").attr("fill", "var(--muted)");
-  const gP = svg.append("g");
-
-  function fly(label, color, back) {
-    const [a, b] = back ? [LX1, LX0] : [LX0, LX1];
-    const w = Math.max(54, label.length * 7.4 + 18);
-    const dur = N <= 12 ? 420 : N <= 40 ? 140 : 55;
-    const g = gP.append("g").attr("transform", `translate(${a - w / 2},${LY - 12})`);
-    g.append("rect").attr("width", w).attr("height", 24).attr("rx", 12).attr("fill", color);
-    g.append("text").attr("x", w / 2).attr("y", 12).attr("fill", "#fff").attr("font-size", 11).attr("font-weight", 700).attr("font-family", "var(--mono)").attr("text-anchor", "middle").attr("dominant-baseline", "central").text(label);
-    return g.transition().duration(dur).ease(d3.easeCubicInOut).attr("transform", `translate(${b - w / 2},${LY - 12})`).end().catch(() => {}).then(() => g.remove());
-  }
-
-  function applyFill(f) {
-    fresh = new Set();
-    if (f === "users") usersShown = true;
-    else if (f === "all") { usersShown = true; for (let i = 1; i <= N; i++) { known.add(i); fresh.add(i); } }
-    else { known.add(f); fresh.add(f); }
-  }
-
-  function drawRows() {
-    const tb = $("n1rows");
-    if (!usersShown) { tb.innerHTML = `<tr><td colspan="3" class="pend">— এখনো কিছু আসেনি —</td></tr>`; return; }
-    let h = "";
-    for (let i = 1; i <= N; i++) h += `<tr><td>${i}</td><td>${uname(i)}</td><td class="${known.has(i) ? (fresh.has(i) ? "new" : "") : "pend"}">${known.has(i) ? cnt(i) : "…"}</td></tr>`;
-    tb.innerHTML = h;
-    const nf = tb.querySelector("td.new");
-    if (nf && fresh.size === 1) nf.scrollIntoView({ block: "nearest" });
-  }
-
-  function draw() {
-    const T = total(mode), st = steps();
-    $("n1q").textContent = `${sent} / ${T}`;
-    $("n1f").textContent = mode === "n1" ? `1 + N = 1 + ${N} = ${1 + N}` : mode === "join" ? "1 query (JOIN)" : "2 query (users + posts)";
-    $("n1ms").textContent = fmt(sent * PER);
-    $("n1tot").textContent = fmt(T * PER);
-    appTxt.text(`পাঠানো: ${sent}`);
-    appTxt2.text(sent ? `পেয়েছি: ${sent}` : "");
-    dbTxt.text(`execute: ${sent}`);
-    dbTxt2.text(sent ? `${(sent * EX).toFixed(1)} ms কাজ (MODEL)` : "");
-    drawRows();
-    const mx = total("n1");
-    $("n1cmp").innerHTML = ["n1", "join", "inb"].map(m => {
-      const v = total(m) * PER;
-      return `<div class="cb"><span>${m === "n1" ? "N+1" : m === "join" ? "JOIN" : "IN-batch"}</span><i style="--bc:${MODES[m].c};width:${Math.max(0.6, 100 * total(m) / mx)}%"></i><span>${fmt(v)}</span></div>`;
-    }).join("");
-    $("n1step").disabled = busy || playing || cursor >= st.length;
-    $("n1end").disabled = busy || playing || cursor >= st.length;
-    $("n1play").textContent = playing ? "⏸ থামাও" : "▶ চালাও";
-    $("n1play").disabled = busy && !playing;
-  }
-
-  async function runStep(animate = true, myGen = gen) {
-    const st = steps(), step = st[cursor];
-    if (!step) return;
-    cursor++;
-    busy = animate; draw();
-    $("n1sql").innerHTML = highlight(step.sql, "sql");
-    if (animate) await fly(step.label === "users" ? "Q1" : step.label, MODES[mode].c, false);
-    if (myGen !== gen) return;
-    sent++;
-    if (animate) await fly(step.fill === "all" || step.fill === "users" ? `${step.fill === "users" ? N : N} rows` : `${cnt(step.fill)} rows`, "var(--ok)", true);
-    if (myGen !== gen) return;
-    applyFill(step.fill);
-    $("n1explain").innerHTML = `<b style="background:${MODES[mode].c}">${cursor}</b><span>${step.msg}</span>`;
-    busy = false; draw();
-  }
-  async function toEnd() {
-    const st = steps();
-    while (cursor < st.length) await runStep(false);
-    $("n1explain").innerHTML = `<b style="background:${MODES[mode].c}">✓</b><span>শেষ: ${total(mode)}টা query, ${fmt(total(mode) * PER)} (MODEL)।</span>`;
-    draw();
-  }
-  function reset() {
-    gen++; cursor = 0; busy = false; playing = false; sent = 0; usersShown = false; known = new Set(); fresh = new Set();
-    gP.selectAll("*").remove();
-    $("n1sql").textContent = "";
-    $("n1explain").innerHTML = `<b style="background:${MODES[mode].c}">i</b><span>${({ n1: "N+1: প্রথমে users, তারপর প্রতিটা user-এর জন্য আলাদা query।", join: "JOIN: একটাই query, DB-ই count বের করে।", inb: "IN-batch: ১টা users + ১টা posts (WHERE user_id IN …) — মোট ২।" })[mode]}</span>`;
-    draw();
-  }
-  const modesEl = $("n1modes");
-  modesEl.innerHTML = Object.entries(MODES).map(([k, m]) => `<button type="button" data-m="${k}" style="--mc:${m.c}">${m.name}</button>`).join("");
-  const sync = () => modesEl.querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.m === mode));
-  modesEl.addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; mode = b.dataset.m; sync(); reset(); });
-  $("n1n").addEventListener("input", e => { N = +e.target.value; $("n1nv").textContent = N; reset(); });
-  $("n1step").addEventListener("click", () => { if (!busy && cursor < steps().length) runStep(); });
-  $("n1end").addEventListener("click", () => { if (!busy) toEnd(); });
-  $("n1reset").addEventListener("click", reset);
-  $("n1play").addEventListener("click", async () => {
-    if (playing) { playing = false; draw(); return; }
-    if (busy) return;
-    if (cursor >= steps().length) reset();
-    playing = true; draw();
-    const myGen = gen, fast = N > 12;
-    while (playing && myGen === gen && cursor < steps().length) { await runStep(true, myGen); if (myGen !== gen) return; await sleep(fast ? 30 : 450); }
-    if (myGen !== gen) return;
-    playing = false;
-    if (cursor >= steps().length) $("n1explain").innerHTML = `<b style="background:${MODES[mode].c}">✓</b><span>শেষ: ${total(mode)}টা query, ${fmt(total(mode) * PER)} (MODEL)। বাকি দুই পদ্ধতির সাথে নিচের bar-এ তুলনা করো।</span>`;
-    draw();
-  });
-  sync(); reset();
-})();
-
-// ====================================================================
-// Simulator 2 — race: two sessions, one last Laptop, five protections. Scripts mirror the real two-psql runs above.
-// ====================================================================
-(() => {
-  const $ = id => document.getElementById(id);
-  const beg = w => s => s[w].tx = true;
-  const SEL = "SELECT stock FROM products WHERE id = 1;";
-  const MODES = {
-    none: { name: "কোনো সুরক্ষা নেই", c: "var(--pa)", kind: "stock", steps: [
-      { who: "A", sql: "BEGIN;", out: "BEGIN", fx: beg("A"), msg: "A transaction শুরু করল।" },
-      { who: "B", sql: "BEGIN;", out: "BEGIN", fx: beg("B"), msg: "B-ও শুরু করল।" },
-      { who: "A", sql: SEL, out: "stock → 1", back: "1", fx: s => { s.A.mem = "stock = 1"; s.A.plan = "1 আছে → বিক্রি করব"; }, msg: "A দেখল stock 1 — সিদ্ধান্ত নিল বিক্রি করবে। সাধারণ SELECT কোনো lock নেয় না।" },
-      { who: "B", sql: SEL, out: "stock → 1", back: "1", fx: s => { s.B.mem = "stock = 1"; s.B.plan = "1 আছে → বিক্রি করব"; }, msg: "B-ও 1 দেখল (A এখনো কিছু লেখেনি) — সে-ও বিক্রি করতে চায়। এটাই ফাঁক।" },
-      { who: "A", sql: "UPDATE products SET stock = stock - 1 WHERE id = 1;", out: "UPDATE 1", fx: s => { s.pend = { v: 0, by: "A" }; s.lock = "A"; }, msg: "A লিখল stock = 0 (uncommitted), row lock নিল।" },
-      { who: "B", sql: "UPDATE products SET stock = stock - 1 WHERE id = 1;", status: "wait", fx: s => s.B.wait = true, tag: ["wait", "⏳ A-র lock"], msg: "B-এর UPDATE row lock-এর জন্য অপেক্ষা করছে।" },
-      { who: "A", sql: "COMMIT;", out: "COMMIT", fx: s => { s.stock = 0; s.pend = null; s.lock = null; s.A.tx = false; s.A.plan = "✓ কিনেছে"; }, msg: "A commit — stock 0। এবার B-এর অপেক্ষা শেষ।" },
-      { who: "B", chain: true, sql: "UPDATE products SET stock = stock - 1 WHERE id = 1;", out: "UPDATE 1", resumed: true, fx: s => { s.B.wait = false; s.pend = { v: -1, by: "B" }; s.lock = "B"; s.B.plan = "কিনেছে (!)"; }, tag: ["bad", "0 − 1 = −1"], msg: "UPDATE নতুন মান 0-এর উপর চলল: 0 − 1 = −1। B আগে থেকেই \"আছে\" ধরে নিয়েছিল — database কিছুই আটকাল না।" },
-      { who: "B", sql: "COMMIT;", out: "COMMIT", fx: s => { s.stock = -1; s.pend = null; s.lock = null; s.B.tx = false; }, msg: "B commit। ১টা Laptop, ২টা বিক্রি — stock −1।" },
-    ], verdict: s => s.stock === -1 ? [false, "<b>✗ stock −1।</b> ১টা Laptop দুইজনের কাছে বিক্রি; কেউ error পায়নি। আসল run-এও stock -1 এসেছিল।"] : [true, ""] },
-    check: { name: "CHECK (stock ≥ 0)", c: "var(--pc)", kind: "stock", steps: [
-      { who: "A", sql: "BEGIN;", out: "BEGIN", fx: beg("A"), msg: "A transaction শুরু করল।" },
-      { who: "B", sql: "BEGIN;", out: "BEGIN", fx: beg("B"), msg: "B-ও শুরু করল। (table-এ CHECK (stock >= 0) আছে।)" },
-      { who: "A", sql: SEL, out: "stock → 1", back: "1", fx: s => { s.A.mem = "stock = 1"; s.A.plan = "1 আছে → বিক্রি করব"; }, msg: "A দেখল 1।" },
-      { who: "B", sql: SEL, out: "stock → 1", back: "1", fx: s => { s.B.mem = "stock = 1"; s.B.plan = "1 আছে → বিক্রি করব"; }, msg: "B-ও দেখল 1 — একই ফাঁক।" },
-      { who: "A", sql: "UPDATE products SET stock = stock - 1 WHERE id = 1;", out: "UPDATE 1", fx: s => { s.pend = { v: 0, by: "A" }; s.lock = "A"; }, msg: "A লিখল 0, lock নিল।" },
-      { who: "B", sql: "UPDATE products SET stock = stock - 1 WHERE id = 1;", status: "wait", fx: s => s.B.wait = true, tag: ["wait", "⏳ A-র lock"], msg: "B অপেক্ষায়।" },
-      { who: "A", sql: "COMMIT;", out: "COMMIT", fx: s => { s.stock = 0; s.pend = null; s.lock = null; s.A.tx = false; s.A.plan = "✓ কিনেছে"; }, msg: "A commit — stock 0।" },
-      { who: "B", chain: true, sql: "UPDATE products SET stock = stock - 1 WHERE id = 1;", status: "err", out: 'ERROR:  new row for relation "products" violates check constraint "products_stock_check"', resumed: true, fx: s => { s.B.wait = false; s.B.err = true; s.lock = null; s.B.plan = "error → app: sold out বলবে"; }, tag: ["ok", "CHECK আটকাল"], msg: "0 − 1 = −1 CHECK ভাঙে — PostgreSQL B-এর statement বাতিল করল (DETAIL: Failing row contains (1, Laptop, -1))। Data বাঁচল, কিন্তু B একটা error পেল।" },
-      { who: "B", sql: "COMMIT;", out: "ROLLBACK", fx: s => { s.B.tx = false; s.B.err = false; }, msg: "Error-এর পর transaction aborted — COMMIT দিলেও ফল ROLLBACK। App error ধরে ব্যবহারকারীকে জানাবে।" },
-    ], verdict: s => [s.stock === 0, "<b>✓ stock 0, মাত্র ১টা বিক্রি।</b> Data ঠিক — কিন্তু B-কে error handle করতে হলো। CHECK safety net, সুন্দর fix না: শর্তটা UPDATE-এর WHERE-এ নিয়ে যাওয়াই ভালো।"] },
-    atomic: { name: "Atomic UPDATE + guard", c: "var(--accent)", kind: "stock", steps: [
-      { who: "A", sql: "BEGIN;", out: "BEGIN", fx: beg("A"), msg: "A transaction শুরু করল। এবার আলাদা SELECT নেই — শর্তটা UPDATE-এর ভেতরে।" },
-      { who: "B", sql: "BEGIN;", out: "BEGIN", fx: beg("B"), msg: "B-ও শুরু করল।" },
-      { who: "A", sql: "UPDATE products SET stock = stock - 1 WHERE id = 1 AND stock >= 1;", out: "UPDATE 1", fx: s => { s.pend = { v: 0, by: "A" }; s.lock = "A"; s.A.mem = "(app কিছু পড়েনি)"; s.A.plan = "row-এর উপর সরাসরি"; }, msg: "পড়া, শর্ত যাচাই আর লেখা — একটাই statement। A row lock নিল।" },
-      { who: "B", sql: "UPDATE products SET stock = stock - 1 WHERE id = 1 AND stock >= 1;", status: "wait", fx: s => { s.B.wait = true; s.B.mem = "(app কিছু পড়েনি)"; }, tag: ["wait", "⏳ A-র lock"], msg: "B-এর UPDATE একই row চায় — অপেক্ষা।" },
-      { who: "A", sql: "COMMIT;", out: "COMMIT", fx: s => { s.stock = 0; s.pend = null; s.lock = null; s.A.tx = false; s.A.plan = "✓ কিনেছে"; }, msg: "A commit — stock 0।" },
-      { who: "B", chain: true, sql: "UPDATE products SET stock = stock - 1 WHERE id = 1 AND stock >= 1;", out: "UPDATE 0", status: "zero", resumed: true, fx: s => { s.B.wait = false; s.B.plan = "UPDATE 0 → sold out"; }, tag: ["ok", "WHERE নতুন মানে যাচাই → 0 rows"], msg: "PostgreSQL আটকে থাকা UPDATE-এর WHERE নতুন committed row-এর উপর আবার যাচাই করে: stock (0) >= 1 মেলে না → UPDATE 0। App বোঝে sold out — কোনো error ছাড়াই।" },
-      { who: "B", sql: "COMMIT;", out: "COMMIT", fx: s => { s.B.tx = false; }, msg: "B কিছু বদলায়নি; commit নিরীহ।" },
-    ], verdict: s => [s.stock === 0, "<b>✓ stock 0, মাত্র ১টা বিক্রি, কোনো error নেই।</b> <code>UPDATE 0</code> মানে sold out — এটাই সবচেয়ে সহজ ও সবচেয়ে ভালো fix।"] },
-    fu: { name: "SELECT … FOR UPDATE", c: "var(--pi)", kind: "stock", steps: [
-      { who: "A", sql: "BEGIN;", out: "BEGIN", fx: beg("A"), msg: "A transaction শুরু করল।" },
-      { who: "B", sql: "BEGIN;", out: "BEGIN", fx: beg("B"), msg: "B-ও শুরু করল।" },
-      { who: "A", sql: "SELECT stock FROM products WHERE id = 1 FOR UPDATE;", out: "stock → 1", back: "1", fx: s => { s.lock = "A"; s.A.mem = "stock = 1"; s.A.plan = "1 আছে → বিক্রি করব"; }, msg: "পড়ার সাথে সাথে row lock — A commit না করা পর্যন্ত কেউ এই row FOR UPDATE/UPDATE করতে পারবে না।" },
-      { who: "B", sql: "SELECT stock FROM products WHERE id = 1 FOR UPDATE;", status: "wait", fx: s => s.B.wait = true, tag: ["wait", "⏳ পড়ার আগেই অপেক্ষা"], msg: "B-ও FOR UPDATE চাইল — lock A-র, তাই B পুরনো 1 পড়তেই পারল না, লাইনে দাঁড়াল।" },
-      { who: "A", sql: "UPDATE products SET stock = stock - 1 WHERE id = 1;", out: "UPDATE 1", fx: s => s.pend = { v: 0, by: "A" }, msg: "A লিখল 0।" },
-      { who: "A", sql: "COMMIT;", out: "COMMIT", fx: s => { s.stock = 0; s.pend = null; s.lock = null; s.A.tx = false; s.A.plan = "✓ কিনেছে"; }, msg: "A commit — stock 0, lock ছাড়ল।" },
-      { who: "B", chain: true, sql: "SELECT stock FROM products WHERE id = 1 FOR UPDATE;", out: "stock → 0", back: "0", resumed: true, fx: s => { s.B.wait = false; s.lock = "B"; s.B.mem = "stock = 0"; s.B.plan = "0 → sold out"; }, tag: ["ok", "নতুন মান 0 পেল"], msg: "এবার B lock পেল আর পড়ল নতুন committed মান 0 — app সিদ্ধান্ত নিল sold out।" },
-      { who: "B", sql: "COMMIT;", out: "COMMIT", fx: s => { s.lock = null; s.B.tx = false; }, msg: "B কিছু না বদলে commit করল।" },
-    ], verdict: s => [s.stock === 0, "<b>✓ stock 0, মাত্র ১টা বিক্রি।</b> B অপেক্ষা করেছে, তারপর সঠিক মান দেখে নিজেই সিদ্ধান্ত নিয়েছে। খরচ: B আটকে ছিল, আর transaction লম্বা হলে সবাই লাইনে।"] },
-    uniq: { name: "UNIQUE constraint", c: "var(--pd)", kind: "claim", steps: [
-      { who: "A", sql: "BEGIN;", out: "BEGIN", fx: beg("A"), msg: "A শুরু করল। এখানে stock row না — \"বিক্রি\" একটা row: sold(product_id PRIMARY KEY, buyer)।" },
-      { who: "B", sql: "BEGIN;", out: "BEGIN", fx: beg("B"), msg: "B-ও শুরু করল।" },
-      { who: "A", sql: "SELECT count(*) FROM sold WHERE product_id = 1;", out: "count → 0", back: "0", fx: s => { s.A.mem = "sold = 0"; s.A.plan = "কেউ কেনেনি → কিনব"; }, msg: "A দেখল এখনো বিক্রি হয়নি (0)।" },
-      { who: "B", sql: "SELECT count(*) FROM sold WHERE product_id = 1;", out: "count → 0", back: "0", fx: s => { s.B.mem = "sold = 0"; s.B.plan = "কেউ কেনেনি → কিনব"; }, msg: "B-ও 0 দেখল — check-then-act ফাঁক, আগের মতোই।" },
-      { who: "A", sql: "INSERT INTO sold VALUES (1, 'A');", out: "INSERT 0 1", fx: s => { s.soldPend = "A"; s.lock = "A"; }, msg: "A insert করল (uncommitted)। PRIMARY KEY-র unique index-এ key 1 এখন A-র।" },
-      { who: "B", sql: "INSERT INTO sold VALUES (1, 'B');", status: "wait", fx: s => s.B.wait = true, tag: ["wait", "⏳ unique index-এ A-র key"], msg: "B একই key insert করতে চায় — A-র ফল (commit না rollback) না জেনে এগোতে পারে না, তাই অপেক্ষা।" },
-      { who: "A", sql: "COMMIT;", out: "COMMIT", fx: s => { s.sold = "A"; s.soldPend = null; s.lock = null; s.A.tx = false; s.A.plan = "✓ কিনেছে"; }, msg: "A commit — sold = (1, 'A')।" },
-      { who: "B", chain: true, sql: "INSERT INTO sold VALUES (1, 'B');", status: "err", out: 'ERROR:  duplicate key value violates unique constraint "sold_pkey"', resumed: true, fx: s => { s.B.wait = false; s.B.err = true; s.B.plan = "error → sold out"; }, tag: ["ok", "UNIQUE আটকাল"], msg: "Key 1 আগেই committed → <code>duplicate key</code> error (DETAIL: Key (product_id)=(1) already exists)। Database নিজে নিয়মটা বলবৎ করল — app-এর ভুল থাকলেও।" },
-      { who: "B", sql: "ROLLBACK;", out: "ROLLBACK", fx: s => { s.B.tx = false; s.B.err = false; }, msg: "B rollback করল; app \"sold out\" দেখাবে।" },
-    ], verdict: s => [s.sold === "A", "<b>✓ sold-এ একটাই row — (1, 'A')।</b> UNIQUE/PRIMARY KEY \"একজনই\"-এর জন্য সবচেয়ে শক্ত গ্যারান্টি; B error পায়, app সেটা ধরে।"] },
-  };
-
-  const svg = d3.select("#rsvg");
-  const SA = 16, SB = 744, SW = 240, SH = 236, DX = 330, DW = 340, DY = 22, DH = 236, MIDY = DY + 118;
-  const gWait = svg.append("g"), gDb = svg.append("g"), gS = svg.append("g"), gP = svg.append("g");
-  const boxes = {};
-  for (const [n, x] of [["A", SA], ["B", SB]]) {
-    const g = gS.append("g").attr("transform", `translate(${x},${DY})`).style("--who", `var(--s${n.toLowerCase()})`);
-    boxes[n] = { rect: g.append("rect").attr("class", "sbox").attr("width", SW).attr("height", SH).attr("rx", 14) };
-    g.append("text").attr("class", "s-title").attr("x", 16).attr("y", 30).text(`Session ${n}`);
-    g.append("text").attr("class", "s-sub").attr("x", 16).attr("y", 48).text("কিনবে 1টা");
-    boxes[n].st = g.append("text").attr("class", "s-line").attr("x", 16).attr("y", 78);
-    g.append("text").attr("class", "s-lbl").attr("x", 16).attr("y", 106).text("app memory");
-    boxes[n].mem = g.append("text").attr("class", "s-mem").attr("x", 16).attr("y", 126);
-    boxes[n].plan = g.append("text").attr("class", "s-mem").attr("x", 16).attr("y", 146);
-    g.append("text").attr("class", "s-lbl").attr("x", 16).attr("y", 180).text("শেষ জবাব");
-    boxes[n].res = g.append("text").attr("class", "s-res").attr("x", 16).attr("y", 204);
-  }
-  const db = gDb.append("g").attr("transform", `translate(${DX},${DY})`);
-  const dbRect = db.append("rect").attr("class", "db").attr("width", DW).attr("height", DH).attr("rx", 16);
-  const vTitle = db.append("text").attr("class", "db-t").attr("x", 18).attr("y", 32);
-  const vKey = db.append("text").attr("class", "db-k").attr("x", 18).attr("y", 70);
-  const vStock = db.append("text").attr("class", "db-v").attr("x", 18).attr("y", 112);
-  const vPend = db.append("text").attr("class", "db-pend").attr("x", 18).attr("y", 146);
-  const vLock = db.append("text").attr("class", "db-lock").attr("x", 18).attr("y", 180);
-  const vGoal = db.append("text").attr("class", "db-goal").attr("x", 18).attr("y", 216);
-
-  let mode = "none", st, cursor = 0, busy = false, playing = false, n = 0;
-  const logBox = $("rlog"), explain = $("rexplain"), verdict = $("rverdict");
-  const HEADR = headHTML("Session A · 1টা কিনবে", "Session B · 1টা কিনবে");
-  const fresh = () => ({ stock: 1, pend: null, lock: null, sold: null, soldPend: null, A: { tx: false, wait: false, err: false, mem: "—", plan: "", res: "", rs: "" }, B: { tx: false, wait: false, err: false, mem: "—", plan: "", res: "", rs: "" } });
-
-  function draw() {
-    const M = MODES[mode], claim = M.kind === "claim";
-    for (const k of ["A", "B"]) {
-      const s = st[k], b = boxes[k];
-      b.rect.attr("class", "sbox" + (s.wait ? " wait" : s.err ? " err" : s.tx ? " busy" : ""));
-      b.st.text(s.wait ? "⏳ lock-এর অপেক্ষা" : s.err ? "✗ error — ROLLBACK দাও" : s.tx ? "transaction চলছে" : "idle");
-      b.mem.text(s.mem); b.plan.text(s.plan);
-      b.res.attr("class", "s-res " + s.rs).text(s.res.length > 28 ? s.res.slice(0, 27) + "…" : s.res);
-    }
-    vTitle.text(claim ? "sold · PRIMARY KEY (product_id)" : "products · id 1 · Laptop");
-    vKey.text(claim ? "sold row (committed)" : "stock (committed)");
-    vStock.text(claim ? (st.sold ? `(1, '${st.sold}')` : "—") : st.stock).style("fill", !claim && st.stock < 0 ? "var(--bad)" : null).attr("font-size", claim ? 24 : null);
-    const by = claim ? st.soldPend : st.pend?.by;
-    vPend.text(claim ? (st.soldPend ? `uncommitted: (1, '${st.soldPend}') (${st.soldPend}-র)` : "") : st.pend ? `uncommitted: ${st.pend.v} (${st.pend.by}-র লেখা)` : "").style("fill", by ? `var(--s${by.toLowerCase()})` : null);
-    vLock.text(st.lock ? `🔒 lock: ${st.lock}` : "🔓 কোনো lock নেই").style("fill", st.lock ? `var(--s${st.lock.toLowerCase()})` : "var(--muted)");
-    dbRect.attr("class", "db" + (st.lock ? " locked" : "")).style("--lk", st.lock ? `var(--s${st.lock.toLowerCase()})` : null);
-    vGoal.text(claim ? "লক্ষ্য: sold-এ একটাই row" : "লক্ষ্য: stock ≥ 0, বিক্রি মাত্র ১টা (শেষে 0)");
-    const waits = ["A", "B"].filter(k => st[k].wait).map(k => {
-      const x0 = k === "A" ? SA + SW : SB, x1 = k === "A" ? DX : DX + DW;
-      return { k, d: `M${x0},${MIDY + 40} C${(x0 + x1) / 2},${MIDY + 40} ${(x0 + x1) / 2},${DY + 176} ${x1},${DY + 176}` };
-    });
-    const wp = gWait.selectAll("path").data(waits, d => d.k);
-    wp.enter().append("path").attr("class", "waitline").merge(wp).attr("d", d => d.d);
-    wp.exit().remove();
-    $("rprog").textContent = `ধাপ ${cursor} / ${M.steps.length}`;
-    $("rstep").disabled = busy || playing || cursor >= M.steps.length;
-    $("rplay").textContent = playing ? "⏸ থামাও" : "▶ চালাও";
-  }
-  function fly(who, label, cls, back) {
-    const x0 = who === "A" ? SA + SW : SB, x1 = who === "A" ? DX : DX + DW;
-    const [fx, tx] = back ? [x1, x0] : [x0, x1];
-    const w = Math.max(64, label.length * 7.4 + 18);
-    const g = gP.append("g").attr("class", "pkt " + cls).attr("transform", `translate(${fx - w / 2},${MIDY - 12})`);
-    g.append("rect").attr("width", w).attr("height", 24).attr("rx", 12);
-    g.append("text").attr("x", w / 2).attr("y", 12).text(label);
-    return g.transition().duration(520).ease(d3.easeCubicInOut).attr("transform", `translate(${tx - w / 2},${MIDY - 12})`).end().catch(() => {}).then(() => g.remove());
-  }
-  async function runStep() {
-    const M = MODES[mode], step = M.steps[cursor++];
-    busy = true; draw();
-    const status = step.status || "ok";
-    if (!step.resumed) await fly(step.who, wordOf(step.sql), step.who.toLowerCase());
-    step.fx(st);
-    const s = st[step.who];
-    s.res = status === "wait" ? "⏳ অপেক্ষা" : status === "err" ? "ERROR" : step.out || "";
-    s.rs = status;
-    draw();
-    await sleep(200);
-    await fly(step.who, status === "wait" ? "⏳ WAIT" : status === "err" ? "ERROR" : step.back || step.out, status, true);
-    n++;
-    if (n === 1) logBox.innerHTML = HEADR;
-    const row = [step.who, (step.resumed ? "-- (আটকে থাকা statement শেষ হলো)\n" : "") + step.sql,
-      status === "err" ? E(esc(step.out)) : step.out ? esc(step.out) : "", step.tag];
-    logBox.insertAdjacentHTML("beforeend", rowHTML(n, row));
-    logBox.scrollTop = logBox.scrollHeight;
-    explain.innerHTML = `<b style="background:var(--s${step.who.toLowerCase()})">${step.who}</b><span>${step.msg}</span>`;
-    busy = false;
-    if (cursor === M.steps.length) finish();
-    draw();
-    if (M.steps[cursor]?.chain) { await sleep(450); await runStep(); }
-  }
-  function finish() {
-    const [ok, html] = MODES[mode].verdict(st);
-    verdict.style.setProperty("--vc", ok ? "var(--ok)" : "var(--bad)");
-    verdict.innerHTML = html;
-  }
-  function reset() {
-    st = fresh(); cursor = 0; n = 0; playing = false;
-    gP.selectAll("*").remove();
-    logBox.innerHTML = `<p class="empty">▶ চালাও বা ⏭ এক ধাপ চাপো।</p>`;
-    explain.innerHTML = `<b style="background:${MODES[mode].c}">i</b><span>${({ none: "কোনো সুরক্ষা ছাড়া — দুজনেই stock পড়ে নিজের সিদ্ধান্ত নেয়, তারপর লেখে।", check: "Table-এ CHECK (stock >= 0) — ভুল ঘটলে error দিয়ে ঠেকায়।", atomic: "পড়া + শর্ত + লেখা একটাই UPDATE — মাঝে ফাঁক নেই।", fu: "পড়ার সময়ই FOR UPDATE — অন্যজন লাইনে।", uniq: "\"বিক্রি\" একটা row; PRIMARY KEY দুইবার insert হতে দেয় না।" })[mode]}</span>`;
-    verdict.innerHTML = "";
-    draw();
-  }
-  const modesEl = $("rmodes");
-  modesEl.innerHTML = Object.entries(MODES).map(([k, m]) => `<button type="button" data-m="${k}" style="--mc:${m.c}">${m.name}</button>`).join("");
-  const sync = () => modesEl.querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.m === mode));
-  modesEl.addEventListener("click", e => { const b = e.target.closest("button"); if (!b || busy) return; mode = b.dataset.m; sync(); reset(); });
-  $("rstep").addEventListener("click", () => { if (!busy && cursor < MODES[mode].steps.length) runStep(); });
-  $("rreset").addEventListener("click", () => { if (!busy) reset(); });
-  $("rplay").addEventListener("click", async () => {
-    if (playing) { playing = false; draw(); return; }
-    if (busy) return;
-    reset(); playing = true; draw();
-    while (playing && cursor < MODES[mode].steps.length) { await runStep(); await sleep(700); }
-    playing = false; draw();
-  });
-  sync(); reset();
-})();
-
-// ====================================================================
-// Simulator 3 — deadlock wait-for graph. Steps mirror the real demo-1 run and the real ORDER BY id FOR UPDATE run.
-// ====================================================================
-(() => {
-  const $ = id => document.getElementById(id);
-  const UPD = (bal, id, op) => `UPDATE accounts SET balance = balance ${op} ${bal}\nWHERE id = ${id};`;
-  const MODES = {
-    bad: { name: "উল্টো ক্রমে lock", c: "var(--bad)", steps: [
-      { who: "T1", sql: "BEGIN;\n" + UPD(100, 1, "-"), out: "UPDATE 1", fx: s => { s.hold.R1 = "T1"; s.s.T1 = "run"; }, msg: "T1 শুরু করল, row 1 (R1) update করে lock নিল — R1 এখন T1-এর।" },
-      { who: "T2", sql: "BEGIN;\n" + UPD(50, 2, "-"), out: "UPDATE 1", fx: s => { s.hold.R2 = "T2"; s.s.T2 = "run"; }, msg: "T2 শুরু করল, row 2 (R2) update করে lock নিল — R2 এখন T2-র।" },
-      { who: "T1", sql: UPD(100, 2, "+"), status: "wait", fx: s => { s.wait.T1 = "R2"; s.s.T1 = "wait"; }, tag: ["wait", "⏳ R2-র অপেক্ষা"], msg: "T1 এবার R2 চাইল — কিন্তু সেটা T2-র হাতে। T1 অপেক্ষায় (dashed edge T1 → R2)। এখনো চক্র নেই — T2 এগোতে পারে।" },
-      { who: "T2", sql: UPD(50, 1, "+"), status: "wait", fx: s => { s.wait.T2 = "R1"; s.s.T2 = "wait"; s.cyc = true; }, tag: ["bad", "⏳ R1-র অপেক্ষা — চক্র!"], msg: "T2 চাইল R1, যেটা T1-এর হাতে। এখন T1 → R2 → T2 → R1 → T1: <strong>চক্র</strong>। কেউ এগোতে পারবে না, আর নিজে থেকে কেউ ছাড়বেও না।" },
-      { who: "S", sql: "-- deadlock_timeout = 1s পার\n-- wait-for graph যাচাই → চক্র T1 ⇄ T2", fx: s => { s.det = true; }, tag: ["info", "detector চলল"], msg: "1 সেকেন্ড অপেক্ষার পর (deadlock_timeout) PostgreSQL wait-for graph খুঁজল — চক্র পেল। এখন একজনকে বাতিল করতে হবে।" },
-      { who: "T2", sql: "-- T2-এর আটকে থাকা UPDATE", out: "ERROR:  deadlock detected (SQLSTATE 40P01)", status: "err", fx: s => { s.s.T2 = "abort"; s.hold.R2 = "T1"; s.wait.T1 = null; s.wait.T2 = null; s.cyc = false; s.det = false; s.s.T1 = "run"; }, tag: ["bad", "T2 victim — ROLLBACK, সব lock ছাড়ল"], msg: "T2 বাতিল (<code>ERROR: deadlock detected</code>) — তার transaction rollback, R2 ছেড়ে দিল। R2 এখন T1 পেল, T1-এর আটকে থাকা UPDATE এগিয়ে গেল। Victim যে-ই হোক, PostgreSQL তাকে নিজে retry করে না।" },
-      { who: "T1", sql: "-- আটকে থাকা UPDATE শেষ\nCOMMIT;", out: "UPDATE 1 · COMMIT", fx: s => { s.hold.R1 = null; s.hold.R2 = null; s.s.T1 = "done"; }, tag: ["ok", "T1 সম্পন্ন (900 / 1100)"], msg: "T1 commit করল, সব lock ছাড়ল। শুধু T1-এর transfer টিকল; T2-কে app 40P01 ধরে আবার চালাতে হবে।" },
-    ], verdict: () => [false, "<b>চক্র ভাঙল — কিন্তু T2-এর কাজ গেল।</b> আসল run-এও T2 victim হয়েছিল, শেষে Rahim 900 / Karima 1100। ঠেকাতে lock order ঠিক করো (toggle), না পারলে 40P01-এ retry।"], vcolor: "var(--warn)" },
-    ordered: { name: "Consistent lock order ✓", c: "var(--ok)", steps: [
-      { who: "T1", sql: "BEGIN;\nSELECT id, balance FROM accounts\nWHERE id IN (1, 2) ORDER BY id FOR UPDATE;", out: "2 rows (1000, 1000)", fx: s => { s.hold.R1 = "T1"; s.hold.R2 = "T1"; s.s.T1 = "run"; }, msg: "T1 দরকারি সব row একসাথে, id-ক্রমে lock করল — R1 আর R2 দুটোই T1-এর।" },
-      { who: "T2", sql: "BEGIN;\nSELECT id, balance FROM accounts\nWHERE id IN (1, 2) ORDER BY id FOR UPDATE;", status: "wait", fx: s => { s.wait.T2 = "R1"; s.s.T2 = "wait"; }, tag: ["wait", "⏳ R1-এ আটকে — কিছুই ধরেনি"], msg: "T2-ও একই ক্রমে চায়, প্রথম row (R1)-তেই আটকাল। T2 <strong>কোনো lock ধরে নেই</strong> — তাই T1-এর অপেক্ষা করার কিছু নেই, কোনো চক্র সম্ভব না। T2 শুধু ভদ্রভাবে লাইনে।" },
-      { who: "T1", sql: UPD(100, 1, "-") + "\n" + UPD(100, 2, "+") + "\nCOMMIT;", out: "UPDATE 1 · UPDATE 1 · COMMIT", fx: s => { s.hold.R1 = "T2"; s.hold.R2 = "T2"; s.wait.T2 = null; s.s.T1 = "done"; s.s.T2 = "run"; }, tag: ["ok", "T1 সম্পন্ন → T2 lock পেল"], msg: "T1 কাজ শেষ করে commit — সব lock ছাড়ল। অপেক্ষায় থাকা T2 সাথে সাথে R1, R2 পেয়ে গেল।" },
-      { who: "T2", sql: "-- আটকে থাকা SELECT ফেরে (900, 1100)\n" + UPD(50, 1, "+") + "\n" + UPD(50, 2, "-") + "\nCOMMIT;", out: "2 rows · UPDATE 1 · UPDATE 1 · COMMIT", fx: s => { s.hold.R1 = null; s.hold.R2 = null; s.s.T2 = "done"; }, tag: ["ok", "T2 সম্পন্ন (950 / 1050)"], msg: "T2 নতুন মান (900, 1100) পড়ে নিজের কাজ করল। দুই transfer-ই ঠিক, error নেই — আসল run-এও শেষ ফল 950 / 1050।" },
-    ], verdict: () => [true, "<b>✓ Deadlock হয়নি।</b> সবাই একই ক্রমে lock নিলে \"circular wait\" তৈরিই হয় না — শুধু একজন অপেক্ষা করে।"] },
-  };
-  const COL = { T1: "var(--sa)", T2: "var(--sb)" };
-  const POS = { T1: [170, 155], T2: [830, 155], R1: [500, 52], R2: [500, 258] };
-  const svg = d3.select("#dsvg");
-  const defs = svg.append("defs");
-  for (const c of ["h1", "h2", "w", "c"]) defs.append("marker").attr("id", `dmk-${c}`).attr("viewBox", "0 0 10 10").attr("refX", 9).attr("refY", 5).attr("markerWidth", 7).attr("markerHeight", 7).attr("orient", "auto").append("path").attr("d", "M0,0L10,5L0,10z").attr("class", `mk-${c}`);
-  const gE = svg.append("g"), gN = svg.append("g"), gC = svg.append("g");
-  const nodes = {};
-  for (const t of ["T1", "T2"]) {
-    const [x, y] = POS[t];
-    const g = gN.append("g").attr("transform", `translate(${x},${y})`).style("--who", COL[t]);
-    nodes[t] = { c: g.append("circle").attr("r", 46).attr("class", "nodeT") };
-    g.append("text").attr("class", "n-t").attr("y", -2).text(t);
-    nodes[t].s = g.append("text").attr("class", "n-s").attr("y", 18);
-    g.append("text").attr("class", "n-s").attr("y", 66).text(t === "T1" ? "Rahim → Karima" : "Karima → Rahim");
-  }
-  for (const r of ["R1", "R2"]) {
-    const [x, y] = POS[r];
-    const g = gN.append("g").attr("transform", `translate(${x},${y})`);
-    nodes[r] = { r: g.append("rect").attr("x", -75).attr("y", -26).attr("width", 150).attr("height", 52).attr("rx", 12).attr("class", "nodeR"), g };
-    g.append("text").attr("class", "n-r").attr("y", 5).text(`${r} · id = ${r === "R1" ? 1 : 2}`);
-  }
-  const cycText = gC.append("text").attr("class", "cyc-t").attr("x", 500).attr("y", 150);
-  const cycText2 = gC.append("text").attr("class", "n-s").attr("x", 500).attr("y", 172);
-
-  function trim(a, b, ka, kb) {
-    const [x1, y1] = POS[a], [x2, y2] = POS[b];
-    const dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy), ux = dx / L, uy = dy / L;
-    const rad = (k, sx, sy) => k[0] === "T" ? 52 : Math.min(81 / Math.max(Math.abs(sx), 1e-6), 32 / Math.max(Math.abs(sy), 1e-6));
-    const d1 = rad(a, ux, uy), d2 = rad(b, ux, uy) + 4;
-    return { x1: x1 + ux * d1, y1: y1 + uy * d1, x2: x2 - ux * d2, y2: y2 - uy * d2, mx: (x1 + x2) / 2 - uy * 14, my: (y1 + y2) / 2 + ux * 14 };
-  }
-  let mode = "bad", st, cursor = 0, busy = false, playing = false, n = 0;
-  const logBox = $("dlog"), explain = $("dexplain"), verdict = $("dverdict"), sqlbar = $("dsql");
-  const HEADD = headHTML("T1 · Rahim → Karima 100", "T2 · Karima → Rahim 50");
-  const fresh = () => ({ hold: { R1: null, R2: null }, wait: { T1: null, T2: null }, cyc: false, det: false, s: { T1: "idle", T2: "idle" } });
-  const SLBL = { idle: "idle", run: "চলছে", wait: "⏳ অপেক্ষা", abort: "✗ 40P01 বাতিল", done: "✓ commit" };
-
-  function draw() {
-    const edges = [];
-    for (const r of ["R1", "R2"]) if (st.hold[r]) edges.push({ k: `h-${r}`, a: r, b: st.hold[r], type: "hold", lbl: "held by" });
-    for (const t of ["T1", "T2"]) if (st.wait[t]) edges.push({ k: `w-${t}`, a: t, b: st.wait[t], type: "wait", lbl: "waits for" });
-    gE.attr("class", st.cyc ? "cyc" : "");
-    const sel = gE.selectAll("g.edge").data(edges, d => d.k);
-    const ent = sel.enter().append("g").attr("class", "edge");
-    ent.append("path"); ent.append("text").attr("class", "e-lbl");
-    const all = ent.merge(sel);
-    all.each(function (d) {
-      const t = trim(d.a, d.b);
-      const holder = d.type === "hold" ? d.b : d.a;
-      const g = d3.select(this);
-      g.select("path").attr("d", `M${t.x1},${t.y1}L${t.x2},${t.y2}`).attr("class", d.type === "hold" ? "e-hold" : "e-wait")
-        .style("--who", COL[holder])
-        .attr("marker-end", `url(#dmk-${st.cyc ? "c" : d.type === "wait" ? "w" : holder === "T1" ? "h1" : "h2"})`);
-      g.select("text").attr("x", t.mx).attr("y", t.my).text(d.lbl);
-    });
-    sel.exit().remove();
-    for (const t of ["T1", "T2"]) {
-      const s = st.s[t];
-      nodes[t].c.attr("class", "nodeT" + (s === "wait" ? " wait" : s === "abort" ? " abort" : s === "done" ? " done" : ""));
-      nodes[t].s.text(SLBL[s]);
-    }
-    for (const r of ["R1", "R2"]) {
-      const h = st.hold[r];
-      nodes[r].r.attr("class", "nodeR" + (h ? " held" : "")).style("--who", h ? COL[h] : null);
-    }
-    cycText.text(st.det ? "⏱ deadlock_timeout → graph check" : st.cyc ? "⚠ CYCLE: T1 → R2 → T2 → R1 → T1" : "");
-    cycText2.text(st.det ? "চক্র পাওয়া গেল → একজন victim" : "");
-    $("dprog").textContent = `ধাপ ${cursor} / ${MODES[mode].steps.length}`;
-    $("dstep").disabled = busy || playing || cursor >= MODES[mode].steps.length;
-    $("dplay").textContent = playing ? "⏸ থামাও" : "▶ চালাও";
-  }
-  async function runStep() {
-    const M = MODES[mode], step = M.steps[cursor++];
-    busy = true; draw();
-    sqlbar.innerHTML = `<span class="c">-- ${step.who === "S" ? "PostgreSQL server" : step.who}</span>\n` + highlight(step.sql, "sql");
-    await sleep(350);
-    step.fx(st);
-    draw();
-    await sleep(500);
-    n++;
-    if (n === 1) logBox.innerHTML = HEADD;
-    const who = step.who === "T1" ? "A" : step.who === "T2" ? "B" : "S";
-    const status = step.status || "ok";
-    const row = [who, step.sql, status === "err" ? E(esc(step.out)) : step.out ? esc(step.out) : "", step.tag];
-    logBox.insertAdjacentHTML("beforeend", rowHTML(n, row));
-    logBox.scrollTop = logBox.scrollHeight;
-    explain.innerHTML = `<b style="background:${step.who === "T1" ? "var(--sa)" : step.who === "T2" ? "var(--sb)" : "var(--muted)"}">${step.who === "S" ? "DB" : step.who}</b><span>${step.msg}</span>`;
-    busy = false;
-    if (cursor === M.steps.length) {
-      const [ok, html] = M.verdict();
-      verdict.style.setProperty("--vc", ok ? "var(--ok)" : (M.vcolor || "var(--bad)"));
-      verdict.innerHTML = html;
-    }
-    draw();
-  }
-  function reset() {
-    st = fresh(); cursor = 0; n = 0; playing = false;
-    sqlbar.textContent = "";
-    logBox.innerHTML = `<p class="empty">▶ চালাও বা ⏭ এক ধাপ চাপো।</p>`;
-    explain.innerHTML = `<b style="background:${MODES[mode].c}">i</b><span>${mode === "bad" ? "T1 আর T2 উল্টো ক্রমে (R1→R2 বনাম R2→R1) row lock নেবে — wait-for graph-এ চক্র তৈরি হবে।" : "দুজনেই একই ক্রমে (ORDER BY id) আর একসাথে lock নেয় — চক্র তৈরি হওয়ার সুযোগই নেই।"}</span>`;
-    verdict.innerHTML = "";
-    draw();
-  }
-  const modesEl = $("dmodes");
-  modesEl.innerHTML = Object.entries(MODES).map(([k, m]) => `<button type="button" data-m="${k}" style="--mc:${m.c}">${m.name}</button>`).join("");
-  const sync = () => modesEl.querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.m === mode));
-  modesEl.addEventListener("click", e => { const b = e.target.closest("button"); if (!b || busy) return; mode = b.dataset.m; sync(); reset(); });
-  $("dstep").addEventListener("click", () => { if (!busy && cursor < MODES[mode].steps.length) runStep(); });
-  $("dreset").addEventListener("click", () => { if (!busy) reset(); });
-  $("dplay").addEventListener("click", async () => {
-    if (playing) { playing = false; draw(); return; }
-    if (busy) return;
-    if (cursor >= MODES[mode].steps.length) reset();
-    playing = true; draw();
-    while (playing && cursor < MODES[mode].steps.length) { await runStep(); await sleep(900); }
-    playing = false; draw();
-  });
-  sync(); reset();
-})();
-
-const root = document.documentElement;
-try { const t = localStorage.getItem("welldev-theme"); if (t) root.dataset.theme = t; } catch (e) {}
-document.getElementById("theme").addEventListener("click", () => {
-  const dark = root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
-  root.dataset.theme = dark ? "light" : "dark";
-  try { localStorage.setItem("welldev-theme", root.dataset.theme); } catch (e) {}
-});
 </script>
 </body>
 </html>
