@@ -105,6 +105,9 @@ svg text{font-family:var(--sans);font-size:13px;fill:var(--fg);dominant-baseline
 .text.b text,.text.lg text{font-weight:700}
 .text.lg text{font-size:15px}
 .sm text{font-size:11.5px}
+.box.hd rect{fill:color-mix(in srgb,var(--cc) 28%,var(--surface))}
+.hd text{font-weight:700}
+.box.on rect{fill:color-mix(in srgb,var(--cc) 30%,var(--surface));stroke-width:2.2}
 .m text{font-family:var(--mono);font-size:12px}
 .path path{fill:none;stroke:var(--cc);stroke-width:3.4;stroke-linecap:round}
 .arrow line{stroke:var(--cc);stroke-width:2.2;transition:stroke .4s}
@@ -181,7 +184,7 @@ function upd(g,d,t){
   g.attr('class',`n ${d.k} c-${d.c||'n'}${d.dash?' dash':''}${d.hl?' hl':''}${d.s?' '+d.s:''}${d.m?' m':''}`);
   if(d.k==='box'){
     let r=g.select('rect');
-    if(r.empty())r=g.insert('rect',':first-child').attr('rx',9).attr('width',d.w).attr('height',d.h);
+    if(r.empty())r=g.insert('rect',':first-child').attr('rx',d.rx??9).attr('width',d.w).attr('height',d.h);
     r.transition(t).attr('width',d.w).attr('height',d.h);
     setText(g,'lb',d.label,d.w/2,d.h/2,'middle');
   }else if(d.k==='circ'){
@@ -220,6 +223,7 @@ function mount(host,topic){
   function show(dur){
     draw(svg,stateAt(steps,si),dur);
     cap.innerHTML=steps[si].cap;
+    svg.attr('viewBox','0 0 760 '+(steps.vh||240));
     cnt.textContent=`${si+1} / ${steps.length}`;
     prev.disabled=si===0;
     next.textContent=si===steps.length-1?'↻ আবার':'Next ▶';
@@ -244,59 +248,85 @@ function mount(host,topic){
 const PARTS=[['1','Joins'],['2','Clustered বনাম Non-clustered'],['3','SQL বনাম NoSQL'],['4','Data Model বনাম ER'],['5','Trigger ও Cascading'],['6','Views']];
 
 /* ===== 1. Joins ===== */
-const JEMP={lt:'employees',rt:'departments',header:'name  |  dept',
-  L:[{label:'1  Rahim   dept=10',key:10,n:'Rahim'},{label:'2  Karim   dept=20',key:20,n:'Karim'},{label:'3  Sumon   dept=NULL',key:null,n:'Sumon'},{label:'4  Anika   dept=30',key:30,n:'Anika'}],
-  R:[{label:'10  Sales',id:10,n:'Sales'},{label:'20  HR',id:20,n:'HR'},{label:'40  IT',id:40,n:'IT'}],
-  sql:{INNER:'SELECT e.name, d.name FROM employees e INNER JOIN departments d ON e.dept = d.id;',LEFT:'SELECT e.name, d.name FROM employees e LEFT JOIN departments d ON e.dept = d.id;',RIGHT:'SELECT e.name, d.name FROM employees e RIGHT JOIN departments d ON e.dept = d.id;',FULL:'SELECT e.name, d.name FROM employees e FULL OUTER JOIN departments d ON e.dept = d.id;',CROSS:'SELECT e.name, d.name FROM employees e CROSS JOIN departments d;'},
+const JEMP={lt:'employees  (e)',rt:'departments  (d)',t1:'employees e',t2:'departments d',cond:'e.dept_id = d.id',ln:'employees',rn:'departments',lkn:'dept_id',
+  lcols:['id','name','dept_id'],lw:[40,84,84],lk:2,rcols:['id','name'],rw:[50,116],la:'e',ra:'d',
+  L:[[1,'Rahim',10],[2,'Karim',20],[3,'Sumon',null],[4,'Anika',30]],
+  R:[[10,'Sales'],[20,'HR'],[40,'IT']],
   intro:{
-    INNER:'<b>INNER JOIN:</b> শুধু যাদের <b>দুই table-এই match আছে</b> তারা ফলে আসে। Employee-র dept আর department-এর id মিললে row ঢোকে।',
-    LEFT:'<b>LEFT JOIN:</b> <b>বাঁ table (employees)-এর সব row</b> আসে। ডানে match না থাকলে ডানের অংশ <b>NULL</b>।',
-    RIGHT:'<b>RIGHT JOIN:</b> <b>ডান table (departments)-এর সব row</b> আসে। বাঁয়ে match না থাকলে বাঁয়ের অংশ <b>NULL</b>।',
-    FULL:'<b>FULL OUTER JOIN:</b> <b>দুই table-এর সব row</b> আসে। যেখানে match নেই সেখানে অন্য পাশ NULL।',
-    CROSS:'<b>CROSS JOIN:</b> কোনো শর্ত নেই। <b>প্রতিটা employee × প্রতিটা department</b> (Cartesian product): 4 × 3 = 12 row।'}};
+    INNER:'<b>INNER JOIN:</b> বাঁ table-এর প্রতিটা row নিয়ে ডান table-এ <code>ON</code> শর্ত মেলে এমন row খুঁজি। <b>দুই পাশেই match থাকলে</b> তবেই জোড়া লেগে result-এ আসে। বাকিরা <b>বাদ</b>। ধাপে ধাপে দেখো।',
+    LEFT:'<b>LEFT JOIN:</b> <b>বাঁ table-এর সব row</b> result-এ আসবেই। ডানে match পেলে জোড়া লাগে, না পেলে ডানের column গুলো <b>NULL</b> হয়ে যায়।',
+    RIGHT:'<b>RIGHT JOIN:</b> <b>ডান table-এর সব row</b> result-এ আসবেই। বাঁয়ে match পেলে জোড়া লাগে (একাধিকও হতে পারে), না পেলে বাঁয়ের column গুলো <b>NULL</b>।',
+    FULL:'<b>FULL OUTER JOIN:</b> <b>দুই table-এর সব row</b> আসে। আগে বাঁয়ের সব row (LEFT JOIN-এর মতো), তারপর ডানের যেগুলো এখনো আসেনি সেগুলো NULL সহ।',
+    CROSS:'<b>CROSS JOIN:</b> <b>কোনো শর্ত নেই</b>। বাঁয়ের প্রতিটা row ডানের প্রতিটা row-র সাথে জোড়া লাগে (Cartesian product): 4 × 3 = 12 row।'}};
+const JT={INNER:'INNER JOIN',LEFT:'LEFT JOIN',RIGHT:'RIGHT JOIN',FULL:'FULL OUTER JOIN',CROSS:'CROSS JOIN'};
 function joinScene(cfg,type){
-  const {L,R}=cfg,RH=type==='CROSS'?15:21;let k=0,prev=[];
-  const base=[T('lt',20,12,cfg.lt,{c:'a',s:'sm b'}),...L.map((r,i)=>B('l'+i,20,26+i*38,230,32,r.label,'a',{m:1,s:'sm'})),T('rt',270,12,cfg.rt,{c:'b',s:'sm b'}),...R.map((r,i)=>B('r'+i,270,26+i*38,170,32,r.label,'b',{m:1,s:'sm'})),
-    B('of',470,8,270,214,'','g',{dash:1}),T('oh',482,22,cfg.header,{c:'n',s:'m b'}),T('sql',20,232,cfg.sql[type],{c:'f',s:'m'})];
+  const rh=28,ty=30,lx=20,rx=480,rr=22,ry=236,{L,R,lw,rw}=cfg,nl=lw.length,nr=rw.length,ow=[...lw,...rw];
+  const sum=a=>a.reduce((x,y)=>x+y,0),lend=lx+sum(lw),key=l=>l[cfg.lk],yc=i=>ty+rh*(i+1)+rh/2;
+  const cells=(pre,x,y,cols,w,rows,c,h)=>{const o=[];let cx=x;
+    cols.forEach((n,j)=>{o.push(B(`${pre}h${j}`,cx,y,w[j],h,n,c,{rx:3,m:1,s:'sm hd'}));cx+=w[j];});
+    rows.forEach((r,i)=>{cx=x;r.forEach((v,j)=>{o.push(B(`${pre}${i}_${j}`,cx,y+h*(i+1),w[j],h,v==null?'NULL':v,v==null?'o':'n',{rx:3,m:1,s:'sm'}));cx+=w[j];});});
+    return o;};
+  const rowMod=(pre,i,data,c)=>{const m={};data.forEach((v,j)=>{m[`${pre}${i}_${j}`]=c?{c,s:'sm on'}:{c:v==null?'o':'n',s:'sm'};});return m;};
+  const sql=`SELECT * FROM ${cfg.t1} ${JT[type]} ${cfg.t2}${type==='CROSS'?'':' ON '+cfg.cond};`;
+  const base=[T('lt',lx,14,cfg.lt,{c:'a',s:'sm b'}),T('rt',rx,14,cfg.rt,{c:'b',s:'sm b'}),T('on',(lend+rx)/2,14,type==='CROSS'?'ON নেই':'ON '+cfg.cond,{a:'middle',c:'g',s:'m b'}),
+    ...cells('l',lx,ty,cfg.lcols,lw,L,'a',rh),...cells('r',rx,ty,cfg.rcols,rw,R,'b',rh),
+    T('sql',380,ty+rh*5+22,sql,{a:'middle',c:'f',s:'m b'}),
+    T('ot',lx,ry-14,'Result',{c:'g',s:'sm b'}),T('rc',lx+sum(ow),ry-14,'0 row',{a:'end',c:'g',s:'sm b'}),
+    ...cells('oh',lx,ry,[...cfg.lcols.map(c=>cfg.la+'.'+c),...cfg.rcols.map(c=>cfg.ra+'.'+c)],ow,[],'g',rr).map(n=>({...n,id:n.id.replace('ohh','oh')})),
+    T('lg0',430,ry+8,'রঙের মানে',{c:'f',s:'sm b'}),T('lg1',430,ry+32,'■ সবুজ: match পেয়েছে, result-এ ঢুকল',{c:'g',s:'sm'}),
+    T('lg2',430,ry+54,'■ কমলা NULL: ওই পাশে match নেই',{c:'o',s:'sm'}),T('lg3',430,ry+76,'■ লাল / ✕: match নেই',{c:'r',s:'sm'})];
+  let k=0,ln=0,prev=[],prevLn=[],stepNo=0;
+  const outRow=(l,r,cm)=>{const vals=[...(l||Array(nl).fill(null)),...(r||Array(nr).fill(null))];
+    const nodes=vals.map((v,j)=>B(`o${k}_${j}`,lx+sum(ow.slice(0,j)),ry+rr*(k+1),ow[j],rr,v==null?'NULL':v,v==null?'o':cm,{rx:3,m:1,s:'sm'}));k++;return nodes;};
+  const link=(i,j,c)=>{const id='ln'+(ln++);cur.push(id);return A(id,lend,yc(i),rx,yc(j),c,{hl:1});};
+  const missL=i=>{const a='ln'+(ln++);cur.push(a);return [A(a,lend,yc(i),lend+34,yc(i),'r',{dash:1,hl:1}),T('mx'+a,lend+42,yc(i),'✕ match নেই',{c:'r',s:'sm b'})];};
+  const missR=j=>{const a='ln'+(ln++);cur.push(a);return [A(a,rx,yc(j),rx-34,yc(j),'r',{dash:1,hl:1}),T('mx'+a,rx-42,yc(j),'match নেই ✕',{a:'end',c:'r',s:'sm b'})];};
+  let cur=[];
+  const reset=()=>{const m={};prev.forEach(([p,i,d])=>Object.assign(m,rowMod(p,i,d,0)));prevLn.forEach(id=>m[id]={hl:0});return m;};
+  const step=(cap,add,mod,rows)=>{stepNo++;const m={...reset(),...mod,rc:{label:`${k} row`}};prev=rows;prevLn=cur;cur=[];return S(cap,{add,mod:m});};
   const steps=[S(cfg.intro[type],{add:base})];
-  const row=(txt,c)=>{const n=T('o'+k,482,44+k*RH,txt,{c,s:'m'});k++;return n;};
-  const clr=()=>Object.fromEntries(prev.map(id=>[id,{hl:0,c:id[0]==='l'?'a':'b'}]));
-  const norm=(arr)=>arr;
-  if(type==='INNER'||type==='LEFT'){
-    L.forEach((l,i)=>{const m=R.findIndex(r=>r.id===l.key);const mod={...clr()};prev=['l'+i];mod['l'+i]={hl:1,c:m>=0?'g':'r'};const add=[];
-      if(m>=0){mod['r'+m]={hl:1,c:'g'};prev.push('r'+m);add.push(row(`${l.n}  |  ${R[m].n}`,'g'));}
-      else if(type==='LEFT')add.push(row(`${l.n}  |  NULL`,'o'));
-      const cap=m>=0?`<b>${l.n}</b> (dept ${l.key}): departments-এ <b>${R[m].n}</b> পাওয়া গেল, তাই ফলে ঢুকল।`:(type==='LEFT'?`<b>${l.n}</b>: ${l.key==null?'dept NULL':'dept '+l.key+' departments-এ নেই'}। Match নেই, কিন্তু LEFT JOIN বাঁয়ের সব row রাখে, তাই <b>NULL সহ</b> ঢুকল।`:`<b>${l.n}</b>: ${l.key==null?'dept NULL':'dept '+l.key+' departments-এ নেই'}। Match নেই, INNER JOIN-এ তাই <b>বাদ</b>।`);
-      steps.push(S(cap,{add,mod}));});
+  const kv=v=>v==null?'NULL':v;
+  if(type==='INNER'||type==='LEFT'||type==='FULL'){
+    L.forEach((l,i)=>{cur=[];const ms=R.map((r,j)=>key(l)!=null&&r[0]===key(l)?j:-1).filter(j=>j>=0);
+      const add=[],mod={...rowMod('l',i,l,ms.length?'g':'r')},rows=[['l',i,l]];
+      ms.forEach(j=>{mod['r'+j+'_0']=0;Object.assign(mod,rowMod('r',j,R[j],'g'));rows.push(['r',j,R[j]]);add.push(link(i,j,'g'),...outRow(l,R[j],'g'));});
+      let tail;
+      if(ms.length)tail=`${cfg.rn}-এ id = ${key(l)} খুঁজলাম → <b>${R[ms[0]][1]}</b> পেলাম ✓। দুই row জোড়া লেগে result-এ <b>ঢুকল</b>।`;
+      else{add.push(...missL(i));
+        tail=`${cfg.rn}-এ ${key(l)==null?'NULL কোনো কিছুর সাথেই মেলে না':'id = '+key(l)+' নেই'} ✕। `+(type==='INNER'?'INNER JOIN-এ match না থাকলে row <b>বাদ</b>, result-এ কিছু যোগ হল না।':'বাঁয়ের সব row রাখা হয়, তাই ডানের অংশ <b>NULL</b> দিয়ে result-এ <b>ঢুকল</b>।');
+        if(type!=='INNER')add.push(...outRow(l,null,'n'));}
+      steps.push(step(`<b>ধাপ ${stepNo+1} · ${l[1]}:</b> ${cfg.lkn} = <b>${kv(key(l))}</b> → `+tail,add,mod,rows));});
+    if(type==='FULL')R.forEach((r,j)=>{if(L.some(l=>key(l)===r[0]))return;cur=[];
+      steps.push(step(`<b>ধাপ ${stepNo+1} · ${r[1]} (ডান table):</b> id = <b>${r[0]}</b> → ${cfg.ln}-এ কেউ এই id ধরে নেই ✕। FULL JOIN ডানের বাকি row-ও রাখে, তাই বাঁয়ের অংশ <b>NULL</b> দিয়ে <b>ঢুকল</b>।`,[...missR(j),...outRow(null,r,'n')],rowMod('r',j,r,'r'),[['r',j,r]]));});
   }else if(type==='RIGHT'){
-    R.forEach((r,j)=>{const ms=L.map((l,i)=>l.key===r.id?i:-1).filter(i=>i>=0);const mod={...clr()};mod['r'+j]={hl:1,c:ms.length?'g':'r'};prev=['r'+j];const add=[];
-      ms.forEach(i=>{mod['l'+i]={hl:1,c:'g'};prev.push('l'+i);add.push(row(`${L[i].n}  |  ${r.n}`,'g'));});
-      if(!ms.length)add.push(row(`NULL  |  ${r.n}`,'o'));
-      steps.push(S(ms.length?`<b>${r.n}</b> (id ${r.id}): employees-এ <b>${ms.map(i=>L[i].n).join(', ')}</b> আছে, ফলে ঢুকল।`:`<b>${r.n}</b> (id ${r.id}): কোনো employee নেই। RIGHT JOIN ডানের সব row রাখে, তাই <b>NULL সহ</b> ঢুকল।`,{add,mod}));});
-  }else if(type==='FULL'){
-    L.forEach((l,i)=>{const m=R.findIndex(r=>r.id===l.key);const mod={...clr()};prev=['l'+i];mod['l'+i]={hl:1,c:m>=0?'g':'r'};const add=[];
-      if(m>=0){mod['r'+m]={hl:1,c:'g'};prev.push('r'+m);add.push(row(`${l.n}  |  ${R[m].n}`,'g'));}else add.push(row(`${l.n}  |  NULL`,'o'));
-      steps.push(S(m>=0?`<b>${l.n}</b> ↔ <b>${R[m].n}</b>: match, ঢুকল।`:`<b>${l.n}</b>: match নেই, তবু <b>NULL সহ</b> ঢুকল (বাঁয়ের সব row আসে)।`,{add,mod}));});
-    R.forEach((r,j)=>{if(L.some(l=>l.key===r.id))return;const mod={...clr()};mod['r'+j]={hl:1,c:'r'};prev=['r'+j];steps.push(S(`<b>${r.n}</b>-এ কোনো employee নেই, তবু <b>NULL সহ</b> ঢুকল (ডানের সব row-ও আসে)।`,{add:[row(`NULL  |  ${r.n}`,'o')],mod}));});
+    R.forEach((r,j)=>{cur=[];const ms=L.map((l,i)=>key(l)!=null&&key(l)===r[0]?i:-1).filter(i=>i>=0);
+      const add=[],mod={...rowMod('r',j,r,ms.length?'g':'r')},rows=[['r',j,r]];
+      ms.forEach(i=>{Object.assign(mod,rowMod('l',i,L[i],'g'));rows.push(['l',i,L[i]]);add.push(link(i,j,'g'),...outRow(L[i],r,'g'));});
+      let tail;
+      if(ms.length)tail=`${cfg.ln}-এ ${cfg.lkn} = ${r[0]} খুঁজলাম → <b>${ms.map(i=>L[i][1]).join(', ')}</b> পেলাম ✓${ms.length>1?` (${ms.length}টা, তাই ${ms.length}টা row)`:''}। জোড়া লেগে result-এ <b>ঢুকল</b>।`;
+      else{add.push(...missR(j),...outRow(null,r,'n'));tail=`${cfg.ln}-এ ${cfg.lkn} = ${r[0]} কোনো row-তে নেই ✕। RIGHT JOIN ডানের সব row রাখে, তাই বাঁয়ের অংশ <b>NULL</b> দিয়ে <b>ঢুকল</b>।`;}
+      steps.push(step(`<b>ধাপ ${stepNo+1} · ${r[1]}:</b> id = <b>${r[0]}</b> → `+tail,add,mod,rows));});
   }else{
-    L.forEach((l,i)=>{const mod={...clr()};prev=['l'+i];mod['l'+i]={hl:1,c:'g'};const add=R.map(r=>row(`${l.n}  |  ${r.n}`,'g'));steps.push(S(`<b>${l.n}</b> প্রতিটা department-এর সাথে জোড়া লাগল (3টা row)।`,{add,mod}));});
+    L.forEach((l,i)=>{cur=[];const add=[],mod={...rowMod('l',i,l,'g')},rows=[['l',i,l]];
+      R.forEach((r,j)=>{Object.assign(mod,rowMod('r',j,r,'g'));rows.push(['r',j,r]);add.push(link(i,j,'g'),...outRow(l,r,'g'));});
+      steps.push(step(`<b>ধাপ ${stepNo+1} · ${l[1]}:</b> শর্ত নেই, তাই ডানের <b>${R.length}টা row-র প্রত্যেকটার</b> সাথে জোড়া লাগল → ${R.length}টা নতুন row।`,add,mod,rows));});
   }
   const cnt=k;
-  steps.push(S({INNER:`<b>ফল:</b> ${cnt}টা row। যাদের match নেই (Sumon, Anika, IT) তারা নেই।`,LEFT:`<b>ফল:</b> ${cnt}টা row। সব employee আছে, match না থাকলে NULL।`,RIGHT:`<b>ফল:</b> ${cnt}টা row। সব department আছে (IT সহ), match না থাকলে NULL।`,FULL:`<b>ফল:</b> ${cnt}টা row। দুই পাশের সবাই আছে, match না থাকলে NULL।`,CROSS:`<b>ফল:</b> ${cnt}টা row (4 × 3)। শর্ত নেই বলে সব সম্ভাব্য জোড়া। সাবধান: বড় table-এ বিশাল হয়ে যায়।`}[type],{mod:clr()}));
+  steps.push(step({INNER:`<b>ফল:</b> ${cnt}টা row। যাদের match নেই (Sumon, Anika, আর IT department) তারা result-এ নেই।`,LEFT:`<b>ফল:</b> ${cnt}টা row। ${L.length}জন employee-ই আছে। match না থাকলে (Sumon, Anika) department অংশ NULL।`,RIGHT:`<b>ফল:</b> ${cnt}টা row। ${R.length}টা department-ই আছে (IT সহ)। match না থাকলে employee অংশ NULL।`,FULL:`<b>ফল:</b> ${cnt}টা row। দুই পাশের সবাই আছে। যেখানে match নেই সেখানে অন্য পাশ NULL।`,CROSS:`<b>ফল:</b> ${cnt}টা row (${L.length} × ${R.length}) । শর্ত নেই বলে সব সম্ভাব্য জোড়া। সাবধান: বড় table-এ result বিশাল হয়ে যায়।`}[type],[],{},[]));
+  steps.vh=Math.max(340,ry+rr*(cnt+1)+16);
   return steps;
 }
-const JSELF={lt:'employees e',rt:'employees m (manager)',header:'employee  |  manager',
-  L:[{label:'1  Rahim   mgr=NULL',key:null,n:'Rahim'},{label:'2  Karim   mgr=1',key:1,n:'Karim'},{label:'3  Sumon   mgr=1',key:1,n:'Sumon'},{label:'4  Anika   mgr=2',key:2,n:'Anika'}],
-  R:[{label:'1  Rahim',id:1,n:'Rahim'},{label:'2  Karim',id:2,n:'Karim'},{label:'3  Sumon',id:3,n:'Sumon'},{label:'4  Anika',id:4,n:'Anika'}],
-  sql:{LEFT:'SELECT e.name, m.name FROM employees e LEFT JOIN employees m ON e.manager_id = m.id;'},
-  intro:{LEFT:'<b>SELF JOIN:</b> একটা table নিজের সাথেই join। এখানে employees-কে দুইবার ধরা হয়: <b>e</b> (কর্মী) আর <b>m</b> (ম্যানেজার)। <code>manager_id</code> দিয়ে মেলানো।'}};
+const JSELF={lt:'employees  (e, কর্মী)',rt:'employees  (m, ম্যানেজার)',t1:'employees e',t2:'employees m',cond:'e.manager_id = m.id',ln:'employees (m)',rn:'employees (m)',lkn:'manager_id',
+  lcols:['id','name','manager_id'],lw:[40,84,100],lk:2,rcols:['id','name'],rw:[50,116],la:'e',ra:'m',
+  L:[[1,'Rahim',null],[2,'Karim',1],[3,'Sumon',1],[4,'Anika',2]],
+  R:[[1,'Rahim'],[2,'Karim'],[3,'Sumon'],[4,'Anika']],
+  intro:{LEFT:'<b>SELF JOIN:</b> একটা table নিজের সাথেই join। একই <code>employees</code> table-কে দুইবার ধরা হয়: <b>e</b> (কর্মী) আর <b>m</b> (ম্যানেজার)। <code>e.manager_id = m.id</code> দিয়ে কর্মীর পাশে তার ম্যানেজারকে বসানো হয়। এখানে LEFT JOIN, কারণ Rahim-এর কোনো manager নেই।'}};
 function selfScene(){
   const steps=joinScene(JSELF,'LEFT');
-  // fix captions for self join wording
-  steps.forEach((s,i)=>{if(i>0&&i<steps.length-1)s.cap=s.cap.replace('departments-এ','employees (m)-এ').replace('dept ','manager ');});
   steps[steps.length-1].cap='<b>ফল:</b> প্রতিটা কর্মীর পাশে তার ম্যানেজার। Rahim-এর manager নেই, তাই NULL। Hierarchy (কে কার অধীনে) বোঝাতে SELF JOIN।';
   return steps;
 }
+
 
 /* ===== 2. Indexing ===== */
 const CLUSTERED=[
@@ -431,7 +461,7 @@ const MATVIEW=[
 const TOPICS=[
 {p:0,q:'Different types of joins (all joins with example)',
  ans:'<b>Join</b> দুই (বা বেশি) table-এর row একটা শর্তে জোড়া লাগায়। পাঁচ রকম মূল join: <b>INNER, LEFT, RIGHT, FULL OUTER, CROSS</b>, আর একটা table নিজের সাথে <b>SELF</b> join। একই দুটো table দিয়ে প্রতিটা tab-এ ফল আলাদা দেখো।',
- pts:['উদাহরণের table: <b>employees</b> (Sumon-এর dept NULL, Anika-র dept 30 যা departments-এ নেই) আর <b>departments</b> (IT-তে কোনো employee নেই)।','<b>INNER:</b> দু-পাশে match থাকলেই। <b>LEFT:</b> বাঁয়ের সব। <b>RIGHT:</b> ডানের সব। <b>FULL:</b> দুই পাশের সব। <b>CROSS:</b> সব জোড়া।','<b>NULL</b> মানে "ওই পাশে match নেই"।'],
+ pts:['উদাহরণের table: <b>employees</b> (id, name, dept_id; Sumon-এর dept_id NULL, Anika-র 30 যা departments-এ নেই) আর <b>departments</b> (id, name; IT-তে কোনো employee নেই)। Join-এর শর্ত: <code>e.dept_id = d.id</code>।','<b>INNER:</b> দু-পাশে match থাকলেই। <b>LEFT:</b> বাঁয়ের সব। <b>RIGHT:</b> ডানের সব। <b>FULL:</b> দুই পাশের সব। <b>CROSS:</b> সব জোড়া।','<b>NULL</b> মানে "ওই পাশে match নেই"।'],
  tabs:[
   {n:'INNER',steps:()=>joinScene(JEMP,'INNER')},{n:'LEFT',steps:()=>joinScene(JEMP,'LEFT')},{n:'RIGHT',steps:()=>joinScene(JEMP,'RIGHT')},
   {n:'FULL OUTER',steps:()=>joinScene(JEMP,'FULL')},{n:'CROSS',steps:()=>joinScene(JEMP,'CROSS')},{n:'SELF',steps:()=>selfScene()}
