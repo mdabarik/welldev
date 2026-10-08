@@ -8,6 +8,7 @@ Software engineering interview prep — বাংলায় ব্যাখ্
 
 ## 01 · DSA & Problem Solving
 
+- [C++ STL Cheat Sheet](01-dsa-problem-solving/cpp-stl/index.html) - stack, queue, deque, string, vector sort ও custom comparator, priority_queue (min/max heap) এর common method
 - [Blind 75](01-dsa-problem-solving/blind-75/index.html) - ৭৫টি problem, ১০টি category, প্রতিটার সংক্ষিপ্ত statement ও example
 - [Top Interview 150](01-dsa-problem-solving/top-150/index.html) - LeetCode-এর ১৫০টি problem, ২৩টি category অনুযায়ী
 - [Common Graph Algorithms](01-dsa-problem-solving/graph-algorithms/index.html) - BFS, DFS, Dijkstra, Bellman-Ford, Kruskal, Prim, Floyd-Warshall, Kosaraju, bipartite, cycle detection

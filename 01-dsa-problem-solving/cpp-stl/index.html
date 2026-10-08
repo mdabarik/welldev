@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>C++ STL Cheat Sheet</title>
+<meta name="description" content="C++ STL cheat sheet: stack, queue, deque, string, vector sort ও custom comparator, priority_queue (min/max heap, struct comparator) - LeetCode problem solving-এর common method।">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f5f7fc;--surface:#fff;--surface-2:#f1f4fa;--fg:#0f172a;--muted:#5b6478;--faint:#94a0b8;--line:#e4e8f1;--accent:#0ea5e9;
+--e:#059669;--m:#d97706;--h:#e11d48;--hero:linear-gradient(135deg,#0ea5e9 0%,#6366f1 55%,#8b5cf6 100%);
+--shadow:0 1px 2px rgba(15,23,42,.04),0 10px 30px -12px rgba(15,23,42,.14);
+--sans:"Inter","Hind Siliguri",system-ui,sans-serif;--bn:"Hind Siliguri","Inter",system-ui,sans-serif;--mono:"JetBrains Mono",ui-monospace,Menlo,monospace}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0b0f1a;--surface:#121827;--surface-2:#182033;--fg:#e7ecf6;--muted:#9aa6bf;--faint:#66728c;--line:#232c42;--accent:#38bdf8;--e:#34d399;--m:#fbbf24;--h:#fb7185;--shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6)}}
+:root[data-theme="dark"]{--bg:#0b0f1a;--surface:#121827;--surface-2:#182033;--fg:#e7ecf6;--muted:#9aa6bf;--faint:#66728c;--line:#232c42;--accent:#38bdf8;--e:#34d399;--m:#fbbf24;--h:#fb7185;--shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6)}
+*{box-sizing:border-box}html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 var(--bn);-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}button,input{font:inherit;color:inherit}
+code{font-family:var(--mono);font-size:.86em}
+.wrap{max-width:1000px;margin:0 auto;padding:20px 18px 70px}
+.topnav{display:flex;align-items:center;gap:10px}
+.brand{display:flex;align-items:center;gap:10px;font:800 16px var(--sans);letter-spacing:-.02em}
+.logo{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:#fff;font:800 13px var(--mono);background:var(--hero)}
+.sp{flex:1}
+.pill{border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:6px 14px;font:600 13px var(--sans);cursor:pointer}
+.pill:hover{color:var(--fg)}
+.hero{margin-top:20px;border-radius:22px;padding:26px 30px;color:#fff;background:var(--hero)}
+.hero .eyebrow{font:600 12px var(--sans);letter-spacing:.1em;text-transform:uppercase;opacity:.85}
+.hero h1{margin:6px 0 8px;font:800 clamp(26px,4.2vw,38px)/1.15 var(--sans);letter-spacing:-.03em}
+.hero p{margin:0;max-width:700px;opacity:.94}
+.stats{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+.stat{background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.26);border-radius:12px;padding:6px 14px;font:600 13px var(--sans)}
+.stat b{font-size:18px;margin-right:4px}
+.bar{position:sticky;top:0;z-index:5;margin:14px -18px 0;padding:10px 18px;background:color-mix(in srgb,var(--bg) 90%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.bar input{width:100%;padding:9px 14px;border-radius:12px;border:1px solid var(--line);background:var(--surface);font:500 14px var(--sans);outline:none}
+.bar input:focus{border-color:var(--accent)}
+.chips{display:flex;gap:6px;overflow-x:auto;margin-top:8px;scrollbar-width:none}
+.chip{flex:none;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:3px 12px;font:600 12.5px var(--sans);color:var(--muted);cursor:pointer}
+.chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.chip i{font-style:normal;opacity:.7;margin-left:4px}
+.cat{margin-top:34px;scroll-margin-top:110px}
+.cat>h2{display:flex;align-items:baseline;gap:10px;margin:0 0 12px;font:800 22px/1.25 var(--sans);letter-spacing:-.02em}
+.cat>h2 small{font:600 13px var(--sans);color:var(--faint)}
+.dif{display:inline-block;font:700 11px var(--sans);padding:2px 9px;border-radius:999px;border:1px solid currentColor}
+.dif.E{color:var(--e)}.dif.M{color:var(--m)}.dif.H{color:var(--h)}
+.prem{font:700 10.5px var(--sans);padding:2px 8px;border-radius:999px;background:var(--surface-2);color:var(--muted);border:1px dashed var(--faint)}
+.empty{display:none;text-align:center;color:var(--muted);margin-top:30px}
+footer{margin-top:50px;text-align:center;color:var(--faint);font:500 13px var(--sans)}
+
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:22px}
+@media (max-width:700px){.grid{grid-template-columns:1fr}}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px 20px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:8px}
+.card .top{display:flex;align-items:center;gap:10px}
+.no{flex:none;width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:#fff;font:800 14px var(--sans);background:var(--hero)}
+.card h3{margin:0;font:700 17px/1.3 var(--sans)}
+.card p{margin:0;color:var(--muted);font:400 15px/1.6 var(--sans)}
+.kind{align-self:flex-start;font:700 11px var(--sans);padding:2px 10px;border-radius:999px;background:var(--surface-2);color:var(--accent)}
+.cx{margin-top:auto;font:600 12.5px var(--mono);color:var(--fg)}
+.cx span{color:var(--faint);font-family:var(--sans)}
+.note{margin-top:22px;border:1px dashed var(--faint);border-radius:14px;padding:12px 16px;color:var(--muted);font:500 14px var(--sans)}
+/* bn-type: Bengali glyphs/digits need normal tracking */
+h1,h2,h3,h4,h5{letter-spacing:0!important}
+.hero h1,.page-head h1,.p-hero h1,.prose h1,header.top h1{line-height:1.32!important}
+
+pre{margin:0;background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:12px 14px;overflow-x:auto;font:500 13px/1.6 var(--mono);color:var(--fg)}
+.cat{margin-top:34px;scroll-margin-top:90px}
+.cards{display:grid;grid-template-columns:1fr;gap:14px}
+.card h3 small{font:600 12px var(--sans);color:var(--faint);margin-left:6px}
+.tip{color:var(--muted);font:400 14px/1.6 var(--bn)}
+.toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:18px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="topnav"><a class="brand" href="../../index.html"><span class="logo">W</span>WellDev</a><span class="sp"></span><button class="pill" id="theme" type="button">Theme</button></nav>
+  <header class="hero">
+    <div class="eyebrow">DSA · C++ STL</div>
+    <h1>C++ STL Cheat Sheet</h1>
+    <p>LeetCode problem solving-এ যে STL method গুলো বারবার লাগে: stack, queue, deque, string, vector sort ও custom comparator, priority_queue (min heap, max heap, struct comparator)।</p>
+    <div class="stats" id="stats"></div>
+  </header>
+  <div class="toc" id="toc"></div>
+  <main id="app"></main>
+  <footer>C++ STL · আরও যোগ হবে</footer>
+</div>
+<script>
+(function(){const root=document.documentElement,btn=document.getElementById('theme');
+try{const t=localStorage.getItem('theme');if(t)root.dataset.theme=t;}catch(e){}
+const dark=()=>root.dataset.theme?root.dataset.theme==='dark':matchMedia('(prefers-color-scheme:dark)').matches;
+const label=()=>btn.textContent=dark()?'Light':'Dark';
+btn.onclick=()=>{root.dataset.theme=dark()?'light':'dark';try{localStorage.setItem('theme',root.dataset.theme);}catch(e){}label();};label();})();
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const SEC=[
+{id:'stack',t:'1. stack',cards:[
+{h:'Common methods',s:'LIFO. Top element-ই শুধু access করা যায়। সব O(1)। pop() কিছু return করে না, তাই আগে top() নাও।',c:`#include <stack>
+stack<int> st;
+st.push(5);          // top-এ বসায়
+st.emplace(7);       // in-place push
+int x = st.top();    // top দেখো (pop করে না)
+st.pop();            // top ফেলে দেয়, return করে না
+st.empty();          // খালি কিনা
+st.size();
+
+// usage pattern
+while(!st.empty()){ int t = st.top(); st.pop(); }
+// valid parentheses / monotonic stack / DFS iterative-এ লাগে`}]},
+{id:'queue',t:'2. queue',cards:[
+{h:'Common methods',s:'FIFO। BFS, level order, sliding window-তে সবচেয়ে বেশি। সব O(1)।',c:`#include <queue>
+queue<int> q;
+q.push(1);           // back-এ ঢোকে
+q.emplace(2);
+int f = q.front();   // সামনের element
+int b = q.back();    // শেষের element
+q.pop();             // front ফেলে দেয়
+q.empty(); q.size();
+
+// BFS level order
+queue<TreeNode*> q; q.push(root);
+while(!q.empty()){
+    int sz = q.size();           // এই level-এ কয়টা node
+    for(int i=0;i<sz;i++){
+        auto n = q.front(); q.pop();
+        if(n->left)  q.push(n->left);
+        if(n->right) q.push(n->right);
+    }
+}`}]},
+{id:'deque',t:'3. deque',cards:[
+{h:'Common methods',s:'দুই মাথা থেকেই push/pop O(1) + index access O(1)। Sliding window maximum, monotonic deque, 0-1 BFS-এ লাগে।',c:`#include <deque>
+deque<int> dq;
+dq.push_back(1);  dq.push_front(0);
+dq.pop_back();    dq.pop_front();
+dq.front();       dq.back();
+dq[i];            // random access
+dq.size(); dq.empty(); dq.clear();
+dq.insert(dq.begin()+1, 9);   // middle insert O(n)
+
+// Sliding window maximum (monotonic decreasing deque of indices)
+deque<int> d; vector<int> res;
+for(int i=0;i<n;i++){
+    if(!d.empty() && d.front() <= i-k) d.pop_front();     // window-এর বাইরে
+    while(!d.empty() && nums[d.back()] <= nums[i]) d.pop_back();
+    d.push_back(i);
+    if(i >= k-1) res.push_back(nums[d.front()]);
+}`}]},
+{id:'string',t:'4. string',cards:[
+{h:'reverse, sort, front/back remove',s:'string-ও vector-এর মতো। reverse/sort <algorithm> থেকে আসে।',c:`#include <string>
+#include <algorithm>
+string s = "hello";
+
+// reverse
+reverse(s.begin(), s.end());          // "olleh"
+string r(s.rbegin(), s.rend());       // reversed copy
+
+// sort (characters)
+sort(s.begin(), s.end());                           // ascending
+sort(s.begin(), s.end(), greater<char>());          // descending
+// anagram key: sort(key.begin(), key.end());
+
+// remove from end / front
+s.pop_back();                  // শেষ char মুছে
+s.erase(s.begin());            // প্রথম char মুছে  O(n)
+s.erase(0, 1);                 // প্রথম 1 char মুছে
+s.erase(s.size()-1);           // শেষ char মুছে
+s.erase(s.begin()+2, s.begin()+5);   // [2,5) range মুছে
+s.erase(0, k);                 // প্রথম k char মুছে`},
+{h:'আরও common string method',s:'প্রায় প্রতিটা string problem-এ লাগে।',c:`s.size(); s.length(); s.empty();
+s.front(); s.back(); s[i];
+s.push_back('a');  s += "xyz";  s.append("abc");
+s.substr(pos, len);            // substr(2,3) = index 2 থেকে 3 char
+s.find("lo");                  // index, না পেলে string::npos
+s.find('l', 3);                // 3 থেকে খোঁজা শুরু
+s.rfind('l');
+s.insert(1, "ab");
+s.compare(t);                  // 0 হলে সমান
+s.clear();
+to_string(123);                // int -> string
+stoi("123"); stoll("123"); stod("1.5");   // string -> number
+isalpha(c); isdigit(c); isalnum(c); islower(c); isupper(c);
+tolower(c); toupper(c);
+// split by space
+stringstream ss(s); string w; while(ss >> w){ /* word */ }`}]},
+{id:'vector',t:'5. vector sorting & custom comparator',cards:[
+{h:'Basic sort',s:'sort() O(n log n)। Default ascending।',c:`#include <vector>
+#include <algorithm>
+vector<int> v = {5,2,9,1};
+sort(v.begin(), v.end());                     // ascending
+sort(v.begin(), v.end(), greater<int>());     // descending
+sort(v.rbegin(), v.rend());                   // descending (reverse iterator)
+reverse(v.begin(), v.end());
+// partial: sort(v.begin(), v.begin()+k);
+stable_sort(v.begin(), v.end(), cmp);         // equal element-এর order ঠিক রাখে`},
+{h:'Custom comparator (lambda)',s:'cmp(a,b) true দিলে a আগে বসবে। Strict ordering দাও (<, >), কখনো <= নয়, নাহলে crash/UB হতে পারে।',c:`// vector<vector<int>> / vector<pair<int,int>> sort
+vector<vector<int>> a = {{1,5,3},{2,2,9},{1,3,4}};
+
+// 1st index ascending
+sort(a.begin(), a.end(), [](auto& x, auto& y){ return x[0] < y[0]; });
+
+// 2nd index descending
+sort(a.begin(), a.end(), [](auto& x, auto& y){ return x[1] > y[1]; });
+
+// 1st asc, tie হলে 2nd desc, tie হলে 3rd asc
+sort(a.begin(), a.end(), [](auto& x, auto& y){
+    if(x[0] != y[0]) return x[0] < y[0];
+    if(x[1] != y[1]) return x[1] > y[1];
+    return x[2] < y[2];
+});
+
+// tuple / pair trick: lexicographic compare
+sort(a.begin(), a.end(), [](auto& x, auto& y){
+    return make_tuple(x[0], -x[1], x[2]) < make_tuple(y[0], -y[1], y[2]);
+});
+
+// intervals: start অনুযায়ী (merge intervals)
+sort(intervals.begin(), intervals.end());     // vector default lexicographic
+
+// string length, তারপর lexicographic
+sort(words.begin(), words.end(), [](const string& a, const string& b){
+    return a.size() != b.size() ? a.size() < b.size() : a < b;
+});`},
+{h:'Common vector method',s:'',c:`v.push_back(x); v.emplace_back(x); v.pop_back();
+v.size(); v.empty(); v.front(); v.back(); v.clear();
+v.insert(v.begin()+i, x);  v.erase(v.begin()+i);  v.erase(v.begin()+l, v.begin()+r);
+v.resize(n, 0);  v.assign(n, 0);   vector<int> v(n, 0);
+vector<vector<int>> g(n, vector<int>(m, 0));     // 2D
+*max_element(v.begin(), v.end());  *min_element(v.begin(), v.end());
+accumulate(v.begin(), v.end(), 0);               // sum (#include <numeric>)
+lower_bound(v.begin(), v.end(), x);   // প্রথম element >= x  (sorted)
+upper_bound(v.begin(), v.end(), x);   // প্রথম element > x
+binary_search(v.begin(), v.end(), x);
+unique(v.begin(), v.end());           // sorted হলে duplicate সরায়; erase সহ:
+v.erase(unique(v.begin(), v.end()), v.end());
+count(v.begin(), v.end(), x);  find(v.begin(), v.end(), x);
+next_permutation(v.begin(), v.end());`}]},
+{id:'pq',t:'6. priority_queue (heap)',cards:[
+{h:'Max heap (default) ও Min heap',s:'Default max heap: top() সবচেয়ে বড়। Min heap-এর জন্য greater<> দাও। push/pop O(log n), top O(1)।',c:`#include <queue>
+priority_queue<int> maxH;                                  // max heap
+priority_queue<int, vector<int>, greater<int>> minH;       // min heap
+
+maxH.push(5); maxH.push(9);
+maxH.top();     // 9
+maxH.pop();
+maxH.empty(); maxH.size();
+maxH.emplace(3);
+
+// pair: first দিয়ে compare, tie হলে second
+priority_queue<pair<int,int>> pm;                                      // max
+priority_queue<pair<int,int>, vector<pair<int,int>>, greater<pair<int,int>>> pn; // min
+// Dijkstra: pn.push({dist, node});
+
+// vector থেকে heap বানানো
+vector<int> v = {4,1,7};
+priority_queue<int> h(v.begin(), v.end());                 // max heap
+priority_queue<int, vector<int>, greater<int>> h2(v.begin(), v.end());  // min heap
+
+// trick: min heap = max heap-এ negative দিয়ে
+maxH.push(-x);  int val = -maxH.top();`},
+{h:'Struct + operator diye comparator',s:'priority_queue-তে operator< ঠিক উল্টো ভাবে কাজ করে: যে "ছোট" সে নিচে যায়, "বড়" সে top-এ। তাই return a.x < b.x দিলে max heap, a.x > b.x দিলে min heap।',c:`struct Node{
+    int a, b, c;
+    // max heap on a   (বড় a আগে)
+    bool operator<(const Node& o) const { return a < o.a; }
+};
+priority_queue<Node> pq;
+
+struct Node2{
+    int a, b, c;
+    // min heap on a   (ছোট a আগে)
+    bool operator<(const Node2& o) const { return a > o.a; }   // উল্টো!
+};
+priority_queue<Node2> pq2;
+
+// multi-key: a min, tie হলে b max, tie হলে c min
+struct N3{
+    int a, b, c;
+    bool operator<(const N3& o) const {
+        if(a != o.a) return a > o.a;     // a ছোট আগে
+        if(b != o.b) return b < o.b;     // b বড় আগে
+        return c > o.c;                  // c ছোট আগে
+    }
+};`},
+{h:'Separate comparator struct / lambda',s:'এখানে cmp(x,y) true মানে x এর priority y এর চেয়ে কম (x নিচে যাবে)। Sort-এর উল্টো মনে রাখো।',c:`// comparator struct
+struct cmp{
+    bool operator()(const vector<int>& x, const vector<int>& y) const {
+        return x[1] > y[1];     // x[1] ছোট হলে আগে  -> min heap by index 1
+    }
+};
+priority_queue<vector<int>, vector<vector<int>>, cmp> pq;
+pq.push({1, 5, 3});  pq.push({2, 2, 9});
+pq.top();   // {2,2,9}
+
+// max heap by index 2 (3rd value)
+struct cmpMax{
+    bool operator()(const vector<int>& x, const vector<int>& y) const {
+        return x[2] < y[2];
+    }
+};
+priority_queue<vector<int>, vector<vector<int>>, cmpMax> pq3;
+
+// 1st asc, tie হলে 2nd desc  (min heap by [0], then max by [1])
+struct cmp2{
+    bool operator()(const vector<int>& x, const vector<int>& y) const {
+        if(x[0] != y[0]) return x[0] > y[0];
+        return x[1] < y[1];
+    }
+};
+
+// lambda version
+auto cmpL = [](const vector<int>& x, const vector<int>& y){ return x[0] > y[0]; };
+priority_queue<vector<int>, vector<vector<int>>, decltype(cmpL)> pq4(cmpL);`},
+{h:'Common method & trick',s:'priority_queue-তে iterate করা যায় না, শুধু top/pop। Top-K problem-এ size k রাখো।',c:`pq.push(x); pq.emplace(...); pq.pop(); pq.top(); pq.size(); pq.empty();
+// clear করার সরাসরি method নেই:
+pq = priority_queue<int>();
+
+// K-th largest -> size k-এর MIN heap
+priority_queue<int, vector<int>, greater<int>> h;
+for(int x: nums){ h.push(x); if(h.size() > k) h.pop(); }
+int kth = h.top();
+
+// K-th smallest -> size k-এর MAX heap
+// Merge K sorted lists -> min heap of {val, listIdx}
+// Task scheduler / Reorganize string -> max heap of {count, char}
+// Median of stream -> maxHeap (নিচের অর্ধেক) + minHeap (উপরের অর্ধেক)`}]}
+];
+let total=0;
+document.getElementById('toc').innerHTML=SEC.map(s=>`<a class="chip" href="#${s.id}">${esc(s.t)}</a>`).join('');
+document.getElementById('app').innerHTML=SEC.map(s=>{total+=s.cards.length;return `<section class="cat" id="${s.id}"><h2>${esc(s.t)}</h2><div class="cards">`+s.cards.map(c=>`<article class="card"><h3>${esc(c.h)}</h3>${c.s?`<p class="tip">${esc(c.s)}</p>`:''}<pre><code>${esc(c.c)}</code></pre></article>`).join('')+'</div></section>';}).join('');
+document.getElementById('stats').innerHTML=[[SEC.length,'topics'],[total,'cards']].map(([v,l])=>`<div class="stat"><b>${v}</b>${l}</div>`).join('');
+</script>
+</body>
+</html>
