@@ -83,6 +83,10 @@ button{font:inherit;color:inherit}
 .card .band{height:6px;background:linear-gradient(90deg,var(--c),color-mix(in srgb,var(--c) 55%,#ec4899))}
 .card .body{padding:18px 20px 16px;display:flex;flex-direction:column;gap:8px;flex:1}
 .card .kicker{display:flex;align-items:center;gap:8px;font-size:11.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--c)}
+.tier{font:700 10.5px var(--sans);letter-spacing:.04em;text-transform:none;padding:2px 9px;border-radius:999px;white-space:nowrap}
+.tier.core{background:var(--c);color:#fff}
+.tier.opt{background:transparent;color:var(--muted);border:1px dashed var(--faint)}
+.card.core{border-color:color-mix(in srgb,var(--c) 55%,var(--line));box-shadow:0 0 0 1px color-mix(in srgb,var(--c) 30%,transparent),var(--shadow)}
 .card .kicker .ext{margin-left:auto;width:28px;height:28px;border-radius:9px;display:grid;place-items:center;background:color-mix(in srgb,var(--c) 12%,transparent);color:var(--c);transition:transform .18s}
 .card:hover .kicker .ext{transform:translate(2px,-2px)}
 .card h3{margin:0;font-size:19px;line-height:1.25;letter-spacing:-.015em;font-weight:750}
@@ -203,27 +207,27 @@ const TRACKS = [
       tags: ["CORS", "Preflight", "CSRF", "XSS"], meta: [["1", "simulator"], ["8", "Q&A"]] },
   ]},
   { id: "os", n: "05", title: "Operating System", blurb: "Kernel, process, thread, scheduling", color: "#ec4899", guides: [
-    { href: "05-operating-system/01-os-kernel-process-thread.html", kicker: "OS", title: "OS, Kernel, Process ও Thread",
+    { tier: "core", href: "05-operating-system/basics/index.html", kicker: "OS · Interview", title: "OS Basics - ৩৯টি Interview প্রশ্ন",
+      desc: "OS-এর মূল গাইড: process/thread, context switch, memory, scheduling, deadlock, synchronization, file system - প্রতি প্রশ্নে সংক্ষিপ্ত উত্তর আর ক্লিক করে দেখার D3 animation।",
+      tags: ["Interview", "Scheduling", "Paging", "D3.js"], meta: [["39", "questions"], ["39", "animations"]] },
+    { tier: "opt", href: "05-operating-system/01-os-kernel-process-thread.html", kicker: "OS", title: "OS, Kernel, Process ও Thread",
       desc: "Boot থেকে GUI, CPU core-এর ভেতর, process ও thread তৈরি, scheduling আর context switch — ধাপে ধাপে।",
       tags: ["Kernel", "Scheduler", "Context switch"], meta: [["7", "chapters"], ["25", "diagrams"]] },
-    { href: "05-operating-system/thread-process/index.html", kicker: "OS · Interactive", title: "Process, Thread আর CPU-র ভেতরে",
+    { tier: "opt", href: "05-operating-system/thread-process/index.html", kicker: "OS · Interactive", title: "Process, Thread আর CPU-র ভেতরে",
       desc: "Process/thread কে বানায়, user ও kernel space, page table, MMU/TLB, L1–L3 cache, register, core, IMC, দুই stack, PCB/TCB, context switch, driver আর NIC — animation সহ।",
       tags: ["MMU / TLB", "Context switch", "Driver", "D3.js"], meta: [["21", "sections"], ["4", "animations"]] },
-    { href: "05-operating-system/os-scheduling-algo/index.html", kicker: "OS · Interactive", title: "CPU Scheduling — ৪টি algorithm",
+    { tier: "opt", href: "05-operating-system/os-scheduling-algo/index.html", kicker: "OS · Interactive", title: "CPU Scheduling — ৪টি algorithm",
       desc: "Preemptive বনাম non-preemptive, FCFS ও convoy effect, SJF/SRTF, priority ও starvation, round robin-এর time quantum — Gantt chart simulator সহ।",
       tags: ["FCFS", "SJF", "Round Robin", "D3.js"], meta: [["6", "algorithms"], ["6", "presets"]] },
-    { href: "05-operating-system/thread/index.html", kicker: "OS · 3D Interactive", title: "Thread Scheduling · Multi-core CPU",
+    { tier: "opt", href: "05-operating-system/thread/index.html", kicker: "OS · 3D Interactive", title: "Thread Scheduling · Multi-core CPU",
       desc: "অনেক process-এর thread কীভাবে ready queue, scheduler ও context switch পেরিয়ে multi-core CPU-তে চলে—live 3D simulation-এ।",
       tags: ["Thread", "Multi-core", "Context switch", "Three.js"], meta: [["4", "cores"], ["1", "3D simulator"]] },
-    { href: "05-operating-system/deadlock/index.html", kicker: "OS · Interactive", title: "Deadlock — কেউ ছাড়ে না, কেউ এগোয় না",
+    { tier: "opt", href: "05-operating-system/deadlock/index.html", kicker: "OS · Interactive", title: "Deadlock — কেউ ছাড়ে না, কেউ এগোয় না",
       desc: "PostgreSQL-এর আসল deadlock, দুই thread দুই mutex-এর animation, ৪টি Coffman condition, Banker's algorithm simulator আর multiprogramming বনাম multitasking।",
       tags: ["Coffman", "Banker's", "Mutex", "D3.js"], meta: [["4", "conditions"], ["1", "Banker's simulator"]] },
-    { href: "05-operating-system/mutex/index.html", kicker: "OS · Interactive", title: "Mutex — race condition কীভাবে থামায়",
+    { tier: "opt", href: "05-operating-system/mutex/index.html", kicker: "OS · Interactive", title: "Mutex — race condition কীভাবে থামায়",
       desc: "counter++ কেন নিরাপদ না, mutex / spinlock / atomic ভেতরে কীভাবে কাজ করে, futex — দুই thread-এর D3 animation আর আসল C ও Java run সহ।",
       tags: ["Mutex", "Spinlock", "Atomic", "D3.js"], meta: [["4", "modes"], ["10", "Q&A"]] },
-    { href: "05-operating-system/basics/index.html", kicker: "OS · Interview", title: "OS Basics - ৩৯টি Interview প্রশ্ন",
-      desc: "Process/thread, context switch, memory, scheduling, deadlock, synchronization, file system - প্রতি প্রশ্নে সংক্ষিপ্ত উত্তর আর ক্লিক করে দেখার D3 animation।",
-      tags: ["Interview", "Scheduling", "Paging", "D3.js"], meta: [["39", "questions"], ["39", "animations"]] },
   ]},
   { id: "net", n: "06", title: "Networking", blurb: "OSI model, web server, browser rendering", color: "#14b8a6", guides: [
     { href: "06-networking/OSI/index.html", kicker: "OSI · Interactive", title: "Seq, Checksum ও CRC",
@@ -264,10 +268,10 @@ function render(q = "") {
     shown += gs.length;
     const body = t.guides.length
       ? `<div class="grid">${gs.map(g => `
-        <a class="card" href="${encodeURI(g.href)}" target="_blank" rel="noopener" style="--c:${t.color}">
+        <a class="card${g.tier === 'core' ? ' core' : ''}" href="${encodeURI(g.href)}" target="_blank" rel="noopener" style="--c:${t.color}">
           <div class="band"></div>
           <div class="body">
-            <div class="kicker">${esc(g.kicker)}<span class="ext">${arrow}</span></div>
+            <div class="kicker">${esc(g.kicker)}${g.tier === 'core' ? '<span class="tier core">★ Core · আগে এটা</span>' : g.tier === 'opt' ? '<span class="tier opt">◌ Optional</span>' : ''}<span class="ext">${arrow}</span></div>
             <h3>${esc(g.title)}</h3>
             <p>${esc(g.desc)}</p>
             <div class="tags">${g.tags.map(x => `<span>${esc(x)}</span>`).join("")}</div>

@@ -435,6 +435,77 @@ function bankerRequest(){return [
   S('কোনো safe ক্রম নেই ⇒ <b>UNSAFE</b>। ব্যাংক এই request <b>দেয় না</b>, P2 অপেক্ষা করে। এভাবে সিস্টেম কখনো এমন অবস্থায় যায় না যেখান থেকে deadlock হতে পারে।',{mod:{rq:{label:'Request: P2 +1\n→ DENY ✗ (অপেক্ষা)',c:'r'},p2:{c:'r'}}})
 ];}
 
+// scene 17b: scheduling algorithms running threads on one CPU core
+const SCOL=['a','b','g','o','s'];
+function simSched(jobs,cfg){
+  const J=jobs.map((j,i)=>({...j,idx:i,rem:j.bt,ct:0})),ev=[];let t=0,done=0;
+  if(cfg.algo==='RR'){
+    const seen=new Set(),rq=[];
+    const admit=u=>J.forEach(j=>{if(!seen.has(j.n)&&j.at<=u){seen.add(j.n);rq.push(j);}});
+    admit(0);
+    while(done<J.length){
+      if(!rq.length){t++;admit(t);continue;}
+      const j=rq.shift(),run=Math.min(cfg.q,j.rem),q=rq.map(x=>x.n);
+      t+=run;j.rem-=run;admit(t);ev.push({n:j.n,s:t-run,e:t,q,rem:j.rem});
+      if(j.rem>0)rq.push(j);else{j.ct=t;done++;}
+    }
+  }else{
+    const pre=cfg.algo==='SRTF'||cfg.algo==='PRIOP';
+    const eff=(j,tm)=>j.pr-(cfg.aging?Math.floor((tm-j.at-(j.bt-j.rem))/cfg.aging):0);
+    const key=(j,tm)=>({FCFS:j.at,SJF:j.bt,SRTF:j.rem,PRIO:eff(j,tm),PRIOP:eff(j,tm)})[cfg.algo];
+    const order=(a,b,tm)=>key(a,tm)-key(b,tm)||a.at-b.at;
+    let cur=null;
+    while(done<J.length){
+      const ready=J.filter(j=>j.at<=t&&j.rem>0);
+      if(!ready.length){t++;continue;}
+      if(!cur||cur.rem===0||pre)cur=[...ready].sort((a,b)=>order(a,b,t))[0];
+      const last=ev[ev.length-1];
+      if(last&&last.n===cur.n&&last.e===t){cur.rem--;last.e=t+1;last.rem=cur.rem;}
+      else{const q=ready.filter(j=>j!==cur).sort((a,b)=>order(a,b,t)).map(j=>j.n);cur.rem--;ev.push({n:cur.n,s:t,e:t+1,q,rem:cur.rem});}
+      t++;if(cur.rem===0){cur.ct=t;done++;}
+    }
+  }
+  return {ev,J};
+}
+function schedViz(variants){
+  const steps=[];let prev=[],first=true;
+  variants.forEach((v,vi)=>{
+    const {ev,J}=simSched(v.jobs,v.cfg),total=ev[ev.length-1].e,U=Math.min(44,520/total),X0=200;
+    const col=n=>{const j=J.find(x=>x.n===n);return j.col||SCOL[j.idx%5];};
+    const avg=(J.reduce((a,j)=>a+(j.ct-j.at-j.bt),0)/J.length).toFixed(2);
+    const ctx=ev.filter((e,i)=>i>0&&e.n!==ev[i-1].n).length;
+    const rows=[0,1,2,3,4].map(i=>J[i]?{label:`${J[i].n}   AT ${J[i].at}   BT ${J[i].bt}${v.showPr?'   prio '+J[i].pr:''}`,c:col(J[i].n),o:1}:{label:'',o:0});
+    const base=first?[T('ttl',20,10,'',{c:'f',s:'b'}),T('ql',20,40,'Ready queue:',{c:'n',s:'sm b'}),...[0,1,2,3,4,5].map(i=>B('q'+i,112+i*66,24,60,32,'','n',{o:0})),B('core',20,78,160,56,'Core 0\nখালি','n'),T('gl',200,64,'Core 0 timeline (সময় →)',{c:'n',s:'sm'}),...[0,1,2,3,4].map(i=>T('jr'+i,20,158+i*15,'',{c:'n',s:'m'})),T('sum',380,226,'',{a:'middle',c:'f',s:'m b'})]:[];
+    const mod={ttl:{label:v.title},core:{label:'Core 0\nখালি',c:'n'},sum:{label:''}};
+    [0,1,2,3,4,5].forEach(i=>{mod['q'+i]={label:'',o:0};});
+    rows.forEach((r,i)=>{mod['jr'+i]=r;});
+    steps.push(S(v.intro,{del:prev,add:base,mod}));
+    prev=[];first=false;
+    ev.forEach((e,i)=>{
+      const j=J.find(x=>x.n===e.n),pe=ev[i-1],sw=pe&&pe.n!==e.n;
+      let why='';
+      const a=v.cfg.algo;
+      if(a==='FCFS')why=i===0?'সবার আগে এসেছে।':'এবার এর পালা, আসার ক্রমে।'+(e.s-j.at>=5&&j.bt<=2?` <b>Convoy:</b> মাত্র ${j.bt} unit-এর কাজের জন্য ${e.s-j.at} unit অপেক্ষা করেছে।`:'');
+      else if(a==='SJF')why='ready-দের মধ্যে সবচেয়ে ছোট কাজ বাছা হল, শেষ না হওয়া পর্যন্ত থামবে না।';
+      else if(a==='SRTF')why=sw&&pe.rem>0?`নতুন thread-এর বাকি কাজ কম, তাই <b>${pe.n}</b>-কে মাঝপথে থামিয়ে (<b>preempt</b>) এটা চালু।`:'যার বাকি কাজ সবচেয়ে কম, সে চলে।';
+      else if(a==='PRIO')why='সবচেয়ে বেশি priority (ছোট সংখ্যা) যার, সে আগে।'+(v.cfg.aging&&e.s-j.at>=v.cfg.aging?' অপেক্ষার জন্য এর priority বেড়েছে (aging)।':'');
+      else if(a==='PRIOP')why=sw&&pe.rem>0?`বেশি priority-র thread এল, তাই <b>${pe.n}</b>-কে থামিয়ে (<b>preempt</b>) এটা চালু।`:'এই মুহূর্তে সবচেয়ে বেশি priority যার, সে চলে।';
+      else why=`প্রতি thread সর্বোচ্চ ${v.cfg.q} unit পায়।`+(e.rem>0?' কাজ বাকি, তাই সারির <b>পেছনে</b> যায়।':' কাজ শেষ।');
+      const ids=[`g${vi}_${i}`,`tl${vi}_${i}`];
+      const add=[B(ids[0],X0+e.s*U,78,(e.e-e.s)*U-1,50,e.n,col(e.n)),T(ids[1],X0+e.s*U,136,String(e.s),{a:'start',c:'n',s:'m'})];
+      if(sw){add.push(B(`cm${vi}_${i}`,X0+e.s*U-2,72,3,62,'','r'));ids.push(`cm${vi}_${i}`);}
+      if(i===ev.length-1){add.push(T(`te${vi}`,X0+e.e*U,136,String(e.e),{a:'end',c:'n',s:'m'}));ids.push(`te${vi}`);}
+      prev.push(...ids);
+      const m={core:{label:`Core 0\n${e.n} চলছে`,c:col(e.n)}};
+      [0,1,2,3,4,5].forEach(k=>{m['q'+k]=k<e.q.length?{label:e.q[k],c:col(e.q[k]),o:1}:{label:'',o:0};});
+      steps.push(S(`<b>t = ${e.s} থেকে ${e.e}:</b> thread <b>${e.n}</b> Core 0-তে চলে। ${why}${sw?' <span style="color:var(--r)">(thread বদল = context switch)</span>':''}`,{add,mod:m}));
+    });
+    prev.push(`te${vi}`);
+    steps.push(S(v.outro,{mod:{core:{label:'Core 0\nখালি',c:'n'},...Object.fromEntries([0,1,2,3,4,5].map(k=>['q'+k,{label:'',o:0}])),sum:{label:`গড় অপেক্ষা = ${avg} unit    context switch = ${ctx}`}}}));
+  });
+  return steps;
+}
+
 /* ---------- content ---------- */
 const PARTS=[
   ['A','Process ও Thread'],['B','Memory ও Kernel basics'],['C','Hardware support'],['D','Synchronization'],
@@ -696,7 +767,7 @@ const TOPICS=[
   S('Consumer ১টা নিল → <code>signal(empty)</code>, Producer জাগল, আবার বানাল।',{mod:{s0:{label:'খালি',c:'g',dash:1},c:{hl:1},cnt:{label:'empty = 1   full = 3'},p:{c:'a',label:'Producer\n(thread)'}}})
  ]},
 
-{p:4,q:'What are the CPU scheduling algorithms? Do they schedule processes or threads, and who schedules them?',
+{p:4,lab:'17a',cnt:1,q:'What are the CPU scheduling algorithms? Do they schedule processes or threads, and who schedules them?',
  ans:'CPU scheduling = ready থাকা <b>thread</b>-দের মধ্যে কে পরে CPU পাবে তা ঠিক করা। এটা করে <b>kernel</b> (ring 0), দুই ভাগে: <b>scheduler</b> সিদ্ধান্ত নেয়, <b>dispatcher</b> সেটা বাস্তবে করে। Schedule হয় <b>thread</b>, process না।',
  pts:['<b>কী schedule হয়:</b> thread (kernel thread)। Process শুধু memory, files-এর মালিক; তার প্রতিটি thread আলাদা করে CPU পায়। Single-thread process-এ main thread-ই একমাত্র thread, তাই "process schedule হয়" কথাটা চালু আছে।','<b>Scheduler:</b> kernel-এর ভেতরের সাধারণ code (Linux-এ <code>schedule()</code> function)। কাজ: ready queue থেকে algorithm মেনে পরের thread বাছা।','<b>Dispatcher:</b> একই kernel-এর ভেতরের code (Linux-এ <code>context_switch()</code>)। আলাদা process, thread বা hardware না। কাজ: পুরনো thread-এর register save, নতুনেরটা load, দরকারে CR3 বদল, user mode-এ ফেরা।','<b>কখন চলে:</b> timer interrupt (quantum শেষ), thread block হলে (I/O, lock), yield বা exit করলে।','Scheduler আর dispatcher আলাদা ভাগ করা হয় বোঝার সুবিধার জন্য (সিদ্ধান্ত বনাম বাস্তবায়ন)। বাস্তবে দুটোই kernel code, Linux-এ একই জায়গায়।','Algorithm: FCFS, SJF, SRTF, Round Robin, Priority, MLFQ (Linux CFS-ও এই পরিবারের)।'],
  steps:[
@@ -704,6 +775,16 @@ const TOPICS=[
   S('<b>Scheduler</b> algorithm (FCFS, RR, Priority...) মেনে ready queue থেকে একটা thread <b>বাছে</b>: T1। শুধু সিদ্ধান্ত, এখনো কিছু বদলায়নি।',{add:[A('a1',350,100,388,62,'o')],mod:{p1:{hl:1}}}),
   S('<b>Dispatcher</b> সেই সিদ্ধান্ত <b>করে দেখায়</b>: আগের thread-এর register save, T1-এর register load, দরকারে CR3 বদল, তারপর user mode-এ T1 শুরু।',{add:[A('a2',540,186,640,156,'o')],mod:{p1:{x:640,y:100,c:'g'},p2:{x:30},p3:{x:130},cpu:{c:'g',label:'CPU\nচলছে: T1'}}}),
   S('Quantum শেষ (timer interrupt), বা T1 block/exit করলে kernel-এ ফেরে। T1 আবার queue-তে, scheduler আবার বাছে।',{mod:{p1:{x:230,y:110,hl:0,c:'a'},cpu:{c:'n',label:'CPU'}}})
+ ]},
+
+{p:4,lab:'17b',q:'CPU scheduling algorithms in detail: FCFS, SJF, Priority and Round Robin (preemptive vs non-preemptive)',
+ ans:'চারটা algorithm: <b>FCFS</b> (আগে এলে আগে), <b>SJF</b> (ছোট কাজ আগে), <b>Priority</b> (গুরুত্ব অনুযায়ী), <b>Round Robin</b> (পালা করে time quantum)। <b>Non-preemptive:</b> CPU পেলে শেষ না করে ছাড়ে না। <b>Preemptive:</b> OS মাঝপথে কেড়ে নিতে পারে। ছবিতে <b>T1, T2... = thread</b>, আর কাজ চলে ১টা <b>CPU core</b>-এ।',
+ pts:['<b>FCFS</b> (non-preemptive): সহজ, কিন্তু <b>convoy effect</b>: লম্বা thread-এর পেছনে ছোটগুলো আটকে থাকে।','<b>SJF:</b> গড় অপেক্ষা সবচেয়ে কম। দুই রকম: <b>non-preemptive</b> (চালু হলে শেষ করে) আর <b>preemptive = SRTF</b> (ছোট কাজ এলে চলতিকে থামায়)। অসুবিধা: burst আগে জানতে হয়, লম্বা thread starve করতে পারে।','<b>Priority:</b> non-preemptive আর preemptive দুটোই। অসুবিধা: কম priority thread <b>starve</b> করে। সমাধান: <b>aging</b> (অপেক্ষা বাড়লে priority বাড়ানো)।','<b>Round Robin</b> (preemptive): প্রতি thread <b>quantum</b> পায়। Quantum <b>বড়</b> হলে FCFS-এর মতো, <b>খুব ছোট</b> হলে context switch বেশি (খরচ), মাঝারি সবচেয়ে ভালো।'],
+ tabs:[
+  {n:'1. FCFS',steps:()=>schedViz([{title:'FCFS (non-preemptive)',jobs:[{n:'T1',at:0,bt:7},{n:'T2',at:2,bt:4},{n:'T3',at:4,bt:1},{n:'T4',at:5,bt:4}],cfg:{algo:'FCFS'},intro:'<b>FCFS:</b> যে thread আগে আসে সে আগে Core 0 পায়। একবার পেলে শেষ না হওয়া পর্যন্ত ছাড়ে না। AT = কখন এল, BT = কত unit কাজ।',outro:'<b>Convoy effect:</b> T3 মাত্র ১ unit-এর কাজ, কিন্তু লম্বা T1 আর T2-র পেছনে আটকে <b>৭ unit</b> অপেক্ষা করল। ছোট thread-রা একটা লম্বার পেছনে কনভয়ের মতো আটকে থাকে। Core ব্যস্ত, কিন্তু গড় অপেক্ষা বেশি।'}])},
+  {n:'2. Shortest Job First',steps:()=>schedViz([{title:'SJF: non-preemptive',jobs:[{n:'T1',at:0,bt:7},{n:'T2',at:2,bt:4},{n:'T3',at:4,bt:1},{n:'T4',at:5,bt:4}],cfg:{algo:'SJF'},intro:'<b>Non-preemptive SJF:</b> Core খালি হলে ready thread-দের মধ্যে সবচেয়ে ছোট কাজ বাছা হয়। একবার চালু হলে শেষ না হওয়া পর্যন্ত থামে না।',outro:'T1 শুরু হলে শেষ না করে ছাড়েনি। শেষে ready ছিল T2 (৪), T3 (১), T4 (৪): ছোট T3 আগে, তারপর T2 (আগে এসেছে), তারপর T4। গড় অপেক্ষা FCFS-এর চেয়ে কম।'},{title:'SJF: preemptive (SRTF)',jobs:[{n:'T1',at:0,bt:7},{n:'T2',at:2,bt:4},{n:'T3',at:4,bt:1},{n:'T4',at:5,bt:4}],cfg:{algo:'SRTF'},intro:'<b>Preemptive SJF (SRTF):</b> প্রতি মুহূর্তে যার <b>বাকি কাজ সবচেয়ে কম</b>, সে চলে। ছোট কাজ এলে চলতি thread-কে থামিয়ে (preempt) তাকে দেওয়া হয়। একই thread, এবার আবার।',outro:'ছোট thread-রা প্রায় অপেক্ষা ছাড়াই শেষ, গড় অপেক্ষা সবচেয়ে কম। দাম: context switch বেশি, আর লম্বা T1 শেষে পড়ে (বারবার ছোট কাজ এলে T1 <b>starve</b> করতে পারে)।'}])},
+  {n:'3. Priority',steps:()=>schedViz([{title:'Priority: non-preemptive',showPr:1,jobs:[{n:'T1',at:0,bt:4,pr:3},{n:'T2',at:1,bt:3,pr:1},{n:'T3',at:2,bt:1,pr:4},{n:'T4',at:3,bt:2,pr:2}],cfg:{algo:'PRIO'},intro:'<b>Priority (non-preemptive):</b> ছোট সংখ্যা = বেশি priority। Core খালি হলে সবচেয়ে বেশি priority-র thread বাছা হয়। চালু হলে শেষ না করে ছাড়ে না।',outro:'T1 আগে শুরু করেছিল বলে শেষ করল। তারপর priority ক্রমে T2 (১), T4 (২), T3 (৪)। বেশি priority-র T2 এসেও T1 শেষ হওয়া পর্যন্ত অপেক্ষা করল।'},{title:'Priority: preemptive',showPr:1,jobs:[{n:'T1',at:0,bt:4,pr:3},{n:'T2',at:1,bt:3,pr:1},{n:'T3',at:2,bt:1,pr:4},{n:'T4',at:3,bt:2,pr:2}],cfg:{algo:'PRIOP'},intro:'<b>Priority (preemptive):</b> বেশি priority-র thread এলে চলতি thread-কে সাথে সাথে থামিয়ে তাকে দেওয়া হয়। একই thread, আবার।',outro:'T2 (priority ১) এসেই T1-কে থামাল। T2 শেষে T4 (২), তারপর T1 (৩), শেষে T3 (৪)। জরুরি কাজ সাথে সাথে সাড়া পায়।'},{title:'Starvation (priority)',showPr:1,jobs:[{n:'L',at:0,bt:2,pr:5,col:'r'},{n:'H1',at:0,bt:3,pr:1},{n:'H2',at:2,bt:3,pr:1},{n:'H3',at:5,bt:3,pr:1},{n:'H4',at:8,bt:3,pr:1}],cfg:{algo:'PRIO'},intro:'<b>Starvation:</b> L-এর priority কম (৫)। বেশি priority-র H thread আসতেই থাকলে L অনির্দিষ্টকাল অপেক্ষা করে। লাল = L।',outro:'H thread আসতেই থাকল, L (priority ৫) পুরো সময় অপেক্ষা করল: <b>১২ unit</b>। এটাই <b>starvation</b>: কম priority thread চিরকাল পড়ে থাকে।'},{title:'Aging: starvation-এর সমাধান',showPr:1,jobs:[{n:'L',at:0,bt:2,pr:5,col:'r'},{n:'H1',at:0,bt:3,pr:1},{n:'H2',at:2,bt:3,pr:1},{n:'H3',at:5,bt:3,pr:1},{n:'H4',at:8,bt:3,pr:1}],cfg:{algo:'PRIO',aging:2},intro:'<b>Aging:</b> অপেক্ষার সময় বাড়লে priority বাড়ানো হয় (প্রতি ২ unit-এ ১ ধাপ)। তাই L শেষমেশ সুযোগ পায়।',outro:'অপেক্ষা বাড়ার সাথে L-এর priority বাড়ল, ৯ unit পর সে H4-কে ধরে ফেলল (সমান হলে আগে-আসা জেতে)। L-এর অপেক্ষা <b>১২ থেকে ৯</b> unit-এ নামল।'}])},
+  {n:'4. Round Robin',steps:()=>schedViz([{title:'Round Robin: quantum = 2',jobs:[{n:'T1',at:0,bt:5},{n:'T2',at:0,bt:3},{n:'T3',at:0,bt:2}],cfg:{algo:'RR',q:2},intro:'<b>Round Robin (preemptive):</b> প্রতি thread সর্বোচ্চ <b>quantum = 2 unit</b> পায়। না শেষ হলে timer interrupt তাকে থামিয়ে সারির পেছনে পাঠায়।',outro:'সবাই পালা করে ২ unit পেল, কেউ বেশিক্ষণ আটকে থাকেনি। ছোট T3 দ্রুত শেষ।'},{title:'Round Robin: quantum অনেক বড় (১০)',jobs:[{n:'T1',at:0,bt:5},{n:'T2',at:0,bt:3},{n:'T3',at:0,bt:2}],cfg:{algo:'RR',q:10},intro:'<b>Quantum অনেক বড় (১০):</b> সবার কাজ quantum-এর আগেই শেষ হয়ে যায়, তাই কাউকে কেড়ে নিতে হয় না।',outro:'ফল: <b>FCFS-এর মতোই</b>। কেউ preempt হয়নি, context switch সবচেয়ে কম। বড় quantum = RR শেষমেশ FCFS।'},{title:'Round Robin: quantum খুব ছোট (১)',jobs:[{n:'T1',at:0,bt:5},{n:'T2',at:0,bt:3},{n:'T3',at:0,bt:2}],cfg:{algo:'RR',q:1},intro:'<b>Quantum খুব ছোট (১):</b> প্রতি unit-এ thread বদলায়। লাল দাগ = context switch।',outro:'প্রতিটা switch-এ register save/load-এর খরচ। Quantum খুব ছোট হলে কাজের চেয়ে <b>context switch-ই বেশি</b> হয়ে যায়। তাই quantum না বেশি বড়, না বেশি ছোট।'}])}
  ]},
 
 {p:4,q:'What types of queues are used in CPU scheduling?',
@@ -1222,7 +1303,7 @@ PARTS.forEach((pt,pi)=>{
 });
 let mainNo=0;
 TOPICS.forEach((t,i)=>{
-  const n=t.sub||String(++mainNo);
+  let n;if(t.lab){n=t.lab;if(t.cnt)mainNo++;}else n=t.sub||String(++mainNo);
   const j=document.createElement('a');j.href='#q'+n;j.textContent=n;j.title=t.q;jump.appendChild(j);
   const card=document.createElement('article');card.className='q';card.id='q'+n;
   card.innerHTML=`<h3><span class="num">${n}</span><span>${t.q}${t.opt?' <em class="skip">Optional - skip করা যায়</em>':''}</span></h3><p class="ans">${t.ans}</p>${t.pts&&t.pts.length?'<ul>'+t.pts.map(x=>`<li>${x}</li>`).join('')+'</ul>':''}${t.extra?`<div class="extra">${t.extra}</div>`:''}<div class="viz"></div>`;
