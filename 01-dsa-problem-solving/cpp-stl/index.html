@@ -135,16 +135,14 @@ sort(a.begin(), a.end(), [](auto& x, auto& y){
 sort(p.begin(), p.end());                    // pair: first, তারপর second
 sort(a.begin(), a.end());                    // vector: lexicographic (intervals)
 stable_sort(a.begin(), a.end(), cmp);        // সমান element-এর order ঠিক থাকে`},
-{h:'sort: function ও struct comparator',f:'hot',s:'true মানে x আগে বসবে। function-এ নাম দাও (() ছাড়া), struct-এ object দাও (Cmp())।',c:`vector<vector<int>> a = {{1,5,3}, {2,2,9}, {1,3,4}};
+{h:'sort: function ও struct comparator',f:'hot',c:`vector<vector<int>> a = {{1,5,3}, {2,2,9}, {1,3,4}};
 
-// function
 bool cmp(const vector<int>& x, const vector<int>& y){
     if(x[0] != y[0]) return x[0] < y[0];
     return x[1] > y[1];
 }
 sort(a.begin(), a.end(), cmp);
 
-// struct
 struct Cmp{
     bool operator()(const vector<int>& x, const vector<int>& y) const {
         if(x[0] != y[0]) return x[0] < y[0];
@@ -153,7 +151,6 @@ struct Cmp{
 };
 sort(a.begin(), a.end(), Cmp());
 
-// নিজের struct-এর vector
 struct P{ int id, score; };
 vector<P> ps = {{1, 90}, {2, 85}};
 
@@ -163,7 +160,6 @@ bool byScore(const P& x, const P& y){
 }
 sort(ps.begin(), ps.end(), byScore);
 
-// operator< ভিতরে থাকলে comparator লাগে না
 struct Q{
     int id, score;
     bool operator<(const Q& o) const {
