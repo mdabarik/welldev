@@ -309,24 +309,26 @@ const SYNC3=VH([
   S('<b>সমস্যা:</b> প্রতিটা thread ≈ <b>১ MB stack</b> মেমোরি নেয় আর OS-এর context switch-এর খরচ আছে। ১০,০০০ জন একসাথে এলে ১০,০০০ thread = ~১০ GB মেমোরি। আর thread-গুলোর বেশিরভাগ সময় <b>শুধু অপেক্ষায়</b>। এটাই <b>C10K problem</b>, আর এই কারণেই async এসেছে।',{})
 ],262);
 
-/* CPU scheduling scene: Ready Queue -> CPU -> Wait Queue (BLOCKED) -> Ready Queue */
-const RQ=i=>({x:45+i*50,y:75}), WQ=i=>({x:45+i*50,y:205}), CPU={x:385,y:75};
+/* CPU scheduling scene (2 cores): Ready Queue -> Core 1/2 -> Wait Queue (BLOCKED) -> Ready Queue */
+const RQ=i=>({x:45+i*50,y:75}), WQ=i=>({x:45+i*50,y:205}), C1={x:430,y:75}, C2={x:550,y:75};
 const TH=(id,n,p,c)=>C(id,p.x,p.y,17,'T'+n,c);
+const SCHED_BASE=[
+  B('rq',20,40,320,70,'','o',{dash:1}),T('rqt',20,27,'Ready Queue: চলার জন্য তৈরি, CPU-র অপেক্ষায়',{c:'o',s:'sm'}),
+  B('core1',380,40,100,70,'','a'),T('core1t',430,27,'Core 1',{a:'middle',c:'a',s:'sm'}),
+  B('core2',500,40,100,70,'','a'),T('core2t',550,27,'Core 2',{a:'middle',c:'a',s:'sm'}),
+  B('wq',20,170,320,70,'','r',{dash:1}),T('wqt',20,157,'Wait Queue: BLOCKED, DB-র উত্তরের অপেক্ষায় ঘুমাচ্ছে',{c:'r',s:'sm'}),
+  B('dv',560,170,180,70,'Disk / Network / DB','s')];
 const SYNC4=VH([
-  S('<b>মূল প্রশ্ন: ১০০০ thread থাকলে CPU-তে কী হয়?</b> CPU (এখানে ১ core) একসময়ে <b>একটা</b> thread চালায়। যে thread <b>চলার জন্য তৈরি</b> (READY), সে <b>Ready Queue</b>-তে দাঁড়ায়। Scheduler সেখান থেকে একটা তুলে CPU দেয়। এখানে ৪টা thread, প্রত্যেকের কোড sync: validate → DB → render।',{add:[
-    B('rq',20,40,250,70,'','o',{dash:1}),T('rqt',20,27,'Ready Queue: CPU-র জন্য তৈরি',{c:'o',s:'sm'}),
-    B('cpu',330,40,110,70,'','a'),T('cput',385,27,'CPU (১ core)',{a:'middle',c:'a',s:'sm'}),T('cpus',385,128,'খালি',{a:'middle',c:'n',s:'sm'}),
-    B('wq',20,170,250,70,'','r',{dash:1}),T('wqt',20,157,'Wait Queue: BLOCKED (I/O-র অপেক্ষা)',{c:'r',s:'sm'}),
-    B('dv',520,170,220,70,'Disk / Network / DB','s'),
-    TH('t1',1,RQ(0),'o'),TH('t2',2,RQ(1),'o'),TH('t3',3,RQ(2),'o'),TH('t4',4,RQ(3),'o')]}),
-  S('<b>Scheduler T1-কে তুলল।</b> T1 এখন <b>RUNNING</b>: CPU-তে সত্যিকারের কাজ করছে (validate)। বাকিরা READY, অপেক্ষা করছে CPU-র।',{mod:{t1:{...CPU,c:'g'},t2:RQ(0),t3:RQ(1),t4:RQ(2),cpus:{label:'ব্যস্ত',c:'g'}}}),
-  S('<b>T1 <code>db.query()</code> ডাকল।</b> OS তখন T1-কে <b>CPU থেকে নামিয়ে Wait Queue-তে</b> রাখে, state = <b>BLOCKED</b>। অনুরোধ DB-র কাছে যায়। T1 এখন <b>CPU চায়ও না</b>, Scheduler তাকে দেখেই না। সে শুধু ঘুমিয়ে আছে।',{add:[A('q1',440,110,545,170,'n'),T('q1t',500,128,'query',{c:'f',s:'sm'})],mod:{t1:{...WQ(0),c:'r'},cpus:{label:'খালি (মুহূর্তের জন্য)',c:'o'}}}),
-  S('<b>CPU সাথে সাথে T2-কে পেল।</b> CPU বসে থাকেনি! T1-এর অপেক্ষা T1-এর সমস্যা, CPU-র নয়। CPU এখন অন্য thread-এর সবুজ কাজ করছে।',{mod:{t2:{...CPU,c:'g'},t3:RQ(0),t4:RQ(1),cpus:{label:'ব্যস্ত',c:'g'}}}),
-  S('<b>T2-ও DB ডাকল → BLOCKED।</b> আবার CPU তুলে দিল T3-কে। এভাবে প্রতিটা thread-এর <b>অপেক্ষার ফাঁক</b> অন্য thread-এর কাজ দিয়ে ভরে যায়।',{mod:{t2:{...WQ(1),c:'r'},t3:{...CPU,c:'g'},t4:RQ(0)}}),
-  S('<b>T3-ও BLOCKED, T4 চলল।</b> এখন ৩টা thread ঘুমাচ্ছে, কিন্তু CPU ১০০% ব্যস্ত। ঘুমন্ত thread <b>CPU-র সময় খরচ করছে না</b>। তারা শুধু <b>মেমোরি</b> ধরে রেখেছে (প্রতিটার stack ≈ ১ MB)।',{mod:{t3:{...WQ(2),c:'r'},t4:{...CPU,c:'g'}}}),
-  S('<b>T1-এর DB উত্তর এল।</b> Device OS-কে <b>interrupt</b> দেয়। OS দেখে "এই data T1-এর জন্য", তাই T1-কে <b>Wait Queue থেকে তুলে Ready Queue-তে</b> রাখে (state = READY)। এখনো CPU পায়নি, শুধু লাইনে দাঁড়াল।',{add:[A('irq',520,205,275,205,'g'),T('irqt',398,188,'interrupt: T1-এর data এসেছে',{a:'middle',c:'g',s:'sm'})],mod:{t1:{...RQ(0),c:'o'}}}),
-  S('<b>T4-এর কাজ শেষ বা তার time slice (কয়েক ms) শেষ,</b> CPU খালি হল। Scheduler Ready Queue থেকে T1-কে তুলল: <b>RUNNING</b>, <code>query()</code> return করল, পরের লাইন (render) চলল।',{del:['irq','irqt','q1','q1t','t4'],mod:{t1:{...CPU,c:'g'}}}),
-  S('<b>সারকথা:</b> sync মানে <b>thread-এর নিজের কোডের ক্রম</b>, CPU-র নয়। Blocked thread CPU ছেড়ে ঘুমায়, CPU অন্য thread চালায়। <b>CPU idle হয় শুধু তখন</b> যখন Ready Queue-তে কোনো thread-ই নেই (যেমন server-এ মাত্র ১টা thread)। অনেক thread রাখার <b>আসল খরচ</b>: প্রতিটার মেমোরি, আর thread বদলের context switch। ১০,০০০ thread-এ এটাই ভারী হয়।',{})
+  S('<b>অনেক thread, মাত্র 2 core: কী হয়?</b> একটা core একসময়ে <b>একটা</b> thread চালায়, তাই এখানে সত্যিকারের একসাথে চলে সর্বোচ্চ <b>2টা</b>। যে thread চলার জন্য তৈরি (READY), সে <b>Ready Queue</b>-তে দাঁড়ায়। এখানে 6টা thread, প্রত্যেকের কোড sync: validate → DB → render।',{add:[...SCHED_BASE,
+    TH('t1',1,RQ(0),'o'),TH('t2',2,RQ(1),'o'),TH('t3',3,RQ(2),'o'),TH('t4',4,RQ(3),'o'),TH('t5',5,RQ(4),'o'),TH('t6',6,RQ(5),'o')]}),
+  S('<b>Scheduler দুটো core-কে দুটো thread দিল:</b> T1 → Core 1, T2 → Core 2। এরা এখন <b>RUNNING</b> (সবুজ), সত্যিই একই মুহূর্তে চলছে। বাকি 4টা READY, লাইনে।',{mod:{t1:{...C1,c:'g'},t2:{...C2,c:'g'},t3:RQ(0),t4:RQ(1),t5:RQ(2),t6:RQ(3)}}),
+  S('<b>T1 <code>db.query()</code> ডাকল।</b> OS তাকে Core 1 থেকে নামিয়ে <b>Wait Queue-তে</b> রাখে (<b>BLOCKED</b>)। T1 এখন CPU চায় না, Scheduler তাকে দেখেই না। সে শুধু ঘুমিয়ে উত্তরের অপেক্ষায়।',{add:[A('q1',455,110,600,170,'n'),T('q1t',545,138,'query',{c:'f',s:'sm'})],mod:{t1:{...WQ(0),c:'r'}}}),
+  S('<b>Core 1 খালি হতেই Scheduler T3-কে দিল।</b> Core বসে থাকেনি! T1-এর অপেক্ষা T1-এর সমস্যা, core-এর নয়।',{mod:{t3:{...C1,c:'g'},t4:RQ(0),t5:RQ(1),t6:RQ(2)}}),
+  S('<b>T2-ও DB ডাকল → BLOCKED।</b> Core 2 সাথে সাথে T4-কে পেল। এখন 2টা thread ঘুমাচ্ছে, কিন্তু <b>দুটো core-ই ব্যস্ত</b>।',{mod:{t2:{...WQ(1),c:'r'},t4:{...C2,c:'g'},t5:RQ(0),t6:RQ(1)}}),
+  S('<b>Time slice:</b> T3 blocked হয়নি, কিন্তু তার নির্ধারিত সময় (কয়েক ms) শেষ। Scheduler তাকে জোর করে নামিয়ে <b>Ready Queue-র শেষে</b> পাঠাল (এখনো READY) এবং Core 1-এ T5-কে দিল। এভাবে সবাই পালা পায়।',{mod:{t3:{...RQ(1),c:'o'},t5:{...C1,c:'g'},t6:RQ(0)}}),
+  S('<b>T1-এর DB উত্তর এল।</b> Device OS-কে <b>interrupt</b> দেয়। OS দেখে "এই data T1-এর জন্য", তাই T1-কে <b>Wait Queue থেকে তুলে Ready Queue-র শেষে</b> রাখে (READY)। এখনো core পায়নি, শুধু লাইনে।',{add:[A('irq',555,205,345,205,'g'),T('irqt',450,188,'interrupt: T1-এর data এসেছে',{a:'middle',c:'g',s:'sm'})],mod:{t1:{...RQ(2),c:'o'}}}),
+  S('<b>T4-এর কাজ শেষ,</b> Core 2 খালি। Scheduler Ready Queue-র সামনের T6-কে দিল। এরপর যে core আগে খালি হবে সে T3 আর তারপর T1-কে নেবে। T1 তখন <code>query()</code> থেকে return করে render করবে।',{del:['irq','irqt','q1','q1t','t4'],mod:{t6:{...C2,c:'g'},t3:RQ(0),t1:RQ(1)}}),
+  S('<b>সারকথা:</b> sync মানে <b>thread-এর নিজের কোডের ক্রম</b>, core-এর নয়। Blocked thread core ছেড়ে Wait Queue-তে ঘুমায়, core অন্য thread চালায়। <b>Core idle হয় শুধু তখন</b> যখন Ready Queue-ই খালি। অনেক thread-এর <b>আসল খরচ</b>: প্রতিটার মেমোরি (stack ≈ 1 MB) আর thread বদলের context switch। 10,000 thread-এ এটাই ভারী হয়।',{})
 ],262);
 
 /* ===== Q2: Asynchronous ===== */
@@ -357,22 +359,25 @@ const ASYNC4=VH([
   S('<b>Parallelism:</b> একাধিক thread/core, দুটো কাজ <b>সত্যিই একই সময়ে</b>। এর জন্য একাধিক CPU core লাগে। CPU-ভারী কাজে (ছবি প্রসেস, গণনা) এটাই কাজে দেয়।',{del:['a1','b1','a2','b2'],add:[T('ln1',14,LN(1)+17,'Thread 2',{c:'f',s:'b'}),L('lb1',LX,LN(1)+42,740,LN(1)+42,'n'),blk('p1',0,0,60,'কাজ A','a'),blk('p2',1,0,60,'কাজ B','b')]}),
   S('<b>তফাত এক লাইনে:</b> Async/concurrency = অপেক্ষার সময় <b>কাজে লাগানো</b> (I/O-ভারী কাজে সেরা)। Parallelism = <b>একসাথে কাজ করা</b> (CPU-ভারী কাজে সেরা)। দুটো একসাথেও থাকতে পারে।',{})
 ],262);
-/* same layout as SYNC4, but ONE thread never blocks; small request objects wait instead */
-const EV=i=>({x:30+i*55,y:61}), PD=i=>({x:30+i*55,y:191});
-const RB=(id,n,p,c)=>B(id,p.x,p.y,44,28,'R'+n,c,{s:'sm'});
+/* same 2 cores, but only 2 threads (one per core) serve 6 requests; they never block */
+const EV=i=>({x:30+i*50,y:61}), PD=i=>({x:30+i*50,y:191});
+const U1={x:408,y:118}, U2={x:528,y:118};              // request token shown under the core that runs it
+const RB=(id,n,p,c)=>B(id,p.x,p.y,40,28,'R'+n,c,{s:'sm'});
 const ASYNC6=VH([
-  S('<b>একই ছবি, কিন্তু async।</b> এবার thread মাত্র <b>একটা</b> (T)। তিনটা request R1, R2, R3 <b>Event Queue</b>-তে এসে দাঁড়িয়েছে। আগে ছিল Wait Queue-তে <b>thread</b>; এবার অপেক্ষা করবে শুধু <b>request-এর ছোট object</b>।',{add:[
-    B('eq',20,40,250,70,'','g',{dash:1}),T('eqt',20,27,'Event Queue: নতুন request / শেষ হওয়া কাজ',{c:'g',s:'sm'}),
-    B('cpu',330,40,110,70,'','a'),T('cput',385,27,'CPU (১ core)',{a:'middle',c:'a',s:'sm'}),T('cpus',385,128,'ব্যস্ত',{a:'middle',c:'g',s:'sm'}),
-    B('pd',20,170,250,70,'','o',{dash:1}),T('pdt',20,157,'Pending: DB-র উত্তরের অপেক্ষায় (শুধু ছোট object)',{c:'o',s:'sm'}),
-    B('dv',520,170,220,70,'Disk / Network / DB','s'),
-    C('th',CPU.x,CPU.y,17,'T','g'),RB('r1',1,EV(0),'b'),RB('r2',2,EV(1),'b'),RB('r3',3,EV(2),'b')]}),
-  S('<b>T R1-কে তুলল,</b> validate করল, তারপর <b>non-blocking</b> DB call করল: OS-কে বলল "কাজটা শুরু করো, শেষ হলে Event Queue-তে জানিও" এবং <b>সাথে সাথে return</b>। T ঘুমায়নি! R1 Pending-এ গিয়ে বসল, অপেক্ষার ভার তার ঘাড়ে।',{add:[A('q1',440,110,545,170,'n'),T('q1t',500,128,'query',{c:'f',s:'sm'})],mod:{r1:{...PD(0),c:'o'},r2:EV(0),r3:EV(1)}}),
-  S('<b>T সাথে সাথে R2-কে ধরল:</b> একই ভাবে call করে ছেড়ে দিল। T <b>একবারও Wait Queue-তে যায়নি</b>, CPU-ও একদম ব্যস্ত। অপেক্ষা করছে R1, R2 (কয়েক শ\' byte-এর object), ১ MB stack-ওয়ালা thread নয়।',{mod:{r2:{...PD(1),c:'o'},r3:EV(0)}}),
-  S('<b>DB R1-এর উত্তর দিল।</b> OS (<code>epoll</code> / <code>IOCP</code>) একটা <b>completion event</b> Event Queue-তে রাখল। R1 আবার লাইনে। কেউ interrupt করে T-কে জাগাচ্ছে না, কারণ T ঘুমায়ইনি।',{add:[A('dn',545,205,275,205,'g'),T('dnt',410,188,'R1-এর উত্তর এল',{a:'middle',c:'g',s:'sm'})],mod:{r1:{...EV(1),c:'g'}}}),
-  S('<b>T R3-কে নিয়ে</b> তার DB call করল (Pending-এ), এখন Event Queue-র সামনে R1।',{del:['dn','dnt'],mod:{r3:{...PD(2),c:'o'},r1:EV(0)}}),
-  S('<b>Event Loop R1-কে তুলল,</b> T এবার R1-এর <b>বাকি অংশ</b> (callback / <code>await</code>-এর পরের লাইন) চালাল: render। R1 শেষ। একা T-ই ৩টা request-কে পালা করে এগিয়ে দিচ্ছে।',{del:['r1']}),
-  S('<b>নামগুলো এবার একসাথে:</b> কাজ শুরু করে ছেড়ে দেওয়া = <b>asynchronous / non-blocking I/O</b>। "শেষ হলে এটা চালিও" অংশটা = <b>callback / continuation</b> (<code>await</code>-এর পরের কোড)। উত্তর জমা রাখার লাইন = <b>Event Queue</b>, যে তুলে চালায় = <b>Event Loop</b>। অপেক্ষা করে <b>OS/hardware</b>, আর state মনে রাখে ছোট একটা <b>object</b>। (C#/Java-তে <code>await</code>-এ thread <b>thread-pool-এ ফিরে যায়</b>, শেষে যেকোনো pool thread বাকি অংশ চালায়।)',{})
+  S('<b>একই ছবি, কিন্তু async।</b> 2 core, তাই thread-ও মাত্র <b>2টা</b> (T1, T2)। 6টা request <b>Event Queue</b>-তে। আগে অপেক্ষা করত <b>thread</b> (Wait Queue-তে); এবার অপেক্ষা করবে শুধু <b>request-এর ছোট object</b> (Pending-এ)।',{add:[
+    B('eq',20,40,320,70,'','g',{dash:1}),T('eqt',20,27,'Event Queue: নতুন request / শেষ হওয়া কাজ',{c:'g',s:'sm'}),
+    B('core1',380,40,100,70,'','a'),T('core1t',430,27,'Core 1',{a:'middle',c:'a',s:'sm'}),
+    B('core2',500,40,100,70,'','a'),T('core2t',550,27,'Core 2',{a:'middle',c:'a',s:'sm'}),
+    B('pd',20,170,320,70,'','o',{dash:1}),T('pdt',20,157,'Pending: DB-র উত্তরের অপেক্ষায় (শুধু ছোট object)',{c:'o',s:'sm'}),
+    B('dv',560,170,180,70,'Disk / Network / DB','s'),
+    C('th1',C1.x,C1.y,17,'T1','g'),C('th2',C2.x,C2.y,17,'T2','g'),
+    RB('r1',1,EV(0),'b'),RB('r2',2,EV(1),'b'),RB('r3',3,EV(2),'b'),RB('r4',4,EV(3),'b'),RB('r5',5,EV(4),'b'),RB('r6',6,EV(5),'b')]}),
+  S('<b>T1 R1-কে, T2 R2-কে তুলল</b> এবং validate করছে (সবুজ = চলছে)। বাকি 4টা request লাইনে।',{mod:{r1:{...U1,c:'g'},r2:{...U2,c:'g'},r3:EV(0),r4:EV(1),r5:EV(2),r6:EV(3)}}),
+  S('<b>validate শেষ, এবার DB call। কিন্তু non-blocking:</b> OS-কে বলল "কাজটা শুরু করো, শেষ হলে Event Queue-তে জানিও" এবং <b>সাথে সাথে return</b>। T1/T2 ঘুমায়নি! R1, R2 <b>Pending</b>-এ গিয়ে বসল। T1, T2 তখনই R3, R4 তুলল।',{add:[A('q1',455,110,600,170,'n'),A('q2',575,110,640,170,'n')],mod:{r1:{...PD(0),c:'o'},r2:{...PD(1),c:'o'},r3:{...U1,c:'g'},r4:{...U2,c:'g'},r5:EV(0),r6:EV(1)}}),
+  S('<b>আবার একই:</b> R3, R4 Pending-এ গেল, T1, T2 নিল R5, R6। 6টা request, 2টা thread, <b>কোনো thread ঘুমায়নি</b>, দুটো core-ই ব্যস্ত। অপেক্ষা করছে কয়েক শ\' byte-এর object, 1 MB stack-ওয়ালা thread নয়।',{mod:{r3:{...PD(2),c:'o'},r4:{...PD(3),c:'o'},r5:{...U1,c:'g'},r6:{...U2,c:'g'}}}),
+  S('<b>DB R1, R2-এর উত্তর দিল।</b> OS (<code>epoll</code> / <code>IOCP</code>) তাদের <b>শেষ-হওয়ার event</b> Event Queue-তে রাখল। এদিকে T1, T2 R5, R6-এর DB call ছেড়ে দিল (Pending-এ)। কেউ T1/T2-কে জাগাচ্ছে না, কারণ তারা ঘুমায়ইনি।',{add:[A('dn',555,205,345,205,'g'),T('dnt',450,188,'R1, R2-এর উত্তর এল',{a:'middle',c:'g',s:'sm'})],mod:{r1:{...EV(0),c:'g'},r2:{...EV(1),c:'g'},r5:{...PD(4),c:'o'},r6:{...PD(5),c:'o'}}}),
+  S('<b>Event Loop:</b> T1, T2 ফাঁকা হতেই queue থেকে R1, R2-এর <b>বাকি অংশ</b> (callback / <code>await</code>-এর পরের লাইন) তুলে চালাল: render। R1, R2 শেষ।',{del:['dn','dnt'],mod:{r1:{...U1,c:'g',label:'R1 render'},r2:{...U2,c:'g',label:'R2 render'}}}),
+  S('<b>নামগুলো একসাথে:</b> কাজ শুরু করে ছেড়ে দেওয়া = <b>asynchronous / non-blocking I/O</b>। "শেষ হলে এটা চালিও" অংশ = <b>callback / continuation</b> (<code>await</code>-এর পরের কোড)। উত্তর জমার লাইন = <b>Event Queue</b>, যে তুলে চালায় = <b>Event Loop</b>। অপেক্ষা করে <b>OS/hardware</b>, state মনে রাখে ছোট <b>object</b>। Thread সংখ্যা ≈ core সংখ্যা (2), আর request হাজার-হাজার হলেও চলে। (C#/Java-তে <code>await</code>-এ thread <b>thread-pool-এ ফিরে যায়</b>, শেষে যেকোনো pool thread বাকি অংশ চালায়।)',{del:['r1','r2']})
 ],262);
 const ASYNC5=VH([
   S('<b>Sync বেছে নাও</b> যখন কাজ ছোট ও দ্রুত, ধাপগুলো একটার ফলের ওপর আরেকটা নির্ভর করে, আর সরলতা জরুরি: ছোট script, গণনা, ফাইল পড়ে একবারই কিছু করা।',{add:[B('s',30,40,330,150,'Synchronous\n\nসহজ কোড, debug সহজ\nCPU-ভারী ছোট কাজ\nscript, CLI, ছোট tool','a',{s:'sm'})]}),
