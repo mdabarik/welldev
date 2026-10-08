@@ -88,6 +88,11 @@ code{font-family:var(--mono);font-size:.86em;font-weight:500;background:color-mi
 .extra .deep-body code{font:600 12.5px var(--mono);background:var(--surface-2);padding:1px 5px;border-radius:5px}
 .extra .deep-body pre code{background:none;padding:0}
 .extra .deep-body table{width:100%}
+.extra .deep-body .qq{margin:16px 0 4px;padding:6px 12px;border-left:4px solid var(--accent);border-radius:0 8px 8px 0;background:color-mix(in srgb,var(--accent) 8%,var(--surface));font-weight:700}
+.extra .deep-body .aa{margin:6px 0}
+.extra .deep-body h4.sec{margin:26px 0 4px;padding-bottom:4px;border-bottom:2px solid var(--line);font-size:16px}
+.extra .faq{border:1px solid var(--line);border-radius:12px;background:var(--surface);text-align:left;padding-top:4px}
+.extra .faq table{margin:8px 0}
 
 .viz{border:1px solid var(--line);border-radius:14px;background:var(--surface-2);overflow:hidden}
 .tabs{display:flex;gap:6px;flex-wrap:wrap;padding:10px 12px 0}
@@ -249,7 +254,7 @@ function mount(host,topic){
 
 
 /* ---------- content ---------- */
-const PARTS=[['1','Idempotency কী'],['2','সমস্যা'],['3','সমাধান: Key'],['4','আরও দুই সমাধান'],['5','HTTP ও সারকথা']];
+const PARTS=[['1','Idempotency কী'],['2','সমস্যা'],['3','সমাধান: Key'],['4','আরও দুই সমাধান'],['5','HTTP ও সারকথা'],['6','প্রশ্ন-উত্তর: retry কেন, Serializable কেন নয়']];
 // repeated-run scene: one statement, run n times, history chips show the value after each run
 function runScene(stmt,start,vals,good,intro,outro){
   const steps=[S(intro,{add:[B('op',20,14,720,48,stmt,'a',{m:1}),B('db',300,90,160,80,'balance\n'+start,'g'),T('cnt',380,192,'চালানো হয়েছে: 0 বার',{a:'middle',c:'f',s:'b'})]})];
@@ -283,7 +288,7 @@ const TOPICS=[
 
 {p:1,q:'সমস্যা: timeout-এর পর retry = double charge',
  ans:'Server টাকা কেটে ফেলেছে, কিন্তু সফল response <b>network-এ হারিয়ে</b> গেছে। Client উত্তর না পেয়ে ভাবে "হয়নি" এবং আবার পাঠায়। Server নতুন request ভেবে <b>আবার টাকা কাটে</b>।',
- pts:['Client জানে না request পৌঁছায়নি, নাকি কাজ হয়ে গেছে কিন্তু উত্তর আসেনি।','তাই retry নিরাপদ করতে কাজটা <b>idempotent</b> বানাতে হয়।'],
+ pts:['Client জানে না request পৌঁছায়নি, নাকি কাজ হয়ে গেছে কিন্তু উত্তর আসেনি।','তাই retry নিরাপদ করতে কাজটা <b>idempotent</b> বানাতে হয়।','<b>কেন retry আসেই? Unit of Work বা Serializable দিয়ে কেন ঠেকানো যায় না?</b> উত্তর <a href="#s5">পার্ট ৬ (প্রশ্ন-উত্তর)</a>-এ।'],
  tabs:[{n:'কী ঘটে',steps:[
   S('Customer 500 টাকা pay করবে। Balance 1000। তিনটা পক্ষ: client app, server, database।',{add:[B('cl',20,70,130,100,'Client\n(app)','a'),B('sv',320,70,130,100,'Server','o'),B('db',610,70,130,100,'Database\nbalance 1000','g')]}),
   S('<b>১.</b> Client server-কে পাঠায়: "Pay 500"।',{add:[A('a1',152,100,318,100,'a'),T('a1l',235,84,'Pay 500',{a:'middle',c:'a',s:'sm b'})]}),
@@ -447,7 +452,75 @@ WHERE id = 42 AND status = 'pending';   -- শর্ত: এখনো pending �
      {req:'PATCH  {add: 100}',resp:'200 OK',state:'balance = 700',chip:'700',ok:0,cap:'<b>retry:</b> আবার 100 যোগ হল, 600 → 700। প্রতিবার বদলায়। এই ধরনের PATCH <b>idempotent না</b>।'},
      {req:'PATCH  {add: 100}',resp:'200 OK',state:'balance = 800',chip:'800',ok:0,cap:'<b>তৃতীয় বার:</b> 800। আবার বদলে গেল।'}],
     outro:'<b>PATCH: হ্যাঁ বা না।</b> "মান বসাও" ধরনের হলে হ্যাঁ (<code>balance = 500</code>, ঘড়িতে ৫টা বাজাও)। "যোগ/কমাও" ধরনের হলে না (<code>balance + 100</code>, ঘড়ি এগিয়ে দাও)।'})}
- ]}
+ ]},
+
+{p:5,q:'প্রশ্ন-উত্তর: retry কেন আসে, Serializable দিয়ে কেন হয় না',
+ ans:'এখানে প্রশ্ন-উত্তরে তিনটা জিনিস পরিষ্কার করা হয়েছে: (ক) <b>retry কেন আসেই</b>, commit হয়ে গেলেও; (খ) <b>Unit of Work / Serializable দিয়ে কেন ঠেকানো যায় না</b>; (গ) <b>Idempotency দিয়ে কীভাবে ঠেকানো যায়</b>, আর এটা কেন শুধু retry-র জন্যই লাগে।',
+ pts:[],
+ extra:`<div class="deep-body faq">
+
+<h4 class="sec">ক) মূল সমস্যা: retry কেন আসেই?</h4>
+
+<p class="qq">প্রশ্ন ১: Commit তো হয়েই গেছে, তাহলে retry করার দরকার কী?</p>
+<p class="aa"><b>কারণ client জানে না commit হয়েছে কি না।</b> তার কাছে শুধু এটুকু তথ্য: "request পাঠিয়েছি, উত্তর পাইনি।" এর পেছনে তিনটা সম্ভাবনা:</p>
+<pre><code>১) Request-ই server-এ পৌঁছায়নি       → টাকা কাটেনি
+২) Server কাজ করেছে, উত্তর হারিয়েছে   → টাকা কেটেছে ✅
+৩) Server কাজের মাঝে crash করেছে       → টাকা কাটেনি (rollback)</code></pre>
+<p class="aa">Client-এর চোখে তিনটাই হুবহু এক: "timeout"। Retry না করলে ১ বা ৩ হলে কাজটা হারিয়ে যায় (পেমেন্ট ফেল)। Retry করলে ২ হলে দুবার হয়ে যায়। তাই সমাধান: <b>retry-টা এমন বানাও যেন করলেও ক্ষতি না হয়।</b></p>
+
+<p class="qq">প্রশ্ন ২: Retry কি শুধু আমার কোড ইচ্ছা করে করে?</p>
+<p class="aa">না। অনেক retry আপনার অজান্তেই ঘটে:</p>
+<ul>
+<li><b>ব্যবহারকারী:</b> "Pay" দুবার চাপল, বা রিফ্রেশ করল।</li>
+<li><b>HTTP library / SDK:</b> timeout হলে নিজেই আবার পাঠায়।</li>
+<li><b>Load balancer / gateway:</b> এক server সাড়া না দিলে অন্য server-এ পাঠিয়ে দেয়।</li>
+<li><b>Message queue (Kafka, RabbitMQ, SQS):</b> "at-least-once" ডেলিভারি, মানে একই মেসেজ একাধিকবার আসতে পারে।</li>
+</ul>
+<p class="aa">এগুলো পুরোপুরি বন্ধ করা যায় না। তাই "retry আসবেই না" ধরে কোড লেখা বিপজ্জনক।</p>
+
+<h4 class="sec">খ) Transaction / UoW / Isolation Level দিয়ে কেন হয় না?</h4>
+
+<p class="qq">প্রশ্ন ৩: Unit of Work বা Transaction দিয়ে কি এটা ঠেকানো যায় না?</p>
+<p class="aa"><b>না।</b> Retry মানে একটা <b>নতুন, আলাদা request, নতুন transaction</b>:</p>
+<pre><code>Request 1:  BEGIN → টাকা কাটো → COMMIT ✅   (উত্তর হারাল)
+Request 2:  BEGIN → টাকা কাটো → COMMIT ✅   (retry)</code></pre>
+<p class="aa">দুটো transaction-ই নিজের জায়গায় <b>পুরোপুরি সঠিক</b>। Transaction শুধু নিজের ভেতরের ধাপগুলো সামলায় (সব হবে, নয়তো কিছুই না)। সে <b>আগের কোনো transaction-এর কথা মনে রাখে না</b>। ATM-এ "টাকা কাটা + নোট বের হওয়া" একসাথে হয় ঠিক, কিন্তু আপনি দুবার বোতাম চাপলে ATM দুটো আলাদা উত্তোলন ধরে নেয়।</p>
+
+<p class="qq">প্রশ্ন ৪: সবচেয়ে কড়া isolation level <code>SERIALIZABLE</code> দিলে?</p>
+<p class="aa"><b>তাও হয় না।</b> Isolation level সমাধান করে <b>একসাথে চলা</b> transaction-দের ঝামেলা (একে অন্যের কাঁচা ডেটা দেখা, lost update ইত্যাদি)। কিন্তু:</p>
+<ul>
+<li>Retry-তে প্রায়ই দুটো request <b>একসাথে চলেই না</b>। Request 1 আগেই শেষ, তারপর Request 2 আসে। Overlap নেই, isolation-এর করার কিছু নেই।</li>
+<li>যদি একসাথেও চলে, <code>SERIALIZABLE</code> শুধু নিশ্চিত করে "ফল এমন হবে যেন একটার পর আরেকটা চলেছে।" আর একটার পর আরেকটা চললে? <b>দুটোই ৫০০ কাটে।</b> ডেটাবেজের চোখে দুটো বৈধ, আলাদা কাজ। সে জানে না দ্বিতীয়টা ভুলে পাঠানো duplicate।</li>
+</ul>
+<table class="cmp"><tr><th></th><th>কী ঠেকায়</th><th>retry-র duplicate ঠেকায়?</th></tr>
+<tr><td>Transaction / UoW</td><td>এক request-এর ধাপ অর্ধেক হয়ে ঝুলে থাকা</td><td>না</td></tr>
+<tr><td>Isolation level</td><td>একসাথে চলা transaction-দের ঝামেলা</td><td>না</td></tr>
+<tr><td>Idempotency</td><td>একই কাজ দুবার হয়ে যাওয়া</td><td><b>হ্যাঁ</b></td></tr></table>
+<p class="aa"><b>এক লাইনে:</b> transaction/isolation নিশ্চিত করে কাজটা <b>ঠিকভাবে</b> হোক। Idempotency নিশ্চিত করে কাজটা <b>একবারই</b> হোক। "ঠিকভাবে" আর "একবার" আলাদা দাবি। একটা কাজ ঠিকভাবে দুবারও হতে পারে।</p>
+
+<p class="qq">প্রশ্ন ৫: তাহলে transaction আর isolation কি অকেজো?</p>
+<p class="aa">মোটেই না। Idempotency-র সমাধানগুলো নিজেই এদের ওপর দাঁড়িয়ে: Key-এর ক্ষেত্রে "key ঢোকানো + টাকা কাটা" <b>একই transaction-এ</b> হয়। <code>UNIQUE</code>/<code>PRIMARY KEY</code> একসাথে আসা দুটো request-কে ডেটাবেজের concurrency নিয়ন্ত্রণ দিয়ে ঠেকায়। Conditional update ডেটাবেজ atomically করে। অর্থাৎ <b>ভেতরের ধাপ সামলায় transaction, বাইরের retry সামলায় idempotency।</b> একটা অন্যটার বিকল্প না, দুটো একসাথে লাগে।</p>
+
+<h4 class="sec">গ) Idempotency দিয়ে কীভাবে কাজ হয়?</h4>
+
+<p class="qq">প্রশ্ন ৬: Idempotency কীভাবে double charge ঠেকায়?</p>
+<p class="aa">মূল কৌশল: <b>server-কে একটা স্মৃতি দেওয়া</b>, যেন সে বলতে পারে "এই request আমি আগেই সামলেছি।" Transaction-এর সেই স্মৃতি নেই, এটাই পার্থক্য। প্রবাহ:</p>
+<pre><code>Request 1 (Key K1):  K1 নতুন → টাকা কাটো + "K1 হয়েছে" লিখে রাখো → COMMIT → ✅
+Request 2 (Key K1):  K1 আগেই আছে! → টাকা কাটে না → আগের উত্তর ফেরত দেয় ✅
+ফল: টাকা কাটল একবারই</code></pre>
+<p class="aa">তিনভাবে এই "স্মৃতি" রাখা যায়: Key টেবিলে টোকেন (Idempotency Key), টেবিলে একই id দুবার ঢুকতে না দেওয়া (<code>UNIQUE</code>), বা status দেখে (<code>WHERE status = 'pending'</code>)। বিস্তারিত পার্ট ৩, ৪ ও ৫-এ আছে।</p>
+
+<p class="qq">প্রশ্ন ৭: Key দিয়ে server কীভাবে বোঝে কোনটা repeat, কোনটা নতুন কাজ?</p>
+<p class="aa"><b>একই key = একই কাজের পুনরাবৃত্তি। নতুন key = নতুন কাজ।</b> Client প্রতিটা আলাদা কাজের জন্য একটা নতুন key বানায় (লম্বা random string, UUID), কিন্তু সেই কাজের retry-তে <b>একই key-টাই</b> পাঠায়। তাই রহিমের ৫০০ টাকার পেমেন্টের key <code>K1</code> আর পরে দেওয়া আরেকটা ৫০০ টাকার পেমেন্টের key <code>K2</code> আলাদা, দুটোই আলাদা কাজ হিসেবে চলে।</p>
+
+<p class="qq">প্রশ্ন ৮: Idempotency কি শুধু retry-র জন্যই লাগে?</p>
+<p class="aa"><b>হ্যাঁ, মূলত তাই।</b> Retry না থাকলে idempotency-র কোনো দরকারই হতো না। Network নিখুঁত হলে, উত্তর কখনো না হারালে, কেউ দুবার চাপ না দিলে, প্রতিটা request ঠিক একবারই আসত, তখন "দ্বিতীয়বার চেনার" প্রশ্ন ওঠে না। Retry (বা একই request আবার আসা) আছে বলেই idempotency লাগে।</p>
+<p class="aa">একটু সূক্ষ্ম কথা: "retry" বলতে এখানে শুধু client-এর নিজে পাঠানো retry বোঝানো হচ্ছে না, বরং <b>একই request একাধিকবার এসে পৌঁছানো</b>। যার কারণ হতে পারে retry, double click, load balancer-এর re-send, বা queue-র redelivery। সবগুলোর সমাধান এক: idempotent বানানো।</p>
+
+<p class="qq">প্রশ্ন ৯: সব API-তে কি idempotency key লাগে?</p>
+<p class="aa">না। <b>GET</b> শুধু পড়ে, কিছু বদলায় না, তাই retry-তে ক্ষতি নেই। <b>PUT, DELETE</b> স্বভাবতই idempotent। দরকার সেখানে, যেখানে কাজটা "নতুন কিছু তৈরি/যোগ করা" (POST, <code>balance + 100</code>) এবং ভুলে দুবার হলে ক্ষতি হয়: payment, অর্ডার তৈরি, ইমেইল/SMS পাঠানো।</p>
+
+</div>`}
 ];
 
 /* ---------- build page ---------- */
