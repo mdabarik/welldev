@@ -113,6 +113,8 @@ svg text{font-family:var(--sans);font-size:13px;fill:var(--fg);dominant-baseline
 footer{margin-top:50px;text-align:center;color:var(--faint);font:500 13px var(--sans)}
 
 .q .ans code,.q li code{white-space:nowrap}
+.imgstage{padding:10px}
+.imgstage img{display:block;width:100%;height:auto;border-radius:10px;background:#fff}
 .hero{background:linear-gradient(135deg,#e11d48 0%,#7c3aed 55%,#4f46e5 100%)}
 </style>
 </head>
@@ -211,9 +213,9 @@ function draw(svg,nodes,dur){
 
 function mount(host,topic){
   const tabs=topic.tabs||[{n:'',steps:topic.steps}];
-  host.innerHTML='<div class="tabs"></div><div class="stage"><svg viewBox="0 0 760 240" role="img"><g class="layer"></g></svg></div><div class="cap"></div><div class="ctl"><button class="b prev" type="button">◀</button><button class="b pri next" type="button">Next ▶</button><span class="cnt"></span></div>';
+  host.innerHTML='<div class="tabs"></div><div class="stage"><svg viewBox="0 0 760 240" role="img"><g class="layer"></g></svg></div><div class="imgstage" style="display:none"></div><div class="cap"></div><div class="ctl"><button class="b prev" type="button">◀</button><button class="b pri next" type="button">Next ▶</button><span class="cnt"></span></div>';
   const svg=d3.select(host).select('svg'),cap=host.querySelector('.cap'),cnt=host.querySelector('.cnt');
-  const prev=host.querySelector('.prev'),next=host.querySelector('.next'),tabBox=host.querySelector('.tabs');
+  const prev=host.querySelector('.prev'),next=host.querySelector('.next'),tabBox=host.querySelector('.tabs'),stage=host.querySelector('.stage'),imgst=host.querySelector('.imgstage'),ctl=host.querySelector('.ctl');
   let ti=0,si=0,steps;
   function show(dur){
     draw(svg,stateAt(steps,si),dur);
@@ -224,8 +226,12 @@ function mount(host,topic){
   }
   function load(i){
     ti=i;si=0;
-    const tb=tabs[ti];steps=typeof tb.steps==='function'?tb.steps():tb.steps;
+    const tb=tabs[ti];
     tabBox.querySelectorAll('button').forEach((b,k)=>b.classList.toggle('on',k===ti));
+    const isImg=!!tb.img;
+    stage.style.display=isImg?'none':'';imgst.style.display=isImg?'':'none';ctl.style.display=isImg?'none':'';
+    if(isImg){imgst.innerHTML=`<img src="${tb.img}" alt="${tb.alt||''}" loading="lazy">`;cap.innerHTML=tb.cap||'';return;}
+    steps=typeof tb.steps==='function'?tb.steps():tb.steps;
     show(0);
   }
   if(tabs.length>1){
@@ -265,7 +271,8 @@ const TOPICS=[
     S('<b>N = 10:</b> N+1 → 11 query (11 ms)। Batch → 2 query (2 ms)। এখনো তফাত কম।',{add:[B('r1',110,14,11*0.5+6,22,'11','r',{s:'sm'}),B('g1',110,40,6+2*0.5,22,'2','g',{s:'sm'})]}),
     S('<b>N = 100:</b> N+1 → 101 query (101 ms)। Batch এখনো 2 (2 ms)।',{add:[B('r2',110,84,101*0.5+6,22,'101','r',{s:'sm'}),B('g2',110,110,6+2*0.5,22,'2','g',{s:'sm'})]}),
     S('<b>N = 1000:</b> N+1 → 1001 query (প্রায় ১ সেকেন্ড)। Batch তবু 2। N+1 লাইনের মতো বাড়ে, batch স্থির।',{add:[B('r3',110,154,1001*0.5+6,22,'1001','r',{s:'sm'}),B('g3',110,180,6+2*0.5,22,'2','g',{s:'sm'})]})
-  ]}
+  ]},
+  {n:'4. ছবি (infographic)',img:'n%2B1%20query.png',alt:'N+1 Query Problem-এর বাংলা infographic',cap:'<b>এক ছবিতে সব:</b> উদাহরণ (users ও posts), ধাপে ধাপে query, ORM-এ সমস্যা আর সমাধান।'}
  ]},
 
 {p:1,q:'Race Condition (overselling)',
