@@ -120,6 +120,7 @@ footer{margin-top:50px;text-align:center;color:var(--faint);font:500 13px var(--
 .path.thin path{stroke-width:2.2}
 .part{margin-top:44px;scroll-margin-top:60px}
 .extra .cmp td code,.extra .cmp td{font-size:13px}
+.extra .lbl{margin:14px 0 0;font:700 13px var(--bn);color:var(--muted)}
 .extra pre{margin:10px 0 0;padding:10px 14px;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;font:500 12.5px/1.6 var(--mono);overflow-x:auto;white-space:pre-wrap}
 /* bn-type: Bengali glyphs/digits need normal tracking */
 h1,h2,h3,h4,h5{letter-spacing:0!important}
@@ -349,26 +350,19 @@ const ASYNC1=VH([
   S('<b>R2-এর উত্তর (74):</b> Thread আবার ফিরে R2 শেষ করল। দুটো request শেষ হল প্রায় <b>84</b>-এ। Sync-এ লেগেছিল <b>140</b>। Thread-এর অপেক্ষা প্রায় নেই।',{add:[blk('c2',0,74,84,'render R2','g')],mod:at(84)}),
   S('<b>মূল কথা:</b> Async-এ কাজ দ্রুত হয় না, <b>অপেক্ষার সময় নষ্ট হয় না</b>। এক thread-ই হাজার request ছোট ছোট টুকরোয় সামলায়। Node.js, nginx, Redis এভাবে চলে।',{})
 ],262);
-const ASYNC2=VH([
-  S('Async কোড লেখার <b>তিন উপায়</b>, যেগুলো আসলে একই জিনিস। <b>1) Callback:</b> "কাজ শেষ হলে এই function ডেকো।" কিন্তু ধাপ বাড়লে ভেতরে ভেতরে ঢুকতে থাকে (callback hell)।',{add:[B('cb',12,28,235,110,'getUser(id, (user) => {\n  getOrders(user, (orders) => {\n    show(orders);\n  });\n});','a',{m:1,s:'sm'}),T('cl',130,160,'Callback',{a:'middle',c:'a',s:'b'})]}),
-  S('<b>2) Promise:</b> কাজ এখনো শেষ হয়নি, কিন্তু "ভবিষ্যতে ফল দেব" এমন একটা object। <code>.then()</code> দিয়ে সোজা লাইনে জোড়া যায়, <code>.catch()</code> এ error।',{add:[B('pr',262,28,235,110,'getUser(id)\n  .then(u => getOrders(u))\n  .then(o => show(o))\n  .catch(console.error);','g',{m:1,s:'sm'}),T('pl',380,160,'Promise',{a:'middle',c:'g',s:'b'})]}),
-  S('<b>3) async / await:</b> Promise-এরই সুন্দর রূপ। দেখতে <b>sync-এর মতো</b> উপর-নিচ, কিন্তু ভেতরে non-blocking। আজকের সবচেয়ে প্রচলিত।',{add:[B('aw',512,28,235,110,'async function run() {\n  const u = await getUser(id);\n  const o = await getOrders(u);\n  show(o);\n}','o',{m:1,s:'sm'}),T('al',630,160,'async / await',{a:'middle',c:'o',s:'b'})]}),
-  S('<b><code>await</code> আসলে কী করে?</b> ফল না আসা পর্যন্ত <b>function-টা থামে</b> (pause), কিন্তু <b>thread থামে না</b>। Thread অন্য কাজে যায়। ফল এলে function ঠিক ওই লাইন থেকে আবার চলে। তাই <code>await</code> blocking নয়।',{add:[T('nt',380,205,'await = function পাজ, thread মুক্ত',{a:'middle',c:'f',s:'b'})],mod:{aw:{hl:1}}}),
-  S('<b>মনে রাখো:</b> async/await কোনো নতুন ক্ষমতা নয়, শুধু callback/promise-কে পড়তে সহজ করে। ভেতরে সেই একই event loop আর non-blocking I/O।',{mod:{aw:{hl:0}}})
-],235);
 const ASYNC6=VH([
-  S('<b>Thread Pool (async):</b> একই board, একই 6 request, 2 core। কিন্তু pool-এ thread মাত্র <b>2টা</b> (W1, W2), core সংখ্যার সমান। নিয়ম বদলেছে: thread request <b>আঁকড়ে ধরে না</b>। যতক্ষণ কাজ আছে ততক্ষণ চলে, DB-র অপেক্ষা এলেই ছেড়ে দেয়।',{add:[...BOARD([
+  S('<b>Thread Pool (async):</b> একই board, একই 6 request, 2 core। কিন্তু pool-এ thread মাত্র <b>2টা</b> (T1, T2), core সংখ্যার সমান। নিয়ম বদলেছে: thread request <b>আঁকড়ে ধরে না</b>। যতক্ষণ কাজ আছে ততক্ষণ চলে, DB-র অপেক্ষা এলেই ছেড়ে দেয়।',{add:[...BOARD([
       B('cqb',290,40,190,60,'','g',{dash:1}),T('cqbt',290,27,'Completion Queue: DB-র উত্তর এসেছে',{c:'g',s:'sm'}),
       B('pdb',290,180,190,70,'','o',{dash:1}),T('pdbt',290,167,'Pending: DB চলছে (ছোট object)',{c:'o',s:'sm'})]),
-    ...[1,2,3,4,5,6].map(n=>RT('q'+n,n,RQT(n-1))),TD('w1','W1',IDL(0),'n'),TD('w2','W2',IDL(1),'n')]}),
-  S('<b>W1 R1-কে, W2 R2-কে তুলল</b> এবং সরাসরি core-এ চলল। (thread = core, তাই Ready Queue-এ দাঁড়াতে হয় না।) validate চলছে।',{del:['q1','q2'],mod:{q3:RQT(0),q4:RQT(1),q5:RQT(2),q6:RQT(3),w1:{...CORE1,c:'g',label:'W1\nR1'},w2:{...CORE2,c:'g',label:'W2\nR2'}}}),
-  S('<b>R1, R2 DB call করল, কিন্তু non-blocking:</b> "কাজটা শুরু করো, শেষ হলে জানিও" বলে <b>সাথে সাথে return</b>। R1, R2 এখন <b>Pending</b>-এ (শুধু ছোট object, অপেক্ষা করছে DB)। W1, W2 <b>ঘুমায়নি</b>, তখনই পরের request R3, R4 তুলল।',{del:['q3','q4'],add:[SM('p1',1,PEND(0),'o'),SM('p2',2,PEND(1),'o')],mod:{q5:RQT(0),q6:RQT(1),w1:{label:'W1\nR3'},w2:{label:'W2\nR4'}}}),
-  S('<b>R3, R4-ও Pending-এ গেল।</b> W1, W2 তুলল R5, R6। 6টার মধ্যে 4টা এখন DB-তে। কোনো thread ঘুমায়নি, দুই core-ই কাজে।',{del:['q5','q6'],add:[SM('p3',3,PEND(2),'o'),SM('p4',4,PEND(3),'o')],mod:{w1:{label:'W1\nR5'},w2:{label:'W2\nR6'}}}),
-  S('<b>R5, R6-ও DB call করে Pending-এ গেল।</b> Request Queue খালি, তাই W1, W2 <b>Thread Pool-এ ফিরে গেল</b>। তারা কোনো request ধরে নেই, শুধু নতুন কাজের অপেক্ষায় বসে। (এটা "R-এর DB উত্তরের অপেক্ষা" নয়, তাই blocked নয়।)',{add:[SM('p5',5,PEND(4),'o'),SM('p6',6,PEND(5),'o')],mod:{w1:{...IDL(0),c:'n',label:'W1'},w2:{...IDL(1),c:'n',label:'W2'}}}),
+    ...[1,2,3,4,5,6].map(n=>RT('q'+n,n,RQT(n-1))),TD('w1','T1',IDL(0),'n'),TD('w2','T2',IDL(1),'n')]}),
+  S('<b>T1 R1-কে, T2 R2-কে তুলল</b> এবং সরাসরি core-এ চলল। (thread = core, তাই Ready Queue-এ দাঁড়াতে হয় না।) validate চলছে।',{del:['q1','q2'],mod:{q3:RQT(0),q4:RQT(1),q5:RQT(2),q6:RQT(3),w1:{...CORE1,c:'g',label:'T1\nR1'},w2:{...CORE2,c:'g',label:'T2\nR2'}}}),
+  S('<b>R1, R2 DB call করল, কিন্তু non-blocking:</b> "কাজটা শুরু করো, শেষ হলে জানিও" বলে <b>সাথে সাথে return</b>। R1, R2 এখন <b>Pending</b>-এ (শুধু ছোট object, অপেক্ষা করছে DB)। T1, T2 <b>ঘুমায়নি</b>, তখনই পরের request R3, R4 তুলল।',{del:['q3','q4'],add:[SM('p1',1,PEND(0),'o'),SM('p2',2,PEND(1),'o')],mod:{q5:RQT(0),q6:RQT(1),w1:{label:'T1\nR3'},w2:{label:'T2\nR4'}}}),
+  S('<b>R3, R4-ও Pending-এ গেল।</b> T1, T2 তুলল R5, R6। 6টার মধ্যে 4টা এখন DB-তে। কোনো thread ঘুমায়নি, দুই core-ই কাজে।',{del:['q5','q6'],add:[SM('p3',3,PEND(2),'o'),SM('p4',4,PEND(3),'o')],mod:{w1:{label:'T1\nR5'},w2:{label:'T2\nR6'}}}),
+  S('<b>R5, R6-ও DB call করে Pending-এ গেল।</b> Request Queue খালি, তাই T1, T2 <b>Thread Pool-এ ফিরে গেল</b>। তারা কোনো request ধরে নেই, শুধু নতুন কাজের অপেক্ষায় বসে। (এটা "R-এর DB উত্তরের অপেক্ষা" নয়, তাই blocked নয়।)',{add:[SM('p5',5,PEND(4),'o'),SM('p6',6,PEND(5),'o')],mod:{w1:{...IDL(0),c:'n',label:'T1'},w2:{...IDL(1),c:'n',label:'T2'}}}),
   S('<b>DB R1, R2-এর উত্তর দিল।</b> OS তাদের <b>Completion Queue</b>-তে রাখল। Pool-এর thread-দের জাগানোর কাজ এটাই: কাজ এসেছে।',{mod:{p1:{...COMP(0),c:'g'},p2:{...COMP(1),c:'g'}}}),
-  S('<b>W1, W2 জেগে R1, R2-এর বাকি অংশ তুলল</b> (callback / <code>await</code>-এর পরের লাইন) এবং core-এ চলল: render।',{del:['p1','p2'],mod:{w1:{...CORE1,c:'g',label:'W1\nR1'},w2:{...CORE2,c:'g',label:'W2\nR2'}}}),
-  S('<b>R1, R2 শেষ।</b> W1, W2 আবার Pool-এ। এদিকে DB R3, R4-এর উত্তর দিল, Completion Queue-তে এল।',{mod:{w1:{...IDL(0),c:'n',label:'W1'},w2:{...IDL(1),c:'n',label:'W2'},p3:{...COMP(0),c:'g'},p4:{...COMP(1),c:'g'}}}),
-  S('<b>W1, W2 R3, R4 তুলে চলল।</b> একই চক্র: Pool → কাজ তোলা → core → DB-তে ছেড়ে দেওয়া বা শেষ → Pool-এ ফেরা। R5, R6-ও এভাবেই শেষ হবে।',{del:['p3','p4'],mod:{w1:{...CORE1,c:'g',label:'W1\nR3'},w2:{...CORE2,c:'g',label:'W2\nR4'}}}),
+  S('<b>T1, T2 জেগে R1, R2-এর বাকি অংশ তুলল</b> (callback / <code>await</code>-এর পরের লাইন) এবং core-এ চলল: render।',{del:['p1','p2'],mod:{w1:{...CORE1,c:'g',label:'T1\nR1'},w2:{...CORE2,c:'g',label:'T2\nR2'}}}),
+  S('<b>R1, R2 শেষ।</b> T1, T2 আবার Pool-এ। এদিকে DB R3, R4-এর উত্তর দিল, Completion Queue-তে এল।',{mod:{w1:{...IDL(0),c:'n',label:'T1'},w2:{...IDL(1),c:'n',label:'T2'},p3:{...COMP(0),c:'g'},p4:{...COMP(1),c:'g'}}}),
+  S('<b>T1, T2 R3, R4 তুলে চলল।</b> একই চক্র: Pool → কাজ তোলা → core → DB-তে ছেড়ে দেওয়া বা শেষ → Pool-এ ফেরা। R5, R6-ও এভাবেই শেষ হবে।',{del:['p3','p4'],mod:{w1:{...CORE1,c:'g',label:'T1\nR3'},w2:{...CORE2,c:'g',label:'T2\nR4'}}}),
   S('<b>সারকথা:</b> 6 request, মাত্র 2 thread, কেউ ঘুমায়নি, কেউ request আঁকড়ে ধরেনি। অপেক্ষা করেছে <b>Pending-এর ছোট object</b> আর <b>OS/DB</b>। কাজ শুরু করে ছেড়ে দেওয়া = <b>non-blocking / async</b>; শেষ হলে যা চলে = <b>callback / continuation</b>; তোলার লাইন = <b>Event/Completion Queue</b>। thread যদি core-এর চেয়ে বেশি রাখো, ওপরের sync scene-এর মতো <b>Ready Queue</b> দিয়ে OS scheduler-ই তাদের পালা ঠিক করবে।',{})
 ],312);
 
@@ -381,6 +375,11 @@ const TABLE='<table class="cmp"><tr><th></th><th>Synchronous</th><th>Asynchronou
  +'<tr><td>উদাহরণ</td><td>Python script, পুরনো Tomcat, <code>File.ReadAllText</code></td><td>Node.js, nginx, <code>await HttpClient.GetAsync</code></td></tr></table>';
 const CODE_ASYNC='<pre>// C#\nvar data = File.ReadAllText("a.txt");              // sync: thread আটকে থাকে\nvar data = await File.ReadAllTextAsync("a.txt");   // async: অপেক্ষায় thread মুক্ত\n\n// JavaScript (Node)\nconst data = fs.readFileSync("a.txt");              // sync: blocking\nconst data = await fs.promises.readFile("a.txt");  // async: non-blocking</pre>';
 
+const CODE_STYLES='<div class="lbl">Async কোড লেখার তিন উপায় (একই কাজ, ক্রমে সহজ)</div>'
+ +'<pre>// 1) Callback: "শেষ হলে এই function ডেকো"; ধাপ বাড়লে ভেতরে ভেতরে ঢোকে (callback hell)\ngetUser(id, (user) => {\n  getOrders(user, (orders) => {\n    show(orders);\n  });\n});</pre>'
+ +'<pre>// 2) Promise: "ভবিষ্যতে ফল দেব" object; .then() দিয়ে সোজা লাইনে জোড়া যায়\ngetUser(id)\n  .then(user => getOrders(user))\n  .then(orders => show(orders))\n  .catch(console.error);</pre>'
+ +'<pre>// 3) async / await: দেখতে sync-এর মতো, ভেতরে non-blocking (আজকের সবচেয়ে প্রচলিত)\nasync function run() {\n  const user = await getUser(id);       // function এখানে থামে, thread থামে না\n  const orders = await getOrders(user);\n  show(orders);\n}</pre>';
+
 const PARTS=[['1','Synchronous'],['2','Asynchronous']];
 const TOPICS=[
 {q:'Synchronous কীভাবে কাজ করে',
@@ -391,8 +390,8 @@ const TOPICS=[
 {q:'Asynchronous কীভাবে কাজ করে',
  ans:'<b>Asynchronous (async)</b> মানে কাজ <b>শুরু করে ফল না আসা পর্যন্ত দাঁড়িয়ে না থেকে</b> অন্য কাজে যাওয়া, ফল এলে ফিরে এসে বাকিটা করা (<b>non-blocking</b>)। উপমা: waiter order রান্নাঘরে দিয়ে অন্য টেবিলে যায়, খাবার তৈরি হলে বেল বাজে, তখন এসে পরিবেশন করে। একজন waiter-ই অনেক টেবিল সামলায়।',
  pts:['<b>অপেক্ষা করে OS/I/O</b>, thread নয়। ফল এলে callback <b>Event Queue</b>-তে যায়, <b>Event Loop</b> thread মুক্ত হলে সেটা চালায়।','লেখার ধরন: <b>callback → Promise → async/await</b> (একই জিনিস, ক্রমে সহজ)।','Async কাজ দ্রুত করে না, <b>অপেক্ষার সময় বাঁচায়</b>। CPU-ভারী কাজে লাগে <b>parallelism</b> (একাধিক core)।'],
- extra:CODE_ASYNC,
- tabs:[{n:'Non-blocking, এক thread',steps:ASYNC1},{n:'Callback / Promise / async-await',steps:ASYNC2},{n:'Thread Pool + Queue (async)',steps:ASYNC6}]}
+ extra:CODE_ASYNC+CODE_STYLES,
+ tabs:[{n:'Non-blocking, এক thread',steps:ASYNC1},{n:'Thread Pool + Queue (async)',steps:ASYNC6}]}
 ];
 
 const app=document.getElementById('app'),partsNav=document.getElementById('parts');
