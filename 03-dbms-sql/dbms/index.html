@@ -78,6 +78,16 @@ code{font-family:var(--mono);font-size:.86em;font-weight:500;background:color-mi
 .extra th{background:var(--surface-2)}
 .extra .cmp td,.extra .cmp th{text-align:left;vertical-align:top;font:500 13.5px/1.55 var(--bn);min-width:150px}
 .extra .cmp td:first-child{font-weight:700;white-space:nowrap;min-width:0}
+.extra .deep{margin-top:14px;border:1px solid var(--line);border-radius:12px;background:var(--surface);text-align:left}
+.extra .deep summary{cursor:pointer;padding:10px 14px;font:700 14px var(--bn);color:var(--fg)}
+.extra .deep-body{padding:2px 16px 12px;font:500 14px/1.75 var(--bn);color:var(--fg)}
+.extra .deep-body h4{margin:18px 0 6px;font:800 15px var(--bn);color:var(--accent)}
+.extra .deep-body p,.extra .deep-body li{margin:6px 0}
+.extra .deep-body ol,.extra .deep-body ul{padding-left:22px;margin:6px 0}
+.extra .deep-body pre{margin:8px 0;padding:10px 12px;border-radius:10px;background:var(--surface-2);overflow-x:auto;font:500 12.5px/1.6 var(--mono);white-space:pre}
+.extra .deep-body code{font:600 12.5px var(--mono);background:var(--surface-2);padding:1px 5px;border-radius:5px}
+.extra .deep-body pre code{background:none;padding:0}
+.extra .deep-body table{width:100%}
 
 .viz{border:1px solid var(--line);border-radius:14px;background:var(--surface-2);overflow:hidden}
 .tabs{display:flex;gap:6px;flex-wrap:wrap;padding:10px 12px 0}
@@ -334,7 +344,66 @@ const TOPICS=[
  extra:'<table class="cmp"><tr><th>কোন সমাধান</th><th>এক লাইনে</th><th>কখন</th></tr>'
   +'<tr><td>Idempotency key</td><td>"এই টোকেন আগে দেখেছি, আবার করব না"</td><td>payment, retry হওয়া যেকোনো POST। সবচেয়ে সাধারণ</td></tr>'
   +'<tr><td>UNIQUE constraint</td><td>"ডেটাবেজ একই জিনিস দুবার ঢুকতে দেবে না"</td><td>কাজের নিজস্ব id আছে (order_id, email)</td></tr>'
-  +'<tr><td>Conditional update</td><td>"আগের অবস্থায় থাকলে তবেই বদলাও"</td><td>status বদলের কাজ (pending → paid)</td></tr></table>',
+  +'<tr><td>Conditional update</td><td>"আগের অবস্থায় থাকলে তবেই বদলাও"</td><td>status বদলের কাজ (pending → paid)</td></tr></table>'
+  +`<details class="deep" open><summary>বিস্তারিত: তিন সমাধান কীভাবে কাজ করে (গল্প ধরে)</summary>
+<div class="deep-body">
+<h4>গল্প: "Pay" বোতাম</h4>
+<p>আপনি ৫০০ টাকার অর্ডার (order 42) দিয়ে "Pay" চাপলেন। টাকা কেটে গেল, কিন্তু "OK" উত্তরটা নেট গিয়ে হারিয়ে গেল। অ্যাপ জানে না কাজ হয়েছে কি না, তাই <b>একই request আবার পাঠাল (retry)</b>। Server-এর কাছে এটা নতুন request মনে হয়, তাই আবার ৫০০ কাটে। মোট ১০০০ টাকা কাটা গেল।</p>
+<p><b>আসল সমস্যা একটাই:</b> server বুঝতে পারছে না "এই request আগে একবার এসেছিল।" তিনটা সমাধান আসলে এক প্রশ্নের তিন উত্তর: <b>"server কীভাবে চিনবে যে এটা repeat?"</b></p>
+<ol>
+<li>টোকেন নম্বর দিয়ে → <b>Idempotency Key</b></li>
+<li>জিনিসটার নিজস্ব পরিচয় (order_id) দিয়ে → <b>UNIQUE constraint</b></li>
+<li>জিনিসটার বর্তমান অবস্থা (status) দেখে → <b>Conditional update</b></li>
+</ol>
+
+<h4>১) Idempotency Key: "ব্যাংকের টোকেন নম্বর"</h4>
+<p>ব্যাংকে আপনি বললেন "আমার টোকেন 42।" ক্লার্ক খাতা দেখে বলে, "42 তো আগেই সামলে দিয়েছি।" এখানেও তাই।</p>
+<ol>
+<li><b>আগে থেকে একটা টেবিল থাকে:</b> <code>idempotency_keys (key, response)</code>। শুরুতে খালি।</li>
+<li><b>Client নিজেই একটা unique key বানায়</b> (যেমন <code>K1</code>) এবং request-এর সাথে পাঠায়: <code>POST /pay  Idempotency-Key: K1</code></li>
+<li><b>Server আগে key টেবিলে <code>K1</code> ঢোকায়।</b> K1 নতুন, তাই ঢুকল। এর মানে "প্রথমবার", তাই সে টাকা কাটে (১০০০ → ৫০০) এবং টেবিলে লেখে <code>K1 → "OK, ৫০০ কাটা হয়েছে"</code>। এই দুটো কাজ <b>একই transaction-এ</b>, হয় দুটোই হবে নয়তো কোনোটাই না।</li>
+<li><b>উত্তর হারিয়ে গেল, client retry করল</b> একই <code>K1</code> দিয়ে।</li>
+<li><b>Server আবার K1 ঢোকাতে চায়, কিন্তু K1 আগেই আছে।</b> বুঝে ফেলে "এটা repeat।" টাকা কাটে না, শুধু টেবিল থেকে আগের response ফেরত দেয়। <b>ফল:</b> client "OK" পেল, টাকা কাটল একবারই।</li>
+</ol>
+<p><b>Response-ও কেন সেভ করে?</b> Client-এর উত্তর দরকার। আগের response হুবহু ফেরত দিলে client-এর মনে হয় এটা প্রথমবারের মতোই সফল।</p>
+<p><b>দুটো request একসাথে এলে?</b> ("Pay" দুবার চাপা পড়ল।) যদি server আগে "K1 আছে কি?" দেখে তারপর ঢোকায়, দুটোই "নেই" দেখবে আর দুটোই কাজ করবে। তাই <code>key</code> কলামে <b>PRIMARY KEY</b> থাকে। ডেটাবেজ নিজেই নিশ্চিত করে একই K1 একবারই ঢুকবে, জেতে একটাই।</p>
+<p><b>কখন:</b> কাজটার নিজস্ব পরিচয় নেই, কিন্তু retry হতে পারে (payment, "অর্ডার করো" বোতাম)। সবচেয়ে সাধারণ ও নিরাপদ।</p>
+
+<h4>২) UNIQUE constraint: "পরীক্ষার রোল নম্বর"</h4>
+<p>এখানে আলাদা টোকেন লাগে না, কারণ কাজটার নিজস্ব পরিচয় আছে: <code>order_id = 42</code>। একটা order-এর payment একটাই হওয়ার কথা। তাই ডেটাবেজকে নিয়ম বলে দিন। রোল 42-এ একজনই বসতে পারে, দ্বিতীয়জনকে সিস্টেম ঢুকতেই দেয় না।</p>
+<pre><code>CREATE TABLE payments (
+  order_id INT UNIQUE,   -- আসল নিয়ম: একই order_id দুবার না
+  amount   INT
+);
+
+-- প্রথমবার: order 42 নতুন, তাই ঢুকল ✅
+INSERT INTO payments (order_id, amount) VALUES (42, 500);
+
+-- retry: order 42 আগেই আছে, ডেটাবেজ নিজেই ঠেকায় ❌ (duplicate key)
+INSERT INTO payments (order_id, amount) VALUES (42, 500);</code></pre>
+<p><b>Error না চাইলে</b> <code>ON CONFLICT (order_id) DO NOTHING</code> যোগ করুন। তখন error আসে না, শুধু "0 row insert" হয়। অ্যাপ বোঝে 0 row মানে "আগেই হয়ে গেছে", তাই চুপচাপ সফল ধরে নেয়।</p>
+<p><b>কখন:</b> কাজের মধ্যেই স্বাভাবিক পরিচয় আছে (<code>order_id</code>, <code>email</code>, <code>invoice_no</code>)। আলাদা টোকেন বানানোর ঝামেলা নেই, ডেটাবেজই পাহারা দেয়।</p>
+
+<h4>৩) Conditional update: "তালা বন্ধ থাকলে তবেই খোলো"</h4>
+<p>এখানে চেনা হয় জিনিসটার <b>অবস্থা (status)</b> দিয়ে। Order-এর status এক ধাপ করে এগোয়: <code>pending → paid</code>। দরজার তালা একবার খুলে ফেললে আবার "বন্ধ থাকলে খোলো" বললে শর্ত আর মেলে না, তাই কিছু হয় না।</p>
+<p>শুরুতে order 42-এর <code>status = 'pending'</code>।</p>
+<pre><code>UPDATE orders
+SET status = 'paid'
+WHERE id = 42 AND status = 'pending';   -- শর্ত: এখনো pending থাকলে তবেই</code></pre>
+<ul>
+<li><b>প্রথমবার:</b> status এখন pending, শর্ত মিলল, <code>paid</code> হলো। ডেটাবেজ বলে <b>"1 row affected"</b>। অ্যাপ বোঝে "আমিই প্রথম, এবার টাকা কাটি।" ✅</li>
+<li><b>retry:</b> status এখন <code>paid</code>, শর্ত মেলে না, ডেটাবেজ বলে <b>"0 row affected"</b>। অ্যাপ বোঝে "আগেই হয়ে গেছে, আর কিছু করব না।" টাকা আবার কাটে না। ✅</li>
+</ul>
+<p>"কাজ হয়েছে কি না"-র প্রমাণ এখানে <code>status</code> নিজেই। আলাদা টেবিল বা key লাগে না।</p>
+<p><b>কখন:</b> কাজটা অবস্থা বদলানোর, আর অবস্থা এক ধাপ করে এগোয় (<code>pending → paid → shipped → delivered</code>)।</p>
+
+<h4>কোনটা কখন? নিজেকে এই প্রশ্নগুলো করুন</h4>
+<table class="cmp"><tr><th>প্রশ্ন</th><th>হ্যাঁ হলে</th></tr>
+<tr><td>কাজটার নিজস্ব id আছে (<code>order_id</code>, <code>email</code>) আর "একটাই থাকবে" চাই?</td><td><b>UNIQUE constraint</b></td></tr>
+<tr><td>কাজটা status এক ধাপ এগোনো (<code>pending → paid</code>)?</td><td><b>Conditional update</b></td></tr>
+<tr><td>কোনোটাই খাটে না, কিন্তু retry হতে পারে?</td><td><b>Idempotency Key</b></td></tr></table>
+<p>তিনটারই শেষ ফল এক: retry হলেও কাজ <b>একবারই</b> হয়।</p>
+</div></details>`,
  tabs:[
   {n:'GET, HEAD, OPTIONS: হ্যাঁ',steps:()=>httpScene({title:'User #1',start:'name = Rahim',
     intro:'এগুলো শুধু <b>পড়ে</b>, server-এর কিছু বদলায় না। তাই যতবারই পাঠাও, অবস্থা একই। User #1-এর নাম Rahim।',
