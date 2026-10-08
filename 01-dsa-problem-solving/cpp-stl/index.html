@@ -70,6 +70,13 @@ pre{margin:0;background:var(--surface-2);border:1px solid var(--line);border-rad
 .card h3 small{font:600 12px var(--sans);color:var(--faint);margin-left:6px}
 .tip{color:var(--muted);font:400 14px/1.6 var(--bn)}
 .toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:18px}
+
+:root{--code-bg:#ffffff;--tk:#0000ff;--tk2:#af00db;--tt:#267f99;--tf:#795e26;--ts:#a31515;--tn:#098658;--tc:#008000;--tv:#001080;--tconst:#0070c1}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--code-bg:#1e1e1e;--tk:#569cd6;--tk2:#c586c0;--tt:#4ec9b0;--tf:#dcdcaa;--ts:#ce9178;--tn:#b5cea8;--tc:#6a9955;--tv:#9cdcfe;--tconst:#4fc1ff}}
+:root[data-theme="dark"]{--code-bg:#1e1e1e;--tk:#569cd6;--tk2:#c586c0;--tt:#4ec9b0;--tf:#dcdcaa;--ts:#ce9178;--tn:#b5cea8;--tc:#6a9955;--tv:#9cdcfe;--tconst:#4fc1ff}
+pre{background:var(--code-bg)!important;color:var(--tv)}
+pre code{font-family:var(--mono)}
+.tk{color:var(--tk)}.tk2{color:var(--tk2)}.tt{color:var(--tt)}.tf{color:var(--tf)}.ts{color:var(--ts)}.tn{color:var(--tn)}.tc{color:var(--tc);font-style:italic}.tv{color:var(--tv)}.tconst{color:var(--tconst)}
 </style>
 </head>
 <body>
@@ -92,10 +99,43 @@ const dark=()=>root.dataset.theme?root.dataset.theme==='dark':matchMedia('(prefe
 const label=()=>btn.textContent=dark()?'Light':'Dark';
 btn.onclick=()=>{root.dataset.theme=dark()?'light':'dark';try{localStorage.setItem('theme',root.dataset.theme);}catch(e){}label();};label();})();
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const KW=new Set('if else for while do return break continue switch case default goto try catch throw'.split(' '));
+const KW2=new Set('const auto struct class operator template typename using namespace new delete static public private protected inline constexpr true false nullptr this decltype define virtual override'.split(' '));
+const TY=new Set('int long double float char bool void unsigned signed short size_t string vector stack queue deque map set unordered_map unordered_set multiset multimap priority_queue pair tuple bitset list array greater less function stringstream TreeNode ListNode Node ll'.split(' '));
+function hl(code){
+  const re=/(\/\/[^\n]*|\/\*[\s\S]*?\*\/)|(#include)([ \t]*)(<[^>\n]+>|"[^"\n]+")|("(?:\\.|[^"\\\n])*"|'(?:\\.|[^'\\\n])*')|(#\s*\w+)|(\b\d[\w.]*)|([A-Za-z_]\w*)|([\s\S])/g;
+  let out='',m;
+  while((m=re.exec(code))){
+    if(m[1]) out+=`<span class="tc">${esc(m[1])}</span>`;
+    else if(m[2]) out+=`<span class="tk2">${m[2]}</span>${m[3]}<span class="ts">${esc(m[4])}</span>`;
+    else if(m[5]) out+=`<span class="ts">${esc(m[5])}</span>`;
+    else if(m[6]) out+=`<span class="tk2">${esc(m[6])}</span>`;
+    else if(m[7]) out+=`<span class="tn">${esc(m[7])}</span>`;
+    else if(m[8]){const w=m[8];
+      let c='';
+      if(KW.has(w)) c='tk2';
+      else if(KW2.has(w)) c='tk';
+      else if(TY.has(w)||w=='std') c='tt';
+      else if(/^[A-Z][A-Z0-9_]{2,}$/.test(w)) c='tconst';
+      else if(code[re.lastIndex]=='(') c='tf';
+      else c='tv';
+      out+=`<span class="${c}">${w}</span>`;}
+    else out+=esc(m[9]);
+  }
+  return out;
+}
 const SEC=[
+{id:'setup',t:'0. শুরুর template',cards:[
+{h:'সব জায়গায় এই দুই লাইন',s:'bits/stdc++.h একটাতেই সব STL header (vector, string, algorithm, cctype, climits, numeric...) চলে আসে, তাই আলাদা #include লিখতে হয় না। LeetCode-এ এটা আগে থেকেই থাকে, শুধু contest বা নিজের মেশিনে লাগে। এই পেজের কোনো code-এ আলাদা include নেই, সব এই template ধরে নেওয়া।',c:`#include <bits/stdc++.h>
+using namespace std;
+
+int main(){
+    ios::sync_with_stdio(false);  cin.tie(nullptr);
+    // code
+    return 0;
+}`}]},
 {id:'stack',t:'1. stack',cards:[
-{h:'Common methods',s:'LIFO. Top element-ই শুধু access করা যায়। সব O(1)। pop() কিছু return করে না, তাই আগে top() নাও।',c:`#include <stack>
-stack<int> st;
+{h:'Common methods',s:'LIFO. Top element-ই শুধু access করা যায়। সব O(1)। pop() কিছু return করে না, তাই আগে top() নাও।',c:`stack<int> st;
 st.push(5);          // top-এ বসায়
 st.emplace(7);       // in-place push
 int x = st.top();    // top দেখো (pop করে না)
@@ -107,8 +147,7 @@ st.size();
 while(!st.empty()){ int t = st.top(); st.pop(); }
 // valid parentheses / monotonic stack / DFS iterative-এ লাগে`}]},
 {id:'queue',t:'2. queue',cards:[
-{h:'Common methods',s:'FIFO। BFS, level order, sliding window-তে সবচেয়ে বেশি। সব O(1)।',c:`#include <queue>
-queue<int> q;
+{h:'Common methods',s:'FIFO। BFS, level order, sliding window-তে সবচেয়ে বেশি। সব O(1)।',c:`queue<int> q;
 q.push(1);           // back-এ ঢোকে
 q.emplace(2);
 int f = q.front();   // সামনের element
@@ -127,8 +166,7 @@ while(!q.empty()){
     }
 }`}]},
 {id:'deque',t:'3. deque',cards:[
-{h:'Common methods',s:'দুই মাথা থেকেই push/pop O(1) + index access O(1)। Sliding window maximum, monotonic deque, 0-1 BFS-এ লাগে।',c:`#include <deque>
-deque<int> dq;
+{h:'Common methods',s:'দুই মাথা থেকেই push/pop O(1) + index access O(1)। Sliding window maximum, monotonic deque, 0-1 BFS-এ লাগে।',c:`deque<int> dq;
 dq.push_back(1);  dq.push_front(0);
 dq.pop_back();    dq.pop_front();
 dq.front();       dq.back();
@@ -145,9 +183,7 @@ for(int i=0;i<n;i++){
     if(i >= k-1) res.push_back(nums[d.front()]);
 }`}]},
 {id:'string',t:'4. string',cards:[
-{h:'reverse, sort, front/back remove',s:'string-ও vector-এর মতো। reverse/sort <algorithm> থেকে আসে।',c:`#include <string>
-#include <algorithm>
-string s = "hello";
+{h:'reverse, sort, front/back remove',s:'string-ও vector-এর মতো। ',c:`string s = "hello";
 
 // reverse
 reverse(s.begin(), s.end());          // "olleh"
@@ -216,8 +252,7 @@ s.find_first_not_of(" ");        // প্রথম non-space (trim-এ কা�
 s.find_last_of("aeiou");
 // s.starts_with("he"), s.ends_with("ld")  -> C++20
 // time O(n*m) worst, সাধারণত দ্রুত`},
-{h:'char function: tolower, toupper, isdigit, isalpha, isalnum',s:'সব <cctype>-এ আছে। argument int/char নেয়। is... function গুলো true/false (আসলে non-zero/0 int) দেয়। tolower/toupper নতুন char return করে, original বদলায় না। string পুরো বদলাতে transform লাগে।',c:`#include <cctype>
-char c = 'a';
+{h:'char function: tolower, toupper, isdigit, isalpha, isalnum',s:'argument int/char নেয়। is... function গুলো true/false (আসলে non-zero/0 int) দেয়। tolower/toupper নতুন char return করে, original বদলায় না। string পুরো বদলাতে transform লাগে।',c:`char c = 'a';
 isalpha(c);     // letter (a-z, A-Z)
 isdigit(c);     // '0'-'9'
 isalnum(c);     // letter বা digit   (palindrome valid check)
@@ -257,11 +292,9 @@ to_string(3.5);     // "3.500000"
 
 // দুই string যোগ হিসাবে সংখ্যা: string r = to_string(a) + to_string(b);
 // stringstream দিয়ে convert
-#include <sstream>
 stringstream ss(s); int x; ss >> x;
 
 // binary string বানানো
-#include <bitset>
 bitset<8>(5).to_string();   // "00000101"`},
 {h:'আরও common string operation',s:'',c:`// compare / equality
 s == t;  s < t;  s.compare(t);       // lexicographic
@@ -307,9 +340,7 @@ string r2(s.rbegin(), s.rend());  bool pal = (s == r2);
 stringstream ss2(s); string tok;
 while(getline(ss2, tok, ',')) { /* tok */ }`}]},
 {id:'vector',t:'5. vector sorting & custom comparator',cards:[
-{h:'Basic sort',s:'sort() O(n log n)। Default ascending।',c:`#include <vector>
-#include <algorithm>
-vector<int> v = {5,2,9,1};
+{h:'Basic sort',s:'sort() O(n log n)। Default ascending।',c:`vector<int> v = {5,2,9,1};
 sort(v.begin(), v.end());                     // ascending
 sort(v.begin(), v.end(), greater<int>());     // descending
 sort(v.rbegin(), v.rend());                   // descending (reverse iterator)
@@ -350,7 +381,7 @@ v.insert(v.begin()+i, x);  v.erase(v.begin()+i);  v.erase(v.begin()+l, v.begin()
 v.resize(n, 0);  v.assign(n, 0);   vector<int> v(n, 0);
 vector<vector<int>> g(n, vector<int>(m, 0));     // 2D
 *max_element(v.begin(), v.end());  *min_element(v.begin(), v.end());
-accumulate(v.begin(), v.end(), 0);               // sum (#include <numeric>)
+accumulate(v.begin(), v.end(), 0);               // sum
 lower_bound(v.begin(), v.end(), x);   // প্রথম element >= x  (sorted)
 upper_bound(v.begin(), v.end(), x);   // প্রথম element > x
 binary_search(v.begin(), v.end(), x);
@@ -359,8 +390,7 @@ v.erase(unique(v.begin(), v.end()), v.end());
 count(v.begin(), v.end(), x);  find(v.begin(), v.end(), x);
 next_permutation(v.begin(), v.end());`}]},
 {id:'pq',t:'6. priority_queue (heap)',cards:[
-{h:'Max heap (default) ও Min heap',s:'Default max heap: top() সবচেয়ে বড়। Min heap-এর জন্য greater<> দাও। push/pop O(log n), top O(1)।',c:`#include <queue>
-priority_queue<int> maxH;                                  // max heap
+{h:'Max heap (default) ও Min heap',s:'Default max heap: top() সবচেয়ে বড়। Min heap-এর জন্য greater<> দাও। push/pop O(log n), top O(1)।',c:`priority_queue<int> maxH;                                  // max heap
 priority_queue<int, vector<int>, greater<int>> minH;       // min heap
 
 maxH.push(5); maxH.push(9);
@@ -447,9 +477,7 @@ int kth = h.top();
 // Task scheduler / Reorganize string -> max heap of {count, char}
 // Median of stream -> maxHeap (নিচের অর্ধেক) + minHeap (উপরের অর্ধেক)`}]}
 ,{id:'map',t:'7. map, unordered_map, set',cards:[
-{h:'unordered_map / map',s:'unordered_map average O(1) (hash), map sorted key সহ O(log n)। Frequency count, two sum, group anagrams-এ সবচেয়ে বেশি লাগে।',c:`#include <unordered_map>
-#include <map>
-unordered_map<int,int> m;           // key -> value
+{h:'unordered_map / map',s:'unordered_map average O(1) (hash), map sorted key সহ O(log n)। Frequency count, two sum, group anagrams-এ সবচেয়ে বেশি লাগে।',c:`unordered_map<int,int> m;           // key -> value
 m[5]++;                             // না থাকলে 0 থেকে শুরু (frequency)
 m[3] = 10;
 m.count(5);                         // 0 বা 1  (আছে কিনা)
@@ -473,9 +501,7 @@ for(int i=0;i<n;i++){
     seen[a[i]] = i;
 }
 // group anagrams: unordered_map<string, vector<string>> (key = sorted string)`},
-{h:'set / unordered_set / multiset',s:'set: unique + sorted O(log n)। unordered_set: unique, O(1) average। multiset: duplicate allowed + sorted।',c:`#include <set>
-#include <unordered_set>
-set<int> st;
+{h:'set / unordered_set / multiset',s:'set: unique + sorted O(log n)। unordered_set: unique, O(1) average। multiset: duplicate allowed + sorted।',c:`set<int> st;
 st.insert(3);  st.erase(3);  st.count(3);  st.find(3) != st.end();
 *st.begin();            // সবচেয়ে ছোট
 *st.rbegin();           // সবচেয়ে বড়
@@ -504,13 +530,11 @@ get<0>(t);   get<1>(t);
 auto [x, y, z] = t;
 tie(x, y, z) = t;                               // unpack
 swap(a, b);                                     // swap
-INT_MAX; INT_MIN; LLONG_MAX;                    // <climits>
+INT_MAX; INT_MIN; LLONG_MAX;                    // INT_MAX ইত্যাদি
 min(a, b); max(a, b); abs(x);
 min({a, b, c});                                 // একাধিক`}]},
-{id:'algo',t:'9. <algorithm> ও <numeric> common function',cards:[
-{h:'প্রতিদিনের common function',s:'',c:`#include <algorithm>
-#include <numeric>
-sort(v.begin(), v.end());           reverse(v.begin(), v.end());
+{id:'algo',t:'9. algorithm ও numeric common function',cards:[
+{h:'প্রতিদিনের common function',s:'',c:`sort(v.begin(), v.end());           reverse(v.begin(), v.end());
 *max_element(v.begin(), v.end());   *min_element(v.begin(), v.end());
 accumulate(v.begin(), v.end(), 0);  // sum (long long হলে 0LL)
 iota(v.begin(), v.end(), 0);        // 0,1,2,... দিয়ে fill
@@ -528,7 +552,7 @@ is_sorted(v.begin(), v.end());
 partial_sum(v.begin(), v.end(), pre.begin());   // prefix sum
 nth_element(v.begin(), v.begin()+k, v.end());   // k-th element O(n)
 __builtin_popcount(x);              // set bit count
-// gcd(a, b), lcm(a, b)  (C++17 <numeric>)
+// gcd(a, b), lcm(a, b)  (C++17)
 // pow(a, b) double return করে, integer power নিজে loop/fast exponent
 // sqrt(x); ceil(x); floor(x);
 // ceil of int division: (a + b - 1) / b
@@ -544,7 +568,7 @@ vector<vector<bool>> vis(n, vector<bool>(m, false));
 ];
 let total=0;
 document.getElementById('toc').innerHTML=SEC.map(s=>`<a class="chip" href="#${s.id}">${esc(s.t)}</a>`).join('');
-document.getElementById('app').innerHTML=SEC.map(s=>{total+=s.cards.length;return `<section class="cat" id="${s.id}"><h2>${esc(s.t)}</h2><div class="cards">`+s.cards.map(c=>`<article class="card"><h3>${esc(c.h)}</h3>${c.s?`<p class="tip">${esc(c.s)}</p>`:''}<pre><code>${esc(c.c)}</code></pre></article>`).join('')+'</div></section>';}).join('');
+document.getElementById('app').innerHTML=SEC.map(s=>{total+=s.cards.length;return `<section class="cat" id="${s.id}"><h2>${esc(s.t)}</h2><div class="cards">`+s.cards.map(c=>`<article class="card"><h3>${esc(c.h)}</h3>${c.s?`<p class="tip">${esc(c.s)}</p>`:''}<pre><code>${hl(c.c)}</code></pre></article>`).join('')+'</div></section>';}).join('');
 document.getElementById('stats').innerHTML=[[SEC.length,'topics'],[total,'cards']].map(([v,l])=>`<div class="stat"><b>${v}</b>${l}</div>`).join('');
 </script>
 </body>
