@@ -98,7 +98,7 @@ vector<int> a(n, 0);                 // n টা 0
 vector<int> b = {1, 2, 3};
 vector<vector<int>> g(n, vector<int>(m, 0));    // 2D
 
-v.push_back(x);   v.emplace_back(x);
+v.push_back(x);
 v.pop_back();
 v.size();  v.empty();
 v.front();  v.back();  v[i];
@@ -253,7 +253,6 @@ map<int,int> mp;              // sorted key, lower_bound
 m["a"] = 5;                  // নেই হলে বসে, আছে হলে overwrite
 m["b"]++;                    // frequency count
 m.insert({"c", 1});          // আছে হলে কিছু করে না
-m.emplace("d", 4);
 
 // আছে কিনা
 if(m.count("a")) { }         // 0 বা 1
@@ -300,7 +299,6 @@ set<int> u(v.begin(), v.end());       // vector থেকে unique + sorted
 
 st.insert(10);
 st.insert(10).second;                 // false: আগেই ছিল
-st.emplace(20);
 
 if(st.count(10)) { }                  // আছে কিনা
 auto it = st.find(10);
@@ -330,14 +328,14 @@ ms.erase(5);                 // সব 5 মোছে`}]},
 
 {id:'stack',t:'5. stack, queue, deque',cards:[
 {h:'stack (LIFO)',f:'hot',s:'pop() কিছু return করে না, আগে top() নাও।',c:`stack<int> st;
-st.push(x);   st.emplace(x);
+st.push(x);
 st.top();                       // দেখো
 st.pop();                       // ফেলো (return করে না)
 st.empty();  st.size();
 
 while(!st.empty()){ int t = st.top(); st.pop(); }`},
 {h:'queue (FIFO)',f:'hot',c:`queue<int> q;
-q.push(x);   q.emplace(x);
+q.push(x);
 q.front();   q.back();
 q.pop();                        // front ফেলে, return করে না
 q.empty();  q.size();
@@ -371,7 +369,7 @@ for(int i = 0; i < n; i++){
 {h:'max heap, min heap',f:'hot',s:'default max heap (top = সবচেয়ে বড়)। min heap-এর জন্য greater<> দাও। push/pop O(log n), top O(1)। iterate করা যায় না।',c:`priority_queue<int> maxH;                                  // max heap
 priority_queue<int, vector<int>, greater<int>> minH;       // min heap
 
-maxH.push(5);   maxH.emplace(9);
+maxH.push(5);   maxH.push(9);
 maxH.top();     maxH.pop();
 maxH.size();    maxH.empty();
 
@@ -459,7 +457,6 @@ vector<pair<int,int>> v1;
 vector<pair<int,int>> v2 = {{1,2}, {3,4}};
 vector<pair<int,int>> v3(5, {0, 0});
 v1.push_back({1, 2});
-v1.emplace_back(1, 2);
 
 queue<pair<int,int>> q;  q.push({0, 0});  auto [r, c] = q.front();   // grid BFS
 map<int,int> mp;  for(auto& p : mp) { p.first; p.second; }          // map-এর element-ও pair`},
