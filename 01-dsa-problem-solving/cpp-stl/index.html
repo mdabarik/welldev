@@ -180,7 +180,132 @@ stoi("123"); stoll("123"); stod("1.5");   // string -> number
 isalpha(c); isdigit(c); isalnum(c); islower(c); isupper(c);
 tolower(c); toupper(c);
 // split by space
-stringstream ss(s); string w; while(ss >> w){ /* word */ }`}]},
+stringstream ss(s); string w; while(ss >> w){ /* word */ }`},
+{h:'substr() কীভাবে কাজ করে',s:'s.substr(pos, len): pos index থেকে শুরু করে len টা char-এর নতুন string return করে। len না দিলে শেষ পর্যন্ত। pos > size হলে exception (out_of_range), pos == size হলে empty string। Original string বদলায় না। দুই argument হলো (শুরু, দৈর্ঘ্য), (শুরু, শেষ) নয়!',c:`string s = "abcdefgh";
+s.substr(2);        // "cdefgh"   index 2 থেকে শেষ
+s.substr(2, 3);     // "cde"      index 2 থেকে 3 টা char
+s.substr(0, 4);     // "abcd"     প্রথম 4 char (prefix)
+s.substr(s.size()-3);   // "fgh"  শেষ 3 char (suffix)
+s.substr(5, 100);   // "fgh"      len বেশি হলে শেষ পর্যন্ত নেয়, error নয়
+s.substr(8);        // ""         pos == size ঠিক আছে
+// s.substr(9);     // out_of_range exception!
+
+// [l, r] inclusive substring: len = r - l + 1
+s.substr(l, r - l + 1);
+// time O(len), প্রতি call-এ নতুন string copy হয়
+// palindrome check / sliding window: substr বারবার না ডেকে index দিয়ে কাজ করো`},
+{h:'find() কীভাবে কাজ করে',s:'s.find(x) প্রথম যেখানে x (char বা string) পাওয়া যায় সেই index return করে। না পেলে string::npos (বিশাল unsigned সংখ্যা, -1 নয় তাই int-এ নেওয়ার সময় সাবধান)। দ্বিতীয় argument দিলে সেই index থেকে খোঁজা শুরু। rfind() পিছন থেকে খোঁজে।',c:`string s = "hello world";
+s.find('o');            // 4
+s.find("wor");          // 6
+s.find('o', 5);         // 7   index 5 থেকে খুঁজছে
+s.find("xyz");          // string::npos  (পাওয়া যায়নি)
+s.rfind('o');           // 7   শেষ occurrence
+
+// পাওয়া গেছে কিনা check
+if(s.find("lo") != string::npos) { /* আছে */ }
+size_t pos = s.find("lo");
+if(pos != string::npos) cout << pos;
+
+// সব occurrence বের করা
+size_t p = s.find('o');
+while(p != string::npos){ cout << p << " "; p = s.find('o', p + 1); }
+
+// অন্য helper
+s.find_first_of("aeiou");        // যেকোনো একটা vowel-এর প্রথম index
+s.find_first_not_of(" ");        // প্রথম non-space (trim-এ কাজে লাগে)
+s.find_last_of("aeiou");
+// s.starts_with("he"), s.ends_with("ld")  -> C++20
+// time O(n*m) worst, সাধারণত দ্রুত`},
+{h:'char function: tolower, toupper, isdigit, isalpha, isalnum',s:'সব <cctype>-এ আছে। argument int/char নেয়। is... function গুলো true/false (আসলে non-zero/0 int) দেয়। tolower/toupper নতুন char return করে, original বদলায় না। string পুরো বদলাতে transform লাগে।',c:`#include <cctype>
+char c = 'a';
+isalpha(c);     // letter (a-z, A-Z)
+isdigit(c);     // '0'-'9'
+isalnum(c);     // letter বা digit   (palindrome valid check)
+islower(c);     // 'a'-'z'
+isupper(c);     // 'A'-'Z'
+isspace(c);     // space, tab, newline
+ispunct(c);     // punctuation
+tolower('A');   // 'a'
+toupper('a');   // 'A'
+
+// পুরো string lowercase / uppercase
+transform(s.begin(), s.end(), s.begin(), ::tolower);
+transform(s.begin(), s.end(), s.begin(), ::toupper);
+for(char& ch : s) ch = tolower(ch);     // loop দিয়েও হয়
+
+// valid palindrome: শুধু alnum, case ignore
+string t;
+for(char ch : s) if(isalnum(ch)) t += tolower(ch);
+
+// char <-> number
+int d = c - '0';                 // '7' -> 7
+char ch = '0' + 7;               // 7 -> '7'
+int idx = c - 'a';               // 'a'->0 ... 'z'->25 (freq array[26])
+char nx = 'a' + 3;               // 'd'
+// সতর্কতা: negative char-এ isalpha(unsigned char(c)) ব্যবহার করো`},
+{h:'string <-> number: stoi, stoll, to_string',s:'stoi("123") string থেকে int। শুরুতে space skip করে, সংখ্যা যেখানে শেষ সেখানে থামে ("12ab" -> 12)। সংখ্যা একদম না থাকলে invalid_argument, বেশি বড় হলে out_of_range exception। Atoi problem-এ নিজে parse করা হয়, কিন্তু সাধারণ কাজে stoi।',c:`stoi("123");        // 123        int
+stoi("-45");        // -45
+stoi("12ab");       // 12         সংখ্যা যতটুকু
+stoll("9999999999");// long long
+stoul("42");        // unsigned long
+stod("3.14");       // double
+stoi("101", nullptr, 2);   // 5   base 2 (binary) থেকে
+stoi("ff", nullptr, 16);   // 255 hex
+
+to_string(123);     // "123"
+to_string(3.5);     // "3.500000"
+
+// দুই string যোগ হিসাবে সংখ্যা: string r = to_string(a) + to_string(b);
+// stringstream দিয়ে convert
+#include <sstream>
+stringstream ss(s); int x; ss >> x;
+
+// binary string বানানো
+#include <bitset>
+bitset<8>(5).to_string();   // "00000101"`},
+{h:'আরও common string operation',s:'',c:`// compare / equality
+s == t;  s < t;  s.compare(t);       // lexicographic
+
+// replace
+s.replace(pos, len, "new");          // pos থেকে len char বদলে "new"
+// সব occurrence replace করতে find + replace loop
+
+// insert
+s.insert(pos, "abc");   s.insert(s.begin(), 'x');
+
+// repeat / fill
+string r(5, 'a');                    // "aaaaa"
+string z = string(3, '0') + s;       // leading zero
+
+// char array (c-string)
+s.c_str();                           // const char*
+
+// count char
+count(s.begin(), s.end(), 'a');
+
+// freq array
+int f[26] = {0};
+for(char c : s) f[c - 'a']++;
+
+// min / max char
+*max_element(s.begin(), s.end());
+
+// getline (space সহ line input)
+getline(cin, s);
+
+// swap
+swap(s, t);   swap(s[i], s[j]);
+
+// rotate (left by k)
+rotate(s.begin(), s.begin() + k, s.end());
+
+// check palindrome
+string r2(s.rbegin(), s.rend());  bool pal = (s == r2);
+// is_sorted, is_permutation(a.begin(), a.end(), b.begin()) -> anagram check
+
+// split by delimiter
+stringstream ss2(s); string tok;
+while(getline(ss2, tok, ',')) { /* tok */ }`}]},
 {id:'vector',t:'5. vector sorting & custom comparator',cards:[
 {h:'Basic sort',s:'sort() O(n log n)। Default ascending।',c:`#include <vector>
 #include <algorithm>
@@ -321,6 +446,101 @@ int kth = h.top();
 // Merge K sorted lists -> min heap of {val, listIdx}
 // Task scheduler / Reorganize string -> max heap of {count, char}
 // Median of stream -> maxHeap (নিচের অর্ধেক) + minHeap (উপরের অর্ধেক)`}]}
+,{id:'map',t:'7. map, unordered_map, set',cards:[
+{h:'unordered_map / map',s:'unordered_map average O(1) (hash), map sorted key সহ O(log n)। Frequency count, two sum, group anagrams-এ সবচেয়ে বেশি লাগে।',c:`#include <unordered_map>
+#include <map>
+unordered_map<int,int> m;           // key -> value
+m[5]++;                             // না থাকলে 0 থেকে শুরু (frequency)
+m[3] = 10;
+m.count(5);                         // 0 বা 1  (আছে কিনা)
+m.find(5) != m.end();               // আছে কিনা
+m.erase(5);
+m.size(); m.empty(); m.clear();
+for(auto& [k, v] : m) { /* k, v */ }          // structured binding (C++17)
+for(auto& p : m) { p.first; p.second; }
+m.at(5);                            // না থাকলে exception, [] insert করে ফেলে
+m.insert({1, 2});  m.emplace(1, 2);
+
+// map (sorted): begin() = সবচেয়ে ছোট key, rbegin() = সবচেয়ে বড়
+map<int,int> mp;
+mp.begin()->first;   mp.rbegin()->first;
+mp.lower_bound(x);   mp.upper_bound(x);
+
+// two sum pattern
+unordered_map<int,int> seen;
+for(int i=0;i<n;i++){
+    if(seen.count(target - a[i])) return {seen[target - a[i]], i};
+    seen[a[i]] = i;
+}
+// group anagrams: unordered_map<string, vector<string>> (key = sorted string)`},
+{h:'set / unordered_set / multiset',s:'set: unique + sorted O(log n)। unordered_set: unique, O(1) average। multiset: duplicate allowed + sorted।',c:`#include <set>
+#include <unordered_set>
+set<int> st;
+st.insert(3);  st.erase(3);  st.count(3);  st.find(3) != st.end();
+*st.begin();            // সবচেয়ে ছোট
+*st.rbegin();           // সবচেয়ে বড়
+st.lower_bound(x);      // প্রথম element >= x
+st.upper_bound(x);      // প্রথম element > x
+st.size(); st.empty();
+for(int x : st) { /* sorted order */ }
+
+unordered_set<int> us(nums.begin(), nums.end());   // duplicate check / O(1) lookup
+// contains duplicate: us.size() != nums.size()
+// longest consecutive sequence: us.count(x-1) না থাকলে x একটা sequence-এর শুরু
+
+multiset<int> ms;
+ms.insert(3); ms.insert(3);
+ms.erase(ms.find(3));   // একটা মাত্র মোছে (ms.erase(3) সব 3 মুছে ফেলে)
+ms.count(3);`}]},
+{id:'pairtuple',t:'8. pair, tuple, auto, swap',cards:[
+{h:'pair / tuple / structured binding',s:'',c:`pair<int,int> p = {1, 2};   p.first; p.second;
+make_pair(1, 2);
+vector<pair<int,int>> v;  v.push_back({1,2});  v.emplace_back(1,2);
+sort(v.begin(), v.end());                       // first, তারপর second দিয়ে sort
+auto [a, b] = p;                                // C++17
+
+tuple<int,int,int> t = {1,2,3};
+get<0>(t);   get<1>(t);
+auto [x, y, z] = t;
+tie(x, y, z) = t;                               // unpack
+swap(a, b);                                     // swap
+INT_MAX; INT_MIN; LLONG_MAX;                    // <climits>
+min(a, b); max(a, b); abs(x);
+min({a, b, c});                                 // একাধিক`}]},
+{id:'algo',t:'9. <algorithm> ও <numeric> common function',cards:[
+{h:'প্রতিদিনের common function',s:'',c:`#include <algorithm>
+#include <numeric>
+sort(v.begin(), v.end());           reverse(v.begin(), v.end());
+*max_element(v.begin(), v.end());   *min_element(v.begin(), v.end());
+accumulate(v.begin(), v.end(), 0);  // sum (long long হলে 0LL)
+iota(v.begin(), v.end(), 0);        // 0,1,2,... দিয়ে fill
+fill(v.begin(), v.end(), -1);       memset(arr, -1, sizeof arr);   // memset শুধু 0/-1
+count(v.begin(), v.end(), x);       count_if(v.begin(), v.end(), pred);
+find(v.begin(), v.end(), x);        // iterator, না পেলে end()
+binary_search(v.begin(), v.end(), x);
+lower_bound(...); upper_bound(...); // sorted range
+unique(v.begin(), v.end());         // consecutive duplicate সরায়
+next_permutation(v.begin(), v.end());   prev_permutation(...);
+rotate(v.begin(), v.begin()+k, v.end());
+swap(v[i], v[j]);
+all_of(...); any_of(...); none_of(...);
+is_sorted(v.begin(), v.end());
+partial_sum(v.begin(), v.end(), pre.begin());   // prefix sum
+nth_element(v.begin(), v.begin()+k, v.end());   // k-th element O(n)
+__builtin_popcount(x);              // set bit count
+// gcd(a, b), lcm(a, b)  (C++17 <numeric>)
+// pow(a, b) double return করে, integer power নিজে loop/fast exponent
+// sqrt(x); ceil(x); floor(x);
+// ceil of int division: (a + b - 1) / b
+// iterator index: it - v.begin()`},
+{h:'Fast IO ও common template',s:'',c:`ios::sync_with_stdio(false);  cin.tie(nullptr);   // fast input/output
+#define ll long long
+const int MOD = 1e9 + 7;
+const int INF = 1e9;   // INT_MAX-এ +1 করলে overflow, তাই 1e9
+// 2D direction (grid BFS/DFS)
+int dx[4] = {1,-1,0,0}, dy[4] = {0,0,1,-1};
+vector<vector<bool>> vis(n, vector<bool>(m, false));
+// vector<bool> আলাদা ধরনের, reference নেওয়া যায় না`}]}
 ];
 let total=0;
 document.getElementById('toc').innerHTML=SEC.map(s=>`<a class="chip" href="#${s.id}">${esc(s.t)}</a>`).join('');
