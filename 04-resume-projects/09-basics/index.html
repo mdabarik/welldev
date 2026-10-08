@@ -1,0 +1,581 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Architecture, Docker, Terraform &amp; MAUI - Interview Cheat Sheet</title>
+<meta name="description" content="Layered ও Clean Architecture, Docker, Terraform আর .NET MAUI কীভাবে কাজ করে - সহজ বাংলায় সংক্ষিপ্ত উত্তর আর ধাপে ধাপে D3 animation।">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<style>
+/* One card per interview question: short answer, 2-3 bullets, and a step-by-step D3 scene.
+   Scenes are plain data (see TOPICS at the bottom): each step adds / modifies / deletes nodes by id
+   and the tiny engine animates the difference. */
+:root{
+  --bg:#f5f7fc; --surface:#ffffff; --surface-2:#f1f4fa; --fg:#0f172a; --muted:#5b6478; --faint:#94a0b8; --line:#e4e8f1;
+  --accent:#6366f1;
+  --a:#4f46e5; --b:#db2777; --g:#059669; --o:#d97706; --r:#e11d48; --s:#0284c7;
+  --hero:linear-gradient(135deg,#4f46e5 0%,#7c3aed 45%,#db2777 100%);
+  --shadow:0 1px 2px rgba(15,23,42,.04),0 10px 30px -12px rgba(15,23,42,.14);
+  --sans:"Inter","Hind Siliguri",system-ui,sans-serif; --bn:"Hind Siliguri","Inter",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0b0f1a; --surface:#121827; --surface-2:#182033; --fg:#e7ecf6; --muted:#9aa6bf; --faint:#66728c; --line:#232c42;
+  --accent:#818cf8; --a:#818cf8; --b:#f472b6; --g:#34d399; --o:#fbbf24; --r:#fb7185; --s:#38bdf8;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6);
+}}
+:root[data-theme="dark"]{
+  --bg:#0b0f1a; --surface:#121827; --surface-2:#182033; --fg:#e7ecf6; --muted:#9aa6bf; --faint:#66728c; --line:#232c42;
+  --accent:#818cf8; --a:#818cf8; --b:#f472b6; --g:#34d399; --o:#fbbf24; --r:#fb7185; --s:#38bdf8;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 var(--bn);-webkit-font-smoothing:antialiased}
+a{color:var(--accent)}
+button{font:inherit;color:inherit}
+code{font-family:var(--mono);font-size:.86em;font-weight:500;background:color-mix(in srgb,var(--accent) 10%,var(--surface));color:color-mix(in srgb,var(--accent) 72%,var(--fg));padding:.1em .4em;border-radius:6px}
+.wrap{max-width:1000px;margin:0 auto;padding:20px 18px 70px}
+
+.topnav{display:flex;align-items:center;gap:10px}
+.brand{display:flex;align-items:center;gap:10px;color:var(--fg);text-decoration:none;font:800 16px var(--sans);letter-spacing:-.02em}
+.logo{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:#fff;font:800 13px var(--mono);background:var(--hero)}
+.topnav .sp{flex:1}
+.pill{border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:6px 14px;font:600 13px var(--sans);cursor:pointer;text-decoration:none}
+.pill:hover{color:var(--fg)}
+
+.hero{margin-top:20px;border-radius:22px;padding:26px 30px;color:#fff;background:var(--hero)}
+.hero .eyebrow{font:600 12px var(--sans);letter-spacing:.1em;text-transform:uppercase;opacity:.85}
+.hero h1{margin:6px 0 8px;font:800 clamp(26px,4.2vw,38px)/1.15 var(--sans);letter-spacing:-.03em}
+.hero p{margin:0;max-width:680px;opacity:.94}
+.jump{display:flex;flex-wrap:wrap;gap:6px;margin-top:16px}
+.jump a{min-width:32px;padding:0 6px;height:32px;display:grid;place-items:center;border-radius:9px;text-decoration:none;font:700 13px var(--sans);color:#fff;background:rgba(255,255,255,.18)}
+.jump a:hover{background:rgba(255,255,255,.34)}
+
+.parts{position:sticky;top:0;z-index:5;margin:14px -18px 0;padding:10px 18px;display:flex;gap:8px;overflow-x:auto;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);scrollbar-width:none}
+.parts a{flex:none;text-decoration:none;font:600 13px var(--sans);color:var(--muted);border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 13px}
+.parts a:hover{color:var(--fg)}
+.parts a b{color:var(--accent);margin-right:4px}
+
+.part{margin-top:44px;scroll-margin-top:60px}
+.part>h2{margin:0;font:800 clamp(20px,2.6vw,25px)/1.25 var(--sans);letter-spacing:-.02em}
+.part>h2 span{color:var(--accent);margin-right:8px}
+
+.q{margin-top:16px;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:20px 22px;box-shadow:var(--shadow);scroll-margin-top:64px}
+.q h3{display:flex;gap:12px;align-items:flex-start;margin:0 0 10px;font:700 18px/1.4 var(--sans);letter-spacing:-.01em}
+.skip{display:inline-block;margin-left:8px;padding:1px 10px;border-radius:999px;font:600 12px var(--sans);font-style:normal;white-space:nowrap;color:var(--muted);background:var(--surface-2);border:1px dashed var(--faint);vertical-align:middle}
+.num{flex:none;min-width:34px;height:34px;padding:0 8px;border-radius:10px;display:grid;place-items:center;color:#fff;font:800 14px var(--sans);background:var(--hero)}
+.ans{margin:0 0 10px;padding:10px 14px;border-left:4px solid var(--accent);border-radius:0 10px 10px 0;background:color-mix(in srgb,var(--accent) 8%,var(--surface))}
+.q h3 .num.w{min-width:40px}
+.q ul{margin:0 0 12px;padding-left:20px;color:var(--muted)}
+.q li{margin:2px 0}
+.q li b,.ans b{color:var(--fg)}
+.extra{margin:0 0 12px;overflow-x:auto}
+.extra table{border-collapse:collapse;font:500 13px var(--mono)}
+.extra th,.extra td{border:1px solid var(--line);padding:3px 10px;text-align:center}
+.extra th{background:var(--surface-2)}
+.extra .cmp td,.extra .cmp th{text-align:left;vertical-align:top;font:500 13.5px/1.55 var(--bn);min-width:150px}
+.extra .cmp td:first-child{font-weight:700;white-space:nowrap;min-width:0}
+
+.viz{border:1px solid var(--line);border-radius:14px;background:var(--surface-2);overflow:hidden}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;padding:10px 12px 0}
+.tabs button{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:3px 12px;font:600 12.5px var(--sans);color:var(--muted);cursor:pointer}
+.tabs button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.stage{overflow-x:auto;padding-top:8px}
+.stage svg{display:block;width:100%;min-width:680px;height:auto;cursor:pointer;user-select:none}
+.cap{padding:10px 16px;min-height:3.4em;border-top:1px dashed var(--line);font-size:15px}
+.ctl{display:flex;align-items:center;gap:8px;padding:0 12px 12px}
+.b{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:5px 14px;font:600 13px var(--sans);cursor:pointer}
+.b:hover:not(:disabled){border-color:var(--accent)}
+.b:disabled{opacity:.4;cursor:default}
+.b.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+.cnt{margin-left:auto;font:500 12px var(--mono);color:var(--faint)}
+
+/* svg scene */
+svg text,svg tspan{white-space:pre}
+svg text{font-family:var(--sans);font-size:13px;fill:var(--fg);dominant-baseline:central}
+.c-n{--cc:var(--muted)} .c-a{--cc:var(--a)} .c-b{--cc:var(--b)} .c-g{--cc:var(--g)}
+.c-o{--cc:var(--o)} .c-r{--cc:var(--r)} .c-s{--cc:var(--s)} .c-f{--cc:var(--fg)}
+.box rect,.circ circle{fill:color-mix(in srgb,var(--cc) 14%,var(--surface));stroke:var(--cc);stroke-width:1.6;transition:fill .45s,stroke .45s}
+.dash rect,.dash circle{stroke-dasharray:6 4;fill:color-mix(in srgb,var(--cc) 4%,transparent)}
+.hl rect,.hl circle{stroke-width:3.4;filter:drop-shadow(0 0 7px color-mix(in srgb,var(--cc) 65%,transparent))}
+.text text{fill:var(--cc);transition:fill .45s}
+.text.b text,.text.lg text{font-weight:700}
+.text.lg text{font-size:15px}
+.sm text{font-size:11.5px}
+.m text{font-family:var(--mono);font-size:12px}
+.path path{fill:none;stroke:var(--cc);stroke-width:3.4;stroke-linecap:round}
+.arrow line{stroke:var(--cc);stroke-width:2.2;transition:stroke .4s}
+.arrow.dash line{stroke-dasharray:6 4}
+.arrow.hl line{stroke-width:3.4}
+footer{margin-top:50px;text-align:center;color:var(--faint);font:500 13px var(--sans)}
+/* bn-type: Bengali glyphs/digits need normal tracking */
+h1,h2,h3,h4,h5{letter-spacing:0!important}
+.hero h1,.page-head h1,.p-hero h1,.prose h1,header.top h1{line-height:1.32!important}
+.extra pre{margin:0;padding:12px 14px;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;font:500 12.5px/1.65 var(--mono);overflow-x:auto;color:var(--fg);white-space:pre}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs id="defs"></defs></svg>
+<div class="wrap">
+  <nav class="topnav">
+    <a class="brand" href="../../index.html"><span class="logo">W</span>WellDev</a>
+    <span class="sp"></span>
+    <button class="pill" id="theme" type="button">Theme</button>
+  </nav>
+
+  <header class="hero">
+    <div class="eyebrow">Architecture · DevOps · Mobile · Interview</div>
+    <h1>Architecture, Docker, Terraform &amp; MAUI - সোজা উত্তর</h1>
+    <p>প্রতিটি প্রশ্নে এক লাইনের উত্তর আর একটা animation। scene-এ ক্লিক করো বা <b>Next</b> চাপো - ধাপে ধাপে দেখো।</p>
+    <div class="jump" id="jump"></div>
+  </header>
+  <nav class="parts" id="parts"></nav>
+  <main id="app"></main>
+  <footer>Trainee Software Engineer · Architecture, DevOps &amp; MAUI basics</footer>
+</div>
+
+<script>
+/* ---------- theme ---------- */
+(function(){
+  const root=document.documentElement,btn=document.getElementById('theme');
+  try{const t=localStorage.getItem('theme');if(t)root.dataset.theme=t;}catch(e){}
+  const dark=()=>root.dataset.theme?root.dataset.theme==='dark':matchMedia('(prefers-color-scheme:dark)').matches;
+  const label=()=>btn.textContent=dark()?'Light':'Dark';
+  btn.onclick=()=>{root.dataset.theme=dark()?'light':'dark';try{localStorage.setItem('theme',root.dataset.theme);}catch(e){}label();};
+  label();
+})();
+
+/* ---------- scene engine ---------- */
+const COLORS=['n','a','b','g','o','r','s','f'];
+document.getElementById('defs').innerHTML=COLORS.map(c=>
+  `<marker id="ah-${c}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" style="fill:var(--${c==='n'?'muted':c==='f'?'fg':c})"/></marker>`).join('');
+
+const B=(id,x,y,w,h,label,c='n',o={})=>({id,k:'box',x,y,w,h,label,c,...o});
+const T=(id,x,y,label,o={})=>({id,k:'text',x,y,label,c:'n',...o});
+const A=(id,x1,y1,x2,y2,c='n',o={})=>({id,k:'arrow',x:0,y:0,x1,y1,x2,y2,c,...o});
+const C=(id,x,y,r,label,c='n',o={})=>({id,k:'circ',x,y,r,label,c,...o});
+const S=(cap,o={})=>({cap,...o});
+const P=(id,d,c='n',o={})=>({id,k:'path',x:0,y:0,d,c,...o});
+
+function stateAt(steps,i){
+  const m=new Map();
+  for(let k=0;k<=i;k++){
+    const s=steps[k];
+    (s.del||[]).forEach(id=>m.delete(id));
+    (s.add||[]).forEach(n=>m.set(n.id,{...n}));
+    Object.entries(s.mod||{}).forEach(([id,p])=>{if(m.has(id))Object.assign(m.get(id),p);});
+  }
+  return [...m.values()];
+}
+
+function setText(g,cls,str,x,y,anchor,lh=15.5){
+  let tx=g.select('text.'+cls);
+  if(tx.empty())tx=g.append('text').attr('class',cls);
+  const ls=String(str??'').split('\n');
+  tx.attr('text-anchor',anchor);
+  tx.selectAll('tspan').data(ls).join('tspan').attr('x',x).attr('y',(d,i)=>y-(ls.length-1)*lh/2+i*lh).text(d=>d);
+}
+
+function upd(g,d,t){
+  g.attr('class',`n ${d.k} c-${d.c||'n'}${d.dash?' dash':''}${d.hl?' hl':''}${d.s?' '+d.s:''}${d.m?' m':''}`);
+  if(d.k==='box'){
+    let r=g.select('rect');
+    if(r.empty())r=g.insert('rect',':first-child').attr('rx',9).attr('width',d.w).attr('height',d.h);
+    r.transition(t).attr('width',d.w).attr('height',d.h);
+    setText(g,'lb',d.label,d.w/2,d.h/2,'middle');
+  }else if(d.k==='circ'){
+    let r=g.select('circle');
+    if(r.empty())r=g.insert('circle',':first-child').attr('r',d.r);
+    r.transition(t).attr('r',d.r);
+    setText(g,'lb',d.label,0,0,'middle');
+  }else if(d.k==='text'){
+    setText(g,'lb',d.label,0,0,d.a||'start');
+  }else if(d.k==='path'){
+    let p=g.select('path');
+    if(p.empty()){p=g.append('path').attr('d',d.d);const L=p.node().getTotalLength();p.attr('stroke-dasharray',L).attr('stroke-dashoffset',L).transition(t).attr('stroke-dashoffset',0);}
+  }else if(d.k==='arrow'){
+    let l=g.select('line');
+    if(l.empty())l=g.append('line').attr('x1',d.x1).attr('y1',d.y1).attr('x2',d.x2).attr('y2',d.y2);
+    l.attr('marker-end',`url(#ah-${d.c||'n'})`).transition(t).attr('x1',d.x1).attr('y1',d.y1).attr('x2',d.x2).attr('y2',d.y2);
+  }
+}
+
+function draw(svg,nodes,dur){
+  const t=d3.transition().duration(dur).ease(d3.easeCubicInOut);
+  svg.select('.layer').selectAll('g.n').data(nodes,d=>d.id).join(
+    en=>en.append('g').attr('opacity',0).attr('transform',d=>`translate(${d.x},${d.y})`),
+    up=>up,
+    ex=>ex.transition(t).attr('opacity',0).remove()
+  ).each(function(d){upd(d3.select(this),d,t);})
+   .transition(t).attr('transform',d=>`translate(${d.x},${d.y})`).attr('opacity',d=>d.o??1);
+}
+
+function mount(host,topic){
+  const tabs=topic.tabs||[{n:'',steps:topic.steps}];
+  host.innerHTML='<div class="tabs"></div><div class="stage"><svg viewBox="0 0 760 240" role="img"><g class="layer"></g></svg></div><div class="cap"></div><div class="ctl"><button class="b prev" type="button">◀</button><button class="b pri next" type="button">Next ▶</button><span class="cnt"></span></div>';
+  const svg=d3.select(host).select('svg'),cap=host.querySelector('.cap'),cnt=host.querySelector('.cnt');
+  const prev=host.querySelector('.prev'),next=host.querySelector('.next'),tabBox=host.querySelector('.tabs');
+  let ti=0,si=0,steps;
+  function show(dur){
+    draw(svg,stateAt(steps,si),dur);
+    cap.innerHTML=steps[si].cap;
+    cnt.textContent=`${si+1} / ${steps.length}`;
+    prev.disabled=si===0;
+    next.textContent=si===steps.length-1?'↻ আবার':'Next ▶';
+  }
+  function load(i){
+    ti=i;si=0;
+    const tb=tabs[ti];steps=typeof tb.steps==='function'?tb.steps():tb.steps;
+    tabBox.querySelectorAll('button').forEach((b,k)=>b.classList.toggle('on',k===ti));
+    show(0);
+  }
+  if(tabs.length>1){
+    tabs.forEach((tb,i)=>{const b=document.createElement('button');b.type='button';b.textContent=tb.n;b.onclick=()=>load(i);tabBox.appendChild(b);});
+  }else tabBox.remove();
+  const go=()=>{si=si===steps.length-1?0:si+1;show(600);};
+  next.onclick=go;svg.on('click',go);
+  prev.onclick=()=>{if(si>0){si--;show(600);}};
+  load(0);
+}
+
+/* ---------- content ---------- */
+const PARTS=[['A','Layered ও Clean Architecture'],['B','Docker'],['C','Terraform'],['D','.NET MAUI']];
+
+const TOPICS=[
+/* ================= A. Architecture ================= */
+{p:0,n:'1',q:'Layered Architecture কী?',
+ ans:'<b>Layered Architecture</b> = app-কে কয়েকটা <b>স্তরে (layer)</b> ভাগ করা। সবচেয়ে চেনা ভাগ: <b>Presentation</b> (UI/API) → <b>Business</b> (নিয়ম) → <b>Data</b> (database)।',
+ pts:['<b>নিয়ম:</b> উপরের layer নিচের layer-কে ডাকে। নিচেরটা উপরেরটাকে চেনে না।','<b>কেন?</b> প্রতিটা layer-এর একটাই কাজ, তাই বদলানো ও test করা সহজ। UI বদলালে business নিয়ম ছোঁয়া লাগে না।','.NET-এ চেনা রূপ: <code>Controllers</code> → <code>Services</code> → <code>Repositories</code> (EF Core)।'],
+ tabs:[
+  {n:'1. Request-এর যাত্রা',steps:[
+   S('User অর্ডার দিতে চাইল। Request পাঠানো হলো।',{add:[B('u',10,85,130,60,'User','n')]}),
+   S('প্রথমে <b>Presentation layer</b> (Controller)। সে শুধু request ধরে, নিয়ম জানে না।',{add:[B('p',200,85,140,60,'Presentation\n(Controller)','b'),A('a1',142,115,198,115,'n')]}),
+   S('তারপর <b>Business layer</b>। এখানে নিয়ম: stock আছে কিনা, দাম কত, discount কত।',{add:[B('b',400,85,140,60,'Business\n(Service)','a'),A('a2',342,115,398,115,'n')]}),
+   S('শেষে <b>Data layer</b>। শুধু database-এ পড়া/লেখা।',{add:[B('d',600,85,140,60,'Data\n(Repository)','g'),A('a3',542,115,598,115,'n')]}),
+   S('ফল উল্টো পথে ফেরত আসে: Data → Business → Presentation → User।',{add:[A('r1',598,135,542,135,'g',{dash:1}),A('r2',398,135,342,135,'g',{dash:1}),A('r3',198,135,142,135,'g',{dash:1}),T('rt',380,185,'ফল ফেরত যায় একই পথে',{a:'middle',c:'g',s:'sm b'})]})
+  ]},
+  {n:'2. নিয়ম: শুধু নিচে',steps:[
+   S('উপরে <b>Presentation</b>: UI বা API।',{add:[B('p',160,10,300,50,'Presentation (UI / API)','b')]}),
+   S('মাঝে <b>Business</b>: নিয়ম-কানুন।',{add:[B('b',160,95,300,50,'Business (নিয়ম)','a'),A('a1',310,62,310,93,'n')]}),
+   S('নিচে <b>Data</b>: database।',{add:[B('d',160,180,300,50,'Data (Database)','g'),A('a2',310,147,310,178,'n')]}),
+   S('উপরের layer নিচেরটাকে চেনে। <b>উল্টোটা না।</b> Data layer কখনো Presentation-কে ডাকে না।',{add:[T('nt',520,120,'উপর থেকে নিচে ✓',{c:'g',s:'b'})]}),
+   S('আর <b>layer ডিঙানো</b> উচিত না: UI সরাসরি Data-র সাথে কথা বললে নিয়মগুলো এড়িয়ে যায়।',{add:[A('x',475,35,475,205,'r',{dash:1}),T('xt',490,160,'UI → DB সরাসরি ✗',{c:'r',s:'sm b'})]})
+  ]},
+  {n:'3. ভুল বনাম ঠিক',steps:[
+   S('<b>ভুল:</b> Controller-এর ভেতরেই SQL আর হিসাব। সব এক জায়গায়।',{add:[B('c1',20,40,200,60,'Controller\nSQL + discount + HTML','r',{s:'sm'}),B('db1',20,150,200,50,'Database','n'),A('x1',120,102,120,148,'r')]}),
+   S('একটা বদলালে (যেমন DB বদল) Controller-ও ভাঙে। test করা কঠিন।',{add:[T('t1',120,120,'জট',{a:'middle',c:'r',s:'b'})]}),
+   S('<b>ঠিক:</b> প্রতিটা কাজ আলাদা layer-এ।',{add:[B('c2',300,10,200,44,'Controller','b'),B('s2',300,80,200,44,'Service (নিয়ম)','a'),B('r2',300,150,200,44,'Repository (SQL)','g'),A('y1',400,56,400,78,'n'),A('y2',400,126,400,148,'n')]}),
+   S('এখন DB বদলালে শুধু Repository বদলায়। বাকি অংশ অক্ষত।',{add:[B('db2',560,150,170,44,'Database','n'),A('y3',502,172,558,172,'n'),T('t2',645,100,'শুধু এটা বদলাবে',{a:'middle',c:'g',s:'sm b'})]})
+  ]}
+ ]},
+
+{p:0,n:'2',q:'Clean Architecture কী?',
+ ans:'<b>Clean Architecture</b> (Uncle Bob) = business নিয়মকে <b>মাঝখানে</b> রাখা, আর framework, database, UI-কে <b>বাইরে</b>। মূল নিয়ম: <b>Dependency Rule</b>, নির্ভরতা শুধু <b>ভেতরের দিকে</b>।',
+ pts:['<b>ভেতরের অংশ বাইরেরটাকে চেনে না।</b> Business নিয়ম জানে না SQL Server না MongoDB, Web না Console।','তাই database বা framework বদলালে business কোড অক্ষত থাকে। আর business কোড database ছাড়াই test করা যায়।','এটা আসলে <b>Dependency Inversion (SOLID-এর D)</b>-এর বড় রূপ।'],
+ tabs:[
+  {n:'1. চার রিং',steps:[
+   S('সবচেয়ে <b>বাইরে</b>: Frameworks &amp; Drivers (Database, Web, UI)। এগুলো সবচেয়ে বেশি বদলায়।',{add:[B('r4',10,5,500,230,'','n',{dash:1}),T('l4',24,20,'Frameworks & Drivers (DB, Web, UI)',{c:'n',s:'sm b'})]}),
+   S('এর ভেতরে <b>Interface Adapters</b>: Controller, Repository implementation। বাইরের জগৎ আর ভেতরের মধ্যে অনুবাদক।',{add:[B('r3',40,35,440,170,'','s',{dash:1}),T('l3',54,50,'Interface Adapters (Controller, Repository)',{c:'s',s:'sm b'})]}),
+   S('আরও ভেতরে <b>Use Cases</b>: অ্যাপ কী কী করে (অর্ডার দাও, বাতিল করো)।',{add:[B('r2',70,65,380,110,'','a',{dash:1}),T('l2',84,80,'Use Cases (Application কাজ)',{c:'a',s:'sm b'})]}),
+   S('একদম মাঝে <b>Entities</b>: Order, Customer আর তাদের মূল নিয়ম। কখনো বদলায় না বললেই চলে।',{add:[B('r1',100,100,320,60,'Entities (মূল business নিয়ম)','g',{s:'b'})]}),
+   S('<b>Dependency Rule:</b> তীর শুধু বাইরে থেকে <b>ভেতরে</b>। ভেতরের কেউ বাইরেরটাকে চেনে না।',{add:[A('dr',745,120,512,120,'o'),T('dt',630,98,'নির্ভরতা শুধু\nভেতরের দিকে',{a:'middle',c:'o',s:'sm b'})]})
+  ]},
+  {n:'2. Dependency Inversion কীভাবে',steps:[
+   S('Use Case-কে data save করতে হবে। কিন্তু সে SQL চেনে না।',{add:[B('uc',20,80,180,60,'Use Case\nPlaceOrder','a')]}),
+   S('তাই Use Case নিজেই একটা <b>interface</b> বানায়: <code>IOrderRepository</code>। এটা তার নিজের layer-এ থাকে।',{add:[B('i',290,80,180,60,'IOrderRepository\n(interface)','n',{m:1,s:'sm'}),A('a1',202,110,288,110,'a')]}),
+   S('<b>Infrastructure</b> (বাইরের layer) interface-টা implement করে: <code>EfOrderRepository</code>।',{add:[B('ef',560,80,180,60,'EfOrderRepository\n(EF Core + SQL)','g',{s:'sm'}),A('a2',558,110,472,110,'g',{dash:1}),T('t2',515,92,'implements',{a:'middle',s:'sm m'})]}),
+   S('লক্ষ করো: তীরটা <b>বাইরে থেকে ভেতরে</b> এসেছে। Use Case SQL চেনে না। এটাই <b>Inversion</b>।',{add:[T('nt',380,190,'DB বদলাতে চাইলে শুধু নতুন implementation লেখো, Use Case ছোঁয়া লাগে না',{a:'middle',c:'g',s:'sm b'})],mod:{ef:{hl:1}}})
+  ]},
+  {n:'3. .NET-এ folder',steps:[
+   S('<b>Domain</b> (Entities): Order, Customer। কোনো package-এর ওপর নির্ভর করে না।',{add:[B('dm',290,20,180,44,'Domain','g')]}),
+   S('<b>Application</b> (Use Cases + interfaces): Domain-কে চেনে।',{add:[B('ap',290,90,180,44,'Application','a'),A('a1',380,88,380,66,'n')]}),
+   S('<b>Infrastructure</b> (EF Core, Email, File): Application-এর interface implement করে।',{add:[B('in',60,160,200,44,'Infrastructure','o'),A('a2',160,158,330,136,'n')]}),
+   S('<b>API / Web</b> (Controllers, Program.cs): সব জোড়া লাগায়, DI দিয়ে।',{add:[B('wb',500,160,200,44,'API / Web','b'),A('a3',600,158,430,136,'n')]}),
+   S('দুই পাশের Infrastructure আর API দুটোই ভেতরের Application/Domain-কে চেনে। <b>উল্টোটা না।</b>',{mod:{dm:{hl:1},ap:{hl:1}}})
+  ]}
+ ]},
+
+{p:0,n:'3',q:'Layered আর Clean Architecture-এর পার্থক্য কী?',
+ ans:'দুটোতেই layer আছে। পার্থক্য <b>নির্ভরতার দিকে</b>: Layered-এ Business শেষে <b>Data layer-এর ওপর</b> নির্ভর করে। Clean-এ উল্টো: Data/Infrastructure <b>Business-এর ওপর</b> নির্ভর করে।',
+ pts:['<b>Layered:</b> সহজ, ছোট-মাঝারি app-এ চমৎকার। কিন্তু Business-কে database-এর সাথে বাঁধা পড়তে হয়।','<b>Clean:</b> বেশি folder আর interface, তবু বড়, দীর্ঘস্থায়ী app-এ বদলানো আর test করা অনেক সহজ।','ছোট CRUD app-এ Clean অতিরিক্ত ভারী (over-engineering)। প্রয়োজন বুঝে বাছো।'],
+ extra:'<table class="cmp"><tr><th></th><th>Layered</th><th>Clean</th></tr>'+
+  '<tr><td>নির্ভরতার দিক</td><td>উপর → নিচ (Business → Data)</td><td>বাইরে → ভেতরে (Infra → Business)</td></tr>'+
+  '<tr><td>Database কোথায়</td><td>সবার নিচে, Business তার ওপর নির্ভর</td><td>বাইরের layer, Business তাকে চেনেই না</td></tr>'+
+  '<tr><td>Test</td><td>Database/mock লাগে</td><td>Business আলাদা করে সহজে test</td></tr>'+
+  '<tr><td>জটিলতা</td><td>কম</td><td>বেশি (interface, বেশি project)</td></tr>'+
+  '<tr><td>কোথায় ভালো</td><td>ছোট-মাঝারি app</td><td>বড়, দীর্ঘদিন চলার app</td></tr></table>',
+ tabs:[
+  {n:'তীরের দিক',steps:[
+   S('<b>Layered:</b> তীর নিচের দিকে। Business শেষে Data layer-কে চেনে।',{add:[T('h1',20,24,'Layered',{c:'a',s:'lg b'}),B('lp',20,50,150,44,'Presentation','b'),B('lb',20,110,150,44,'Business','a'),B('ld',20,170,150,44,'Data','g'),A('l1',95,96,95,108,'n'),A('l2',95,156,95,168,'n')]}),
+   S('<b>Clean:</b> Business মাঝে। Infrastructure আর UI দুজনেই Business-এর দিকে তাকায়।',{add:[T('h2',300,24,'Clean',{c:'b',s:'lg b'}),B('cb',390,100,150,60,'Business\n(Core)','g'),B('cu',300,30,150,44,'UI / API','b'),B('ci',500,190,160,44,'Infrastructure\n(DB)','o',{s:'sm'}),A('c1',380,76,430,98,'n'),A('c2',570,188,510,162,'n')]}),
+   S('ফল: Layered-এ <b>DB বদলালে Business নড়ে</b>, Clean-এ <b>DB বদলালে শুধু বাইরের অংশ</b>।',{mod:{ld:{c:'r',hl:1},ci:{hl:1}},add:[T('rs',380,222,'নির্ভরতা কার দিকে তাকায়, সেটাই পার্থক্য',{a:'middle',c:'a',s:'sm b'})]})
+  ]}
+ ]},
+
+{p:0,n:'4',q:'Clean Architecture-এ একটা Request কীভাবে যায়? (Place Order)',
+ ans:'Request ঢোকে <b>Controller</b> দিয়ে, যায় <b>Use Case</b>-এ। Use Case <b>Entity</b>-র নিয়ম চালায় আর <b>interface</b>-এর মধ্য দিয়ে data save করায়। আসল database কাজ করে Infrastructure-এ।',
+ pts:['Controller পাতলা: শুধু request নেয়, Use Case ডাকে, response দেয়।','Use Case শুধু interface (<code>IOrderRepository</code>) জানে। DI container runtime-এ আসল class বসিয়ে দেয়।'],
+ tabs:[
+  {n:'ধাপে ধাপে',steps:[
+   S('<code>POST /orders</code>। Request এল <b>Controller</b>-এ (API layer)।',{add:[B('c',10,90,120,56,'Controller\n(API)','b')]}),
+   S('Controller <b>Use Case</b> ডাকে: <code>PlaceOrderHandler</code>।',{add:[B('u',180,90,150,56,'Use Case\nPlaceOrder','a'),A('a1',132,118,178,118,'n')]}),
+   S('Use Case <b>Entity</b>-র নিয়ম চালায়: stock ঠিক আছে? মোট দাম কত?',{add:[B('e',180,170,150,50,'Entity: Order\n(নিয়ম)','g',{s:'sm'}),A('a2',255,148,255,168,'n')]}),
+   S('Save করতে Use Case ডাকে <b>interface</b> <code>IOrderRepository</code>।',{add:[B('i',390,90,150,56,'IOrderRepository\n(interface)','n',{m:1,s:'sm'}),A('a3',332,118,388,118,'n')]}),
+   S('আসল কাজ করে <b>EfOrderRepository</b> (Infrastructure)। DI এটা বসিয়েছে।',{add:[B('r',590,90,150,56,'EfOrderRepository\n(EF Core)','o',{s:'sm'}),A('a4',592,118,542,118,'o',{dash:1})]}),
+   S('Database-এ order save হয়। ফল ফেরত যায় Controller হয়ে user-এর কাছে।',{add:[B('db',590,175,150,44,'Database','n'),A('a5',665,148,665,173,'n')]})
+  ]}
+ ]},
+
+/* ================= B. Docker ================= */
+{p:1,n:'5',q:'Docker কী আর কেন লাগে?',
+ ans:'<b>Docker</b> = app আর তার সব দরকারি জিনিস (runtime, library, config) <b>একটা প্যাকেজে (container)</b> বেঁধে দেয়। ফলে যেখানেই চালাও, একই ভাবে চলে। "<b>আমার machine-এ তো চলছিল</b>" সমস্যা শেষ।',
+ pts:['Container হালকা। পুরো OS নয়, host-এর kernel ভাগ করে চলে।','নতুন dev এলে <code>docker compose up</code> দিলেই পুরো environment (app + database) চালু।','Production-এ scale করা সহজ: একই image থেকে ১০টা container।'],
+ tabs:[
+  {n:'1. সমস্যা',steps:[
+   S('Dev-এর laptop: .NET 8, PostgreSQL 15, কিছু library। সব ঠিকঠাক চলছে।',{add:[B('d',20,70,200,90,'Dev laptop\n.NET 8\nPostgres 15','g')]}),
+   S('Server-এ গেলে: .NET 6, PostgreSQL 12। <b>পরিবেশ আলাদা</b>।',{add:[B('s',520,70,200,90,'Server\n.NET 6\nPostgres 12','o'),A('a1',222,115,518,115,'n'),T('t1',370,98,'কোড পাঠানো',{a:'middle',s:'sm'})]}),
+   S('ফল: <b>app crash</b>। কোডে দোষ নেই, দোষ environment-এর পার্থক্যে।',{mod:{s:{c:'r',hl:1,label:'Server\n💥 Crash'}},add:[T('t2',370,190,'"আমার machine-এ তো চলছিল!"',{a:'middle',c:'r',s:'b'})]})
+  ]},
+  {n:'2. Docker-এর সমাধান',steps:[
+   S('App-এর সাথে <b>সব দরকারি জিনিস</b> একটা container-এ বাঁধা হলো।',{add:[B('c',270,50,220,130,'Container\n\nApp কোড\n.NET 8 runtime\nLibrary, config','a')]}),
+   S('Dev laptop-এ container চালালে চলে।',{add:[B('d',20,85,150,60,'Dev laptop\n(Docker)','g'),A('a1',172,115,268,115,'g')]}),
+   S('Server-এ <b>একই container</b> চালালে হুবহু একই ভাবে চলে। পরিবেশ আর আলাদা হয় না।',{add:[B('s',590,85,150,60,'Server\n(Docker)','g'),A('a2',492,115,588,115,'g')],mod:{c:{hl:1}}})
+  ]}
+ ]},
+
+{p:1,n:'6',q:'Dockerfile, Image আর Container-এর সম্পর্ক কী?',
+ ans:'<b>Dockerfile</b> = রেসিপি। তা থেকে <b>build</b> করলে হয় <b>Image</b> (বন্ধ প্যাকেট, শুধু পড়া যায়)। Image <b>run</b> করলে হয় <b>Container</b> (চলমান app)।',
+ pts:['একটা Image থেকে <b>অনেক Container</b> চালানো যায়। (এক cake-এর ছাঁচ থেকে অনেক cake)','Image <b>Registry</b>-তে (Docker Hub, ACR, ECR) রাখা হয়, সেখান থেকে যে কেউ <code>pull</code> করতে পারে।','Image বদলায় না। বদলাতে চাইলে নতুন Dockerfile দিয়ে নতুন image build।'],
+ extra:'<pre>FROM mcr.microsoft.com/dotnet/aspnet:8.0   # ভিত্তি image\nWORKDIR /app\nCOPY ./publish .                            # app কোড ঢোকাও\nEXPOSE 8080\nENTRYPOINT ["dotnet", "MyApp.dll"]         # container চালু হলে এটা চলবে</pre>',
+ tabs:[
+  {n:'1. পুরো flow',steps:[
+   S('<b>Dockerfile</b>: app কীভাবে প্যাকেজ হবে তার রেসিপি।',{add:[B('f',10,85,130,60,'Dockerfile\n(রেসিপি)','n',{m:1,s:'sm'})]}),
+   S('<code>docker build</code> চালালে তৈরি হয় <b>Image</b>।',{add:[B('i',210,85,130,60,'Image\n(প্যাকেট)','a'),A('a1',142,115,208,115,'n'),T('t1',175,98,'build',{a:'middle',s:'sm m'})]}),
+   S('<code>docker run</code> দিলে Image থেকে <b>Container</b> চালু হয়।',{add:[B('c1',430,40,130,50,'Container 1','g'),B('c2',430,100,130,50,'Container 2','g'),B('c3',430,160,130,50,'Container 3','g'),A('a2',342,105,428,65,'g'),A('a3',342,115,428,125,'g'),A('a4',342,125,428,185,'g'),T('t2',385,95,'run',{a:'middle',s:'sm m'})]}),
+   S('Image <code>push</code> করা যায় <b>Registry</b>-তে। অন্য server <code>pull</code> করে চালায়।',{add:[B('rg',620,85,120,60,'Registry\n(Docker Hub)','o'),A('a5',275,150,620,125,'o',{dash:1}),T('t3',470,200,'push / pull',{a:'middle',c:'o',s:'sm m'})]})
+  ]},
+  {n:'2. Image-এর স্তর',steps:[
+   S('Image আসলে <b>স্তরের (layer) স্তূপ</b>। নিচে base OS/runtime।',{add:[B('l1',230,170,300,40,'Base: dotnet/aspnet:8.0','n')]}),
+   S('তার ওপর আমার app-এর ফাইল।',{add:[B('l2',230,120,300,40,'COPY: app কোড (publish)','a')]}),
+   S('তার ওপর config/environment।',{add:[B('l3',230,70,300,40,'ENV, EXPOSE, ENTRYPOINT','b')]}),
+   S('Container চালু হলে ওপরে একটা <b>লেখার স্তর</b> বসে। Container মুছলে সেটাও যায়।',{add:[B('l4',230,20,300,40,'Container: লেখার স্তর (সাময়িক)','o',{dash:1})]}),
+   S('নিচের স্তরগুলো <b>cache</b> হয় আর অনেক image ভাগ করে নেয়। তাই build দ্রুত, জায়গা কম।',{mod:{l1:{hl:1}}})
+  ]}
+ ]},
+
+{p:1,n:'7',q:'Container আর Virtual Machine (VM)-এর পার্থক্য কী?',
+ ans:'<b>VM</b> প্রতিটার জন্য <b>পুরো OS</b> চালায় (ভারী, মিনিট লাগে)। <b>Container</b> host-এর <b>kernel ভাগ</b> করে, শুধু app আর library নেয় (হালকা, সেকেন্ডে চালু)।',
+ pts:['VM-এ আলাদা OS মানে পুরো আলাদা ঘর। Container-এ একই বাড়ির আলাদা ঘর।','Container দ্রুত আর কম মেমরি নেয়। VM-এর isolation আরও শক্ত।'],
+ extra:'<table class="cmp"><tr><th></th><th>Virtual Machine</th><th>Container</th></tr>'+
+  '<tr><td>OS</td><td>প্রতিটার নিজের Guest OS</td><td>Host-এর kernel ভাগ করে</td></tr>'+
+  '<tr><td>আকার</td><td>GB</td><td>MB</td></tr>'+
+  '<tr><td>চালু হতে</td><td>মিনিট</td><td>সেকেন্ড</td></tr>'+
+  '<tr><td>Isolation</td><td>শক্ত</td><td>কম (kernel ভাগ)</td></tr></table>',
+ tabs:[
+  {n:'স্তূপ পাশাপাশি',steps:[
+   S('<b>VM:</b> Hardware → Hypervisor → প্রতিটা VM-এ <b>আলাদা পুরো OS</b> → app।',{add:[T('h1',30,16,'Virtual Machine',{c:'a',s:'b'}),B('hw1',20,190,310,34,'Hardware','n'),B('hy',20,150,310,34,'Hypervisor','n'),B('g1',20,70,148,74,'Guest OS\n(পুরো)','o',{s:'sm'}),B('g2',182,70,148,74,'Guest OS\n(পুরো)','o',{s:'sm'}),B('p1',20,30,148,34,'App A','g'),B('p2',182,30,148,34,'App B','g')]}),
+   S('<b>Container:</b> Hardware → একটাই Host OS → Docker → হালকা container। Guest OS নেই।',{add:[T('h2',430,16,'Container',{c:'b',s:'b'}),B('hw2',420,190,320,34,'Hardware','n'),B('ho',420,150,320,34,'Host OS (kernel)','n'),B('dk',420,110,320,34,'Docker Engine','s'),B('k1',420,50,100,54,'App A\n+ lib','g',{s:'sm'}),B('k2',530,50,100,54,'App B\n+ lib','g',{s:'sm'}),B('k3',640,50,100,54,'App C\n+ lib','g',{s:'sm'})]}),
+   S('Guest OS-এর বোঝা নেই বলে container <b>হালকা আর দ্রুত</b>। একই machine-এ অনেক বেশি চলে।',{mod:{g1:{c:'r',hl:1},g2:{c:'r',hl:1}}})
+  ]}
+ ]},
+
+{p:1,n:'8',q:'Port, Volume আর Docker Compose কী?',
+ ans:'Container-এর ভেতরটা বন্ধ ঘর। <b>Port mapping</b> বাইরে থেকে ঢোকার দরজা। <b>Volume</b> data টিকিয়ে রাখে। <b>Compose</b> অনেক container একসাথে চালানোর ফাইল।',
+ pts:['<code>-p 8080:80</code> = host-এর 8080 → container-এর 80।','Container মুছলে ভেতরের data যায়। DB-র data তাই <b>Volume</b>-এ রাখতে হয়।','<code>docker-compose.yml</code>-এ app + db লিখলে একটা command-এই সব চালু।'],
+ extra:'<pre>services:\n  api:\n    build: .\n    ports: ["8080:8080"]      # বাইরের:ভেতরের\n    depends_on: [db]\n  db:\n    image: postgres:16\n    volumes: [pgdata:/var/lib/postgresql/data]   # data টিকে থাকে\nvolumes:\n  pgdata:</pre>',
+ tabs:[
+  {n:'1. Port mapping',steps:[
+   S('Container-এর ভেতরে app চলছে <b>port 80</b>-এ। বাইরে থেকে সরাসরি পাওয়া যায় না।',{add:[B('c',420,50,200,110,'Container\nApp : 80','a')]}),
+   S('<code>-p 8080:80</code> বললে host-এর <b>8080</b> port ভেতরের <b>80</b>-তে যায়।',{add:[B('h',200,95,110,40,'Host :8080','o'),A('a1',312,115,418,115,'o'),T('t1',365,98,'8080→80',{a:'middle',s:'sm m'})]}),
+   S('Browser <code>localhost:8080</code> খুললে app পায়।',{add:[B('b',10,95,130,40,'Browser','n'),A('a2',142,115,198,115,'g')]})
+  ]},
+  {n:'2. Volume',steps:[
+   S('DB container চলছে, ভেতরে data আছে।',{add:[B('db',60,70,200,80,'DB Container\n(data ভেতরে)','a')]}),
+   S('Container মুছলে (<code>docker rm</code>) ভেতরের <b>data-ও যায়</b>।',{mod:{db:{c:'r',hl:1,label:'Container মুছে গেল\nData হারাল ✗'}}}),
+   S('<b>Volume</b> দিলে data থাকে container-এর <b>বাইরে</b> (host-এ)।',{add:[B('v',480,70,200,80,'Volume\n(host-এ data)','g')],mod:{db:{c:'a',hl:0,label:'নতুন DB Container'}}}),
+   S('নতুন container একই Volume জুড়ে নিলে <b>পুরনো data ফেরত</b>।',{add:[A('a1',262,110,478,110,'g'),T('t1',370,92,'mount',{a:'middle',s:'sm m'})]})
+  ]},
+  {n:'3. Compose',steps:[
+   S('একটা <code>docker-compose.yml</code>-এ সব সার্ভিস লেখা থাকে।',{add:[B('f',10,85,170,60,'docker-compose.yml','n',{m:1,s:'sm'})]}),
+   S('<code>docker compose up</code> দিলে <b>api</b> container চালু।',{add:[B('a',300,30,150,50,'api','a'),A('x1',182,105,298,60,'n'),T('t1',240,70,'up',{a:'middle',s:'sm m'})]}),
+   S('একই সাথে <b>db</b> container চালু।',{add:[B('d',300,160,150,50,'db','g'),A('x2',182,125,298,180,'n')]}),
+   S('Compose তাদের এক <b>network</b>-এ বসায়। api সরাসরি <code>db</code> নাম ধরে ডাকতে পারে।',{add:[A('x3',375,82,375,158,'o'),T('t2',520,120,'api → db:5432',{c:'o',s:'sm m b'})]})
+  ]}
+ ]},
+
+/* ================= C. Terraform ================= */
+{p:2,n:'9',q:'Terraform কী? Infrastructure as Code (IaC) কী?',
+ ans:'<b>Terraform</b> দিয়ে server, database, network (cloud-এর সব infrastructure) <b>কোড লিখে</b> বানানো হয়। হাতে cloud console-এ ক্লিক করার বদলে ফাইলে লেখা, চালালে নিজেই তৈরি।',
+ pts:['<b>IaC</b> = infrastructure-কেও কোডের মতো ফাইলে রাখা, Git-এ version করা, review করা।','Cloud-নিরপেক্ষ: AWS, Azure, GCP একই ভাষায় (HCL)।','একই কোড চালালে <b>বারবার একই infrastructure</b> তৈরি হয়। ভুল কমে, দ্রুত হয়।'],
+ tabs:[
+  {n:'হাতে বনাম কোডে',steps:[
+   S('<b>হাতে:</b> console-এ ক্লিক করে server, DB, network বানানো। ধাপ মনে রাখতে হয়।',{add:[T('h1',20,18,'হাতে (Manual)',{c:'r',s:'b'}),B('m',20,40,230,70,'Cloud Console\nক্লিক, ক্লিক, ক্লিক...','r',{s:'sm'})]}),
+   S('ফল: ভুল হয়, দ্বিতীয়বার একই জিনিস বানানো কঠিন। কেউ জানে না কে কী বদলেছে।',{add:[T('x1',20,135,'✗ ভুলের ঝুঁকি\n✗ মনে রাখা কঠিন\n✗ পুনরাবৃত্তি কঠিন',{c:'r',s:'sm'})]}),
+   S('<b>Terraform:</b> সব কিছু একটা <code>.tf</code> ফাইলে লেখা।',{add:[T('h2',400,18,'Terraform (Code)',{c:'g',s:'b'}),B('f',400,40,170,70,'main.tf\nserver, db, network','g',{m:1,s:'sm'})]}),
+   S('<code>terraform apply</code> চালালে Terraform নিজে cloud-এ সব বানায়।',{add:[B('cl',640,40,100,70,'Cloud','s'),A('a1',572,75,638,75,'g'),T('t1',605,58,'apply',{a:'middle',s:'sm m'})]}),
+   S('✓ Git-এ থাকে, review হয়, যতবার খুশি একই জিনিস বানানো যায়।',{add:[T('x2',400,135,'✓ Git-এ version\n✓ Review করা যায়\n✓ বারবার একই ফল',{c:'g',s:'sm'})]})
+  ]}
+ ]},
+
+{p:2,n:'10',q:'Terraform-এর workflow কী? (init, plan, apply)',
+ ans:'চার ধাপ: <b>write</b> (কোড লেখো) → <code>init</code> (provider নামাও) → <code>plan</code> (কী বদলাবে দেখো) → <code>apply</code> (আসলে বানাও)। শেষে দরকার হলে <code>destroy</code>।',
+ pts:['<code>plan</code> একটা <b>dry run</b>: কিছু না বদলে শুধু দেখায় কী কী তৈরি/বদল/মুছবে। apply-এর আগে এটা দেখা সবচেয়ে জরুরি।','Terraform <b>state</b> ফাইলে মনে রাখে এখন cloud-এ কী আছে। plan তার সাথে তোমার কোড মেলায়।'],
+ extra:'<pre>terraform init      # provider (AWS/Azure) নামায়\nterraform plan      # কী বদলাবে দেখাও, কিছু বদলায় না\nterraform apply     # আসলে বানাও / বদলাও\nterraform destroy   # সব মুছে দাও</pre>',
+ tabs:[
+  {n:'ধাপে ধাপে',steps:[
+   S('<b>১. Write:</b> <code>.tf</code> ফাইলে চাই এমন infrastructure লিখি।',{add:[B('w',10,80,130,60,'Write\nmain.tf','n',{s:'sm'})]}),
+   S('<b>২. init:</b> দরকারি <b>provider</b> (AWS, Azure) plugin নামায়।',{add:[B('i',165,80,130,60,'terraform init','a',{m:1,s:'sm'}),A('a1',142,110,163,110,'n')]}),
+   S('<b>৩. plan:</b> "কী কী বদলাবে" তালিকা দেখায়। <b>কিছু বদলায় না।</b>',{add:[B('p',320,80,130,60,'terraform plan','o',{m:1,s:'sm'}),A('a2',297,110,318,110,'n'),T('t1',385,160,'+ 1 server\n~ 1 DB বদল',{a:'middle',c:'o',s:'sm m'})]}),
+   S('<b>৪. apply:</b> তুমি "yes" বললে আসলে cloud-এ বানায়।',{add:[B('ap',475,80,130,60,'terraform apply','g',{m:1,s:'sm'}),A('a3',452,110,473,110,'n')]}),
+   S('Cloud-এ resource তৈরি। <code>state</code> ফাইল আপডেট হলো।',{add:[B('cl',630,80,110,60,'Cloud\n✓ তৈরি','s'),A('a4',607,110,628,110,'g')]})
+  ]}
+ ]},
+
+{p:2,n:'11',q:'Provider, Resource, State আর Variable কী?',
+ ans:'<b>Provider</b> = কোন cloud (AWS/Azure)। <b>Resource</b> = কী বানাতে চাই (server, DB)। <b>State</b> = এখন আসলে কী আছে তার খাতা। <b>Variable</b> = বদলানো যায় এমন মান।',
+ pts:['<b>State</b> ফাইল (<code>terraform.tfstate</code>) হারালে Terraform জানে না কী বানানো আছে। তাই team-এ state <b>remote</b> (S3, Azure Blob) রাখা হয়।','Terraform <b>desired state</b> (কোড) আর <b>current state</b> (cloud) মিলিয়ে শুধু পার্থক্যটুকু বদলায়।'],
+ extra:'<pre>provider "aws" { region = "ap-south-1" }          # Provider\n\nvariable "size" { default = "t3.micro" }          # Variable\n\nresource "aws_instance" "web" {                   # Resource\n  ami           = "ami-123"\n  instance_type = var.size\n}</pre>',
+ tabs:[
+  {n:'1. চার অংশ',steps:[
+   S('<b>Provider:</b> কোন cloud-এর সাথে কথা বলবে।',{add:[B('pr',20,20,330,50,'Provider = AWS / Azure / GCP','s')]}),
+   S('<b>Resource:</b> কী বানাতে চাই।',{add:[B('rs',20,85,330,50,'Resource = server, database, network','g')]}),
+   S('<b>Variable:</b> বদলানো যায় এমন মান (size, region)।',{add:[B('vr',20,150,330,50,'Variable = size, region','o')]}),
+   S('<b>State:</b> এখন cloud-এ আসলে কী আছে, সেই খাতা।',{add:[B('st',410,60,320,110,'State\nterraform.tfstate\n(cloud-এর বর্তমান ছবি)','a',{s:'sm'})]})
+  ]},
+  {n:'2. State কেন লাগে',steps:[
+   S('তোমার <b>কোড</b> (desired): ৩টা server চাই।',{add:[B('c',20,70,200,80,'কোড (চাই)\n৩টা server','g')]}),
+   S('<b>State</b> (current): cloud-এ এখন ২টা server আছে।',{add:[B('s',280,70,200,80,'State (আছে)\n২টা server','a')]}),
+   S('<code>plan</code> দুটো <b>মেলায়</b>। পার্থক্য: ১টা কম।',{add:[A('a1',222,110,278,110,'o'),B('d',540,70,200,80,'Plan\n+ ১টা server যোগ','o',{hl:1})],mod:{}}),
+   S('<code>apply</code> শুধু <b>পার্থক্যটুকু</b> করে: ১টা নতুন server। বাকি ২টা ছোঁয়া হয় না।',{add:[A('a2',482,110,538,110,'o')],mod:{s:{label:'State (আছে)\n৩টা server',hl:1}}})
+  ]}
+ ]},
+
+{p:2,n:'12',q:'Docker আর Terraform-এর পার্থক্য কী? দুটো কি একসাথে চলে?',
+ ans:'<b>Terraform</b> infrastructure বানায় (server, network, database)। <b>Docker</b> সেই server-এর ভেতরে app চালায় (container)। দুটো <b>প্রতিদ্বন্দ্বী নয়</b>, একসাথে ব্যবহৃত হয়।',
+ pts:['<b>Terraform:</b> "জমি আর দালানের কাঠামো" (cloud resource)।','<b>Docker:</b> "দালানের ভেতরে সাজানো ঘর" (app চালানোর পরিবেশ)।','বাস্তব flow: Terraform server/Kubernetes cluster বানায় → CI/CD Docker image বানায় → সেই server-এ container চলে।'],
+ tabs:[
+  {n:'কে কোন স্তরে',steps:[
+   S('<b>নিচে:</b> Cloud (AWS/Azure)।',{add:[B('cl',130,185,500,40,'Cloud','n')]}),
+   S('<b>Terraform</b> cloud-এ <b>server, network, DB</b> বানায়।',{add:[B('sv',130,125,500,50,'Server / VM / Kubernetes (Terraform বানায়)','o'),T('tt',650,150,'Terraform',{c:'o',s:'b'})]}),
+   S('<b>Docker</b> সেই server-এর ভেতরে <b>container</b> চালায়।',{add:[B('c1',130,50,150,65,'Container\nApp','g'),B('c2',300,50,150,65,'Container\nApp','g'),B('c3',470,50,160,65,'Container\nDB','g'),T('td',650,80,'Docker',{c:'g',s:'b'})]}),
+   S('মনে রাখো: Terraform = <b>infrastructure বানায়</b>। Docker = <b>app চালায়</b>।',{add:[T('rs',380,18,'দুটো মিলেই পুরো deploy',{a:'middle',c:'a',s:'sm b'})]})
+  ]}
+ ]},
+
+/* ================= D. .NET MAUI ================= */
+{p:3,n:'13',q:'.NET MAUI কী?',
+ ans:'<b>.NET MAUI</b> (Multi-platform App UI) = <b>একটা C# কোডবেস</b> দিয়ে Android, iOS, Windows আর macOS app বানানোর framework। UI লেখা হয় <b>XAML</b> বা C# দিয়ে।',
+ pts:['চারটা platform-এর জন্য চারবার আলাদা app লিখতে হয় না। <b>একটা project, চার platform</b>।','Button, Label, Entry-র মতো control লিখলে প্রতিটা platform-এ তার <b>নিজস্ব native control</b> দেখায়।','Xamarin.Forms-এর পরের রূপ। .NET 6+ এর ওপর চলে।'],
+ tabs:[
+  {n:'এক কোড, চার app',steps:[
+   S('এক জায়গায় তোমার কোড: <b>C# + XAML</b>। একটাই project।',{add:[B('c',20,80,180,80,'MAUI Project\nC# + XAML\n(একটাই কোড)','a')]}),
+   S('Build করলে <b>Android</b> app (APK/AAB)।',{add:[B('an',420,10,150,40,'Android','g'),A('a1',202,110,418,32,'g')]}),
+   S('একই কোড থেকে <b>iOS</b> app (IPA)।',{add:[B('io',420,65,150,40,'iOS','g'),A('a2',202,115,418,87,'g')]}),
+   S('আর <b>Windows</b> (MSIX)।',{add:[B('wi',420,120,150,40,'Windows','g'),A('a3',202,120,418,142,'g')]}),
+   S('আর <b>macOS</b> (Mac Catalyst)। চারটাই এক কোড থেকে।',{add:[B('ma',420,175,150,40,'macOS','g'),A('a4',202,130,418,197,'g')]})
+  ]}
+ ]},
+
+{p:3,n:'14',q:'MAUI ভেতরে কীভাবে কাজ করে? (Handler, Native Control, Runtime)',
+ ans:'তোমার MAUI <code>Button</code> আসলে শুধু একটা বর্ণনা। প্রতিটা platform-এ একটা <b>Handler</b> সেই বর্ণনাকে <b>native control</b> বানিয়ে দেখায় (Android <code>AppCompatButton</code>, iOS <code>UIButton</code>, Windows <code>WinUI Button</code>)। MAUI নিজে ছবি আঁকে না, native UI-ই ব্যবহার করে।',
+ pts:['<b>Handler</b> = অনুবাদক: MAUI control-এর property (Text, Color) native control-এর property-তে মিলিয়ে দেয়।','<b>Runtime</b>: Android-এ Mono (JIT/AOT), iOS-এ Mono <b>AOT</b> (Apple JIT ঠেকায়), Windows-এ আধুনিক .NET + WinUI 3, macOS-এ Mac Catalyst।','<b>Single project</b> কিন্তু ভেতরে <code>Platforms/</code> ফোল্ডারে প্রতি platform-এর নিজস্ব entry কোড থাকে।'],
+ tabs:[
+  {n:'1. স্তরগুলো',steps:[
+   S('সবার ওপরে <b>তোমার কোড</b>: XAML আর C# (ViewModel, logic)। এটা সব platform-এ <b>এক</b>।',{add:[B('u',140,8,480,44,'তোমার কোড: XAML + C# (সব platform-এ এক)','a')]}),
+   S('তার নিচে <b>MAUI Controls</b>: Button, Label, Entry, Layout। এগুলোও এক।',{add:[B('m',140,66,480,44,'MAUI Controls (Button, Label, Entry...)','b'),A('a1',380,54,380,64,'n')]}),
+   S('তারপর <b>Handler</b>: প্রতিটা platform-এর জন্য আলাদা অনুবাদক।',{add:[B('h',140,124,480,44,'Handlers (প্রতি platform-এ আলাদা অনুবাদক)','o'),A('a2',380,112,380,122,'n')]}),
+   S('সবার নিচে <b>native UI + runtime</b>। এখানে এসে platform আলাদা।',{add:[B('n1',140,182,150,48,'Android\nNative + Mono','g',{s:'sm'}),B('n2',305,182,150,48,'iOS\nUIKit + Mono AOT','g',{s:'sm'}),B('n3',470,182,150,48,'Windows / Mac\nWinUI / Catalyst','g',{s:'sm'}),A('a3',380,170,215,180,'n'),A('a4',380,170,380,180,'n'),A('a5',380,170,545,180,'n')]})
+  ]},
+  {n:'2. Handler: Button কীভাবে',steps:[
+   S('তুমি লিখলে: <code>&lt;Button Text="Save" /&gt;</code>। এটা শুধু বর্ণনা।',{add:[B('x',10,80,170,60,'MAUI Button\nText = "Save"','b',{s:'sm'})]}),
+   S('Runtime-এ চলমান platform-এর <b>Handler</b> ধরে।',{add:[B('h',240,80,130,60,'ButtonHandler','o',{s:'sm'}),A('a1',182,110,238,110,'n')]}),
+   S('Android-এ Handler বানায় <b>AppCompatButton</b>।',{add:[B('an',470,10,260,44,'Android: AppCompatButton','g',{s:'sm'}),A('a2',372,100,468,35,'g')]}),
+   S('iOS-এ বানায় <b>UIButton</b>।',{add:[B('io',470,78,260,44,'iOS: UIButton','g',{s:'sm'}),A('a3',372,110,468,100,'g')]}),
+   S('Windows-এ বানায় <b>WinUI Button</b>। তাই প্রতিটা platform-এ <b>আসল native চেহারা</b>।',{add:[B('wi',470,146,260,44,'Windows: WinUI Button','g',{s:'sm'}),A('a4',372,120,468,168,'g')]})
+  ]},
+  {n:'3. Build-এ কী হয়',steps:[
+   S('এক <b>.csproj</b>, <code>TargetFrameworks</code>-এ চার platform: net8.0-android, -ios, -windows, -maccatalyst।',{add:[B('p',10,80,170,60,'MyApp.csproj\n(একটাই)','a',{s:'sm'})]}),
+   S('Build-এর সময় <b>প্রতি platform-এর জন্য আলাদা compile</b> হয়।',{add:[B('an',320,10,200,44,'Android → APK / AAB','g',{s:'sm'}),B('io',320,65,200,44,'iOS → IPA (Mac লাগে)','g',{s:'sm'}),B('wi',320,120,200,44,'Windows → MSIX','g',{s:'sm'}),B('ma',320,175,200,44,'macOS → Mac Catalyst','g',{s:'sm'}),A('a1',182,100,318,32,'n'),A('a2',182,108,318,87,'n'),A('a3',182,114,318,142,'n'),A('a4',182,122,318,197,'n')]}),
+   S('<b>Hot Reload</b> থাকলে কোড/XAML বদলালে চলমান app-এ সাথে সাথে দেখা যায়, আবার build ছাড়াই।',{add:[T('hr',380,230,'iOS build করতে Mac দরকার (Windows-এ remote Mac)',{a:'middle',c:'o',s:'sm b'})]})
+  ]}
+ ]},
+
+{p:3,n:'15',q:'MAUI app-এর core অংশগুলো কী কী? (Startup flow)',
+ ans:'মূল চারটা: <b>MauiProgram.cs</b> (app তৈরি ও DI), <b>App.xaml</b> (সবার জন্য style/resource), <b>AppShell</b> (navigation) আর <b>Pages</b> (XAML screen)। আর <b>Platforms/</b> ফোল্ডারে প্রতি platform-এর entry।',
+ pts:['চালু হওয়ার ক্রম: <b>Platform entry → MauiProgram.CreateMauiApp() → App → AppShell → প্রথম Page</b>।','<b>Shell</b> = menu, tab, navigation এক জায়গায়। <code>Shell.Current.GoToAsync("details")</code> দিয়ে পাতা বদলানো।','<b>Resources/</b> ফোল্ডারে font, ছবি, style। এক জায়গায় রাখলে সব platform-এ আপনাআপনি ঠিক আকারে যায়।'],
+ extra:'<pre>MyApp/\n├─ MauiProgram.cs        # app তৈরি, service register (DI)\n├─ App.xaml(.cs)         # global style, শুরুর window\n├─ AppShell.xaml         # navigation / tab\n├─ MainPage.xaml(.cs)    # একটা screen (Page)\n├─ ViewModels/           # MVVM-এর ViewModel\n├─ Resources/            # font, image, style\n└─ Platforms/            # Android / iOS / Windows / MacCatalyst-এর নিজস্ব entry</pre>',
+ tabs:[
+  {n:'Startup flow',steps:[
+   S('<b>১.</b> প্রতিটা platform নিজের <code>Platforms/…</code> entry দিয়ে app চালু করে।',{add:[B('pl',10,85,130,60,'Platforms/\nMainActivity,\nAppDelegate...','n',{s:'sm'})]}),
+   S('<b>২.</b> <code>MauiProgram.CreateMauiApp()</code>: app বানায়, font ও <b>DI service</b> register করে।',{add:[B('mp',175,85,130,60,'MauiProgram\nCreateMauiApp()','a',{s:'sm'}),A('a1',142,115,173,115,'n')]}),
+   S('<b>৩.</b> <code>App</code> class তৈরি হয় (global resource লোড)।',{add:[B('ap',340,85,110,60,'App\n(App.xaml)','b',{s:'sm'}),A('a2',307,115,338,115,'n')]}),
+   S('<b>৪.</b> <code>AppShell</code> navigation কাঠামো দাঁড় করায়।',{add:[B('sh',485,85,110,60,'AppShell\n(Navigation)','o',{s:'sm'}),A('a3',452,115,483,115,'n')]}),
+   S('<b>৫.</b> প্রথম <b>Page</b> (MainPage) দেখা যায়। অ্যাপ চালু!',{add:[B('pg',630,85,110,60,'MainPage\n(প্রথম screen)','g',{s:'sm'}),A('a4',597,115,628,115,'n')]})
+  ]}
+ ]},
+
+{p:3,n:'16',q:'MAUI-তে MVVM, DI আর Platform-specific কোড কীভাবে?',
+ ans:'MAUI-র সাধারণ নকশা <b>MVVM</b>: XAML-এ <b>data binding</b>, ViewModel-এ logic। service-গুলো <b>DI</b> দিয়ে inject। আর যখন কোনো platform-এর নিজস্ব কিছু দরকার (যেমন Android-এর নির্দিষ্ট API), তখন <b>platform-specific কোড</b> লেখা হয়।',
+ pts:['<b>MVVM:</b> ViewModel-এ property বদলালে View নিজে বদলায় (<code>INotifyPropertyChanged</code> বা <code>CommunityToolkit.Mvvm</code>)।','<b>DI:</b> <code>builder.Services.AddSingleton&lt;IApiService, ApiService&gt;()</code>। Page/ViewModel-এর constructor-এ নিজে আসে।','<b>Platform কোড:</b> <code>#if ANDROID</code> বা partial class দিয়ে। এছাড়া <b>MAUI Essentials</b> geolocation, connectivity, camera, secure storage-এর মতো ready API দেয়।'],
+ extra:'<pre>// MauiProgram.cs : DI register\nbuilder.Services.AddSingleton&lt;IApiService, ApiService&gt;();\nbuilder.Services.AddTransient&lt;MainViewModel&gt;();\n\n// ViewModel : constructor-এ service আসে\npublic MainViewModel(IApiService api) { _api = api; }\n\n// Platform-specific\n#if ANDROID\n    // শুধু Android-এর কোড\n#elif IOS\n    // শুধু iOS-এর কোড\n#endif</pre>',
+ tabs:[
+  {n:'1. MVVM binding',steps:[
+   S('<b>View</b> (XAML): <code>Label Text="{Binding Name}"</code>। View শুধু binding জানে।',{add:[B('v',20,70,210,80,'View (XAML)\n{Binding Name}','b',{s:'sm'})]}),
+   S('<b>ViewModel</b> (C#): <code>Name</code> property ও command রাখে।',{add:[B('vm',300,70,210,80,'ViewModel\nName, SaveCommand','a',{s:'sm'}),A('a1',232,100,298,100,'o',{dash:1}),A('a2',298,122,232,122,'o',{dash:1}),T('t1',265,85,'binding',{a:'middle',c:'o',s:'sm b'})]}),
+   S('<b>Model/Service</b>: data ও API।',{add:[B('m',580,70,160,80,'Service\n(API / DB)','g',{s:'sm'}),A('a3',512,110,578,110,'n')]}),
+   S('ViewModel-এর <code>Name</code> বদলালে <b>View নিজে update</b>। হাতে UI বদলাতে হয় না।',{mod:{vm:{label:'ViewModel\nName = "Rahim"',hl:1},v:{label:'View (XAML)\nRahim',hl:1}}})
+  ]},
+  {n:'2. DI',steps:[
+   S('<code>MauiProgram</code>-এ service <b>register</b> করা হয়: কোন interface-এর জন্য কোন class।',{add:[B('r',10,80,200,60,'MauiProgram\nAddSingleton<IApi, Api>','a',{s:'sm'})]}),
+   S('MAUI-র <b>DI container</b> সব রেজিস্ট্রেশন মনে রাখে।',{add:[B('c',290,80,170,60,'DI Container','o'),A('a1',212,110,288,110,'n')]}),
+   S('ViewModel চাইলে constructor-এ <code>IApi</code> লেখে। Container আসল <code>Api</code> বসিয়ে দেয়।',{add:[B('vm',540,80,200,60,'MainViewModel(IApi api)','b',{s:'sm'}),A('a2',462,110,538,110,'g')]}),
+   S('<b>লাভ:</b> test-এ নকল <code>IApi</code> বসানো যায়। class নিজেরা <code>new</code> করে না।',{mod:{c:{hl:1}}})
+  ]},
+  {n:'3. Platform-specific',steps:[
+   S('বেশিরভাগ কোড <b>shared</b> (সব platform-এ এক)।',{add:[B('sh',20,60,360,70,'Shared কোড\n(UI, ViewModel, logic)','a')]}),
+   S('কখনো একটা platform-এর নিজস্ব জিনিস লাগে, যেমন Android-এর notification channel।',{add:[B('an',420,20,150,40,'Android only','g'),A('a1',382,80,418,45,'g',{dash:1})]}),
+   S('<code>#if ANDROID</code> ... <code>#endif</code> দিয়ে শুধু সেই platform-এ কোড চলে।',{add:[B('io',420,75,150,40,'iOS only','g'),A('a2',382,95,418,95,'g',{dash:1})]}),
+   S('অথবা <b>MAUI Essentials</b> (camera, location, connectivity) ব্যবহার করো। platform-পার্থক্য সে সামলায়।',{add:[B('es',420,130,150,40,'Essentials API','o'),A('a3',382,115,418,150,'o',{dash:1}),T('t1',380,205,'আগে Essentials দেখো, না থাকলে তবেই platform-specific লেখো',{a:'middle',c:'a',s:'sm b'})]})
+  ]}
+ ]},
+
+{p:3,n:'17',q:'MAUI বনাম Xamarin.Forms, Flutter আর React Native',
+ ans:'<b>MAUI</b> = Xamarin.Forms-এর উত্তরসূরি (এক project, নতুন .NET)। <b>Flutter</b> নিজে UI আঁকে (Dart)। <b>React Native</b> JavaScript + native control। বাছাই নির্ভর করে <b>টিম কোন ভাষা জানে</b> তার ওপর।',
+ pts:['.NET/C# টিম হলে MAUI স্বাভাবিক বাছাই। একই ভাষায় backend (ASP.NET) আর mobile।','Flutter নিজে সব pixel আঁকে, তাই সব platform-এ হুবহু এক চেহারা। MAUI native control ব্যবহার করে, তাই platform-এর নিজস্ব চেহারা।'],
+ extra:'<table class="cmp"><tr><th></th><th>.NET MAUI</th><th>Xamarin.Forms</th><th>Flutter</th><th>React Native</th></tr>'+
+  '<tr><td>ভাষা</td><td>C# + XAML</td><td>C# + XAML</td><td>Dart</td><td>JavaScript / TypeScript</td></tr>'+
+  '<tr><td>UI কীভাবে</td><td>Native control (Handler)</td><td>Native control (Renderer)</td><td>নিজে আঁকে (Skia/Impeller)</td><td>Native control</td></tr>'+
+  '<tr><td>Project</td><td>একটাই</td><td>আলাদা প্রতি platform</td><td>একটাই</td><td>একটাই</td></tr>'+
+  '<tr><td>অবস্থা</td><td>সক্রিয় (নতুন)</td><td>support শেষ</td><td>সক্রিয়</td><td>সক্রিয়</td></tr></table>',
+ tabs:[
+  {n:'UI কীভাবে আঁকে',steps:[
+   S('<b>MAUI / React Native:</b> platform-এর <b>আসল native control</b> ব্যবহার করে।',{add:[B('m',20,40,200,60,'MAUI\nতোমার কোড','a'),B('mn',20,130,200,50,'Native Button','g'),A('a1',120,102,120,128,'n')]}),
+   S('তাই native চেহারা পায় (iOS-এ iOS-ের মতো, Android-এ Android-এর মতো)।',{add:[T('t1',120,200,'platform-এর নিজস্ব look',{a:'middle',c:'g',s:'sm b'})]}),
+   S('<b>Flutter:</b> native control নেয় না, নিজের engine-এ <b>নিজে সব আঁকে</b>।',{add:[B('f',400,40,200,60,'Flutter\nDart কোড','b'),B('fn',400,130,200,50,'নিজের canvas-এ আঁকা','o'),A('a2',500,102,500,128,'n')]}),
+   S('ফল: সব platform-এ <b>হুবহু এক চেহারা</b>।',{add:[T('t2',500,200,'সব platform-এ একই look',{a:'middle',c:'o',s:'sm b'})]})
+  ]}
+ ]}
+];
+
+/* ---------- build page ---------- */
+const app=document.getElementById('app'),jump=document.getElementById('jump'),partsNav=document.getElementById('parts');
+PARTS.forEach((pt,pi)=>{
+  const a=document.createElement('a');a.href='#part'+pi;a.innerHTML=`<b>${pt[0]}</b>${pt[1]}`;partsNav.appendChild(a);
+  const sec=document.createElement('section');sec.className='part';sec.id='part'+pi;
+  sec.innerHTML=`<h2><span>${pt[0]}</span>${pt[1]}</h2>`;app.appendChild(sec);
+});
+TOPICS.forEach((t,i)=>{
+  const n=t.n;
+  const j=document.createElement('a');j.href='#q'+n;j.textContent=n;j.title=t.q;jump.appendChild(j);
+  const card=document.createElement('article');card.className='q';card.id='q'+n;
+  card.innerHTML=`<h3><span class="num${n.length>1?' w':''}">${n}</span><span>${t.q}</span></h3><p class="ans">${t.ans}</p><ul>${t.pts.map(x=>`<li>${x}</li>`).join('')}</ul>${t.extra?`<div class="extra">${t.extra}</div>`:''}<div class="viz"></div>`;
+  document.getElementById('part'+t.p).appendChild(card);
+  mount(card.querySelector('.viz'),t);
+});
+</script>
+</body>
+</html>
