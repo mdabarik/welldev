@@ -46,6 +46,7 @@ Software engineering interview prep — বাংলায় ব্যাখ্
 - [Synchronous বনাম Asynchronous](04-resume-projects/06-sync-async/index.html) - দুটো কীভাবে কাজ করে: thread timeline, blocking / non-blocking, callback / Promise / async-await, Event Loop; ধাপে ধাপে D3 animation
 - [React Hooks: State ও useEffect](04-resume-projects/07-reactjs/index.html) - render চক্র, useState, Hooks-এর নিয়ম, useEffect (deps, cleanup, infinite loop); ধাপে ধাপে D3 animation
 - [.NET Web API & MVC](04-resume-projects/08-dotnet/index.html) - MVC, MVP, MVVM, Web API বনাম MVC, LINQ, IEnumerable বনাম IQueryable; ধাপে ধাপে D3 animation
+- [Return to Iman](04-resume-projects/16-project-return-to-iman/index.html) - resume project: 31টি interview প্রশ্ন (EF Core schema, ASP.NET Core API, CORS, BCrypt, React, moderation)
 - ★ **Core** · [Browser কীভাবে কাজ করে](04-resume-projects/15-how-browser-works/index.html) - Browser-এর ভেতরের অংশ, URL লিখলে কী ঘটে, page আঁকা (DOM/CSSOM/Layout/Paint), JavaScript, cache ও storage, নিরাপত্তা: সহজ ভাষায় step-by-step D3 animation
 
 ## 05 · Operating System
