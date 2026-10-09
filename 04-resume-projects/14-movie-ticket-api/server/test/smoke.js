@@ -1,10 +1,20 @@
-// Smoke test: সব endpoint একবার করে চালিয়ে status code মেলায়।  চালাতে: npm test
+// Smoke test: সব endpoint একবার করে চালিয়ে status code মেলায়।
+//   npm test            -> আসল Express server-এর বিরুদ্ধে
+//   npm run test:mock   -> browser-এর নকল server (client/src/mockServer.js)-এর বিরুদ্ধে, একই ৫৩টা check
 process.env.NODE_ENV = 'test';
 import assert from 'node:assert/strict';
-const { app } = await import('../src/app.js'); // env সেট করার পরে import, যাতে request log বন্ধ থাকে
 
-const server = app.listen(0);
-const base = `http://localhost:${server.address().port}/api`;
+let server = null;
+let base;
+if (process.env.MOCK) {
+  const { installMock } = await import('../../client/src/mockServer.js');
+  installMock({ latency: 0 });
+  base = 'http://mock.local/api';
+} else {
+  const { app } = await import('../src/app.js'); // env সেট করার পরে import, যাতে request log বন্ধ থাকে
+  server = app.listen(0);
+  base = `http://localhost:${server.address().port}/api`;
+}
 let passed = 0;
 
 async function call(method, path, { token, body } = {}) {
@@ -103,5 +113,5 @@ try {
   console.error('\n✗ FAIL:', err.message);
   process.exitCode = 1;
 } finally {
-  server.close();
+  server?.close();
 }

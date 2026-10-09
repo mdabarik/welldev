@@ -14,6 +14,10 @@
     └── src/ api.js (header + token) · ApiConsole.jsx · pages/
 ```
 
+## 🌐 Live demo
+
+সাইটে চালিয়ে দেখো: `04-resume-projects/14-movie-ticket-api/index.html` (GitHub Pages)। সেখানে Node server চলে না, তাই browser-এর ভেতরে নকল server (`client/src/mockServer.js`) চলে। `server/` আর mock দুটোই একই ৫৩টা test পাশ করে (`npm test`, `npm run test:mock`)। Demo আবার build করতে: `cd client && npm run build:demo` (output: `demo/`)।
+
 ## চালানোর নিয়ম
 
 ```bash

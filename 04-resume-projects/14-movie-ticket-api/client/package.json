@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:demo": "VITE_MOCK=1 vite build --base=./ --outDir ../demo --emptyOutDir",
     "preview": "vite preview"
   },
   "dependencies": {

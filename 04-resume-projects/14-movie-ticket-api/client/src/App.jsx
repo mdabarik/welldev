@@ -30,6 +30,12 @@ export default function App() {
 
   return (
     <div className="app">
+      {import.meta.env.VITE_MOCK && (
+        <div className="demo-banner">
+          🧪 Demo mode: এই page-এ আসল Node server নেই, browser-এর ভেতরেই একটা নকল API server চলছে (একই endpoint, একই status code)।
+          Reload দিলে data আবার প্রথম অবস্থায় ফেরে। নিচের <b>API console</b> দেখো: প্রতিটা request, header আর response সেখানে।
+        </div>
+      )}
       <header className="top">
         <h1>🎬 CineBook</h1>
         {user && (
