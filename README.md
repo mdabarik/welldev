@@ -41,6 +41,7 @@ Software engineering interview prep — বাংলায় ব্যাখ্
 - [Event Loop — Browser ও Node.js Interactive](04-resume-projects/03-event-loop/index.html) — call stack, microtask, task queue, Node-এর phase, D3 animation-এ
 - ★ **Core** · [System Design Basics](04-resume-projects/04-system-design/index.html) - ১৪টি প্রশ্ন (Client-Server, Functional vs Non-functional, Latency, Bandwidth, Throughput, Scalability, Vertical/Horizontal, Reliability, Availability, SPOF, Maintainability, Partition Tolerance, CAP, CDN): প্রতিটির সংক্ষিপ্ত উত্তর ও step-by-step D3 animation
 - ★ **Core** · [SDLC ও SDLC Model](04-resume-projects/05-sdlc/index.html) - SDLC কী, ৭টি ধাপ, Waterfall / Agile / Iterative / Incremental: সংক্ষিপ্ত উত্তর, তুলনার table ও step-by-step D3 animation
+- ★ **Core** · [API Design](04-resume-projects/13-api-design/index.html) - API কী, Public/Partner/Private/Composite, REST, SOAP, GraphQL, gRPC, WebSocket, Webhook, API key ও rate limit, কোনটা কখন: সহজ ভাষায় step-by-step D3 animation
 - [Synchronous বনাম Asynchronous](04-resume-projects/06-sync-async/index.html) - দুটো কীভাবে কাজ করে: thread timeline, blocking / non-blocking, callback / Promise / async-await, Event Loop; ধাপে ধাপে D3 animation
 - [React Hooks: State ও useEffect](04-resume-projects/07-reactjs/index.html) - render চক্র, useState, Hooks-এর নিয়ম, useEffect (deps, cleanup, infinite loop); ধাপে ধাপে D3 animation
 - [.NET Web API & MVC](04-resume-projects/08-dotnet/index.html) - MVC, MVP, MVVM, Web API বনাম MVC, LINQ, IEnumerable বনাম IQueryable; ধাপে ধাপে D3 animation

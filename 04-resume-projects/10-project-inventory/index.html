@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Inventory Management System (.NET MVC) - Interview Questions</title>
+<meta name="description" content="ASP.NET Core MVC (.NET 9) দিয়ে product, category, supplier আর stock-in/stock-out ট্র্যাক করার web app।">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Hind+Siliguri:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f5f7fc;--surface:#fff;--surface-2:#f1f4fa;--fg:#0f172a;--muted:#5b6478;--line:#e4e8f1;--accent:#6366f1;--hero:linear-gradient(135deg,#4f46e5,#7c3aed 45%,#db2777);--sans:"Inter","Hind Siliguri",system-ui,sans-serif;--bn:"Hind Siliguri","Inter",system-ui,sans-serif;--mono:"JetBrains Mono",ui-monospace,monospace}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0b0f1a;--surface:#121827;--surface-2:#182033;--fg:#e7ecf6;--muted:#9aa6bf;--line:#232c42;--accent:#818cf8}}
+:root[data-theme="dark"]{--bg:#0b0f1a;--surface:#121827;--surface-2:#182033;--fg:#e7ecf6;--muted:#9aa6bf;--line:#232c42;--accent:#818cf8}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 var(--bn);-webkit-font-smoothing:antialiased}
+code{font-family:var(--mono);font-size:.86em;background:color-mix(in srgb,var(--accent) 10%,var(--surface));padding:.1em .4em;border-radius:6px}
+.wrap{max-width:860px;margin:0 auto;padding:20px 18px 70px}
+.topnav{display:flex;align-items:center;gap:10px}
+.brand{display:flex;align-items:center;gap:10px;color:var(--fg);text-decoration:none;font:800 16px var(--sans)}
+.logo{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:#fff;font:800 13px var(--mono);background:var(--hero)}
+.sp{flex:1}
+.pill{border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:6px 14px;font:600 13px var(--sans);cursor:pointer;text-decoration:none}
+.hero{margin-top:20px;border-radius:22px;padding:26px 30px;color:#fff;background:var(--hero)}
+.hero .eyebrow{font:600 12px var(--sans);letter-spacing:.1em;text-transform:uppercase;opacity:.85}
+.hero h1{margin:6px 0 8px;font:800 clamp(24px,4vw,34px)/1.15 var(--sans);letter-spacing:-.03em}
+.hero p{margin:0;opacity:.94}
+.hero a{color:#fff;font:600 13px var(--sans);margin-right:14px}
+h2{margin:36px 0 4px;font:800 20px var(--sans);letter-spacing:-.02em}
+h2 span{color:var(--accent);margin-right:6px}
+details{margin-top:10px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:0 18px}
+summary{cursor:pointer;padding:14px 0;font:600 16px/1.45 var(--sans);list-style:none;display:flex;gap:10px}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"+";color:var(--accent);font:800 18px var(--mono);width:14px}
+details[open] summary::before{content:"\2212"}
+details .a{padding:0 0 14px 24px;color:var(--muted)}
+details .a b{color:var(--fg)}
+details .a ul{margin:6px 0 0;padding-left:18px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="topnav"><a class="brand" href="../../index.html"><span class="logo">W</span>WellDev</a><span class="sp"></span><button class="pill" id="theme" type="button">Theme</button></nav>
+  <header class="hero">
+    <div class="eyebrow">Resume Project &middot; Interview</div>
+    <h1>Inventory Management System (.NET MVC)</h1>
+    <p>ASP.NET Core MVC (.NET 9) দিয়ে product, category, supplier আর stock-in/stock-out ট্র্যাক করার web app।</p>
+    <p style="margin-top:12px"><a href="https://github.com/mdabarik/inventory-management-system" target="_blank" rel="noopener">GitHub</a></p>
+  </header>
+  <h2>Project Overview</h2>
+  <details><summary>এই project-টা কী আর কেন বানিয়েছ?</summary><div class="a">Product, category, supplier-এর তথ্য রাখা আর <b>stock-in / stock-out</b> দিয়ে কতটুকু মজুত আছে তা ট্র্যাক করার ASP.NET Core MVC app। <b>Pitch:</b> কী সমস্যা, কে ব্যবহার করবে, তুমি কোন অংশ বানিয়েছ - ৩০ সেকেন্ডে বলার জন্য তৈরি থাকো।</div></details>
+  <details><summary>MVC কীভাবে কাজ করে? তোমার project-এ কোথায় কী আছে?</summary><div class="a"><ul><li><b>Model</b> - Product, Category, Supplier (<code>Models/</code>)</li><li><b>View</b> - Razor page (<code>Views/</code>)</li><li><b>Controller</b> - request ধরে Service ডাকে, View ফেরত দেয় (<code>Controllers/</code>)</li></ul></div></details>
+  <details><summary>Services layer কেন রেখেছ, Controller-এ logic দিলে কী সমস্যা?</summary><div class="a">Controller শুধু HTTP সামলাবে; business rule (যেমন stock কমানো) <code>Services/</code>-এ থাকলে test করা সহজ, reuse করা যায়, আর controller মোটা (fat) হয় না।</div></details>
+  <h2>Database &amp; EF Core</h2>
+  <details><summary>Data access কীভাবে করেছ? Code First আর Migration কী?</summary><div class="a">Entity class লিখে <b>EF Core</b> (<code>DbContext</code>) দিয়ে table বানানো = Code First। Model বদলালে <code>Migrations/</code> schema-র version history রাখে, <code>dotnet ef database update</code> দিয়ে apply হয়।</div></details>
+  <details><summary>Product ↔ Category ↔ Supplier relation কেমন?</summary><div class="a">Category-Product এক-থেকে-অনেক (1:N), Supplier-Product-ও সাধারণত 1:N। Foreign key + navigation property ব্যবহার হয়। (নিজের schema অনুযায়ী মিলিয়ে নাও।)</div></details>
+  <details><summary>Stock কীভাবে হিসাব করো? দুইজন একসাথে stock-out করলে কী হবে?</summary><div class="a">Stock-in/out transaction আলাদা table-এ রেখে quantity আপডেট হয়। <b>Race condition</b> ঠেকাতে DB transaction আর concurrency token (<code>RowVersion</code>) বা atomic update দরকার।</div></details>
+  <details><summary>N+1 problem আর IEnumerable বনাম IQueryable?</summary><div class="a">Loop-এর ভেতরে প্রতিবার query চালানো = N+1; সমাধান <code>Include()</code>। <code>IQueryable</code> DB-তে SQL হয়ে filter চালায়, <code>IEnumerable</code> memory-তে।</div></details>
+  <h2>Security &amp; Quality</h2>
+  <details><summary>Form-এ কোন কোন security ব্যবস্থা নিয়েছ?</summary><div class="a"><ul><li><b>CSRF</b> - <code>[ValidateAntiForgeryToken]</code></li><li><b>XSS</b> - Razor default HTML-encode করে</li><li><b>SQL injection</b> - EF Core parameterized query</li><li>Server-side validation (Data Annotations)</li></ul></div></details>
+  <details><summary>Authentication/Authorization কীভাবে? (যদি থাকে)</summary><div class="a">ASP.NET Core Identity বা cookie auth; role-based <code>[Authorize(Roles="Admin")]</code>। না থাকলে সৎভাবে বলো "এখনো যোগ করিনি, করলে এভাবে করতাম"।</div></details>
+  <details><summary>Dependency Injection কী, কোথায় ব্যবহার করেছ?</summary><div class="a">Service/DbContext <code>Program.cs</code>-এ register করে constructor-এ inject করা হয়; coupling কমে, mock করে test করা যায়।</div></details>
+  <details><summary>Project-টা scale করতে হলে কী করতে?</summary><div class="a">Pagination, caching, index, Repository/Clean Architecture, background job, Docker + CI/CD, আর PostgreSQL/SQL Server production DB।</div></details>
+
+</div>
+<script>
+(function(){const r=document.documentElement,b=document.getElementById('theme');
+try{const t=localStorage.getItem('theme');if(t)r.dataset.theme=t}catch(e){}
+const dark=()=>r.dataset.theme?r.dataset.theme==='dark':matchMedia('(prefers-color-scheme:dark)').matches;
+b.onclick=()=>{r.dataset.theme=dark()?'light':'dark';try{localStorage.setItem('theme',r.dataset.theme)}catch(e){}}})();
+</script>
+</body>
+</html>
