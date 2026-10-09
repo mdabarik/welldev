@@ -13,14 +13,17 @@
   --bg:#fafafa; --surface:#ffffff; --fg:#0f172a; --muted:#64748b; --line:#e5e7eb; --soft:#f4f4f5;
   --accent:#4f46e5; --accent-soft:#eef2ff; --ok:#059669; --warn:#d97706; --bad:#dc2626;
   --sans:"Inter","Hind Siliguri",system-ui,sans-serif; --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  --code-bg:#ffffff; --code-fg:#1f1f1f; --c-com:#008000; --c-str:#a31515; --c-num:#098658; --c-kw:#0000ff; --c-ctl:#af00db; --c-fn:#795e26; --c-var:#001080; --c-type:#267f99; --c-key:#0451a5;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#0b0b0f; --surface:#131318; --fg:#ececf1; --muted:#9a9aa8; --line:#26262e; --soft:#1a1a21;
   --accent:#8b8bff; --accent-soft:#1c1c33; --ok:#34d399; --warn:#fbbf24; --bad:#f87171;
+  --code-bg:#1e1e1e; --code-fg:#d4d4d4; --c-com:#6a9955; --c-str:#ce9178; --c-num:#b5cea8; --c-kw:#569cd6; --c-ctl:#c586c0; --c-fn:#dcdcaa; --c-var:#9cdcfe; --c-type:#4ec9b0; --c-key:#9cdcfe;
 }}
 :root[data-theme="dark"]{
   --bg:#0b0b0f; --surface:#131318; --fg:#ececf1; --muted:#9a9aa8; --line:#26262e; --soft:#1a1a21;
   --accent:#8b8bff; --accent-soft:#1c1c33; --ok:#34d399; --warn:#fbbf24; --bad:#f87171;
+  --code-bg:#1e1e1e; --code-fg:#d4d4d4; --c-com:#6a9955; --c-str:#ce9178; --c-num:#b5cea8; --c-kw:#569cd6; --c-ctl:#c586c0; --c-fn:#dcdcaa; --c-var:#9cdcfe; --c-type:#4ec9b0; --c-key:#9cdcfe;
 }
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
@@ -69,7 +72,8 @@ h2.sec{margin:64px 0 6px;font:700 26px/1.3 var(--sans);letter-spacing:0}
 .row span{color:var(--muted)}
 .x{color:var(--bad)} .v{color:var(--ok)}
 .get{color:var(--ok)} .post{color:var(--accent)} .put{color:var(--warn)} .patch{color:#0891b2} .del{color:var(--bad)}
-pre{margin:0;padding:14px 16px;background:var(--soft);border:1px solid var(--line);border-radius:12px;font:500 13px/1.65 var(--mono);overflow-x:auto;white-space:pre}
+pre{margin:0;padding:14px 16px;background:var(--code-bg);color:var(--code-fg);border:1px solid var(--line);border-radius:12px;font:400 13px/1.65 var(--mono);overflow-x:auto;white-space:pre;tab-size:2;font-variant-ligatures:none}
+.t-c{color:var(--c-com);font-style:italic}.t-s{color:var(--c-str)}.t-n{color:var(--c-num)}.t-k{color:var(--c-kw)}.t-x{color:var(--c-ctl)}.t-f{color:var(--c-fn)}.t-v{color:var(--c-var)}.t-t{color:var(--c-type)}.t-p{color:var(--c-key)}
 .cols{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 @media (max-width:640px){.cols{grid-template-columns:1fr}.row{grid-template-columns:1fr;gap:2px}.step{grid-template-columns:34px 1fr;gap:6px 12px}}
 .codes{display:flex;flex-wrap:wrap;gap:8px}
@@ -354,6 +358,37 @@ if (!res.ok) throw new Error(data.error.message);          // 400, 401, 409 …<
 
 
 <script>
+/* ছোট syntax highlighter, রং VS Code Light+ (dark mode-এ Dark+) */
+(function(){
+  const CTL=/^(if|else|return|try|catch|throw|await|import|export|from|for|while|switch|case|break|continue|default|async)$/;
+  const KW=/^(const|let|var|function|new|typeof|instanceof|of|in|class|extends|this|true|false|null|undefined)$/;
+  const RE=/(\/\/[^\n]*|\/\*[\s\S]*?\*\/)|("(?:\\.|[^"\\\n])*"|'(?:\\.|[^'\\\n])*'|`(?:\\.|[^`\\])*`)(\s*:)?|(\b\d+(?:\.\d+)?\b)|(\.)([A-Za-z_$][\w$]*)(\s*\()?|([A-Za-z_$][\w$]*)(\s*\()?/g;
+  const esc=(x)=>x.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const span=(c,x)=>'<span class="t-'+c+'">'+esc(x)+'</span>';
+  window.hl=function(el){
+    const t=el.textContent; let out='',last=0,m; RE.lastIndex=0;
+    while((m=RE.exec(t))){
+      out+=esc(t.slice(last,m.index));
+      if(m[1]) out+=span('c',m[1]);
+      else if(m[2]) out+=span(m[3]?'p':'s',m[2])+(m[3]?esc(m[3]):'');
+      else if(m[4]) out+=span('n',m[4]);
+      else if(m[5]) out+=esc('.')+(m[7]?span('f',m[6]):span('v',m[6]))+(m[7]?esc(m[7]):'');
+      else { const w=m[8];
+        if(CTL.test(w)) out+=span('x',w);
+        else if(KW.test(w)) out+=span('k',w);
+        else if(m[9]) out+=span('f',w);
+        else if(/^[A-Z]/.test(w)) out+=span('t',w);
+        else out+=span('v',w);
+        if(m[9]) out+=esc(m[9]);
+      }
+      last=RE.lastIndex;
+    }
+    el.innerHTML=out+esc(t.slice(last));
+  };
+  document.addEventListener('DOMContentLoaded',()=>document.querySelectorAll('main pre:not(#req):not(#res)').forEach(window.hl));
+})();
+</script>
+<script>
 /* ৫টা method: client (fetch) আর server (Express) কোড */
 (function(){
   const M = {
@@ -509,7 +544,7 @@ app.delete("/users/:id", auth, requireAdmin, deleteUser);`;
   function codeBlock(text) {
     const w = document.createElement('div'); w.className = 'cwrap';
     const b = document.createElement('button'); b.className = 'cp'; b.type = 'button'; b.textContent = 'Copy'; copy(b, text);
-    const pre = document.createElement('pre'); pre.textContent = text;
+    const pre = document.createElement('pre'); pre.textContent = text; hl(pre);
     w.append(b, pre); return w;
   }
   function show(name) {
@@ -529,7 +564,7 @@ app.delete("/users/:id", auth, requireAdmin, deleteUser);`;
     const b = document.createElement('button'); b.type = 'button'; b.dataset.m = k; b.textContent = k;
     b.onclick = () => show(k); tabs.append(b);
   });
-  const mw = document.getElementById('mwcode'); mw.textContent = MW;
+  const mw = document.getElementById('mwcode'); mw.textContent = MW; hl(mw);
   copy(mw.parentElement.querySelector('.cp'), MW);
   show('POST');
 })();
@@ -597,6 +632,7 @@ async function send() {
   $('stat').innerHTML = `<span class="status ${cls}">${res.status} ${names[res.status] || ''} <small>${ms} ms</small></span>` +
     (loc ? ` <span class="muted" style="font-size:13px">Location: <code>${loc}</code></span>` : '');
   $('res').textContent = res.status === 204 ? '(খালি: 204 No Content, কোনো body নেই)' : pretty(text);
+  if (res.status !== 204) window.hl($('res'));
   // login বা register হলে token নিজেই ধরে নিই
   if (res.ok && /\/auth\/(login|register)$/.test(path)) { try { setToken(JSON.parse(text).token); } catch {} }
 }
