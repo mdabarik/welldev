@@ -3,167 +3,296 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Movie Ticket Booking API - Node.js + React Project</title>
-<meta name="description" content="Movie ticket booking-এর পুরো REST API project: Node.js + Express server, JWT Bearer token, React client। Live demo, সব endpoint, status code আর ধাপে ধাপে D3 animation।">
+<title>API Design: কী কী লাগে (Movie Ticket Booking)</title>
+<meta name="description" content="একটা API design করতে কী কী লাগে, Movie ticket booking উদাহরণে ধাপে ধাপে। সাথে React থেকে সত্যিকারের request পাঠিয়ে দেখার জায়গা।">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Hind+Siliguri:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-/* One card per interview question: short answer, 2-3 bullets, and a step-by-step D3 scene.
-   Scenes are plain data (see TOPICS at the bottom): each step adds / modifies / deletes nodes by id
-   and the tiny engine animates the difference. */
 :root{
-  --bg:#f5f7fc; --surface:#ffffff; --surface-2:#f1f4fa; --fg:#0f172a; --muted:#5b6478; --faint:#94a0b8; --line:#e4e8f1;
-  --accent:#6366f1;
-  --a:#4f46e5; --b:#db2777; --g:#059669; --o:#d97706; --r:#e11d48; --s:#0284c7;
-  --hero:linear-gradient(135deg,#4f46e5 0%,#7c3aed 45%,#db2777 100%);
-  --shadow:0 1px 2px rgba(15,23,42,.04),0 10px 30px -12px rgba(15,23,42,.14);
-  --sans:"Inter","Hind Siliguri",system-ui,sans-serif; --bn:"Hind Siliguri","Inter",system-ui,sans-serif;
-  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  --bg:#fafafa; --surface:#ffffff; --fg:#0f172a; --muted:#64748b; --line:#e5e7eb; --soft:#f4f4f5;
+  --accent:#4f46e5; --accent-soft:#eef2ff; --ok:#059669; --warn:#d97706; --bad:#dc2626;
+  --sans:"Inter","Hind Siliguri",system-ui,sans-serif; --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --bg:#0b0f1a; --surface:#121827; --surface-2:#182033; --fg:#e7ecf6; --muted:#9aa6bf; --faint:#66728c; --line:#232c42;
-  --accent:#818cf8; --a:#818cf8; --b:#f472b6; --g:#34d399; --o:#fbbf24; --r:#fb7185; --s:#38bdf8;
-  --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6);
+  --bg:#0b0b0f; --surface:#131318; --fg:#ececf1; --muted:#9a9aa8; --line:#26262e; --soft:#1a1a21;
+  --accent:#8b8bff; --accent-soft:#1c1c33; --ok:#34d399; --warn:#fbbf24; --bad:#f87171;
 }}
 :root[data-theme="dark"]{
-  --bg:#0b0f1a; --surface:#121827; --surface-2:#182033; --fg:#e7ecf6; --muted:#9aa6bf; --faint:#66728c; --line:#232c42;
-  --accent:#818cf8; --a:#818cf8; --b:#f472b6; --g:#34d399; --o:#fbbf24; --r:#fb7185; --s:#38bdf8;
-  --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6);
+  --bg:#0b0b0f; --surface:#131318; --fg:#ececf1; --muted:#9a9aa8; --line:#26262e; --soft:#1a1a21;
+  --accent:#8b8bff; --accent-soft:#1c1c33; --ok:#34d399; --warn:#fbbf24; --bad:#f87171;
 }
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
-body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 var(--bn);-webkit-font-smoothing:antialiased}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.75 var(--sans);-webkit-font-smoothing:antialiased}
 a{color:var(--accent)}
-button{font:inherit;color:inherit}
-code{font-family:var(--mono);font-size:.86em;font-weight:500;background:color-mix(in srgb,var(--accent) 10%,var(--surface));color:color-mix(in srgb,var(--accent) 72%,var(--fg));padding:.1em .4em;border-radius:6px}
-.wrap{max-width:1000px;margin:0 auto;padding:20px 18px 70px}
+code,pre,kbd{font-family:var(--mono)}
+code{font-size:.86em;background:var(--soft);padding:.12em .42em;border-radius:6px}
+.wrap{max-width:760px;margin:0 auto;padding:0 22px}
 
-.topnav{display:flex;align-items:center;gap:10px}
-.brand{display:flex;align-items:center;gap:10px;color:var(--fg);text-decoration:none;font:800 16px var(--sans);letter-spacing:-.02em}
-.logo{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:#fff;font:800 13px var(--mono);background:var(--hero)}
-.topnav .sp{flex:1}
-.pill{border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:6px 14px;font:600 13px var(--sans);cursor:pointer;text-decoration:none}
+/* top bar */
+.bar{position:sticky;top:0;z-index:10;background:color-mix(in srgb,var(--bg) 85%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.bar .wrap{display:flex;align-items:center;gap:14px;height:54px}
+.brand{display:flex;align-items:center;gap:9px;color:var(--fg);text-decoration:none;font-weight:700;font-size:15px}
+.logo{width:26px;height:26px;border-radius:8px;background:var(--accent);color:#fff;display:grid;place-items:center;font:700 12px var(--mono)}
+.bar .sp{flex:1}
+.bar a.l{color:var(--muted);text-decoration:none;font-size:14px;font-weight:500}
+.bar a.l:hover{color:var(--fg)}
+.pill{border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:5px 13px;font:600 13px var(--sans);cursor:pointer}
 .pill:hover{color:var(--fg)}
 
-.hero{margin-top:20px;border-radius:22px;padding:26px 30px;color:#fff;background:var(--hero)}
-.hero .eyebrow{font:600 12px var(--sans);letter-spacing:.1em;text-transform:uppercase;opacity:.85}
-.hero h1{margin:6px 0 8px;font:800 clamp(26px,4.2vw,38px)/1.15 var(--sans);letter-spacing:-.03em}
-.hero p{margin:0;max-width:680px;opacity:.94}
-.jump{display:flex;flex-wrap:wrap;gap:6px;margin-top:16px}
-.jump a{min-width:32px;padding:0 6px;height:32px;display:grid;place-items:center;border-radius:9px;text-decoration:none;font:700 13px var(--sans);color:#fff;background:rgba(255,255,255,.18)}
-.jump a:hover{background:rgba(255,255,255,.34)}
+/* hero */
+.hero{padding:72px 0 36px}
+.hero .tag{display:inline-block;font:600 12px var(--sans);color:var(--accent);background:var(--accent-soft);padding:4px 12px;border-radius:999px;letter-spacing:.04em}
+.hero h1{margin:16px 0 12px;font:700 clamp(32px,6vw,48px)/1.25 var(--sans);letter-spacing:0}
+.hero p{margin:0;color:var(--muted);font-size:18px;max-width:600px}
+.hero .go{display:flex;gap:10px;flex-wrap:wrap;margin-top:26px}
+.btn{display:inline-block;text-decoration:none;font:600 14px var(--sans);padding:10px 18px;border-radius:11px;border:1px solid var(--line);background:var(--surface);color:var(--fg);cursor:pointer}
+.btn:hover{border-color:var(--accent)}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:#fff}
 
-.parts{position:sticky;top:0;z-index:5;margin:14px -18px 0;padding:10px 18px;display:flex;gap:8px;overflow-x:auto;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);scrollbar-width:none}
-.parts a{flex:none;text-decoration:none;font:600 13px var(--sans);color:var(--muted);border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 13px}
-.parts a:hover{color:var(--fg)}
-.parts a b{color:var(--accent);margin-right:4px}
+/* steps */
+h2.sec{margin:64px 0 6px;font:700 26px/1.3 var(--sans);letter-spacing:0}
+.lead{margin:0 0 8px;color:var(--muted)}
+.step{display:grid;grid-template-columns:44px 1fr;gap:6px 18px;padding:28px 0;border-top:1px solid var(--line)}
+.step:first-of-type{border-top:0}
+.n{width:34px;height:34px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font:700 14px var(--sans);margin-top:2px}
+.step h3{margin:0 0 4px;font:600 19px/1.4 var(--sans);letter-spacing:0}
+.step p{margin:0 0 12px;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:2px 0 4px}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:3px 13px;font:500 14px var(--sans)}
+.chip.m{font-family:var(--mono);font-size:13px}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:4px 16px}
+.row{display:grid;grid-template-columns:130px 1fr;gap:10px;padding:9px 0;border-top:1px solid var(--line);font-size:15px;align-items:baseline}
+.row:first-child{border-top:0}
+.row b{font:600 13px var(--mono)}
+.row span{color:var(--muted)}
+.x{color:var(--bad)} .v{color:var(--ok)}
+.get{color:var(--ok)} .post{color:var(--accent)} .put{color:var(--warn)} .patch{color:#0891b2} .del{color:var(--bad)}
+pre{margin:0;padding:14px 16px;background:var(--soft);border:1px solid var(--line);border-radius:12px;font:500 13px/1.65 var(--mono);overflow-x:auto;white-space:pre}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:640px){.cols{grid-template-columns:1fr}.row{grid-template-columns:1fr;gap:2px}.step{grid-template-columns:34px 1fr;gap:6px 12px}}
+.codes{display:flex;flex-wrap:wrap;gap:8px}
+.codes div{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:8px 12px;min-width:150px;flex:1}
+.codes b{font:700 15px var(--mono);display:block}
+.codes span{font-size:13px;color:var(--muted);line-height:1.4;display:block}
+.c2 b{color:var(--ok)} .c4 b{color:var(--warn)} .c5 b{color:var(--bad)}
 
-.part{margin-top:44px;scroll-margin-top:60px}
-.part>h2{margin:0;font:800 clamp(20px,2.6vw,25px)/1.25 var(--sans);letter-spacing:-.02em}
-.part>h2 span{color:var(--accent);margin-right:8px}
-
-.q{margin-top:16px;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:20px 22px;box-shadow:var(--shadow);scroll-margin-top:64px}
-.q h3{display:flex;gap:12px;align-items:flex-start;margin:0 0 10px;font:700 18px/1.4 var(--sans);letter-spacing:-.01em}
-.skip{display:inline-block;margin-left:8px;padding:1px 10px;border-radius:999px;font:600 12px var(--sans);font-style:normal;white-space:nowrap;color:var(--muted);background:var(--surface-2);border:1px dashed var(--faint);vertical-align:middle}
-.num{flex:none;min-width:34px;height:34px;padding:0 8px;border-radius:10px;display:grid;place-items:center;color:#fff;font:800 14px var(--sans);background:var(--hero)}
-.ans{margin:0 0 10px;padding:10px 14px;border-left:4px solid var(--accent);border-radius:0 10px 10px 0;background:color-mix(in srgb,var(--accent) 8%,var(--surface))}
-.q ul{margin:0 0 12px;padding-left:20px;color:var(--muted)}
-.q li{margin:2px 0}
-.q li b,.ans b{color:var(--fg)}
-.extra{margin:0 0 12px;overflow-x:auto}
-.extra table{border-collapse:collapse;font:500 13px var(--mono)}
-.extra th,.extra td{border:1px solid var(--line);padding:3px 10px;text-align:center}
-.extra th{background:var(--surface-2)}
-.extra .cmp td,.extra .cmp th{text-align:left;vertical-align:top;font:500 13.5px/1.55 var(--bn);min-width:150px}
-.extra .cmp td:first-child{font-weight:700;white-space:nowrap;min-width:0}
-
-.viz{border:1px solid var(--line);border-radius:14px;background:var(--surface-2);overflow:hidden}
-.tabs{display:flex;gap:6px;flex-wrap:wrap;padding:10px 12px 0}
-.tabs button{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:3px 12px;font:600 12.5px var(--sans);color:var(--muted);cursor:pointer}
-.tabs button.on{background:var(--accent);border-color:var(--accent);color:#fff}
-.stage{overflow-x:auto;padding-top:8px}
-.stage svg{display:block;width:100%;min-width:680px;height:auto;cursor:pointer;user-select:none}
-.cap{padding:10px 16px;min-height:3.4em;border-top:1px dashed var(--line);font-size:15px}
-.ctl{display:flex;align-items:center;gap:8px;padding:0 12px 12px}
-.b{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:5px 14px;font:600 13px var(--sans);cursor:pointer}
-.b:hover:not(:disabled){border-color:var(--accent)}
-.b:disabled{opacity:.4;cursor:default}
-.b.pri{background:var(--accent);border-color:var(--accent);color:#fff}
-.cnt{margin-left:auto;font:500 12px var(--mono);color:var(--faint)}
-
-/* svg scene */
-svg text,svg tspan{white-space:pre}
-svg text{font-family:var(--sans);font-size:13px;fill:var(--fg);dominant-baseline:central}
-.c-n{--cc:var(--muted)} .c-a{--cc:var(--a)} .c-b{--cc:var(--b)} .c-g{--cc:var(--g)}
-.c-o{--cc:var(--o)} .c-r{--cc:var(--r)} .c-s{--cc:var(--s)} .c-f{--cc:var(--fg)}
-.box rect,.circ circle{fill:color-mix(in srgb,var(--cc) 14%,var(--surface));stroke:var(--cc);stroke-width:1.6;transition:fill .45s,stroke .45s}
-.dash rect,.dash circle{stroke-dasharray:6 4;fill:color-mix(in srgb,var(--cc) 4%,transparent)}
-.hl rect,.hl circle{stroke-width:3.4;filter:drop-shadow(0 0 7px color-mix(in srgb,var(--cc) 65%,transparent))}
-.text text{fill:var(--cc);transition:fill .45s}
-.text.b text,.text.lg text{font-weight:700}
-.text.lg text{font-size:15px}
-.sm text{font-size:11.5px}
-.m text{font-family:var(--mono);font-size:12px}
-.path path{fill:none;stroke:var(--cc);stroke-width:3.4;stroke-linecap:round}
-.arrow line{stroke:var(--cc);stroke-width:2.2;transition:stroke .4s}
-.arrow.dash line{stroke-dasharray:6 4}
-.arrow.hl line{stroke-width:3.4}
-footer{margin-top:50px;text-align:center;color:var(--faint);font:500 13px var(--sans)}
-/* bn-type: Bengali glyphs/digits need normal tracking */
-h1,h2,h3,h4,h5{letter-spacing:0!important}
-.hero h1,.page-head h1,.p-hero h1,.prose h1,header.top h1{line-height:1.32!important}
-
-/* movie-ticket landing */
-.demo{margin-top:22px;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:18px 20px;box-shadow:var(--shadow)}
-.demo h2{margin:0 0 4px;font:800 20px var(--sans)}
-.demo p{margin:4px 0 10px;color:var(--muted)}
-.demo .btns{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
-.demo .btns a{display:inline-block;text-decoration:none;font:700 13px var(--sans);padding:7px 14px;border-radius:10px;border:1px solid var(--line);background:var(--surface-2);color:var(--fg)}
-.demo .btns a.pri{background:var(--accent);border-color:var(--accent);color:#fff}
-.demo iframe{width:100%;height:760px;border:1px solid var(--line);border-radius:12px;background:#0f1220}
-.demo .try{margin:10px 0 0;padding:10px 14px;border-radius:10px;background:var(--surface-2);font-size:14px}
-.cmd{margin:8px 0 0;padding:10px 14px;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;font:500 12.5px/1.6 var(--mono);overflow-x:auto;white-space:pre}
-.extra pre{margin:10px 0 0;padding:10px 14px;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;font:500 12.5px/1.6 var(--mono);overflow-x:auto;white-space:pre}
+/* tester */
+.tester{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:18px;margin-top:18px}
+.tok{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:13px;color:var(--muted);margin-bottom:14px}
+.tok code{max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;vertical-align:middle}
+.mini{border:1px solid var(--line);background:var(--soft);color:var(--fg);border-radius:8px;padding:4px 11px;font:600 12.5px var(--sans);cursor:pointer}
+.mini:hover{border-color:var(--accent)}
+.presets{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.presets button{border:1px solid var(--line);background:var(--bg);color:var(--fg);border-radius:999px;padding:4px 12px;font:500 13px var(--sans);cursor:pointer}
+.presets button:hover{border-color:var(--accent);color:var(--accent)}
+.line{display:flex;gap:8px}
+.line select,.line input{font:500 14px var(--mono);color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:9px 11px;outline:none}
+.line select{width:104px;font-weight:700}
+.line input{flex:1;min-width:0}
+.line button.send{background:var(--accent);color:#fff;border:0;border-radius:10px;padding:0 20px;font:600 14px var(--sans);cursor:pointer}
+.line select:focus,.line input:focus,textarea:focus{border-color:var(--accent)}
+textarea{width:100%;margin-top:8px;height:92px;font:500 13px/1.6 var(--mono);color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;outline:none;resize:vertical}
+.lab{margin:14px 0 6px;font:600 12px var(--sans);color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+.status{display:inline-flex;align-items:center;gap:8px;font:700 14px var(--mono);padding:3px 12px;border-radius:999px;border:1px solid}
+.status.s2{color:var(--ok);border-color:var(--ok)} .status.s4{color:var(--warn);border-color:var(--warn)} .status.s5{color:var(--bad);border-color:var(--bad)}
+.status small{font:500 12px var(--sans);color:var(--muted)}
+.muted{color:var(--muted)}
+footer{margin:80px 0 50px;padding-top:22px;border-top:1px solid var(--line);color:var(--muted);font-size:14px;display:flex;flex-wrap:wrap;gap:6px 18px}
 </style>
 </head>
 <body>
-<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs id="defs"></defs></svg>
-<div class="wrap">
-  <nav class="topnav">
-    <a class="brand" href="../../index.html"><span class="logo">W</span>WellDev</a>
-    <span class="sp"></span>
-    <button class="pill" id="theme" type="button">Theme</button>
-  </nav>
+<header class="bar"><div class="wrap">
+  <a class="brand" href="../../index.html"><span class="logo">W</span>WellDev</a>
+  <span class="sp"></span>
+  <a class="l" href="#build">ধাপগুলো</a>
+  <a class="l" href="#try">Request পাঠাও</a>
+  <button class="pill" id="theme" type="button">Theme</button>
+</div></header>
 
-  <header class="hero">
-    <div class="eyebrow">API Design · Project</div>
-    <h1>Movie Ticket Booking API</h1>
-    <p>Node.js + Express server, JWT Bearer token আর React client নিয়ে একটা পুরো project: GET, POST, PUT, PATCH, DELETE সব আছে। নিচে live demo চালিয়ে দেখো, তারপর animation-এ বোঝো কীভাবে চলে।</p>
-    <div class="jump" id="jump"></div>
-  </header>
-  <section class="demo" id="live">
-    <h2>🎬 Live demo</h2>
-    <p>এটা আসল React client। GitHub Pages-এ Node server চলে না, তাই এখানে browser-এর ভেতরেই একটা নকল API server চলছে। endpoint, validation আর status code আসল server-এর <b>একদম একই</b> (দুই জায়গাতেই একই ৫৩টা test পাশ করে)।</p>
-    <div class="try"><b>কী করবে:</b> <code>user@demo.com / user123</code> দিয়ে login → একটা movie → show → seat বাছো → Book → My bookings-এ গিয়ে bKash pay → Cancel। তারপর logout করে <code>admin@demo.com / admin123</code> দিয়ে Admin tab-এ movie বানাও (POST), বদলাও (PUT/PATCH), মোছো (DELETE)। সবচেয়ে জরুরি: নিচের <b>API console</b>-এ প্রতিটা request-এর header, body আর status code দেখো।</div>
-    <div class="btns">
-      <a class="pri" href="demo/index.html" target="_blank" rel="noopener">নতুন tab-এ পুরো screen-এ খোলো ↗</a>
-      <a href="https://github.com/mdabarik/welldev/tree/main/04-resume-projects/14-movie-ticket-api" target="_blank" rel="noopener">Source code (GitHub) ↗</a>
-      <a href="https://github.com/mdabarik/welldev/blob/main/04-resume-projects/14-movie-ticket-api/README.md" target="_blank" rel="noopener">README ↗</a>
-    </div>
-    <iframe src="demo/index.html" title="CineBook live demo" loading="lazy"></iframe>
-    <p style="margin-top:12px">নিজের machine-এ আসল server দিয়ে চালাতে:</p>
-    <div class="cmd">cd server &amp;&amp; npm install &amp;&amp; npm start      # Node API  → http://localhost:4000/api
-cd client &amp;&amp; npm install &amp;&amp; npm run dev    # React     → http://localhost:5173</div>
-  </section>
-  <nav class="parts" id="parts"></nav>
-  <main id="app"></main>
-  <footer>Trainee Software Engineer · Movie ticket booking API</footer>
+<main class="wrap">
+
+<section class="hero">
+  <span class="tag">API DESIGN</span>
+  <h1>একটা API design করতে<br>কী কী লাগে?</h1>
+  <p>Movie ticket booking বানাতে বানাতে ধাপে ধাপে দেখি। শেষে React থেকে সত্যিকারের request পাঠিয়ে উত্তর দেখবে।</p>
+  <div class="go">
+    <a class="btn pri" href="#build">শুরু করো ↓</a>
+    <a class="btn" href="#try">Request পাঠিয়ে দেখো</a>
+    <a class="btn" href="demo/index.html" target="_blank" rel="noopener">পুরো app ↗</a>
+  </div>
+</section>
+
+<!-- ===================== API design-এর ধাপ ===================== -->
+<h2 class="sec" id="build">ধাপে ধাপে API design</h2>
+<p class="lead">কোড লেখার আগে এই ১০টা প্রশ্নের উত্তর ঠিক করলেই API-র নকশা হয়ে যায়।</p>
+
+<div class="step"><div class="n">1</div><div>
+  <h3>কোন কোন জিনিস নিয়ে কাজ?</h3>
+  <p>আগে ঠিক করো system-এ কী কী "জিনিস" (<b>resource</b>) আছে। API এই জিনিসগুলোর চারপাশেই গড়া হয়।</p>
+  <div class="chips"><span class="chip">🎬 movie</span><span class="chip">🕒 showtime</span><span class="chip">🎟 booking</span><span class="chip">👤 user</span></div>
+  <p style="margin:10px 0 0">সম্পর্ক: একটা movie-র অনেক showtime, একটা showtime-এ অনেক booking (প্রতিটায় কয়েকটা seat)।</p>
+</div></div>
+
+<div class="step"><div class="n">2</div><div>
+  <h3>প্রতিটার একটা URL (endpoint)</h3>
+  <p>নিয়ম: URL-এ থাকবে <b>জিনিসের নাম</b> (বহুবচন), কাজের নাম নয়। কাজ বোঝাবে method।</p>
+  <div class="box">
+    <div class="row"><b class="x">✗ ভুল</b><span><code>/getMovies</code> · <code>/createBooking</code> · <code>/deleteMovie?id=4</code></span></div>
+    <div class="row"><b class="v">✓ ঠিক</b><span><code>/movies</code> · <code>/movies/4</code> · <code>/movies/4/showtimes</code> · <code>/bookings</code></span></div>
+  </div>
+</div></div>
+
+<div class="step"><div class="n">3</div><div>
+  <h3>কাজ বোঝাতে HTTP method</h3>
+  <p>একই URL, কিন্তু method বদলালে কাজ বদলায়।</p>
+  <div class="box">
+    <div class="row"><b class="get">GET</b><span>পড়া: <code>GET /movies/4</code></span></div>
+    <div class="row"><b class="post">POST</b><span>নতুন তৈরি: <code>POST /bookings</code></span></div>
+    <div class="row"><b class="put">PUT</b><span>পুরোটা বদলানো: <code>PUT /movies/4</code> (সব field পাঠাতে হয়)</span></div>
+    <div class="row"><b class="patch">PATCH</b><span>আংশিক বদল: <code>PATCH /movies/4</code> <code>{ "rating": 9.1 }</code></span></div>
+    <div class="row"><b class="del">DELETE</b><span>মোছা: <code>DELETE /bookings/7</code></span></div>
+  </div>
+</div></div>
+
+<div class="step"><div class="n">4</div><div>
+  <h3>Request-এ কী কী পাঠানো যায়</h3>
+  <p>চারটা জায়গা, প্রতিটার আলাদা কাজ।</p>
+  <div class="box">
+    <div class="row"><b>path</b><span>কোন জিনিস: <code>/movies/<b>4</b></code></span></div>
+    <div class="row"><b>query</b><span>ছাঁকনি, পাতা: <code>?search=inc&amp;page=2</code></span></div>
+    <div class="row"><b>header</b><span>পরিচয় আর ধরন: <code>Authorization</code>, <code>Content-Type</code></span></div>
+    <div class="row"><b>body</b><span>নতুন বা বদলের data (JSON): <code>{ "seats": ["A1"] }</code></span></div>
+  </div>
+</div></div>
+
+<div class="step"><div class="n">5</div><div>
+  <h3>Response-এর একটা নির্দিষ্ট আকার</h3>
+  <p>সফল আর ব্যর্থ দুই ক্ষেত্রেই সবসময় একই ছাঁচ, যাতে client সহজে পড়তে পারে।</p>
+  <div class="cols">
+    <pre>// সফল
+{ "data": { "id": 7, "status": "pending" } }
+
+// তালিকা
+{ "data": [ … ],
+  "meta": { "page": 1, "total": 3 } }</pre>
+    <pre>// ব্যর্থ
+{ "error": {
+    "code": "SEAT_TAKEN",
+    "message": "এই seat আগেই booked: A2",
+    "details": { "seats": ["A2"] } } }</pre>
+  </div>
+</div></div>
+
+<div class="step"><div class="n">6</div><div>
+  <h3>Status code দিয়ে ফল জানানো</h3>
+  <p>প্রথম অঙ্ক দেখলেই বোঝা যায় কেমন খবর: 2 সফল, 4 তোমার ভুল, 5 server-এর ভুল।</p>
+  <div class="codes">
+    <div class="c2"><b>200 OK</b><span>সফল (GET, PUT, PATCH)</span></div>
+    <div class="c2"><b>201 Created</b><span>নতুন তৈরি (POST)</span></div>
+    <div class="c2"><b>204 No Content</b><span>মোছা হয়েছে, body নেই</span></div>
+    <div class="c4"><b>400 Bad Request</b><span>input ভুল</span></div>
+    <div class="c4"><b>401 Unauthorized</b><span>token নেই বা ভুল</span></div>
+    <div class="c4"><b>403 Forbidden</b><span>অনুমতি নেই</span></div>
+    <div class="c4"><b>404 Not Found</b><span>জিনিসটা নেই</span></div>
+    <div class="c4"><b>409 Conflict</b><span>সংঘর্ষ (seat আগেই নেওয়া)</span></div>
+    <div class="c5"><b>500 Server Error</b><span>server-এ গোলমাল</span></div>
+  </div>
+</div></div>
+
+<div class="step"><div class="n">7</div><div>
+  <h3>কে ডাকছে? (Authentication)</h3>
+  <p>একবার login করে <b>token</b> নাও। এরপর প্রতিটা request-এর header-এ সেটা দেখাও। Server শুধু token যাচাই করে।</p>
+  <pre>POST /api/auth/login   { "email": "…", "password": "…" }   →  { "token": "eyJhbGci…" }
+
+GET  /api/bookings
+Authorization: Bearer eyJhbGci…</pre>
+  <p style="margin:12px 0 0"><b>401</b> = তুমি কে জানি না (token নেই/ভুল)। <b>403</b> = জানি, কিন্তু এই কাজ তোমার নয় (user হয়ে admin-এর কাজ)।</p>
+</div></div>
+
+<div class="step"><div class="n">8</div><div>
+  <h3>ব্যবসার নিয়ম আর validation</h3>
+  <p>URL আর method ঠিক থাকলেও API-র আসল কাজ নিয়মগুলো মানানো। Server-এই এগুলো ঠিক করবে, client-এর ওপর ভরসা করে নয়।</p>
+  <div class="box">
+    <div class="row"><b>input যাচাই</b><span>ভুল seat, খালি title → <b>400</b>, কোন field ভুল তা সহ</span></div>
+    <div class="row"><b>seat সংঘর্ষ</b><span>দুজন একই seat চাইলে প্রথমজন পায়, দ্বিতীয়জন <b>409</b></span></div>
+    <div class="row"><b>মালিকানা</b><span>নিজের booking ছাড়া দেখা যাবে না → <b>403</b></span></div>
+    <div class="row"><b>সময়ের নিয়ম</b><span>pending seat ১০ মিনিট আটকে থাকে, পরে ছাড়া পায় (<b>410</b>)</span></div>
+  </div>
+</div></div>
+
+<div class="step"><div class="n">9</div><div>
+  <h3>বড় হলে: pagination, filter, version</h3>
+  <p>তালিকা বড় হলে একবারে সব না পাঠিয়ে ভাগ করে দাও। আর পরে নিয়ম বদলালে পুরনো client যেন না ভাঙে।</p>
+  <div class="box">
+    <div class="row"><b>pagination</b><span><code>/movies?page=2&amp;limit=10</code> → <code>meta.totalPages</code></span></div>
+    <div class="row"><b>filter</b><span><code>/movies?genre=Sci-Fi&amp;search=inc</code></span></div>
+    <div class="row"><b>version</b><span><code>/api/v1/movies</code>, বদল এলে <code>/api/v2</code></span></div>
+  </div>
+</div></div>
+
+<div class="step"><div class="n">10</div><div>
+  <h3>Document আর test</h3>
+  <p>Endpoint-এর তালিকা লিখে রাখো (method, URL, auth, সফল হলে কোন code)। আর প্রতিটা endpoint একবার করে চালিয়ে status code মিলিয়ে দেখো। এই project-এ ৫৩টা check আছে (<code>npm test</code>)।</p>
+</div></div>
+
+<!-- ===================== React থেকে request ===================== -->
+<h2 class="sec" id="try">React থেকে request পাঠানো</h2>
+<p class="lead">React-এ আলাদা কিছু নেই। সাধারণ <code>fetch</code>, শুধু header আর body ঠিকমতো বসাতে হয়।</p>
+
+<pre>const headers = { Accept: 'application/json', 'Content-Type': 'application/json' };
+const token = localStorage.getItem('token');
+if (token) headers.Authorization = `Bearer ${token}`;      // ← Bearer token
+
+const res  = await fetch('/api/bookings', {
+  method: 'POST',
+  headers,
+  body: JSON.stringify({ showtimeId: 1, seats: ['A1', 'A2'] }),
+});
+const data = res.status === 204 ? null : await res.json(); // 204-এ body থাকে না
+if (!res.ok) throw new Error(data.error.message);          // 400, 401, 409 …</pre>
+
+<p class="lead" style="margin-top:26px">নিচে এই <code>fetch</code>-ই চলছে, একটা নকল server-এর বিরুদ্ধে। যেকোনো request বানিয়ে পাঠাও।</p>
+
+<div class="tester" id="tester">
+  <div class="tok">
+    <span>Token:</span> <code id="tokv">নেই</code>
+    <button class="mini" data-login="user@demo.com|user123">user হিসেবে login</button>
+    <button class="mini" data-login="admin@demo.com|admin123">admin হিসেবে login</button>
+    <button class="mini" id="clr">মুছো</button>
+  </div>
+
+  <div class="lab" style="margin-top:0">উদাহরণ</div>
+  <div class="presets" id="presets"></div>
+
+  <div class="line">
+    <select id="method"><option>GET</option><option>POST</option><option>PUT</option><option>PATCH</option><option>DELETE</option></select>
+    <input id="path" value="/api/movies" spellcheck="false" aria-label="path">
+    <button class="send" id="send" type="button">Send</button>
+  </div>
+  <textarea id="body" spellcheck="false" placeholder="Body (JSON), শুধু POST / PUT / PATCH-এ"></textarea>
+
+  <div class="lab">Request</div>
+  <pre id="req"></pre>
+
+  <div class="lab">Response</div>
+  <div id="stat" class="muted">Send চাপো…</div>
+  <pre id="res" style="margin-top:8px">&nbsp;</pre>
 </div>
 
+</main>
+
+<main class="wrap">
+<footer>
+  <a href="demo/index.html" target="_blank" rel="noopener">পুরো React app (demo) ↗</a>
+  <a href="https://github.com/mdabarik/welldev/tree/main/04-resume-projects/14-movie-ticket-api" target="_blank" rel="noopener">Source code ↗</a>
+  <a href="https://github.com/mdabarik/welldev/blob/main/04-resume-projects/14-movie-ticket-api/README.md" target="_blank" rel="noopener">সব endpoint (README) ↗</a>
+</footer>
+</main>
+
 <script>
-/* ---------- theme ---------- */
+/* theme */
 (function(){
   const root=document.documentElement,btn=document.getElementById('theme');
   try{const t=localStorage.getItem('theme');if(t)root.dataset.theme=t;}catch(e){}
@@ -172,261 +301,97 @@ cd client &amp;&amp; npm install &amp;&amp; npm run dev    # React     → http:
   btn.onclick=()=>{root.dataset.theme=dark()?'light':'dark';try{localStorage.setItem('theme',root.dataset.theme);}catch(e){}label();};
   label();
 })();
+</script>
 
-/* ---------- scene engine ---------- */
-const COLORS=['n','a','b','g','o','r','s','f'];
-document.getElementById('defs').innerHTML=COLORS.map(c=>
-  `<marker id="ah-${c}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" style="fill:var(--${c==='n'?'muted':c==='f'?'fg':c})"/></marker>`).join('');
+<script type="module">
+/* নকল API server (browser-এর ভেতরে): client/src/mockServer.js, আসল server/-এর একই নিয়ম */
+import { installMock } from './client/src/mockServer.js';
+installMock({ latency: 120 });
 
-const B=(id,x,y,w,h,label,c='n',o={})=>({id,k:'box',x,y,w,h,label,c,...o});
-const T=(id,x,y,label,o={})=>({id,k:'text',x,y,label,c:'n',...o});
-const A=(id,x1,y1,x2,y2,c='n',o={})=>({id,k:'arrow',x:0,y:0,x1,y1,x2,y2,c,...o});
-const C=(id,x,y,r,label,c='n',o={})=>({id,k:'circ',x,y,r,label,c,...o});
-const S=(cap,o={})=>({cap,...o});
-const P=(id,d,c='n',o={})=>({id,k:'path',x:0,y:0,d,c,...o});
-const F=(x1,y1,x2,y2,c='a',o={})=>({x1,y1,x2,y2,c,...o});
+const $ = (id) => document.getElementById(id);
+let token = null;
 
-function stateAt(steps,i){
-  const m=new Map();
-  for(let k=0;k<=i;k++){
-    const s=steps[k];
-    (s.del||[]).forEach(id=>m.delete(id));
-    (s.add||[]).forEach(n=>m.set(n.id,{...n}));
-    Object.entries(s.mod||{}).forEach(([id,p])=>{if(m.has(id))Object.assign(m.get(id),p);});
-  }
-  return [...m.values()];
-}
-
-function setText(g,cls,str,x,y,anchor,lh=15.5){
-  let tx=g.select('text.'+cls);
-  if(tx.empty())tx=g.append('text').attr('class',cls);
-  const ls=String(str??'').split('\n');
-  tx.attr('text-anchor',anchor);
-  tx.selectAll('tspan').data(ls).join('tspan').attr('x',x).attr('y',(d,i)=>y-(ls.length-1)*lh/2+i*lh).text(d=>d);
-}
-
-function upd(g,d,t){
-  g.attr('class',`n ${d.k} c-${d.c||'n'}${d.dash?' dash':''}${d.hl?' hl':''}${d.s?' '+d.s:''}${d.m?' m':''}`);
-  if(d.k==='box'){
-    let r=g.select('rect');
-    if(r.empty())r=g.insert('rect',':first-child').attr('rx',9).attr('width',d.w).attr('height',d.h);
-    r.transition(t).attr('width',d.w).attr('height',d.h);
-    setText(g,'lb',d.label,d.w/2,d.h/2,'middle');
-  }else if(d.k==='circ'){
-    let r=g.select('circle');
-    if(r.empty())r=g.insert('circle',':first-child').attr('r',d.r);
-    r.transition(t).attr('r',d.r);
-    setText(g,'lb',d.label,0,0,'middle');
-  }else if(d.k==='text'){
-    setText(g,'lb',d.label,0,0,d.a||'start');
-  }else if(d.k==='path'){
-    let p=g.select('path');
-    if(p.empty()){p=g.append('path').attr('d',d.d);const L=p.node().getTotalLength();p.attr('stroke-dasharray',L).attr('stroke-dashoffset',L).transition(t).attr('stroke-dashoffset',0);}
-  }else if(d.k==='arrow'){
-    let l=g.select('line');
-    if(l.empty())l=g.append('line').attr('x1',d.x1).attr('y1',d.y1).attr('x2',d.x2).attr('y2',d.y2);
-    l.attr('marker-end',`url(#ah-${d.c||'n'})`).transition(t).attr('x1',d.x1).attr('y1',d.y1).attr('x2',d.x2).attr('y2',d.y2);
-  }
-}
-
-function draw(svg,nodes,dur){
-  const t=d3.transition().duration(dur).ease(d3.easeCubicInOut);
-  svg.select('.layer').selectAll('g.n').data(nodes,d=>d.id).join(
-    en=>en.append('g').attr('opacity',0).attr('transform',d=>`translate(${d.x},${d.y})`),
-    up=>up,
-    ex=>ex.transition(t).attr('opacity',0).remove()
-  ).each(function(d){upd(d3.select(this),d,t);})
-   .transition(t).attr('transform',d=>`translate(${d.x},${d.y})`).attr('opacity',d=>d.o??1);
-}
-
-/* moving packets: step.fly = [F(x1,y1,x2,y2,colour,{n,gap,dur,r,d0,per,once})] - loops until the step changes */
-let flyGen=0;
-function flyRun(svg,list){
-  const my=++flyGen,fx=svg.select('.fx');
-  fx.selectAll('circle').interrupt().remove();
-  (list||[]).forEach(f=>{
-    const n=f.n??3,gap=f.gap??380,dur=f.dur??1200,per=f.per??Math.max(n*gap+300,dur+300),r=f.r??6;
-    const col=f.c==='n'?'muted':f.c==='f'?'fg':(f.c||'a');
-    for(let i=0;i<n;i++){
-      const dot=fx.append('circle').attr('r',r).attr('cx',f.x1).attr('cy',f.y1).attr('opacity',0)
-        .style('fill',`var(--${col})`).style('stroke','var(--surface)').style('stroke-width',1.5);
-      const go=delay=>{
-        if(my!==flyGen)return;
-        dot.attr('cx',f.x1).attr('cy',f.y1).attr('opacity',0)
-          .transition().delay(delay).duration(0).attr('opacity',1)
-          .transition().duration(dur).ease(d3.easeLinear).attr('cx',f.x2).attr('cy',f.y2)
-          .transition().duration(0).attr('opacity',0)
-          .on('end',()=>{if(!f.once)go(per-dur);});
-      };
-      go((f.d0??500)+i*gap);
-    }
-  });
-}
-
-function mount(host,topic){
-  const tabs=topic.tabs||[{n:'',steps:topic.steps}];
-  host.innerHTML='<div class="tabs"></div><div class="stage"><svg viewBox="0 0 760 240" role="img"><g class="layer"></g><g class="fx"></g></svg></div><div class="cap"></div><div class="ctl"><button class="b prev" type="button">◀</button><button class="b pri next" type="button">Next ▶</button><span class="cnt"></span></div>';
-  const svg=d3.select(host).select('svg'),cap=host.querySelector('.cap'),cnt=host.querySelector('.cnt');
-  const prev=host.querySelector('.prev'),next=host.querySelector('.next'),tabBox=host.querySelector('.tabs');
-  let ti=0,si=0,steps;
-  function show(dur){
-    draw(svg,stateAt(steps,si),dur);
-    flyRun(svg,steps[si].fly);
-    cap.innerHTML=steps[si].cap;
-    cnt.textContent=`${si+1} / ${steps.length}`;
-    prev.disabled=si===0;
-    next.textContent=si===steps.length-1?'↻ আবার':'Next ▶';
-  }
-  function load(i){
-    ti=i;si=0;
-    const tb=tabs[ti];steps=typeof tb.steps==='function'?tb.steps():tb.steps;
-    tabBox.querySelectorAll('button').forEach((b,k)=>b.classList.toggle('on',k===ti));
-    show(0);
-  }
-  if(tabs.length>1){
-    tabs.forEach((tb,i)=>{const b=document.createElement('button');b.type='button';b.textContent=tb.n;b.onclick=()=>load(i);tabBox.appendChild(b);});
-  }else tabBox.remove();
-  const go=()=>{si=si===steps.length-1?0:si+1;show(600);};
-  next.onclick=go;svg.on('click',go);
-  prev.onclick=()=>{if(si>0){si--;show(600);}};
-  load(0);
-}
-
-/* ---------- content ---------- */
-const PARTS=[['A','Request কীভাবে চলে'],['B','Auth ও Booking'],['C','Endpoint, Method ও Header']];
-
-/* একই pipeline ছবি দুই tab-এ: React → CORS → JSON parser → auth → route → data */
-const PIPE=()=>[
-  B('rc',10,100,104,64,'React\n(browser)','a'),B('co',144,100,104,64,'CORS','n'),B('js',278,100,104,64,'JSON\nparser','n'),
-  B('au',412,100,104,64,'auth\n(Bearer)','n'),B('rt',546,100,104,64,'Route\nhandler','n'),B('db',680,100,70,64,'Data','o',{s:'sm'}),
-  A('p1',116,132,142,132,'n'),A('p2',250,132,276,132,'n'),A('p3',384,132,410,132,'n'),A('p4',518,132,544,132,'n'),A('p5',652,132,678,132,'n')
-];
-const HOP=[[114,144],[248,278],[382,412],[516,546],[650,680]];
-const flyHop=(i,c='a',o={})=>F(HOP[i][0],132,HOP[i][1],132,c,{n:1,dur:650,per:2600,...o});
-
-const TOPICS=[
-{p:0,q:'একটা request-এর পুরো যাত্রা: React থেকে Express পর্যন্ত',
- ans:'React <code>api.js</code> দিয়ে header বসিয়ে request পাঠায়। Server-এ request কয়েকটা ধাপ পার হয়: <b>CORS</b> (এই origin-কে অনুমতি আছে?) → <b>JSON parser</b> → <b>auth</b> (token ঠিক?) → <b>route handler</b> (আসল কাজ) → response। যেকোনো ধাপে সমস্যা হলে সেখানেই থেমে error ফেরত যায়।',
- pts:['Route-এর আগের ধাপগুলোকে বলে <b>middleware</b>। প্রতিটা আলাদা একটা পাহারাদার।','Token ঠিক না থাকলে request route handler পর্যন্ত পৌঁছায়ই না: <b>401</b>।','Token ঠিক, কিন্তু অনুমতি নেই (user হয়ে admin-এর কাজ): <b>403</b>। Input ভুল: <b>400</b>।'],
- tabs:[
-  {n:'1. সফল request',steps:[
-   S('<code>GET /api/bookings</code>-এর যাত্রা। মাঝে পাঁচটা ধাপ: React থেকে বেরিয়ে CORS, JSON parser, auth পার হয়ে route handler-এ পৌঁছায়, সেখান থেকে data।',{add:PIPE()}),
-   S('<b>React:</b> request বানায়। সাথে header: <code>Authorization: Bearer eyJ…</code> আর <code>Accept: application/json</code>।',{mod:{rc:{c:'a',hl:1}},add:[B('hd',10,24,420,40,'Authorization: Bearer eyJhbGci…\nAccept: application/json','a',{m:1,s:'sm'})],fly:[flyHop(0)]}),
-   S('<b>CORS:</b> React (<code>localhost:5173</code>) আর API (<code>localhost:4000</code>) আলাদা origin। Server দেখে এই origin-কে অনুমতি আছে কিনা। আছে ✓',{mod:{rc:{hl:0},co:{c:'g',hl:1}},fly:[flyHop(1,'g')]}),
-   S('<b>JSON parser:</b> body থাকলে JSON লেখা থেকে JavaScript object বানায়। (GET-এ body নেই, তাই কিছু করার নেই।)',{mod:{co:{hl:0},js:{c:'g',hl:1}},fly:[flyHop(2,'g')]}),
-   S('<b>auth:</b> <code>Bearer</code> token বের করে যাচাই করে (সই ঠিক? মেয়াদ আছে?)। ঠিক হলে জানা যায় <b>তুমি কে</b>: user #2।',{mod:{js:{hl:0},au:{c:'g',hl:1,label:'auth ✓\nuser #2'}},fly:[flyHop(3,'g')]}),
-   S('<b>Route handler:</b> আসল কাজ। শুধু নিজের booking ছেঁকে নেয় (অন্যেরটা নয়)।',{mod:{au:{hl:0},rt:{c:'g',hl:1}},fly:[flyHop(4,'g')]}),
-   S('Response ফিরে যায়: <b>200 OK</b> আর <code>{ "data": [ … ] }</code>। একই পথে উল্টো দিকে।',{mod:{rt:{hl:0},rc:{hl:1}},add:[B('rs',10,190,420,40,'HTTP 200 OK\n{ "data": [ { "id": 1, "status": "paid" } ] }','g',{m:1,s:'sm'})],fly:[F(678,150,114,150,'g',{n:1,dur:2200,per:3600,r:7})]})
-  ]},
-  {n:'2. মাঝপথে থামা: 401, 403, 400',steps:[
-   S('এবার দেখি request ভুল হলে কোথায় থামে। তিনটা ভুল: token নেই (401), অনুমতি নেই (403), input ভুল (400)।',{add:PIPE()}),
-   S('<b>401 Unauthorized:</b> token ছাড়া <code>GET /api/bookings</code>। auth ধাপে এসেই থেমে যায়। Route handler-এ পৌঁছায়ইনি।',{mod:{rc:{c:'a'},co:{c:'g'},js:{c:'g'},au:{c:'r',hl:1,label:'auth ✗\ntoken নেই'},rt:{dash:1}},add:[B('e1',10,190,420,40,'HTTP 401 Unauthorized\n{ "error": { "code": "UNAUTHORIZED" } }','r',{m:1,s:'sm'})],fly:[flyHop(0),flyHop(1,'a',{d0:700}),flyHop(2,'a',{d0:1300}),F(412,150,114,150,'r',{n:1,dur:1500,per:3600,d0:2000,r:7})]}),
-   S('<b>403 Forbidden:</b> user-এর token দিয়ে <code>DELETE /api/movies/1</code> (admin-এর কাজ)। token ঠিক, তাই auth পার। কিন্তু admin-check-এ আটকায়।',{mod:{au:{c:'g',hl:0,label:'auth ✓\nuser #2'},rt:{c:'r',hl:1,dash:0,label:'Route\nadmin ✗'}},del:['e1'],add:[B('e2',10,190,420,40,'HTTP 403 Forbidden\n{ "error": { "code": "FORBIDDEN" } }','r',{m:1,s:'sm'})],fly:[flyHop(0),flyHop(1,'a',{d0:600}),flyHop(2,'a',{d0:1200}),flyHop(3,'a',{d0:1800}),F(546,150,114,150,'r',{n:1,dur:1800,per:4200,d0:2500,r:7})]}),
-   S('<b>400 Bad Request:</b> ঠিক token, ঠিক অনুমতি, কিন্তু body-তে ভুল seat <code>"Z9"</code>। Route handler নিজেই যাচাই করে ফিরিয়ে দেয়।',{mod:{rt:{c:'o',hl:1,label:'Route\ninput ✗'}},del:['e2'],add:[B('e3',10,190,420,40,'HTTP 400 Bad Request\n{ "error": { "code": "VALIDATION_ERROR" } }','o',{m:1,s:'sm'})],fly:[flyHop(0),flyHop(1,'a',{d0:600}),flyHop(2,'a',{d0:1200}),flyHop(3,'a',{d0:1800}),F(546,150,114,150,'o',{n:1,dur:1800,per:4200,d0:2500,r:7})]})
-  ]}
- ]},
-
-{p:1,q:'Login আর Bearer token কীভাবে কাজ করে',
- ans:'Password দিয়ে <b>একবার login</b> করলে server একটা <b>JWT token</b> দেয়, যেন একটা প্রবেশ-পাস। এরপর প্রতিটা request-এ সেই পাস <code>Authorization: Bearer &lt;token&gt;</code> header-এ দেখাতে হয়। Server password আর মনে রাখে না, শুধু পাসের সই যাচাই করে।',
- pts:['Token-এর তিনটা অংশ: <b>header . payload . signature</b>। Payload-এ থাকে user id, role, মেয়াদ।','Signature server-এর গোপন চাবি (<code>JWT_SECRET</code>) দিয়ে বানানো, তাই কেউ payload বদলালে ধরা পড়ে।','মেয়াদ ১ ঘণ্টা। শেষ হলে <b>401 TOKEN_EXPIRED</b>, আবার login করতে হয়।'],
- tabs:[
-  {n:'1. Login থেকে token',steps:[
-   S('React-এর login form আর Express server। তুমি email আর password দিয়েছো।',{add:[B('c',20,70,150,100,'React\n(login form)','a'),B('s',590,70,150,100,'Express\nserver','g'),A('x1',172,100,588,100,'n'),A('x2',588,140,172,140,'n')]}),
-   S('<b>১.</b> React <code>POST /api/auth/login</code> পাঠায়, body-তে email আর password।',{add:[B('rq',200,36,360,34,'POST /auth/login  { email, password }','a',{m:1,s:'sm'})],mod:{x1:{c:'a'},c:{hl:1}},fly:[F(172,100,588,100,'a',{n:1,dur:1200,per:3600})]}),
-   S('<b>২.</b> Server password মিলিয়ে দেখে। ঠিক হলে একটা <b>JWT</b> বানায়, গোপন চাবি দিয়ে সই করে।',{mod:{c:{hl:0},s:{hl:1,label:'Express server\n✓ password ঠিক\nJWT বানাল'}}}),
-   S('<b>৩.</b> Response: <b>200 OK</b> আর <code>{ token, user }</code>। React token-টা <code>localStorage</code>-এ রেখে দেয়।',{mod:{s:{hl:0,label:'Express\nserver'},x2:{c:'g'},c:{hl:1,label:'React\nlocalStorage-এ\ntoken রাখল'}},add:[B('tk',200,176,360,40,'eyJhbGciOi… . eyJzdWIiOjIs… . mock-sig','g',{m:1,s:'sm',hl:1})],fly:[F(588,140,172,140,'g',{n:1,dur:1200,per:3600})]}),
-   S('<b>৪.</b> এরপর প্রতিটা request-এ header: <code>Authorization: Bearer &lt;token&gt;</code>। Server শুধু সই যাচাই করে, password আর লাগে না।',{del:['rq'],mod:{x1:{c:'g'},c:{hl:0,label:'React'}},add:[B('rq2',200,36,360,34,'GET /bookings   Authorization: Bearer eyJ…','g',{m:1,s:'sm'})],fly:[F(172,100,588,100,'g',{n:2,gap:900,dur:1200,per:3600})]})
-  ]},
-  {n:'2. Token-এর ভেতরে',steps:[
-   S('একটা JWT তিন টুকরো, মাঝে বিন্দু। দেখতে এক লম্বা অক্ষরের সারি, কিন্তু ভেতরে সাজানো।',{add:[B('h',20,50,200,60,'Header\n{ alg, typ }','a'),B('p',250,50,260,60,'Payload\n{ sub: 2, role: "user",\n  exp: ১ ঘণ্টা পরে }','g',{s:'sm'}),B('g',540,50,200,60,'Signature\n(গোপন চাবির সই)','o',{s:'sm'})]}),
-   S('<b>Payload</b> কে আর কতক্ষণ: user id (<code>sub</code>), role, মেয়াদ (<code>exp</code>)। এটা শুধু base64 করা, <b>গোপন নয়</b>, তাই এখানে password রাখা যায় না।',{mod:{p:{hl:1}}}),
-   S('<b>Signature</b> server-এর গোপন চাবি দিয়ে বানানো। কেউ payload-এ <code>role: "admin"</code> লিখলে signature আর মিলবে না, server ধরে ফেলবে।',{mod:{p:{hl:0},g:{hl:1}},add:[B('ex',20,150,720,60,'user নিজে role বদলে "admin" করলে → signature মেলে না → 401 INVALID_TOKEN','r',{s:'sm'})]})
-  ]}
- ]},
-
-{p:1,q:'Seat booking: দুজন একই seat নিলে কী হয় (409)',
- ans:'দুজন একই সময়ে একই seat চাইলে প্রথমজন পায়, দ্বিতীয়জন পায় <b>409 Conflict</b> আর কোন seat আগে নেওয়া হয়েছে তার তালিকা। Booking শুরুতে <b>pending</b> থাকে, ১০ মিনিটের মধ্যে <code>pay</code> করলে <b>paid</b>, না করলে seat ছেড়ে দেওয়া হয়।',
- pts:['<code>POST /bookings</code> → <b>201 Created</b> আর booking-এর <code>Location</code> header।','Seat আগেই নেওয়া → <b>409 SEAT_TAKEN</b>, body-তে <code>details.seats</code>-এ কোনগুলো।','Payment-এর আগে <code>PATCH</code> দিয়ে seat বদলানো যায়, পরে নয় (409)। <code>DELETE</code> দিলে cancel (204)।'],
- tabs:[
-  {n:'1. দুজন, একই seat',steps:[
-   S('একটা show-র সামনের সারির পাঁচটা seat: A1 থেকে A5। সবই ফাঁকা। Rahim আর Karim দুজনেই booking করবে।',{add:[T('l',380,24,'Seat map (সামনের সারি)',{a:'middle',c:'f',s:'b'}),B('a1',130,44,80,40,'A1','g',{s:'sm'}),B('a2',220,44,80,40,'A2','g',{s:'sm'}),B('a3',310,44,80,40,'A3','g',{s:'sm'}),B('a4',400,44,80,40,'A4','g',{s:'sm'}),B('a5',490,44,80,40,'A5','g',{s:'sm'}),B('u1',20,150,150,60,'Rahim','a'),B('u2',590,150,150,60,'Karim','b'),T('lg',380,110,'সবুজ = ফাঁকা',{a:'middle',c:'g',s:'sm'})]}),
-   S('<b>Rahim</b> <code>POST /bookings { seats: ["A1","A2"] }</code> পাঠায়। সবকিছু ঠিক, তাই <b>201 Created</b>। A1, A2 এখন আটকে (pending)।',{mod:{a1:{c:'o'},a2:{c:'o'},u1:{hl:1}},add:[B('r1',190,150,200,34,'201 Created (pending)','g',{s:'sm',hl:1}),T('lg2',380,110,'কমলা = আটকে আছে',{a:'middle',c:'o',s:'sm'})],del:['lg'],fly:[F(172,180,300,86,'a',{n:2,gap:300,dur:700,per:2600})]}),
-   S('<b>Karim</b> একটু পরে <code>["A2","A3"]</code> চাইল। A2 আগেই Rahim-এর। Server ফেরত দেয় <b>409 Conflict</b>: <code>SEAT_TAKEN</code>, <code>details.seats: ["A2"]</code>।',{mod:{u1:{hl:0},u2:{hl:1}},del:['r1'],add:[B('r2',380,150,200,50,'409 SEAT_TAKEN\n{ seats: ["A2"] }','r',{m:1,s:'sm',hl:1})],fly:[F(588,180,310,86,'b',{n:2,gap:300,dur:700,per:2600})]}),
-   S('Client ওই error পড়ে seat map আবার আনে আর Karim <b>A3, A4</b> বাছে। এবার <b>201 Created</b>।',{mod:{a3:{c:'o'},a4:{c:'o'}},del:['r2'],add:[B('r3',380,150,200,34,'201 Created (A3, A4)','g',{s:'sm',hl:1})],fly:[F(588,180,440,86,'b',{n:2,gap:300,dur:700,per:2600})]}),
-   S('<b>সারকথা:</b> Server seat-এর হিসাব রাখে, client নয়। তাই দুজন একই seat পেতে পারে না। (আসল project-এ database transaction দিয়ে এটা পাকা করতে হয়।)',{mod:{u2:{hl:0}},add:[]})
-  ]},
-  {n:'2. Booking-এর জীবন',steps:[
-   S('একটা booking কয়েকটা অবস্থা পার হয়। শুরুতে <b>pending</b> (seat আটকানো, ১০ মিনিট মেয়াদ)।',{add:[B('pe',30,90,150,60,'pending','o'),T('t0',105,76,'POST /bookings → 201',{a:'middle',c:'o',s:'sm b'})]}),
-   S('<b>PATCH /bookings/:id</b>: payment-এর আগে seat বদলানো যায়। অবস্থা pending-ই থাকে।',{add:[A('lp',60,92,60,60,'o',{dash:1}),T('t1',60,48,'PATCH (seat বদল)',{a:'start',c:'o',s:'sm b'})]}),
-   S('<b>POST /bookings/:id/pay</b> → <b>200</b>। অবস্থা হয় <b>paid</b>। এরপর seat বদলালে <b>409</b>।',{add:[B('pd',330,90,150,60,'paid','g'),A('ap',182,120,328,120,'g'),T('t2',255,104,'POST …/pay → 200',{a:'middle',c:'g',s:'sm b'})]}),
-   S('১০ মিনিটে pay না করলে seat ছেড়ে দেওয়া হয়, অবস্থা <b>expired</b>। এরপর <code>pay</code> করলে <b>410 Gone</b>।',{add:[B('ex',330,180,150,50,'expired','r'),A('ae',120,152,328,196,'r'),T('t3',200,196,'১০ মিনিট পার',{a:'middle',c:'r',s:'sm b'}),T('t4',560,205,'pay → 410 Gone',{a:'start',c:'r',s:'sm b'})]}),
-   S('<b>DELETE /bookings/:id</b>: cancel। booking মুছে যায়, response <b>204 No Content</b> (body নেই)। Show শুরু হয়ে গেলে <b>409</b>।',{add:[B('dl',580,90,160,60,'মুছে গেল','n',{dash:1}),A('ad',482,120,578,120,'n',{dash:1}),T('t5',530,104,'DELETE → 204',{a:'middle',c:'n',s:'sm b'})]})
-  ]}
- ]},
-
-{p:2,q:'কোন HTTP method কখন (GET, POST, PUT, PATCH, DELETE)',
- ans:'এই project-এ পাঁচটা method-ই আছে। <b>GET</b> পড়া, <b>POST</b> নতুন তৈরি, <b>PUT</b> পুরোটা বদল, <b>PATCH</b> আংশিক বদল, <b>DELETE</b> মোছা। প্রতিটার সফল হলে ফেরত আসার status code-ও আলাদা।',
- pts:['<b>PUT বনাম PATCH:</b> PUT-এ movie-র সব required field পাঠাতে হয় (পুরোটা বদলে যায়)। PATCH-এ শুধু যেটা বদলাতে চাও (যেমন <code>{ "rating": 9.1 }</code>)।','<b>POST</b> সফল হলে <b>201 Created</b> আর <code>Location</code> header। <b>DELETE</b> সফল হলে <b>204</b>, body ছাড়া।','নিচের table-এ পুরো project-এর সব endpoint আছে।'],
- extra:'<table class="cmp"><tr><th>Method</th><th>Endpoint</th><th>Auth</th><th>সফল</th><th>ব্যর্থ হলে</th></tr>'
-  +'<tr><td>POST</td><td>/auth/register</td><td>না</td><td>201</td><td>400, 409</td></tr>'
-  +'<tr><td>POST</td><td>/auth/login</td><td>না</td><td>200</td><td>400, 401</td></tr>'
-  +'<tr><td>GET · PATCH</td><td>/auth/me</td><td>token</td><td>200</td><td>400, 401</td></tr>'
-  +'<tr><td>GET</td><td>/movies?search=&amp;genre=&amp;page=&amp;limit=</td><td>না</td><td>200</td><td>-</td></tr>'
-  +'<tr><td>GET</td><td>/movies/:id · /movies/:id/showtimes</td><td>না</td><td>200</td><td>404</td></tr>'
-  +'<tr><td>POST</td><td>/movies</td><td>admin</td><td>201</td><td>400, 401, 403</td></tr>'
-  +'<tr><td>PUT</td><td>/movies/:id</td><td>admin</td><td>200</td><td>400, 403, 404</td></tr>'
-  +'<tr><td>PATCH</td><td>/movies/:id</td><td>admin</td><td>200</td><td>400, 403, 404</td></tr>'
-  +'<tr><td>DELETE</td><td>/movies/:id</td><td>admin</td><td>204</td><td>403, 404, 409</td></tr>'
-  +'<tr><td>GET</td><td>/showtimes · /showtimes/:id/seats</td><td>না</td><td>200</td><td>404</td></tr>'
-  +'<tr><td>POST · PATCH · DELETE</td><td>/showtimes · /showtimes/:id</td><td>admin</td><td>201 · 200 · 204</td><td>400, 403, 404, 409</td></tr>'
-  +'<tr><td>GET</td><td>/bookings · /bookings/:id</td><td>token</td><td>200</td><td>401, 403, 404</td></tr>'
-  +'<tr><td>POST</td><td>/bookings</td><td>token</td><td>201</td><td>400, 404, <b>409</b></td></tr>'
-  +'<tr><td>PATCH</td><td>/bookings/:id</td><td>token (মালিক)</td><td>200</td><td>409, 410</td></tr>'
-  +'<tr><td>POST</td><td>/bookings/:id/pay</td><td>token (মালিক)</td><td>200</td><td>409, 410</td></tr>'
-  +'<tr><td>DELETE</td><td>/bookings/:id</td><td>token (মালিক)</td><td>204</td><td>403, 404, 409</td></tr></table>',
- tabs:[
-  {n:'Method → কাজ → status',steps:[
-   S('<b>GET:</b> শুধু পড়া। কিছু বদলায় না। সফল হলে <b>200 OK</b>।',{add:[B('m1',20,10,100,34,'GET','g',{s:'sm'}),B('e1',130,10,330,34,'/movies?search=inc','n',{m:1,s:'sm'}),B('s1',470,10,270,34,'200 OK  { data: [ … ] }','g',{s:'sm'})]}),
-   S('<b>POST:</b> নতুন কিছু তৈরি। সফল হলে <b>201 Created</b>, সাথে <code>Location</code> header নতুন জিনিসের URL দেয়।',{add:[B('m2',20,56,100,34,'POST','a',{s:'sm'}),B('e2',130,56,330,34,'/bookings   { showtimeId, seats }','n',{m:1,s:'sm'}),B('s2',470,56,270,34,'201 Created + Location','g',{s:'sm'})]}),
-   S('<b>PUT:</b> একটা জিনিসের <b>পুরোটা বদলে</b> দেয়। তাই সব required field পাঠাতে হয়, নইলে <b>400</b>।',{add:[B('m3',20,102,100,34,'PUT','o',{s:'sm'}),B('e3',130,102,330,34,'/movies/4   { title, genre, durationMin }','n',{m:1,s:'sm'}),B('s3',470,102,270,34,'200 OK  { data: নতুন movie }','g',{s:'sm'})]}),
-   S('<b>PATCH:</b> শুধু <b>যেটুকু বদলাতে চাও</b> পাঠাও। বাকি যেমন ছিল তেমনই থাকে। এখানে শুধু rating।',{add:[B('m4',20,148,100,34,'PATCH','b',{s:'sm'}),B('e4',130,148,330,34,'/movies/4   { rating: 9.1 }','n',{m:1,s:'sm'}),B('s4',470,148,270,34,'200 OK  (title আগের মতোই)','g',{s:'sm'})]}),
-   S('<b>DELETE:</b> মোছা। সফল হলে <b>204 No Content</b>: কাজ হয়েছে, ফেরত দেওয়ার কিছু নেই, তাই response body-ই থাকে না।',{add:[B('m5',20,194,100,34,'DELETE','r',{s:'sm'}),B('e5',130,194,330,34,'/bookings/7','n',{m:1,s:'sm'}),B('s5',470,194,270,34,'204 No Content (body নেই)','g',{s:'sm'})]})
-  ]}
- ]},
-
-{p:2,q:'Request ও Response-এর header: কোনটা কেন লাগে',
- ans:'<b>Header</b> হলো request-এর "খামের উপরের লেখা": কে পাঠাচ্ছে, কী ধরনের data, কী ধরনের উত্তর চাই। Body হলো খামের ভেতরের আসল জিনিস। এই project-এর React client তিনটা header বসায়: <code>Accept</code>, <code>Content-Type</code>, আর <code>Authorization</code>।',
- pts:['<code>Authorization: Bearer &lt;token&gt;</code>: তুমি কে, তার প্রমাণ।','<code>Content-Type: application/json</code>: body-তে JSON আছে। শুধু body থাকলে বসাতে হয়।','Response-এর <code>Location</code> header 201 Created-এর সাথে নতুন জিনিসের URL দেয়।'],
- extra:'<pre>// client/src/api.js (মূল অংশ)\nconst headers = { Accept: \'application/json\' };\nif (body !== undefined) headers[\'Content-Type\'] = \'application/json\';\nconst token = localStorage.getItem(\'cinebook_token\');\nif (token) headers.Authorization = `Bearer ${token}`;\n\nconst res = await fetch(BASE + path, { method, headers, body: JSON.stringify(body) });\nconst data = res.status === 204 ? null : await res.json();   // 204-এ body থাকে না\nif (!res.ok) throw new ApiError(res.status, data);             // 401 হলে auto logout</pre>'
-  +'<pre>// server/src/middleware/auth.js (মূল অংশ)\nconst [scheme, token] = (req.headers.authorization || \'\').split(\' \');\nif (scheme !== \'Bearer\' || !token) return fail(res, 401, \'UNAUTHORIZED\', \'Bearer token দিতে হবে\');\nconst payload = jwt.verify(token, JWT_SECRET);        // ভুল হলে error, মেয়াদ শেষ হলে TokenExpiredError\nreq.user = db.users.find((u) => u.id === payload.sub);</pre>',
- tabs:[
-  {n:'Header-গুলো',steps:[
-   S('React দুটো পাশে: বাঁয়ে request-এর header, ডানে response-এর header। আগে request দেখি।',{add:[T('h1',20,16,'Request (React → Server)',{c:'a',s:'b'}),T('h2',400,16,'Response (Server → React)',{c:'g',s:'b'})]}),
-   S('<code>Accept: application/json</code>: "উত্তর JSON-এ দিও।"',{add:[B('a1',20,34,170,34,'Accept','a',{s:'sm'}),B('a2',196,34,190,34,'application/json','n',{m:1,s:'sm'})]}),
-   S('<code>Content-Type: application/json</code>: "আমার body-তে JSON আছে।" (POST, PUT, PATCH-এ লাগে।)',{add:[B('b1',20,76,170,34,'Content-Type','a',{s:'sm'}),B('b2',196,76,190,34,'application/json','n',{m:1,s:'sm'})]}),
-   S('<code>Authorization: Bearer &lt;token&gt;</code>: "এই নাও আমার প্রবেশ-পাস।" Server এটা দেখেই চেনে তুমি কে।',{add:[B('c1',20,118,170,34,'Authorization','a',{s:'sm',hl:1}),B('c2',196,118,190,34,'Bearer eyJhbGci…','n',{m:1,s:'sm'})]}),
-   S('এবার response-এর header। <code>Content-Type: application/json</code>: "আমার উত্তর JSON।"',{add:[B('d1',400,34,150,34,'Content-Type','g',{s:'sm'}),B('d2',556,34,184,34,'application/json','n',{m:1,s:'sm'})]}),
-   S('<code>Location: /api/bookings/7</code>: 201 Created-এর সাথে আসে, নতুন তৈরি জিনিসটা কোথায় আছে তার ঠিকানা।',{add:[B('e1',400,76,150,34,'Location','g',{s:'sm'}),B('e2',556,76,184,34,'/api/bookings/7','n',{m:1,s:'sm'})]}),
-   S('<b>CORS header</b> (<code>Access-Control-Allow-Origin</code> ইত্যাদি) server নিজেই বসায়, যাতে browser জানে এই origin-কে অনুমতি আছে।',{add:[B('f1',400,118,150,34,'Access-Control-Allow-*','g',{s:'sm'}),B('f2',556,118,184,34,'browser-কে অনুমতি জানায়','n',{s:'sm'})]})
-  ]}
- ]}
+const PRESETS = [
+  { l: 'সব movie',           m: 'GET',    p: '/api/movies' },
+  { l: 'Movie খোঁজো',        m: 'GET',    p: '/api/movies?search=inter&limit=5' },
+  { l: 'Seat map',           m: 'GET',    p: '/api/showtimes/1/seats' },
+  { l: 'Login',              m: 'POST',   p: '/api/auth/login', b: { email: 'user@demo.com', password: 'user123' } },
+  { l: 'Booking (token লাগে)', m: 'POST', p: '/api/bookings', b: { showtimeId: 1, seats: ['A1', 'A2'] } },
+  { l: 'আমার booking',       m: 'GET',    p: '/api/bookings' },
+  { l: 'Pay',                m: 'POST',   p: '/api/bookings/1/pay', b: { method: 'bkash' } },
+  { l: 'Movie বদলাও (PATCH)', m: 'PATCH', p: '/api/movies/1', b: { rating: 9.1 } },
+  { l: 'Movie মোছো (admin)',  m: 'DELETE', p: '/api/movies/3' },
+  { l: 'ভুল seat (400)',     m: 'POST',   p: '/api/bookings', b: { showtimeId: 1, seats: ['Z9'] } },
 ];
 
-/* ---------- build page ---------- */
-const app=document.getElementById('app'),jump=document.getElementById('jump'),partsNav=document.getElementById('parts');
-PARTS.forEach((pt,pi)=>{
-  const a=document.createElement('a');a.href='#part'+pi;a.innerHTML=`<b>${pt[0]}</b>${pt[1]}`;partsNav.appendChild(a);
-  const sec=document.createElement('section');sec.className='part';sec.id='part'+pi;
-  sec.innerHTML=`<h2><span>${pt[0]}</span>${pt[1]}</h2>`;app.appendChild(sec);
+const fmtBody = () => { const t = $('body').value.trim(); return t ? t : undefined; };
+const pretty = (t) => { try { return JSON.stringify(JSON.parse(t), null, 2); } catch { return t; } };
+
+function renderReq() {
+  const method = $('method').value, path = $('path').value, body = fmtBody();
+  const lines = [`${method} ${path} HTTP/1.1`, 'Accept: application/json'];
+  if (body !== undefined && method !== 'GET' && method !== 'DELETE') lines.push('Content-Type: application/json');
+  if (token) lines.push(`Authorization: Bearer ${token.slice(0, 22)}…`);
+  let out = lines.join('\n');
+  if (body !== undefined && method !== 'GET' && method !== 'DELETE') out += '\n\n' + pretty(body);
+  $('req').textContent = out;
+}
+
+function setToken(t) {
+  token = t;
+  $('tokv').textContent = t ? t.slice(0, 26) + '…' : 'নেই';
+  renderReq();
+}
+
+async function send() {
+  const method = $('method').value, path = $('path').value.trim(), raw = fmtBody();
+  const headers = { Accept: 'application/json' };
+  const hasBody = raw !== undefined && method !== 'GET' && method !== 'DELETE';
+  if (hasBody) headers['Content-Type'] = 'application/json';
+  if (token) headers.Authorization = `Bearer ${token}`;
+  $('stat').textContent = '…'; $('res').textContent = '';
+  const t0 = performance.now();
+  let res, text;
+  try {
+    res = await fetch(path, { method, headers, body: hasBody ? raw : undefined });
+    text = res.status === 204 ? '' : await res.text();
+  } catch (e) {
+    $('stat').textContent = 'Request পাঠানো যায়নি'; $('res').textContent = String(e); return;
+  }
+  const ms = Math.round(performance.now() - t0);
+  const cls = 's' + String(res.status)[0];
+  const names = { 200: 'OK', 201: 'Created', 204: 'No Content', 400: 'Bad Request', 401: 'Unauthorized', 403: 'Forbidden', 404: 'Not Found', 409: 'Conflict', 410: 'Gone' };
+  const loc = res.headers.get('Location');
+  $('stat').innerHTML = `<span class="status ${cls}">${res.status} ${names[res.status] || ''} <small>${ms} ms</small></span>` +
+    (loc ? ` <span class="muted" style="font-size:13px">Location: <code>${loc}</code></span>` : '');
+  $('res').textContent = res.status === 204 ? '(খালি: 204 No Content, কোনো body নেই)' : pretty(text);
+  // login বা register হলে token নিজেই ধরে নিই
+  if (res.ok && /\/auth\/(login|register)$/.test(path)) { try { setToken(JSON.parse(text).token); } catch {} }
+}
+
+async function quickLogin(cred) {
+  const [email, password] = cred.split('|');
+  const res = await fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
+  setToken((await res.json()).token);
+}
+
+function load(p) {
+  $('method').value = p.m;
+  $('path').value = p.p;
+  $('body').value = p.b ? JSON.stringify(p.b, null, 2) : '';
+  renderReq();
+}
+
+PRESETS.forEach((p) => {
+  const b = document.createElement('button'); b.type = 'button'; b.textContent = p.l;
+  b.onclick = () => { load(p); send(); };
+  $('presets').appendChild(b);
 });
-TOPICS.forEach((t,i)=>{
-  const n=String(i+1);
-  const j=document.createElement('a');j.href='#q'+n;j.textContent=n;j.title=t.q;jump.appendChild(j);
-  const card=document.createElement('article');card.className='q';card.id='q'+n;
-  card.innerHTML=`<h3><span class="num">${n}</span><span>${t.q}</span></h3><p class="ans">${t.ans}</p><ul>${t.pts.map(x=>`<li>${x}</li>`).join('')}</ul>${t.extra?`<div class="extra">${t.extra}</div>`:''}<div class="viz"></div>`;
-  document.getElementById('part'+t.p).appendChild(card);
-  mount(card.querySelector('.viz'),t);
-});
+document.querySelectorAll('[data-login]').forEach((b) => (b.onclick = () => quickLogin(b.dataset.login)));
+$('clr').onclick = () => setToken(null);
+$('send').onclick = send;
+['method', 'path', 'body'].forEach((id) => $(id).addEventListener('input', renderReq));
+load(PRESETS[0]);
 </script>
 </body>
 </html>
