@@ -100,12 +100,36 @@ textarea{width:100%;margin-top:8px;height:92px;font:500 13px/1.6 var(--mono);col
 .status small{font:500 12px var(--sans);color:var(--muted)}
 .muted{color:var(--muted)}
 footer{margin:80px 0 50px;padding-top:22px;border-top:1px solid var(--line);color:var(--muted);font-size:14px;display:flex;flex-wrap:wrap;gap:6px 18px}
+
+/* method tabs */
+.tabs{display:flex;flex-wrap:wrap;gap:8px;margin:20px 0 14px}
+.tabs button{border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:6px 16px;font:700 13px var(--mono);cursor:pointer}
+.tabs button:hover{color:var(--fg)}
+.tabs button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.mp h3{margin:0 0 6px;font:600 20px/1.4 var(--sans);letter-spacing:0}
+.mp p{margin:0 0 10px;color:var(--muted)}
+.mp .cl{margin:18px 0 8px;font:600 12px var(--sans);letter-spacing:.06em;text-transform:uppercase;display:flex;align-items:center;gap:8px}
+.mp .cl i{width:8px;height:8px;border-radius:50%;background:var(--accent);display:inline-block}
+.mp .cl.sv i{background:var(--ok)}
+.mp .cl{color:var(--muted)}
+.cwrap{position:relative}
+.cwrap .cp{position:absolute;top:8px;right:8px;border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:7px;padding:2px 9px;font:600 11px var(--sans);cursor:pointer}
+.cwrap .cp:hover{color:var(--fg);border-color:var(--accent)}
+.cwrap pre{padding-right:64px}
+.tbl{overflow-x:auto;margin-top:26px}
+.tbl table{width:100%;border-collapse:collapse;font-size:14px;background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.tbl th,.tbl td{padding:9px 12px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+.tbl th{font:600 12px var(--sans);color:var(--muted);letter-spacing:.04em;background:var(--soft)}
+.tbl tr:last-child td{border-bottom:0}
+.tbl td:first-child{font:700 13px var(--mono)}
+.note{margin:14px 0 0;padding:12px 16px;border-radius:12px;background:var(--accent-soft);color:var(--fg);font-size:15px}
 </style>
 </head>
 <body>
 <header class="bar"><div class="wrap">
   <a class="brand" href="../../index.html"><span class="logo">W</span>WellDev</a>
   <span class="sp"></span>
+  <a class="l" href="#methods">Method ও কোড</a>
   <a class="l" href="#build">ধাপগুলো</a>
   <a class="l" href="#try">Request পাঠাও</a>
   <button class="pill" id="theme" type="button">Theme</button>
@@ -118,11 +142,36 @@ footer{margin:80px 0 50px;padding-top:22px;border-top:1px solid var(--line);colo
   <h1>একটা API design করতে<br>কী কী লাগে?</h1>
   <p>Movie ticket booking বানাতে বানাতে ধাপে ধাপে দেখি। শেষে React থেকে সত্যিকারের request পাঠিয়ে উত্তর দেখবে।</p>
   <div class="go">
-    <a class="btn pri" href="#build">শুরু করো ↓</a>
+    <a class="btn pri" href="#methods">শুরু করো ↓</a>
     <a class="btn" href="#try">Request পাঠিয়ে দেখো</a>
     <a class="btn" href="demo/index.html" target="_blank" rel="noopener">পুরো app ↗</a>
   </div>
 </section>
+
+<!-- ===================== প্রথমে: ৫টা method, client ও server কোড ===================== -->
+<h2 class="sec" id="methods" style="margin-top:48px">প্রথমে: পাঁচটা method, client আর server কোড</h2>
+<p class="lead">React (<code>fetch</code>) থেকে request পাঠাই, Express-এ সেটা ধরি। প্রতিটা method-এ কী পাঠাতে হয় আর server-এ কোথা থেকে কী পাওয়া যায়, পাশাপাশি দেখো।</p>
+<div class="tabs" id="mtabs" role="tablist"></div>
+<div class="mp" id="mpanel"></div>
+
+<div class="tbl"><table>
+  <thead><tr><th>মেথড</th><th>URL</th><th>বডি লাগে?</th><th>সার্ভারে কী পাওয়া যায়</th><th>সফল হলে স্ট্যাটাস</th></tr></thead>
+  <tbody>
+    <tr><td>POST</td><td><code>/users</code></td><td>হ্যাঁ</td><td><code>req.body</code></td><td>201</td></tr>
+    <tr><td>GET</td><td><code>/users/5</code> বা <code>/users?page=2</code></td><td>না</td><td><code>req.params</code>, <code>req.query</code></td><td>200</td></tr>
+    <tr><td>PUT</td><td><code>/users/5</code></td><td>হ্যাঁ (পুরো অবজেক্ট)</td><td><code>req.params</code>, <code>req.body</code></td><td>200</td></tr>
+    <tr><td>PATCH</td><td><code>/users/5</code></td><td>হ্যাঁ (শুধু পরিবর্তন)</td><td><code>req.params</code>, <code>req.body</code></td><td>200</td></tr>
+    <tr><td>DELETE</td><td><code>/users/5</code></td><td>না</td><td><code>req.params</code></td><td>204 বা 200</td></tr>
+  </tbody>
+</table></div>
+
+<div class="note">সবগুলোতেই <code>Authorization</code> header একইভাবে যাচ্ছে, কারণ প্রতিটা request-এ পরিচয় দিতে হয়। আর যেখানে বডি আছে (POST, PUT, PATCH), শুধু সেখানেই <code>Content-Type: application/json</code> দরকার।</div>
+
+<div class="cl-mw" style="margin-top:26px">
+  <h3 style="margin:0 0 6px;font:600 19px var(--sans);letter-spacing:0">প্রতি route-এ আলাদা করে token না দেখে: middleware</h3>
+  <p style="margin:0 0 10px;color:var(--muted)">বাস্তব project-এ প্রতিটা route-এ আলাদা করে token যাচাই না করে একটা <b>middleware</b> বানিয়ে একবারেই লাগিয়ে দেওয়া হয়। এই project-এও তাই করা আছে।</p>
+  <div class="cwrap"><button class="cp" type="button">Copy</button><pre id="mwcode"></pre></div>
+</div>
 
 <!-- ===================== API design-এর ধাপ ===================== -->
 <h2 class="sec" id="build">ধাপে ধাপে API design</h2>
@@ -300,6 +349,189 @@ if (!res.ok) throw new Error(data.error.message);          // 400, 401, 409 …<
   const label=()=>btn.textContent=dark()?'Light':'Dark';
   btn.onclick=()=>{root.dataset.theme=dark()?'light':'dark';try{localStorage.setItem('theme',root.dataset.theme);}catch(e){}label();};
   label();
+})();
+</script>
+
+
+<script>
+/* ৫টা method: client (fetch) আর server (Express) কোড */
+(function(){
+  const M = {
+   POST: {
+    title: '১. POST (নতুন ডেটা তৈরি করা)',
+    desc: 'নতুন ইউজার বানাতে ডেটা বডিতে পাঠানো হয়।',
+    blocks: [
+     ['client','ক্লায়েন্ট সাইড (fetch)',`fetch("https://example.com/users", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    "Authorization": "Bearer " + token,
+  },
+  body: JSON.stringify({ name: "Karim", email: "karim@mail.com" }),
+});`],
+     ['server','সার্ভার সাইড (Express)',`app.use(express.json());   // বডির JSON পার্স করার জন্য
+
+app.post("/users", (req, res) => {
+  const token = req.headers.authorization;  // "Bearer eyJ..."
+  const data  = req.body;                   // { name: "Karim", email: "..." }
+
+  // টোকেন যাচাই করো, তারপর ডাটাবেসে নতুন ইউজার সেভ করো
+  res.status(201).json({ message: "ইউজার তৈরি হয়েছে" });
+});`]
+    ]
+   },
+   GET: {
+    title: '২. GET (ডেটা চাওয়া বা পড়া)',
+    desc: 'GET-এ বডি থাকে না, তাই Content-Type লাগে না। কোন ইউজার চাই সেটা যায় URL-এ।',
+    blocks: [
+     ['client','ক্লায়েন্ট সাইড (fetch)',`// একজন নির্দিষ্ট ইউজার
+fetch("https://example.com/users/5", {
+  method: "GET",   // GET ডিফল্ট, না লিখলেও চলে
+  headers: {
+    "Authorization": "Bearer " + token,
+  },
+});
+
+// অনেকজন ইউজার, query parameter দিয়ে ফিল্টার করে
+fetch("https://example.com/users?page=2&limit=10", {
+  headers: {
+    "Authorization": "Bearer " + token,
+  },
+});`],
+     ['server','সার্ভার সাইড (Express)',`app.get("/users/:id", (req, res) => {
+  const token = req.headers.authorization;  // "Bearer eyJ..."
+  const id    = req.params.id;              // "5" (URL থেকে আসে)
+
+  // টোকেন যাচাই করো, তারপর ডাটাবেস থেকে ইউজার খুঁজে আনো
+  res.json({ id: id, name: "Karim", email: "karim@mail.com" });
+});
+
+app.get("/users", (req, res) => {
+  const page  = req.query.page;             // "2"
+  const limit = req.query.limit;            // "10"
+
+  // সেই অনুযায়ী ইউজার লিস্ট ফেরত দাও
+  res.json([ /* ইউজারদের লিস্ট */ ]);
+});`]
+    ],
+    note: '<code>req.params</code> আসে URL-এর পাথ থেকে (<code>/users/5</code>), আর <code>req.query</code> আসে <code>?</code> এর পরের অংশ থেকে (<code>?page=2</code>)।'
+   },
+   PUT: {
+    title: '৩. PUT (পুরো ডেটা বদলে দেওয়া)',
+    desc: 'PUT-এ পুরো অবজেক্ট পাঠাতে হয়। যে ফিল্ড পাঠাবে না, সেটা মুছে যেতে পারে বা খালি হয়ে যেতে পারে (সার্ভার কীভাবে লেখা তার উপর নির্ভর করে)।',
+    blocks: [
+     ['client','ক্লায়েন্ট সাইড (fetch)',`fetch("https://example.com/users/5", {
+  method: "PUT",
+  headers: {
+    "Content-Type": "application/json",
+    "Authorization": "Bearer " + token,
+  },
+  body: JSON.stringify({
+    name: "Karim Hasan",
+    email: "karim.new@mail.com",
+    age: 25,
+  }),
+});`],
+     ['server','সার্ভার সাইড (Express)',`app.put("/users/:id", (req, res) => {
+  const token = req.headers.authorization;  // "Bearer eyJ..."
+  const id    = req.params.id;              // "5"
+  const data  = req.body;                   // পুরো নতুন অবজেক্ট
+
+  // টোকেন যাচাই করো, তারপর ৫ নম্বর ইউজারের পুরো ডেটা এটা দিয়ে বদলে দাও
+  res.json({ message: "ইউজার পুরোপুরি আপডেট হয়েছে" });
+});`]
+    ]
+   },
+   PATCH: {
+    title: '৪. PATCH (ডেটার একটা অংশ আপডেট করা)',
+    desc: 'PATCH-এ শুধু যেটুকু বদলাতে চাও সেটুকু পাঠালেই হয়। বাকি ফিল্ড আগের মতোই থাকে।',
+    blocks: [
+     ['client','ক্লায়েন্ট সাইড (fetch)',`fetch("https://example.com/users/5", {
+  method: "PATCH",
+  headers: {
+    "Content-Type": "application/json",
+    "Authorization": "Bearer " + token,
+  },
+  body: JSON.stringify({ email: "karim.new@mail.com" }),  // শুধু ইমেইল
+});`],
+     ['server','সার্ভার সাইড (Express)',`app.patch("/users/:id", (req, res) => {
+  const token   = req.headers.authorization;  // "Bearer eyJ..."
+  const id      = req.params.id;              // "5"
+  const changes = req.body;                   // { email: "karim.new@mail.com" }
+
+  // টোকেন যাচাই করো, তারপর শুধু এই ফিল্ডগুলো আপডেট করো, বাকিগুলো যেমন আছে থাকবে
+  res.json({ message: "ইউজারের তথ্য আংশিক আপডেট হয়েছে" });
+});`]
+    ]
+   },
+   DELETE: {
+    title: '৫. DELETE (ডেটা মুছে ফেলা)',
+    desc: 'DELETE-এ সাধারণত বডি থাকে না। কোনটা মুছবে সেটা URL-এই বলে দেওয়া হয়।',
+    blocks: [
+     ['client','ক্লায়েন্ট সাইড (fetch)',`fetch("https://example.com/users/5", {
+  method: "DELETE",
+  headers: {
+    "Authorization": "Bearer " + token,
+  },
+});`],
+     ['server','সার্ভার সাইড (Express)',`app.delete("/users/:id", (req, res) => {
+  const token = req.headers.authorization;  // "Bearer eyJ..."
+  const id    = req.params.id;              // "5"
+
+  // টোকেন যাচাই করো, তারপর ডাটাবেস থেকে ৫ নম্বর ইউজার মুছে ফেলো
+  res.status(204).send();   // 204 মানে সফল, কিন্তু ফেরত দেওয়ার মতো কিছু নেই
+});`]
+    ]
+   }
+  };
+
+  const MW = `// এই project-এর server/src/middleware/auth.js (সংক্ষেপে)
+export function auth(req, res, next) {
+  const [scheme, token] = (req.headers.authorization || "").split(" ");
+  if (scheme !== "Bearer" || !token) return res.status(401).json({ error: "token নেই" });
+  try {
+    const payload = jwt.verify(token, JWT_SECRET);   // সই আর মেয়াদ যাচাই
+    req.user = findUser(payload.sub);
+    next();                                          // ঠিক থাকলে route-এ যাও
+  } catch {
+    res.status(401).json({ error: "token ভুল বা মেয়াদ শেষ" });
+  }
+}
+
+// একবার লিখে যেকোনো route-এ বসাও:
+app.get("/users/:id",    auth, getUser);
+app.delete("/users/:id", auth, requireAdmin, deleteUser);`;
+
+  const tabs = document.getElementById('mtabs'), panel = document.getElementById('mpanel');
+  const copy = (btn, text) => btn.onclick = () => {
+    (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(() => { btn.textContent = 'Copied ✓'; setTimeout(() => btn.textContent = 'Copy', 1400); }).catch(() => {});
+  };
+  function codeBlock(text) {
+    const w = document.createElement('div'); w.className = 'cwrap';
+    const b = document.createElement('button'); b.className = 'cp'; b.type = 'button'; b.textContent = 'Copy'; copy(b, text);
+    const pre = document.createElement('pre'); pre.textContent = text;
+    w.append(b, pre); return w;
+  }
+  function show(name) {
+    [...tabs.children].forEach((b) => b.classList.toggle('on', b.dataset.m === name));
+    const m = M[name];
+    panel.innerHTML = '';
+    const h = document.createElement('h3'); h.textContent = m.title;
+    const p = document.createElement('p'); p.textContent = m.desc;
+    panel.append(h, p);
+    m.blocks.forEach(([kind, label, code]) => {
+      const l = document.createElement('div'); l.className = 'cl ' + (kind === 'server' ? 'sv' : ''); l.innerHTML = '<i></i>' + label;
+      panel.append(l, codeBlock(code));
+    });
+    if (m.note) { const n = document.createElement('p'); n.style.marginTop = '12px'; n.innerHTML = m.note; panel.append(n); }
+  }
+  Object.keys(M).forEach((k) => {
+    const b = document.createElement('button'); b.type = 'button'; b.dataset.m = k; b.textContent = k;
+    b.onclick = () => show(k); tabs.append(b);
+  });
+  const mw = document.getElementById('mwcode'); mw.textContent = MW;
+  copy(mw.parentElement.querySelector('.cp'), MW);
+  show('POST');
 })();
 </script>
 
