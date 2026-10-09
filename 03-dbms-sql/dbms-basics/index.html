@@ -134,8 +134,8 @@ h1,h2,h3,h4,h5{letter-spacing:0!important}
   </nav>
   <header class="hero">
     <div class="eyebrow">DBMS · Basics</div>
-    <h1>DBMS Basics: ৬টি প্রশ্ন</h1>
-    <p>Join-এর সব ধরন, index, SQL বনাম NoSQL, data model বনাম ER diagram, trigger ও cascading, আর view। প্রতিটা ধাপে animation, scene-এ ক্লিক করো বা <b>Next</b> চাপো।</p>
+    <h1>DBMS Basics: ৭টি প্রশ্ন</h1>
+    <p>Join-এর সব ধরন, index, SQL বনাম NoSQL, data model বনাম ER diagram, trigger ও cascading, view, আর deadlock। প্রতিটা ধাপে animation, scene-এ ক্লিক করো বা <b>Next</b> চাপো।</p>
   </header>
   <nav class="parts" id="parts"></nav>
   <main id="app"></main>
@@ -248,7 +248,7 @@ function mount(host,topic){
 
 
 /* ---------- content ---------- */
-const PARTS=[['1','Joins'],['2','Clustered বনাম Non-clustered'],['3','SQL বনাম NoSQL'],['4','Data Model বনাম ER'],['5','Trigger ও Cascading'],['6','Views']];
+const PARTS=[['1','Joins'],['2','Clustered বনাম Non-clustered'],['3','SQL বনাম NoSQL'],['4','Data Model বনাম ER'],['5','Trigger ও Cascading'],['6','Views'],['7','Deadlock']];
 
 /* ===== 1. Joins ===== */
 /* ---------- table helpers (real tables with header + rows) ---------- */
@@ -474,6 +474,36 @@ const MATVIEW=[
   S('<b>Refresh:</b> <code>REFRESH MATERIALIZED VIEW daily_sales;</code> চালালে আবার query চলে আর সংরক্ষিত ফল নতুন হয়।',{mod:{...rp('b',2,2,OFF()),...cp('m',0,0,ON('g')),...cp('m',0,1,{label:'53000  ✓ (refresh)',c:'g',s:'sm on'}),qq:{label:'REFRESH MATERIALIZED VIEW daily_sales;'}}}),
   S('<b>সারকথা:</b> সাধারণ view = সবসময় তাজা, প্রতিবার query চলে। Materialized view = দ্রুত, কিন্তু refresh না করলে পুরনো। রিপোর্ট/dashboard-এ materialized view কাজে লাগে।',{mod:rp('m',0,2,OFF('g'))})
 ];
+
+/* ===== 7. Deadlock ===== */
+const DL_PROBLEM=[
+  S('<b>Deadlock:</b> দুটো transaction একে অপরের হাতে থাকা lock-এর জন্য অপেক্ষা করছে, তাই <b>কেউই এগোতে পারে না</b>। উদাহরণ: দুটো bank transfer, Rahim থেকে Karim আর Karim থেকে Rahim, একই সময়ে।',{add:[B('t1',20,76,170,80,'T1: Rahim → Karim\nআগে row 1, তারপর row 2','a'),B('t2',570,76,170,80,'T2: Karim → Rahim\nআগে row 2, তারপর row 1','b'),B('r1',300,10,160,44,'accounts  id = 1  (Rahim)','o'),B('r2',300,186,160,44,'accounts  id = 2  (Karim)','o')]}),
+  S('<b>T1:</b> <code>UPDATE ... WHERE id = 1</code>। row 1-এর <b>lock</b> পেল।',{add:[A('h1',160,78,298,44,'g'),T('h1l',200,50,'lock ✓',{c:'g',s:'sm b'})],mod:{r1:{c:'g'}}}),
+  S('<b>T2</b> একই সময়ে <code>UPDATE ... WHERE id = 2</code>। row 2-এর lock পেল। এখন দুজনের হাতে একটা করে lock।',{add:[A('h2',600,154,462,198,'g'),T('h2l',560,200,'lock ✓',{c:'g',s:'sm b'})],mod:{r2:{c:'g'}}}),
+  S('<b>T1</b> এবার row 2 চায়। সেটা T2-র হাতে, তাই T1 <b>অপেক্ষা করে</b>।',{add:[A('w1',160,140,298,200,'r',{dash:1})],mod:{t1:{label:'T1\nrow 2-এর অপেক্ষা',c:'o'}}}),
+  S('<b>T2</b> এবার row 1 চায়। সেটা T1-এর হাতে, তাই T2-ও অপেক্ষা করে। <b>T1 → T2 → T1: এই চক্রই DEADLOCK।</b> কেউ lock ছাড়ে না, কেউ এগোয় না।',{add:[A('w2',600,92,462,32,'r',{dash:1}),T('dl',380,120,'DEADLOCK',{a:'middle',c:'r',s:'lg'})],mod:{t2:{label:'T2\nrow 1-এর অপেক্ষা',c:'o'}}}),
+  S('<b>চারটা শর্ত একসাথে হলেই deadlock হয়:</b> ১) <b>Mutual exclusion</b> (lock একজনের)। ২) <b>Hold and wait</b> (একটা ধরে আরেকটার অপেক্ষা)। ৩) <b>No preemption</b> (জোর করে lock কেড়ে নেওয়া যায় না)। ৪) <b>Circular wait</b> (চক্র)। যেকোনো একটা ভাঙলেই deadlock নেই।',{del:['dl']})
+];
+const DL_DETECT=[
+  S('<b>Database কীভাবে ধরে:</b> সে একটা <b>wait-for graph</b> বানায়। Node = transaction, তীর "A অপেক্ষা করছে B-র জন্য"। এখানে T1 অপেক্ষা করছে T2-র জন্য।',{add:[C('n1',230,110,42,'T1','a'),C('n2',530,110,42,'T2','b'),A('e1',272,92,488,92,'r'),T('e1l',380,78,'T1 অপেক্ষা করছে T2-র',{a:'middle',c:'r',s:'sm'})]}),
+  S('আবার T2 অপেক্ষা করছে T1-এর জন্য। এবার তীর ঘুরে <b>শুরুতে ফিরল</b>: graph-এ <b>cycle</b>। Cycle মানে deadlock।',{add:[A('e2',488,130,272,130,'r'),T('e2l',380,160,'T2 অপেক্ষা করছে T1-এর জন্য',{a:'middle',c:'r',s:'sm'})],mod:{n1:{c:'o'},n2:{c:'o'}}}),
+  S('PostgreSQL কেউ অপেক্ষা করলে সাথে সাথে চেক করে না। <code>deadlock_timeout</code> (ডিফল্ট <b>1 সেকেন্ড</b>) পার হলেও lock না পেলে তবেই cycle খোঁজে, কারণ বেশিরভাগ অপেক্ষা সাধারণ, deadlock নয়।',{add:[T('tm',380,208,'অপেক্ষা > deadlock_timeout (1s) ⇒ cycle খোঁজো',{a:'middle',c:'f',s:'m b'})]}),
+  S('Cycle পেলে database একটা transaction-কে <b>victim</b> বেছে নেয় (সাধারণত যে ধরা পড়ল সে) আর তাকে <b>abort</b> করে। তার lock ছাড়া পড়ে।',{mod:{n2:{label:'T2\nabort ✗',c:'r',dash:1}},del:['e2','e2l']}),
+  S('Cycle ভাঙল। <b>T1</b> তার চাওয়া lock পেয়ে কাজ শেষ করে <code>COMMIT</code> করে। T2 পায় <code>ERROR: deadlock detected</code> (SQLSTATE <code>40P01</code>), তাই <b>application-কে আবার চেষ্টা (retry) করতে হয়</b>।',{del:['e1','e1l','tm'],mod:{n1:{label:'T1\ncommit ✓',c:'g'}}})
+];
+const DL_ORDER=[
+  S('<b>সমাধান ১: সবাই একই ক্রমে lock নাও</b> (যেমন সবসময় ছোট id আগে)। এখানে দুটো transfer-ই <b>আগে id = 1, তারপর id = 2</b> lock করে।',{add:[B('t1',20,76,170,80,'T1: id 1 → id 2','a'),B('t2',570,76,170,80,'T2: id 1 → id 2','b'),B('r1',300,10,160,44,'accounts  id = 1','o'),B('r2',300,186,160,44,'accounts  id = 2','o')]}),
+  S('<b>T1</b> row 1-এর lock নিল।',{add:[A('h1',160,78,298,44,'g')],mod:{r1:{c:'g'}}}),
+  S('<b>T2</b>-ও আগে row 1 চায়, T1-এর হাতে। T2 অপেক্ষা করে, কিন্তু <b>কোনো lock ধরে রাখেনি</b>, তাই T1-কে আটকায় না। Hold and wait ভাঙল, cycle হওয়া অসম্ভব।',{add:[A('w2',600,92,462,32,'r',{dash:1})],mod:{t2:{label:'T2\nrow 1-এর অপেক্ষা',c:'o'}}}),
+  S('<b>T1</b> row 2-ও নেয়, <code>COMMIT</code> করে। সব lock ছেড়ে দিল।',{add:[A('h1b',160,140,298,200,'g')],mod:{r2:{c:'g'},t1:{label:'T1\ncommit ✓',c:'g'}}}),
+  S('এবার <b>T2</b> row 1, তারপর row 2 পায়। কোনো deadlock হয়নি, কোনো error নেই।',{del:['w2','h1','h1b'],mod:{r1:{c:'o'},r2:{c:'o'},t2:{label:'T2\nএগোল ✓',c:'g'}}})
+];
+const DL_RETRY=[
+  S('<b>সমাধান ২: Retry।</b> সব deadlock আগে থেকে ঠেকানো যায় না (যেমন অন্য code, trigger বা foreign key-র lock)। তাই application <code>40P01</code> error ধরে <b>transaction টা পুরোটা আবার চালায়</b>।',{add:[B('app',20,76,170,80,'Application\n(transfer চালাচ্ছে)','f'),B('db',570,76,170,80,'Database','a'),A('q1',190,100,568,100,'n'),T('q1l',380,86,'BEGIN … UPDATE …',{a:'middle',c:'n',s:'sm'})]}),
+  S('Database deadlock ধরে এই transaction-কে abort করল আর error ফেরত দিল। <b>পুরো transaction rollback</b> হয়েছে, কিছুই আংশিক সংরক্ষিত নেই।',{add:[A('q2',568,130,190,130,'r'),T('q2l',380,152,'ERROR: deadlock detected (40P01)',{a:'middle',c:'r',s:'sm b'})],mod:{db:{label:'Database\nrollback ✓',c:'r'}}}),
+  S('Application একটু অপেক্ষা (backoff) করে <b>আবার পুরো transaction</b> পাঠায়। এবার অন্য transaction শেষ হয়ে গেছে, তাই সাধারণত সফল হয়। সর্বোচ্চ 3-5 বার চেষ্টা করো।',{del:['q2','q2l'],add:[A('q3',190,170,568,170,'g'),T('q3l',380,194,'retry #1 (আবার BEGIN … COMMIT)',{a:'middle',c:'g',s:'sm b'})],mod:{app:{label:'Application\nretry করছে',c:'o'},db:{label:'Database\ncommit ✓',c:'g'}}}),
+  S('<b>আরও কিছু উপায়:</b> transaction <b>ছোট</b> রাখো (lock কম সময় ধরা থাকবে)। <code>SELECT ... FOR UPDATE</code> একসাথে সব row এক query-তে ও <code>ORDER BY id</code>-সহ নাও। <code>SET lock_timeout</code> বা <code>NOWAIT</code> দিয়ে বেশিক্ষণ অপেক্ষা না করে fail করো।',{del:['q1','q1l','q3','q3l'],mod:{app:{label:'Application\nসফল ✓',c:'g'}}})
+];
 const TOPICS=[
 {p:0,q:'Different types of joins (all joins with example)',
  ans:'<b>Join</b> দুই (বা বেশি) table-এর row একটা শর্তে জোড়া লাগায়। পাঁচ রকম মূল join: <b>INNER, LEFT, RIGHT, FULL OUTER, CROSS</b>, আর একটা table নিজের সাথে <b>SELF</b> join। একই দুটো table দিয়ে প্রতিটা tab-এ ফল আলাদা দেখো।',
@@ -524,7 +554,19 @@ const TOPICS=[
 {p:5,q:'Views (and materialized views)',
  ans:'<b>View</b> = একটা সংরক্ষিত query, যাকে virtual table-এর মতো ব্যবহার করা যায়। নিজের data নেই, প্রতিবার আসল table থেকে পড়ে, তাই সবসময় তাজা। <b>Materialized view</b> = ফল সত্যিই সংরক্ষিত, দ্রুত, কিন্তু refresh না করলে পুরনো।',
  pts:['<b>কেন:</b> জটিল query সহজ করা, column লুকিয়ে security, application-কে স্থির interface।','<b>View:</b> তাজা। <b>Materialized view:</b> দ্রুত কিন্তু stale হতে পারে।'],
- tabs:[{n:'View',steps:VIEWS},{n:'Materialized view',steps:MATVIEW}]}
+ tabs:[{n:'View',steps:VIEWS},{n:'Materialized view',steps:MATVIEW}]},
+
+{p:6,q:'Database deadlock কী? কীভাবে কাজ করে, কীভাবে হয় আর কীভাবে solve করবে?',
+ ans:'<b>Deadlock</b> হল এমন অবস্থা যেখানে দুই বা বেশি transaction একে অপরের হাতে থাকা <b>lock-এর জন্য অপেক্ষা</b> করে, ফলে <b>কেউই এগোতে পারে না</b>। Database নিজে এটা ধরে একটা transaction-কে <b>abort</b> করে (victim), আর অন্যটা এগিয়ে যায়।',
+ pts:['<b>কীভাবে হয়:</b> T1 row 1 lock করে row 2 চায়, T2 row 2 lock করে row 1 চায়। <b>উল্টো ক্রমে lock</b> নেওয়াই সবচেয়ে সাধারণ কারণ।','<b>কীভাবে কাজ করে (detection):</b> database একটা <b>wait-for graph</b> বানায়, তাতে <b>cycle</b> পেলে deadlock ধরে নেয়। PostgreSQL এটা <code>deadlock_timeout</code> (1s) পরে চেক করে।','<b>Error:</b> <code>ERROR: deadlock detected</code> (PostgreSQL SQLSTATE <code>40P01</code>; MySQL error <code>1213</code>; SQL Server error <code>1205</code>)।','<b>সমাধান:</b> ১) সবাই <b>একই ক্রমে</b> lock নাও। ২) transaction <b>ছোট</b> রাখো। ৩) application-এ <b>retry</b> রাখো। ৪) <code>lock_timeout</code> / <code>NOWAIT</code>। ৫) উপযুক্ত <b>index</b> রাখো, যাতে কম row lock হয়।','<b>Deadlock বনাম সাধারণ blocking:</b> blocking-এ অপেক্ষাকারী পরে এগোয় (অন্যজন শেষ হলে)। Deadlock-এ চক্র থাকায় নিজে থেকে কখনো মীমাংসা হয় না, database-কে হস্তক্ষেপ করতে হয়।'],
+ extra:'<h4>আসল PostgreSQL-এ চালিয়ে দেখো (দুটো psql session)</h4><pre>-- accounts(id, owner, balance): (1, Rahim, 1000), (2, Karim, 1000)\n\n-- Session T1                                   -- Session T2\nBEGIN;                                           BEGIN;\nUPDATE accounts SET balance = balance - 100      UPDATE accounts SET balance = balance - 50\n WHERE id = 1;   -- lock row 1                    WHERE id = 2;   -- lock row 2\nUPDATE accounts SET balance = balance + 100      UPDATE accounts SET balance = balance + 50\n WHERE id = 2;   -- অপেক্ষা (T2-র হাতে)          WHERE id = 1;   -- অপেক্ষা (T1-এর হাতে) => cycle\n\n-- 1 সেকেন্ড পর T2-তে:\nERROR:  deadlock detected\nDETAIL:  Process 72284 waits for ShareLock on transaction 763; blocked by process 72282.\n         Process 72282 waits for ShareLock on transaction 764; blocked by process 72284.\nHINT:  See server log for query details.\nCONTEXT:  while updating tuple (0,1) in relation "accounts"\n\n-- T2 rollback হল, T1 এগিয়ে COMMIT করল। শেষে: Rahim 900, Karim 1100</pre>'
+  +'<h4>সমাধান: ক্রম ঠিক করা আর retry (SQL + C#)</h4><pre>-- সবসময় ছোট id আগে lock করো (একই query-তে ORDER BY id দিয়ে)\nBEGIN;\nSELECT id FROM accounts WHERE id IN (1, 2) ORDER BY id FOR UPDATE;\nUPDATE accounts SET balance = balance - 100 WHERE id = 1;\nUPDATE accounts SET balance = balance + 100 WHERE id = 2;\nCOMMIT;\n\n-- বেশিক্ষণ অপেক্ষা না করতে\nSET lock_timeout = \'3s\';           -- 3s-এর বেশি lock না পেলে error\nSELECT * FROM accounts WHERE id = 1 FOR UPDATE NOWAIT;  -- সাথে সাথে fail\n\n// C# (Npgsql): deadlock হলে পুরো transaction আবার চালানো\nfor (var attempt = 1; ; attempt++)\n{\n    try { await TransferAsync(from, to, amount); break; }\n    catch (PostgresException e) when (e.SqlState == "40P01" &amp;&amp; attempt &lt; 3)\n    {\n        await Task.Delay(50 * attempt);   // সামান্য backoff, তারপর retry\n    }\n}</pre>'
+  +'<table class="cmp"><tr><th>কারণ</th><th>প্রতিকার</th></tr>'
+  +'<tr><td>উল্টো ক্রমে lock</td><td>সব জায়গায় একই ক্রম (id ছোট থেকে বড়)</td></tr>'
+  +'<tr><td>লম্বা transaction</td><td>transaction ছোট রাখো, ভেতরে API call/user input রেখো না</td></tr>'
+  +'<tr><td>index না থাকায় অনেক row lock</td><td>WHERE-এর column-এ index দাও</td></tr>'
+  +'<tr><td>তবুও deadlock</td><td>application-এ retry + backoff</td></tr></table>',
+ tabs:[{n:'১. কীভাবে হয়',steps:DL_PROBLEM},{n:'২. কীভাবে ধরে',steps:DL_DETECT},{n:'৩. সমাধান: একই ক্রম',steps:DL_ORDER},{n:'৪. সমাধান: Retry',steps:DL_RETRY}]}
 ];
 
 /* ---------- build page ---------- */
