@@ -1,0 +1,407 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How Browser Works - Browser কীভাবে কাজ করে</title>
+<meta name="description" content="Browser কী, ভেতরে কী কী আছে, URL লিখে Enter চাপলে কী হয়, page কীভাবে আঁকা হয়, JavaScript, cache/storage আর নিরাপত্তা: সহজ ভাষায়, ধাপে ধাপে D3 animation-এ।">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<style>
+/* One card per interview question: short answer, 2-3 bullets, and a step-by-step D3 scene.
+   Scenes are plain data (see TOPICS at the bottom): each step adds / modifies / deletes nodes by id
+   and the tiny engine animates the difference. */
+:root{
+  --bg:#f5f7fc; --surface:#ffffff; --surface-2:#f1f4fa; --fg:#0f172a; --muted:#5b6478; --faint:#94a0b8; --line:#e4e8f1;
+  --accent:#6366f1;
+  --a:#4f46e5; --b:#db2777; --g:#059669; --o:#d97706; --r:#e11d48; --s:#0284c7;
+  --hero:linear-gradient(135deg,#4f46e5 0%,#7c3aed 45%,#db2777 100%);
+  --shadow:0 1px 2px rgba(15,23,42,.04),0 10px 30px -12px rgba(15,23,42,.14);
+  --sans:"Inter","Hind Siliguri",system-ui,sans-serif; --bn:"Hind Siliguri","Inter",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0b0f1a; --surface:#121827; --surface-2:#182033; --fg:#e7ecf6; --muted:#9aa6bf; --faint:#66728c; --line:#232c42;
+  --accent:#818cf8; --a:#818cf8; --b:#f472b6; --g:#34d399; --o:#fbbf24; --r:#fb7185; --s:#38bdf8;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6);
+}}
+:root[data-theme="dark"]{
+  --bg:#0b0f1a; --surface:#121827; --surface-2:#182033; --fg:#e7ecf6; --muted:#9aa6bf; --faint:#66728c; --line:#232c42;
+  --accent:#818cf8; --a:#818cf8; --b:#f472b6; --g:#34d399; --o:#fbbf24; --r:#fb7185; --s:#38bdf8;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 var(--bn);-webkit-font-smoothing:antialiased}
+a{color:var(--accent)}
+button{font:inherit;color:inherit}
+code{font-family:var(--mono);font-size:.86em;font-weight:500;background:color-mix(in srgb,var(--accent) 10%,var(--surface));color:color-mix(in srgb,var(--accent) 72%,var(--fg));padding:.1em .4em;border-radius:6px}
+.wrap{max-width:1000px;margin:0 auto;padding:20px 18px 70px}
+
+.topnav{display:flex;align-items:center;gap:10px}
+.brand{display:flex;align-items:center;gap:10px;color:var(--fg);text-decoration:none;font:800 16px var(--sans);letter-spacing:-.02em}
+.logo{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:#fff;font:800 13px var(--mono);background:var(--hero)}
+.topnav .sp{flex:1}
+.pill{border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:6px 14px;font:600 13px var(--sans);cursor:pointer;text-decoration:none}
+.pill:hover{color:var(--fg)}
+
+.hero{margin-top:20px;border-radius:22px;padding:26px 30px;color:#fff;background:var(--hero)}
+.hero .eyebrow{font:600 12px var(--sans);letter-spacing:.1em;text-transform:uppercase;opacity:.85}
+.hero h1{margin:6px 0 8px;font:800 clamp(26px,4.2vw,38px)/1.15 var(--sans);letter-spacing:-.03em}
+.hero p{margin:0;max-width:680px;opacity:.94}
+.jump{display:flex;flex-wrap:wrap;gap:6px;margin-top:16px}
+.jump a{min-width:32px;padding:0 6px;height:32px;display:grid;place-items:center;border-radius:9px;text-decoration:none;font:700 13px var(--sans);color:#fff;background:rgba(255,255,255,.18)}
+.jump a:hover{background:rgba(255,255,255,.34)}
+
+.parts{position:sticky;top:0;z-index:5;margin:14px -18px 0;padding:10px 18px;display:flex;gap:8px;overflow-x:auto;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);scrollbar-width:none}
+.parts a{flex:none;text-decoration:none;font:600 13px var(--sans);color:var(--muted);border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 13px}
+.parts a:hover{color:var(--fg)}
+.parts a b{color:var(--accent);margin-right:4px}
+
+.part{margin-top:44px;scroll-margin-top:60px}
+.part>h2{margin:0;font:800 clamp(20px,2.6vw,25px)/1.25 var(--sans);letter-spacing:-.02em}
+.part>h2 span{color:var(--accent);margin-right:8px}
+
+.q{margin-top:16px;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:20px 22px;box-shadow:var(--shadow);scroll-margin-top:64px}
+.q h3{display:flex;gap:12px;align-items:flex-start;margin:0 0 10px;font:700 18px/1.4 var(--sans);letter-spacing:-.01em}
+.skip{display:inline-block;margin-left:8px;padding:1px 10px;border-radius:999px;font:600 12px var(--sans);font-style:normal;white-space:nowrap;color:var(--muted);background:var(--surface-2);border:1px dashed var(--faint);vertical-align:middle}
+.num{flex:none;min-width:34px;height:34px;padding:0 8px;border-radius:10px;display:grid;place-items:center;color:#fff;font:800 14px var(--sans);background:var(--hero)}
+.ans{margin:0 0 10px;padding:10px 14px;border-left:4px solid var(--accent);border-radius:0 10px 10px 0;background:color-mix(in srgb,var(--accent) 8%,var(--surface))}
+.q ul{margin:0 0 12px;padding-left:20px;color:var(--muted)}
+.q li{margin:2px 0}
+.q li b,.ans b{color:var(--fg)}
+.extra{margin:0 0 12px;overflow-x:auto}
+.extra table{border-collapse:collapse;font:500 13px var(--mono)}
+.extra th,.extra td{border:1px solid var(--line);padding:3px 10px;text-align:center}
+.extra th{background:var(--surface-2)}
+.extra .cmp td,.extra .cmp th{text-align:left;vertical-align:top;font:500 13.5px/1.55 var(--bn);min-width:150px}
+.extra .cmp td:first-child{font-weight:700;white-space:nowrap;min-width:0}
+
+.viz{border:1px solid var(--line);border-radius:14px;background:var(--surface-2);overflow:hidden}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;padding:10px 12px 0}
+.tabs button{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:3px 12px;font:600 12.5px var(--sans);color:var(--muted);cursor:pointer}
+.tabs button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.stage{overflow-x:auto;padding-top:8px}
+.stage svg{display:block;width:100%;min-width:680px;height:auto;cursor:pointer;user-select:none}
+.cap{padding:10px 16px;min-height:3.4em;border-top:1px dashed var(--line);font-size:15px}
+.ctl{display:flex;align-items:center;gap:8px;padding:0 12px 12px}
+.b{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:5px 14px;font:600 13px var(--sans);cursor:pointer}
+.b:hover:not(:disabled){border-color:var(--accent)}
+.b:disabled{opacity:.4;cursor:default}
+.b.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+.cnt{margin-left:auto;font:500 12px var(--mono);color:var(--faint)}
+
+/* svg scene */
+svg text,svg tspan{white-space:pre}
+svg text{font-family:var(--sans);font-size:13px;fill:var(--fg);dominant-baseline:central}
+.c-n{--cc:var(--muted)} .c-a{--cc:var(--a)} .c-b{--cc:var(--b)} .c-g{--cc:var(--g)}
+.c-o{--cc:var(--o)} .c-r{--cc:var(--r)} .c-s{--cc:var(--s)} .c-f{--cc:var(--fg)}
+.box rect,.circ circle{fill:color-mix(in srgb,var(--cc) 14%,var(--surface));stroke:var(--cc);stroke-width:1.6;transition:fill .45s,stroke .45s}
+.dash rect,.dash circle{stroke-dasharray:6 4;fill:color-mix(in srgb,var(--cc) 4%,transparent)}
+.hl rect,.hl circle{stroke-width:3.4;filter:drop-shadow(0 0 7px color-mix(in srgb,var(--cc) 65%,transparent))}
+.text text{fill:var(--cc);transition:fill .45s}
+.text.b text,.text.lg text{font-weight:700}
+.text.lg text{font-size:15px}
+.sm text{font-size:11.5px}
+.m text{font-family:var(--mono);font-size:12px}
+.path path{fill:none;stroke:var(--cc);stroke-width:3.4;stroke-linecap:round}
+.arrow line{stroke:var(--cc);stroke-width:2.2;transition:stroke .4s}
+.arrow.dash line{stroke-dasharray:6 4}
+.arrow.hl line{stroke-width:3.4}
+footer{margin-top:50px;text-align:center;color:var(--faint);font:500 13px var(--sans)}
+/* bn-type: Bengali glyphs/digits need normal tracking */
+h1,h2,h3,h4,h5{letter-spacing:0!important}
+.hero h1,.page-head h1,.p-hero h1,.prose h1,header.top h1{line-height:1.32!important}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs id="defs"></defs></svg>
+<div class="wrap">
+  <nav class="topnav">
+    <a class="brand" href="../../index.html"><span class="logo">W</span>WellDev</a>
+    <span class="sp"></span>
+    <button class="pill" id="theme" type="button">Theme</button>
+  </nav>
+
+  <header class="hero">
+    <div class="eyebrow">Browser · Interview</div>
+    <h1>Browser কীভাবে কাজ করে</h1>
+    <p>৬টা প্রশ্নে সহজ ভাষায়: Browser-এর ভেতরে কী আছে, URL লিখলে কী ঘটে, page কীভাবে আঁকা হয়, JavaScript, storage আর নিরাপত্তা। scene-এ ক্লিক করো বা <b>Next</b> চাপো।</p>
+    <div class="jump" id="jump"></div>
+  </header>
+  <nav class="parts" id="parts"></nav>
+  <main id="app"></main>
+  <footer>Trainee Software Engineer · How browser works</footer>
+</div>
+
+<script>
+/* ---------- theme ---------- */
+(function(){
+  const root=document.documentElement,btn=document.getElementById('theme');
+  try{const t=localStorage.getItem('theme');if(t)root.dataset.theme=t;}catch(e){}
+  const dark=()=>root.dataset.theme?root.dataset.theme==='dark':matchMedia('(prefers-color-scheme:dark)').matches;
+  const label=()=>btn.textContent=dark()?'Light':'Dark';
+  btn.onclick=()=>{root.dataset.theme=dark()?'light':'dark';try{localStorage.setItem('theme',root.dataset.theme);}catch(e){}label();};
+  label();
+})();
+
+/* ---------- scene engine ---------- */
+const COLORS=['n','a','b','g','o','r','s','f'];
+document.getElementById('defs').innerHTML=COLORS.map(c=>
+  `<marker id="ah-${c}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" style="fill:var(--${c==='n'?'muted':c==='f'?'fg':c})"/></marker>`).join('');
+
+const B=(id,x,y,w,h,label,c='n',o={})=>({id,k:'box',x,y,w,h,label,c,...o});
+const T=(id,x,y,label,o={})=>({id,k:'text',x,y,label,c:'n',...o});
+const A=(id,x1,y1,x2,y2,c='n',o={})=>({id,k:'arrow',x:0,y:0,x1,y1,x2,y2,c,...o});
+const C=(id,x,y,r,label,c='n',o={})=>({id,k:'circ',x,y,r,label,c,...o});
+const S=(cap,o={})=>({cap,...o});
+const P=(id,d,c='n',o={})=>({id,k:'path',x:0,y:0,d,c,...o});
+const F=(x1,y1,x2,y2,c='a',o={})=>({x1,y1,x2,y2,c,...o});
+
+function stateAt(steps,i){
+  const m=new Map();
+  for(let k=0;k<=i;k++){
+    const s=steps[k];
+    (s.del||[]).forEach(id=>m.delete(id));
+    (s.add||[]).forEach(n=>m.set(n.id,{...n}));
+    Object.entries(s.mod||{}).forEach(([id,p])=>{if(m.has(id))Object.assign(m.get(id),p);});
+  }
+  return [...m.values()];
+}
+
+function setText(g,cls,str,x,y,anchor,lh=15.5){
+  let tx=g.select('text.'+cls);
+  if(tx.empty())tx=g.append('text').attr('class',cls);
+  const ls=String(str??'').split('\n');
+  tx.attr('text-anchor',anchor);
+  tx.selectAll('tspan').data(ls).join('tspan').attr('x',x).attr('y',(d,i)=>y-(ls.length-1)*lh/2+i*lh).text(d=>d);
+}
+
+function upd(g,d,t){
+  g.attr('class',`n ${d.k} c-${d.c||'n'}${d.dash?' dash':''}${d.hl?' hl':''}${d.s?' '+d.s:''}${d.m?' m':''}`);
+  if(d.k==='box'){
+    let r=g.select('rect');
+    if(r.empty())r=g.insert('rect',':first-child').attr('rx',9).attr('width',d.w).attr('height',d.h);
+    r.transition(t).attr('width',d.w).attr('height',d.h);
+    setText(g,'lb',d.label,d.w/2,d.h/2,'middle');
+  }else if(d.k==='circ'){
+    let r=g.select('circle');
+    if(r.empty())r=g.insert('circle',':first-child').attr('r',d.r);
+    r.transition(t).attr('r',d.r);
+    setText(g,'lb',d.label,0,0,'middle');
+  }else if(d.k==='text'){
+    setText(g,'lb',d.label,0,0,d.a||'start');
+  }else if(d.k==='path'){
+    let p=g.select('path');
+    if(p.empty()){p=g.append('path').attr('d',d.d);const L=p.node().getTotalLength();p.attr('stroke-dasharray',L).attr('stroke-dashoffset',L).transition(t).attr('stroke-dashoffset',0);}
+  }else if(d.k==='arrow'){
+    let l=g.select('line');
+    if(l.empty())l=g.append('line').attr('x1',d.x1).attr('y1',d.y1).attr('x2',d.x2).attr('y2',d.y2);
+    l.attr('marker-end',`url(#ah-${d.c||'n'})`).transition(t).attr('x1',d.x1).attr('y1',d.y1).attr('x2',d.x2).attr('y2',d.y2);
+  }
+}
+
+function draw(svg,nodes,dur){
+  const t=d3.transition().duration(dur).ease(d3.easeCubicInOut);
+  svg.select('.layer').selectAll('g.n').data(nodes,d=>d.id).join(
+    en=>en.append('g').attr('opacity',0).attr('transform',d=>`translate(${d.x},${d.y})`),
+    up=>up,
+    ex=>ex.transition(t).attr('opacity',0).remove()
+  ).each(function(d){upd(d3.select(this),d,t);})
+   .transition(t).attr('transform',d=>`translate(${d.x},${d.y})`).attr('opacity',d=>d.o??1);
+}
+
+/* moving packets: step.fly = [F(x1,y1,x2,y2,colour,{n,gap,dur,r,d0,per,once})] - loops until the step changes */
+let flyGen=0;
+function flyRun(svg,list){
+  const my=++flyGen,fx=svg.select('.fx');
+  fx.selectAll('circle').interrupt().remove();
+  (list||[]).forEach(f=>{
+    const n=f.n??3,gap=f.gap??380,dur=f.dur??1200,per=f.per??Math.max(n*gap+300,dur+300),r=f.r??6;
+    const col=f.c==='n'?'muted':f.c==='f'?'fg':(f.c||'a');
+    for(let i=0;i<n;i++){
+      const dot=fx.append('circle').attr('r',r).attr('cx',f.x1).attr('cy',f.y1).attr('opacity',0)
+        .style('fill',`var(--${col})`).style('stroke','var(--surface)').style('stroke-width',1.5);
+      const go=delay=>{
+        if(my!==flyGen)return;
+        dot.attr('cx',f.x1).attr('cy',f.y1).attr('opacity',0)
+          .transition().delay(delay).duration(0).attr('opacity',1)
+          .transition().duration(dur).ease(d3.easeLinear).attr('cx',f.x2).attr('cy',f.y2)
+          .transition().duration(0).attr('opacity',0)
+          .on('end',()=>{if(!f.once)go(per-dur);});
+      };
+      go((f.d0??500)+i*gap);
+    }
+  });
+}
+
+function mount(host,topic){
+  const tabs=topic.tabs||[{n:'',steps:topic.steps}];
+  host.innerHTML='<div class="tabs"></div><div class="stage"><svg viewBox="0 0 760 240" role="img"><g class="layer"></g><g class="fx"></g></svg></div><div class="cap"></div><div class="ctl"><button class="b prev" type="button">◀</button><button class="b pri next" type="button">Next ▶</button><span class="cnt"></span></div>';
+  const svg=d3.select(host).select('svg'),cap=host.querySelector('.cap'),cnt=host.querySelector('.cnt');
+  const prev=host.querySelector('.prev'),next=host.querySelector('.next'),tabBox=host.querySelector('.tabs');
+  let ti=0,si=0,steps;
+  function show(dur){
+    draw(svg,stateAt(steps,si),dur);
+    flyRun(svg,steps[si].fly);
+    cap.innerHTML=steps[si].cap;
+    cnt.textContent=`${si+1} / ${steps.length}`;
+    prev.disabled=si===0;
+    next.textContent=si===steps.length-1?'↻ আবার':'Next ▶';
+  }
+  function load(i){
+    ti=i;si=0;
+    const tb=tabs[ti];steps=typeof tb.steps==='function'?tb.steps():tb.steps;
+    tabBox.querySelectorAll('button').forEach((b,k)=>b.classList.toggle('on',k===ti));
+    show(0);
+  }
+  if(tabs.length>1){
+    tabs.forEach((tb,i)=>{const b=document.createElement('button');b.type='button';b.textContent=tb.n;b.onclick=()=>load(i);tabBox.appendChild(b);});
+  }else tabBox.remove();
+  const go=()=>{si=si===steps.length-1?0:si+1;show(600);};
+  next.onclick=go;svg.on('click',go);
+  prev.onclick=()=>{if(si>0){si--;show(600);}};
+  load(0);
+}
+
+/* ---------- content ---------- */
+const PARTS=[['A','Browser-এর ভেতরে কী কী'],['B','Page আসে কীভাবে'],['C','Page আঁকা ও JavaScript'],['D','Storage ও নিরাপত্তা']];
+
+const TOPICS=[
+{p:0,q:'Browser কী ও তার ভেতরে কী কী আছে?',
+ ans:'<b>Browser</b> হলো এমন software যা internet থেকে HTML, CSS, JavaScript আর ছবি এনে তোমার screen-এ <b>পাতা</b> হিসেবে আঁকে। Chrome, Firefox, Safari, Edge সবাই একই কাজ করে। ভেতরে কয়েকটা অংশ ভাগাভাগি করে কাজটা সারে: কেউ UI দেখায়, কেউ network থেকে আনে, কেউ আঁকে, কেউ JavaScript চালায়।',
+ pts:['Browser আসলে একটা ছোট কারখানা: একজন আনে (Networking), একজন বুঝে আঁকে (Rendering engine), একজন code চালায় (JavaScript engine)।','Engine-এর নাম: Chrome = <b>Blink + V8</b>, Firefox = <b>Gecko + SpiderMonkey</b>, Safari = <b>WebKit + JavaScriptCore</b>।','প্রতিটা tab সাধারণত আলাদা process-এ চলে, তাই একটা tab hang করলে বাকিগুলো বাঁচে।'],
+ tabs:[
+  {n:'1. ভেতরের ৭টা অংশ',steps:[
+   S('Browser একটা বড় software। ভেতরে কয়েকটা অংশ আলাদা আলাদা কাজ করে। একটা একটা করে দেখি।',{add:[B('bx',10,6,740,232,'','n',{dash:1}),T('bt',24,20,'Browser',{c:'f',s:'b'})]}),
+   S('<b>User Interface:</b> যা তুমি দেখো আর চাপো: address bar, tab, back/forward বোতাম, bookmark। (page-এর ভেতরের অংশটা বাদে সব।)',{add:[B('ui',30,34,700,34,'User Interface: address bar · tab · back / forward · bookmark','a',{s:'sm'})]}),
+   S('<b>Browser engine:</b> UI আর rendering engine-এর মাঝের সমন্বয়কারী। তুমি Enter চাপলে সে কাজটা ঠিক জনের কাছে পাঠায়।',{add:[B('be',30,74,700,30,'Browser engine: সমন্বয়কারী (কাজ ভাগ করে দেয়)','b',{s:'sm'})]}),
+   S('<b>Rendering engine:</b> HTML আর CSS পড়ে পাতাটা আঁকে। এটাই browser-এর আসল শিল্পী।',{add:[B('re',30,112,220,62,'Rendering engine\nHTML + CSS → ছবি\n(Blink, Gecko, WebKit)','g',{s:'sm'})]}),
+   S('<b>Networking:</b> internet থেকে সবকিছু আনে: DNS, HTTP/HTTPS request, cache আর cookie সামলায়।',{add:[B('nw',270,112,220,62,'Networking\nDNS · HTTP · HTTPS\ncache · cookie','o',{s:'sm'})]}),
+   S('<b>JavaScript engine:</b> page-এর JavaScript পড়ে চালায়। বোতামে চাপলে কিছু ঘটে, তার পেছনে এই engine।',{add:[B('js',510,112,220,62,'JavaScript engine\n(V8, SpiderMonkey,\nJavaScriptCore)','r',{s:'sm'})]}),
+   S('<b>UI backend:</b> OS-এর নিজস্ব জিনিস (button, dropdown, window) আঁকে, যাতে browser সব OS-এ কাজ করে।',{add:[B('bk',30,182,350,42,'UI backend: OS-এর widget আঁকে','n',{s:'sm'})]}),
+   S('<b>Data storage:</b> browser-এর নিজের স্মৃতি: cache, cookie, localStorage, IndexedDB। এগুলো তোমার disk-এ জমে।',{add:[B('st',400,182,330,42,'Data storage: cache · cookie · localStorage','o',{s:'sm'})]})
+  ]},
+  {n:'2. আলাদা process (Chrome)',steps:[
+   S('আগের দিনের browser ছিল <b>এক process</b>। সব tab এক জায়গায়।',{add:[B('one',50,16,660,200,'','n',{dash:1}),T('o1',66,34,'একটাই process',{c:'f',s:'b'}),B('t1',90,70,170,80,'Tab 1\nFacebook','a'),B('t2',295,70,170,80,'Tab 2\nGmail','a'),B('t3',500,70,170,80,'Tab 3\nভিডিও','a')]}),
+   S('Tab 3-এর কোনো page ভুল code-এ <b>crash</b> করল।',{mod:{t3:{c:'r',hl:1,label:'Tab 3\n💥 crash'}}}),
+   S('ফল: <b>পুরো browser বন্ধ</b>। Tab 1 আর 2-ও চলে গেল। এটা বড় সমস্যা।',{mod:{one:{c:'r'},t1:{c:'r',label:'Tab 1\n✗ গেল'},t2:{c:'r',label:'Tab 2\n✗ গেল'},o1:{label:'এক process = সবাই একসাথে মরে',c:'r'}}}),
+   S('<b>এখনকার Chrome:</b> প্রতি tab-এর নিজস্ব <b>renderer process</b>। মাঝে একটা <b>Browser process</b> সবার সমন্বয় করে।',{del:['one','o1','t1','t2','t3'],add:[B('bp',290,10,180,50,'Browser process\n(UI, সমন্বয়)','b'),B('nsv',565,10,170,50,'Network service\n(internet থেকে আনে)','o',{s:'sm'}),B('r1',40,110,150,64,'Renderer\nTab 1','a'),B('r2',215,110,150,64,'Renderer\nTab 2','a'),B('r3',390,110,150,64,'Renderer\nTab 3','a'),B('gp',565,110,170,64,'GPU process\n(আঁকার কাজ)','g',{s:'sm'}),A('p1',350,62,115,108,'n'),A('p2',380,62,290,108,'n'),A('p3',410,62,465,108,'n'),A('p4',440,62,650,108,'n'),A('p5',472,35,563,35,'n')]}),
+   S('এবার Tab 3 crash করলে <b>শুধু সেই process</b> মরে। বাকি tab ঠিকঠাক চলে।',{mod:{r3:{c:'r',hl:1,label:'Renderer Tab 3\n💥 crash'},r1:{c:'g'},r2:{c:'g'}}}),
+   S('<b>বাড়তি লাভ:</b> প্রতিটা renderer একটা বন্ধ ঘরে (sandbox) থাকে। একটা site ভাঙলেও অন্য site-এর data নিরাপদ।',{add:[B('sb',40,196,695,34,'প্রতিটা renderer sandbox-এ: disk বা অন্য tab-কে সরাসরি ছুঁতে পারে না','g',{s:'sm'})]})
+  ]}
+ ]},
+
+{p:1,q:'Address bar-এ URL লিখে Enter চাপলে কী হয়?',
+ ans:'১) URL ভেঙে বোঝা, ২) নিজের <b>cache</b> দেখা, ৩) <b>DNS</b>-এ নাম থেকে IP আনা, ৪) <b>TCP</b> সংযোগ খোলা, ৫) <b>TLS</b> (HTTPS হলে) দিয়ে সুরক্ষা, ৬) <b>HTTP request</b> পাঠানো, ৭) server-এর <b>response</b> (HTML) পাওয়া। তারপর শুরু হয় page আঁকা।',
+ pts:['URL-এর তিন অংশ: <b>protocol</b> (https), <b>host</b> (example.com), <b>path</b> (/hello)।','DNS = নাম থেকে IP (ফোনবই)। TCP = সংযোগ (তিন ধাপের handshake)। TLS = সুরক্ষা। HTTP = আসল চাওয়া।','প্রতিটা ধাপ এড়ানোর চেষ্টা চলে: cache থাকলে network-ই লাগে না, DNS ফলাফলও মনে রাখা হয়।'],
+ tabs:[
+  {n:'ধাপে ধাপে',steps:[
+   S('তুমি লিখলে <code>https://example.com/hello</code> আর Enter চাপলে। Browser আগে URL ভেঙে তিন টুকরো করে।',{add:[B('br',20,86,120,70,'Browser','a'),B('sv',620,86,120,70,'Server','g'),B('u1',20,190,170,42,'https\n(protocol)','a',{s:'sm'}),B('u2',200,190,220,42,'example.com\n(কোন server)','g',{s:'sm'}),B('u3',430,190,170,42,'/hello\n(কোন পাতা)','o',{s:'sm'})]}),
+   S('<b>Cache:</b> আগে নিজের কাছে দেখে, এই পাতা আগে আনা আছে কিনা। নেই, তাই network-এ যেতে হবে।',{add:[T('cc',80,72,'cache: নেই ✗',{a:'middle',c:'r',s:'sm b'})],mod:{br:{hl:1}}}),
+   S('<b>DNS:</b> Browser DNS-কে জিজ্ঞেস করে, "example.com-এর IP কী?" (নাম থেকে নম্বর বের করার ফোনবই)',{add:[B('dns',320,14,160,50,'DNS server','b'),A('d1',110,84,318,50,'b')],mod:{br:{hl:0}},fly:[F(110,84,318,50,'b',{n:1,dur:1100,per:3400})]}),
+   S('DNS উত্তর দেয়: <b>93.184.216.34</b>। এবার Browser জানে কোন server-এ যেতে হবে।',{add:[A('d2',318,60,112,92,'g'),T('ipt',390,86,'93.184.216.34',{a:'middle',c:'g',s:'sm b'})],fly:[F(318,60,112,92,'g',{n:1,dur:1100,per:3400})]}),
+   S('<b>TCP:</b> server-এর সাথে সংযোগ খোলা, তিন ধাপে: "শুনতে পাচ্ছো?" → "হ্যাঁ, তুমি?" → "হ্যাঁ।"',{del:['d1','d2','ipt','dns'],add:[A('c1',142,118,618,118,'n'),T('tcp',380,150,'SYN → SYN-ACK → ACK',{a:'middle',c:'f',s:'sm b'})],fly:[F(142,108,618,108,'a',{n:1,dur:900,per:3600}),F(618,118,142,118,'b',{n:1,dur:900,per:3600,d0:1000}),F(142,128,618,128,'a',{n:1,dur:900,per:3600,d0:2000})]}),
+   S('<b>TLS</b> (HTTPS হলে): server নিজের পরিচয় দেখায় আর দুজনে একটা গোপন চাবি ঠিক করে। এখন থেকে সব কথা তালা-বন্ধ। 🔒',{del:['tcp'],mod:{c1:{c:'g'}},add:[T('lock',380,150,'🔒 TLS: পরিচয় যাচাই + গোপন চাবি',{a:'middle',c:'g',s:'sm b'})],fly:[F(142,108,618,108,'g',{n:2,gap:700,dur:1000,per:3200}),F(618,128,142,128,'g',{n:2,gap:700,dur:1000,per:3200,d0:500})]}),
+   S('<b>HTTP request:</b> এবার আসল চাওয়া: "<code>/hello</code> পাতাটা দাও।"',{del:['lock','u1','u2','u3'],add:[B('rq',160,174,440,46,'GET /hello HTTP/1.1\nHost: example.com','a',{m:1,s:'sm'})],fly:[F(142,118,618,118,'a',{n:1,dur:1200,per:3200})]}),
+   S('<b>Response:</b> server উত্তর দেয় <code>200 OK</code> আর পাতার <b>HTML</b>।',{mod:{rq:{c:'g',label:'200 OK\n<html> … </html>'},sv:{hl:1}},fly:[F(618,118,142,118,'g',{n:1,dur:1200,per:3200})]}),
+   S('HTML Browser-এর হাতে এল। <b>এবার শুরু পাতা আঁকা</b> (পরের প্রশ্ন)। তার আগেই সে HTML পড়তে পড়তে ছবি, CSS, JS-এর জন্য আরও request পাঠাতে থাকে।',{mod:{sv:{hl:0},br:{hl:1}}})
+  ]}
+ ]},
+
+{p:2,q:'Browser কীভাবে HTML থেকে page আঁকে? (Rendering)',
+ ans:'HTML আর CSS পড়ে Browser দুটো <b>গাছ</b> বানায়: <b>DOM</b> আর <b>CSSOM</b>। দুটো মিলিয়ে হয় <b>Render tree</b>। তারপর প্রতিটা জিনিস কোথায় কত বড় তা হিসাব (<b>Layout</b>), রং দিয়ে আঁকা (<b>Paint</b>), আর স্তরগুলো জুড়ে screen-এ দেখানো (<b>Composite</b>)।',
+ pts:['<b>DOM</b> = HTML-এর tag-এর গাছ। <b>CSSOM</b> = CSS-এর নিয়মের গাছ।','Layout বদলালে (width, margin) আবার layout + paint লাগে: ধীর। শুধু <code>transform</code> বা <code>opacity</code> বদলালে composite-ই যথেষ্ট: দ্রুত।','আরও গভীরে দেখতে: <a href="../../06-networking/browser/index.html">URL থেকে Pixel: Browser কীভাবে Page বানায়</a>।'],
+ tabs:[
+  {n:'1. HTML থেকে screen',steps:[
+   S('প্রথমে <b>HTML</b>। Browser তা পড়ে tag-গুলোর একটা গাছ বানায়: <b>DOM</b>।',{add:[B('h',20,18,100,40,'HTML','a'),B('d',160,18,120,40,'DOM tree','a'),A('a1',122,38,158,38,'a'),T('x1',490,38,'tag-এর গাছ: html → body → h1, p …',{c:'a',s:'sm'})],fly:[F(122,38,158,38,'a',{n:2,gap:400,dur:600,per:1800})]}),
+   S('তারপর <b>CSS</b>। এটাও পড়ে একটা গাছ: <b>CSSOM</b>। কোন tag-এর কী রং, কত বড়, সব এখানে।',{add:[B('c',20,80,100,40,'CSS','o'),B('s',160,80,120,40,'CSSOM','o'),A('a2',122,100,158,100,'o'),T('x2',490,98,'style-এর গাছ: কার কী রং, কত বড়',{c:'o',s:'sm'})],fly:[F(122,100,158,100,'o',{n:2,gap:400,dur:600,per:1800})]}),
+   S('দুটো মিলিয়ে <b>Render tree</b>: শুধু যা সত্যিই দেখা যাবে তাই। (<code>display: none</code> হলে ঢোকেই না।)',{del:['x1','x2'],add:[B('rt',320,18,150,44,'Render tree','g'),A('a3',282,36,318,36,'a'),A('a4',282,102,330,64,'o'),T('x3',490,38,'DOM + CSSOM মিলিয়ে',{c:'g',s:'sm'})],fly:[F(282,36,318,36,'a',{n:2,gap:400,dur:600,per:1800}),F(282,102,330,64,'o',{n:2,gap:400,dur:600,per:1800,d0:200})]}),
+   S('<b>Layout:</b> প্রতিটা জিনিস কোথায় বসবে, কত বড় হবে (pixel-এ) তার হিসাব। পর্দার মাপ এখানেই কাজে লাগে।',{del:['x3'],add:[B('l',320,76,150,44,'Layout','b'),A('a5',395,64,395,74,'g'),T('x4',490,98,'কোথায় বসবে, কত বড়? (px হিসাব)',{c:'b',s:'sm'})],fly:[F(395,64,395,74,'g',{n:1,dur:500,per:1600})]}),
+   S('<b>Paint:</b> এবার আঁকা: রং, লেখা, ছবি, border। এখনো আলাদা আলাদা স্তরে।',{del:['x4'],add:[B('p',320,134,150,44,'Paint','b'),A('a6',395,122,395,132,'b'),T('x5',490,156,'রং, লেখা, ছবি আঁকা',{c:'b',s:'sm'})],fly:[F(395,122,395,132,'b',{n:1,dur:500,per:1600})]}),
+   S('<b>Composite:</b> স্তরগুলো জুড়ে একটা ছবি বানিয়ে <b>screen-এ</b> দেখায় (GPU এই কাজ করে)। এবার তুমি page দেখতে পাচ্ছো।',{del:['x5'],add:[B('co',320,192,150,44,'Composite','g',{hl:1}),A('a7',395,180,395,190,'b'),T('x6',490,214,'স্তর জুড়ে screen-এ ✓',{c:'g',s:'sm b'})],fly:[F(395,180,395,190,'b',{n:1,dur:500,per:1600})]})
+  ]},
+  {n:'2. কেন কোনটা ধীর',steps:[
+   S('JavaScript বা CSS পরে কিছু বদলালে কিছু ধাপ <b>আবার</b> চলে। যত আগের ধাপ বদলায়, তত বেশি কাজ।',{add:[T('h',20,18,'কী বদলালে',{c:'f',s:'b'}),T('h2',320,18,'কোন ধাপগুলো আবার চলে',{c:'f',s:'b'})]}),
+   S('<b>width, margin</b> বদলালে সবকিছুর জায়গা বদলাতে পারে। তাই <b>Layout + Paint + Composite</b> তিনটাই। ধীর।',{add:[B('a0',20,36,260,40,'width / margin বদলানো','r',{s:'sm'}),B('a1',320,36,130,40,'Layout','b',{s:'sm'}),B('a2',460,36,130,40,'Paint','b',{s:'sm'}),B('a3',600,36,130,40,'Composite','b',{s:'sm'})]}),
+   S('<b>color, background</b> বদলালে জায়গা একই, শুধু রং। তাই <b>Paint + Composite</b>। মাঝারি।',{add:[B('b0',20,96,260,40,'color / background বদলানো','o',{s:'sm'}),B('b1',320,96,130,40,'Layout','n',{s:'sm',dash:1}),B('b2',460,96,130,40,'Paint','b',{s:'sm'}),B('b3',600,96,130,40,'Composite','b',{s:'sm'})]}),
+   S('<b>transform, opacity</b> বদলালে শুধু স্তরটা সরে বা ঝাপসা হয়। শুধু <b>Composite</b>। সবচেয়ে দ্রুত, তাই animation-এ এগুলোই বাছো।',{add:[B('c0',20,156,260,40,'transform / opacity বদলানো','g',{s:'sm'}),B('c1',320,156,130,40,'Layout','n',{s:'sm',dash:1}),B('c2',460,156,130,40,'Paint','n',{s:'sm',dash:1}),B('c3',600,156,130,40,'Composite','g',{s:'sm',hl:1})]})
+  ]}
+ ]},
+
+{p:2,q:'JavaScript Browser-এ কীভাবে চলে, আর page-কে কীভাবে আটকায়?',
+ ans:'Browser-এর <b>JavaScript engine</b> (Chrome-এ V8) JS কোড পড়ে ছোট নির্দেশে বদলে চালায়। JavaScript চলে <b>একটা main thread-এ</b>, আর সেই thread-ই page-ও আঁকে। তাই ভারী JS চললে page আটকে যায়। <code>&lt;script&gt;</code> কীভাবে আসবে তা ঠিক করে <code>defer</code> আর <code>async</code>।',
+ pts:['সাধারণ <code>&lt;script&gt;</code>: HTML পড়া থামিয়ে আগে script আনে আর চালায়।','<b>defer</b>: পাশাপাশি আনে, HTML শেষ হলে চালায়। <b>async</b>: পাশাপাশি আনে, আসা মাত্রই চালায়।','Click, <code>setTimeout</code>, <code>fetch</code>-এর উত্তর সব <b>event loop</b>-এর মাধ্যমে একটা একটা করে আসে (<a href="../03-event-loop/index.html">Event Loop পাতা</a>)।'],
+ tabs:[
+  {n:'1. script, defer, async',steps:[
+   S('<b>সাধারণ <code>&lt;script&gt;</code>:</b> HTML পড়তে পড়তে script পেলে সব থামিয়ে আগে সেটা আনে, চালায়। তারপর বাকি HTML। তাই পাতা দেরিতে আসে।',{add:[T('l1',40,24,'সাধারণ script',{c:'f',s:'b'}),B('n1',40,40,150,40,'HTML পড়া','g',{s:'sm'}),B('n2',194,40,120,40,'⏸ script আনা','o',{s:'sm'}),B('n3',318,40,110,40,'script চালানো','r',{s:'sm'}),B('n4',432,40,170,40,'বাকি HTML পড়া','g',{s:'sm'}),T('nn',616,60,'HTML আটকে ছিল',{c:'r',s:'sm b'})]}),
+   S('<b>defer:</b> script আনা চলে HTML পড়ার <b>পাশাপাশি</b>। HTML শেষ হলে তারপর চালায়। পাতা আটকায় না। (বেশিরভাগ ক্ষেত্রে সেরা)',{add:[T('l2',40,98,'defer',{c:'f',s:'b'}),B('d1',40,114,380,40,'HTML পড়া (সাথে সাথে script আনা চলছে)','g',{s:'sm'}),B('d2',424,114,150,40,'শেষে script চালানো','r',{s:'sm'}),T('dd',588,134,'আটকায়নি ✓',{c:'g',s:'sm b'})]}),
+   S('<b>async:</b> script আনা চলে পাশাপাশি, কিন্তু আসা মাত্র HTML থামিয়ে চালায়। ক্রমের নিশ্চয়তা নেই। বিজ্ঞাপন, analytics-এর জন্য ভালো।',{add:[T('l3',40,172,'async',{c:'f',s:'b'}),B('s1',40,188,170,40,'HTML পড়া','g',{s:'sm'}),B('s2',214,188,130,40,'script চালানো','r',{s:'sm'}),B('s3',348,188,200,40,'বাকি HTML পড়া','g',{s:'sm'}),T('ss',562,208,'এলেই চালায়',{c:'o',s:'sm b'})]})
+  ]},
+  {n:'2. Main thread আটকে গেলে',steps:[
+   S('JavaScript, style, layout, paint সবাই একই <b>main thread</b>-এ পালা করে চলে। একজনের কাজ শেষ না হলে অন্যজন সুযোগ পায় না।',{add:[T('mt',30,24,'Main thread (একটাই লাইন)',{c:'f',s:'b'}),B('t1',30,60,80,50,'JS','r',{s:'sm'}),B('t2',114,60,80,50,'Layout','b',{s:'sm'}),B('t3',198,60,80,50,'Paint','b',{s:'sm'}),B('t4',282,60,80,50,'JS','r',{s:'sm'}),B('t5',366,60,80,50,'Paint','b',{s:'sm'})]}),
+   S('এবার একটা <b>ভারী JS</b> (যেমন লাখ লাখ item-এর loop) আসে। সে ৩ সেকেন্ড ধরে লাইন আটকে রাখে।',{add:[B('big',450,60,290,50,'ভারী JS: ৩ সেকেন্ড ধরে চলছে…','r',{s:'sm',hl:1})]}),
+   S('এর মধ্যে user একটা বোতামে <b>click</b> করল। কিন্তু main thread ব্যস্ত, তাই click লাইনে দাঁড়িয়ে থাকে। Page <b>জমে গেছে</b> মনে হয়।',{add:[B('ck',450,130,170,36,'👆 click: অপেক্ষায়','o',{s:'sm'}),T('fz',640,148,'page জমে গেছে ❄',{c:'r',s:'sm b'})]}),
+   S('<b>সমাধান:</b> ভারী কাজ ছোট টুকরো করা, বা <b>Web Worker</b>-এ (আলাদা thread) পাঠানো, যাতে main thread ফাঁকা থাকে।',{add:[B('wk',30,188,700,40,'ভারী কাজ → Web Worker (আলাদা thread) → ফল ফিরে আসে → main thread ফাঁকা ✓','g',{s:'sm'})]})
+  ]}
+ ]},
+
+{p:3,q:'Browser cache ও storage: কোথায় কী জমা থাকে?',
+ ans:'বারবার একই জিনিস না আনতে Browser <b>cache</b> রাখে (HTTP cache)। আর website নিজের data রাখার জন্য কয়েক ধরনের storage পায়: <b>cookie</b>, <b>localStorage</b>, <b>sessionStorage</b>, <b>IndexedDB</b>।',
+ pts:['<b>Cache hit</b> = কপি আছে, network-ই লাগে না। <b>Cache miss</b> = নেই, আনতে হয়।','কপির মেয়াদ থাকে (<code>Cache-Control: max-age=3600</code>)। মেয়াদ শেষে browser জিজ্ঞেস করে "বদলেছে?", না বদলালে <b>304 Not Modified</b> (body ছাড়া), কপিই চলে।','Cookie প্রতিটা request-এ server-এ যায়। বাকিগুলো শুধু browser-এই থাকে।'],
+ extra:'<table class="cmp"><tr><th>Storage</th><th>কতদিন থাকে</th><th>কত বড়</th><th>Server-এ যায়?</th></tr><tr><td>Cookie</td><td>expiry পর্যন্ত</td><td>প্রায় 4 KB</td><td>হ্যাঁ, প্রতি request-এ</td></tr><tr><td>localStorage</td><td>মুছলে পর্যন্ত</td><td>প্রায় 5 MB</td><td>না</td></tr><tr><td>sessionStorage</td><td>tab বন্ধ পর্যন্ত</td><td>প্রায় 5 MB</td><td>না</td></tr><tr><td>IndexedDB</td><td>মুছলে পর্যন্ত</td><td>অনেক বড় (শত MB)</td><td>না</td></tr></table>',
+ tabs:[
+  {n:'1. HTTP cache',steps:[
+   S('Browser-এর একটা cache আছে, এখনো খালি। User প্রথমবার <code>style.css</code> চাইছে।',{add:[B('br',20,70,120,100,'Browser','a'),B('ca',200,80,140,80,'Cache\n(খালি)','o'),B('sv',620,70,120,100,'Server','g'),A('a1',142,120,198,120,'n'),A('a2',342,120,618,120,'n')]}),
+   S('<b>Cache miss:</b> cache-এ নেই। তাই server থেকে আনে: <b>200 OK</b>।',{mod:{ca:{c:'r',label:'Cache\n✗ miss'}},fly:[F(142,120,198,120,'a',{n:1,dur:500,per:3600}),F(342,120,618,120,'a',{n:1,dur:1000,per:3600,d0:600}),F(618,134,142,134,'g',{n:1,dur:1500,per:3600,d0:1700})]}),
+   S('Browser কপিটা cache-এ <b>রেখে</b> দেয়, সাথে মেয়াদ: <code>max-age=3600</code> (১ ঘণ্টা)।',{mod:{ca:{c:'g',hl:1,label:'Cache\nstyle.css ✓\n(১ ঘণ্টা)'}}}),
+   S('১০ মিনিট পরে আবার চাইল। <b>Cache hit:</b> কপি আছে, মেয়াদও আছে। <b>network-ই লাগল না</b>, সাথে সাথে।',{mod:{ca:{hl:1},a2:{dash:1,c:'n'}},fly:[F(142,120,198,120,'a',{n:1,dur:500,per:2000}),F(198,136,142,136,'g',{n:1,dur:500,per:2000,d0:600})]}),
+   S('২ ঘণ্টা পরে মেয়াদ শেষ। Browser server-কে জিজ্ঞেস করে: "বদলেছে?" Server বলে <b>304 Not Modified</b> (body ছাড়া)। পুরনো কপিই চলে।',{mod:{ca:{c:'o',label:'Cache\nমেয়াদ শেষ\n(যাচাই চলছে)'},a2:{dash:0,c:'o'}},add:[T('nm',480,100,'বদলেছে? → 304',{a:'middle',c:'o',s:'sm b'})],fly:[F(342,120,618,120,'o',{n:1,dur:900,per:3000}),F(618,136,342,136,'g',{n:1,dur:900,per:3000,d0:1000})]})
+  ]},
+  {n:'2. cookie, localStorage…',steps:[
+   S('Website নিজের data রাখার জন্য Browser-এ কয়েকটা জায়গা পায়। প্রতিটার আলাদা স্বভাব।',{add:[B('bx',10,8,740,224,'','n',{dash:1}),T('bt',24,22,'Browser-এর storage',{c:'f',s:'b'})]}),
+   S('<b>Cookie:</b> ছোট (প্রায় 4 KB)। সবচেয়ে বড় বৈশিষ্ট্য: <b>প্রতিটা request-এ server-এ যায়</b>। তাই login session-এ ব্যবহার হয়।',{add:[B('ck',30,40,330,80,'Cookie\nছোট · প্রতি request-এ server-এ যায়\nlogin session-এর জন্য','o',{s:'sm'})]}),
+   S('<b>localStorage:</b> প্রায় 5 MB, <b>নিজে না মুছলে থেকে যায়</b>। server-এ যায় না। theme, ছোট setting-এর জন্য ভালো।',{add:[B('ls',390,40,340,80,'localStorage\n~5 MB · স্থায়ী · server-এ যায় না\ntheme, ছোট setting','a',{s:'sm'})]}),
+   S('<b>sessionStorage:</b> localStorage-এর মতোই, কিন্তু <b>tab বন্ধ করলে মুছে যায়</b>। এক tab-এর অস্থায়ী কাজের জন্য।',{add:[B('ss',30,134,330,80,'sessionStorage\n~5 MB · tab বন্ধ হলে শেষ\nঅস্থায়ী কাজ','b',{s:'sm'})]}),
+   S('<b>IndexedDB:</b> অনেক বড় data (শত MB পর্যন্ত), structured। offline app আর বড় তালিকার জন্য।',{add:[B('ix',390,134,340,80,'IndexedDB\nঅনেক বড় · structured\noffline app, বড় data','g',{s:'sm'})]})
+  ]}
+ ]},
+
+{p:3,q:'Browser-এর নিরাপত্তা: Same-Origin Policy আর Sandbox',
+ ans:'অচেনা website-এর code তোমার browser-এ চলে। তাই browser কয়েকটা দেয়াল তোলে: <b>Same-Origin Policy</b> (এক site অন্য site-এর data পড়তে পারে না), <b>Sandbox</b> (page তোমার computer-এর file ছুঁতে পারে না), আর <b>HTTPS</b> (পথে কেউ পড়তে পারে না)।',
+ pts:['<b>Origin</b> = <code>protocol + domain + port</code>। এই তিনটার একটা আলাদা হলেই আলাদা origin।','<b>CORS</b> হলো server-এর পক্ষ থেকে "এই অন্য origin-কে পড়তে দিচ্ছি" বলার নিয়ম।','Camera, location, microphone-এর মতো জিনিস ব্যবহারে page-কে তোমার <b>অনুমতি</b> চাইতে হয়।'],
+ tabs:[
+  {n:'1. Same-Origin Policy',steps:[
+   S('তুমি দুটো tab খুলে রেখেছো: ব্যাংকের site আর একটা অচেনা site। দুজনের origin আলাদা।',{add:[B('b1',30,30,320,100,'Tab 1\nhttps://bank.com\n(তোমার account খোলা)','g'),B('e1',410,30,320,100,'Tab 2\nhttps://evil.com\n(খারাপ script আছে)','r')]}),
+   S('evil.com-এর script চেষ্টা করে bank.com-এর <b>তোমার account-এর data</b> পড়তে।',{add:[A('x1',408,80,352,80,'r'),T('xt',380,62,'চুরির চেষ্টা',{a:'middle',c:'r',s:'sm b'})],fly:[F(408,80,352,80,'r',{n:2,gap:500,dur:500,per:2200})]}),
+   S('<b>Same-Origin Policy:</b> browser আটকে দেয়। অন্য origin-এর উত্তর evil.com-এর script-কে পড়তে দেয় না। Console-এ আসে: "blocked by CORS policy"।',{mod:{x1:{c:'n',dash:1},e1:{hl:1}},add:[B('bl',150,150,460,38,'✗ blocked: origin আলাদা (bank.com ≠ evil.com)','r',{s:'sm',hl:1})]}),
+   S('<b>Origin একই কিনা</b> বোঝার নিয়ম: protocol, domain আর port, তিনটাই মিলতে হবে। একটা আলাদা হলেই আলাদা origin।',{del:['b1','e1','x1','xt','bl'],add:[T('hd',380,16,'https://shop.com  এর সাথে তুলনা',{a:'middle',c:'f',s:'b'}),B('o1',30,36,420,32,'https://shop.com/cart','n',{m:1,s:'sm'}),B('v1',470,36,260,32,'✓ একই origin (path আলাদা হলেও চলে)','g',{s:'sm'}),B('o2',30,76,420,32,'http://shop.com  (https নয়)','n',{m:1,s:'sm'}),B('v2',470,76,260,32,'✗ protocol আলাদা','r',{s:'sm'}),B('o3',30,116,420,32,'https://api.shop.com  (subdomain)','n',{m:1,s:'sm'}),B('v3',470,116,260,32,'✗ domain আলাদা','r',{s:'sm'}),B('o4',30,156,420,32,'https://shop.com:8080  (port আলাদা)','n',{m:1,s:'sm'}),B('v4',470,156,260,32,'✗ port আলাদা','r',{s:'sm'}),T('cr',380,212,'অন্য origin-কে পড়তে দিতে চাইলে server CORS header পাঠায়',{a:'middle',c:'o',s:'sm b'})]})
+  ]},
+  {n:'2. Sandbox ও অনুমতি',steps:[
+   S('প্রতিটা page একটা <b>বন্ধ ঘরে (sandbox)</b> চলে। ঘরের বাইরে তোমার computer, আর ঘরের ভেতরে ওই page-এর code।',{add:[B('sb',30,20,330,200,'','g',{dash:1}),T('sbt',46,38,'Sandbox (page-এর ঘর)',{c:'g',s:'b'}),B('pg',60,64,270,60,'Website-এর\nJavaScript','a'),B('pc',470,20,260,200,'তোমার computer\n\nfile · password · camera\nঅন্য program','n',{s:'sm'})]}),
+   S('Page চেষ্টা করল তোমার <b>file পড়তে</b>। Browser সরাসরি অনুমতিই দেয় না। ✗',{add:[A('f1',332,94,468,94,'r'),T('ft',400,78,'file চাই',{a:'middle',c:'r',s:'sm b'}),B('no',60,144,270,40,'✗ আটকে দিল','r',{s:'sm'})],fly:[F(332,94,468,94,'r',{n:2,gap:500,dur:700,per:2200})]}),
+   S('Camera বা location দরকার হলে page-কে <b>তোমাকে জিজ্ঞেস</b> করতে হয়। তুমি "Allow" দিলে তবেই। ✓',{del:['f1','ft','no'],add:[B('al',60,144,270,56,'"Camera ব্যবহার করতে চাই।"\n[ Block ]  [ Allow ]','o',{s:'sm'}),A('f2',332,94,468,94,'g',{dash:1}),T('ft2',400,78,'তোমার অনুমতিতে',{a:'middle',c:'g',s:'sm b'})],fly:[F(332,94,468,94,'g',{n:2,gap:500,dur:700,per:2200,d0:900})]})
+  ]}
+ ]}
+];
+
+/* ---------- build page ---------- */
+const app=document.getElementById('app'),jump=document.getElementById('jump'),partsNav=document.getElementById('parts');
+PARTS.forEach((pt,pi)=>{
+  const a=document.createElement('a');a.href='#part'+pi;a.innerHTML=`<b>${pt[0]}</b>${pt[1]}`;partsNav.appendChild(a);
+  const sec=document.createElement('section');sec.className='part';sec.id='part'+pi;
+  sec.innerHTML=`<h2><span>${pt[0]}</span>${pt[1]}</h2>`;app.appendChild(sec);
+});
+TOPICS.forEach((t,i)=>{
+  const n=String(i+1);
+  const j=document.createElement('a');j.href='#q'+n;j.textContent=n;j.title=t.q;jump.appendChild(j);
+  const card=document.createElement('article');card.className='q';card.id='q'+n;
+  card.innerHTML=`<h3><span class="num">${n}</span><span>${t.q}</span></h3><p class="ans">${t.ans}</p><ul>${t.pts.map(x=>`<li>${x}</li>`).join('')}</ul>${t.extra?`<div class="extra">${t.extra}</div>`:''}<div class="viz"></div>`;
+  document.getElementById('part'+t.p).appendChild(card);
+  mount(card.querySelector('.viz'),t);
+});
+</script>
+</body>
+</html>
