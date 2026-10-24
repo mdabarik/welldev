@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WellDev-এ জিজ্ঞেস করা SQL প্রশ্ন</title>
+<meta name="description" content="WellDev ইন্টারভিউতে আসা চারটি SQL প্রশ্ন: N-তম salary, duplicate row, গত ৩০ দিনে order না করা customer, department-wise সর্বোচ্চ salary। Example table, problem statement, solution আর আসল PostgreSQL output সহ।">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f5f7fc; --surface:#ffffff; --surface-2:#f1f4fa; --fg:#0f172a; --muted:#5b6478; --faint:#94a0b8; --line:#e4e8f1;
+  --accent:#6366f1; --r1:#10b981; --r2:#db2777;
+  --ok:#059669; --bad:#e11d48; --warn:#d97706;
+  --hero:linear-gradient(135deg,#4f46e5 0%,#7c3aed 45%,#db2777 100%);
+  --shadow:0 1px 2px rgba(15,23,42,.04),0 10px 30px -12px rgba(15,23,42,.14);
+  --code-bg:#ffffff; --code-line:#e6e9f1;
+  --sans:"Inter","Hind Siliguri",system-ui,sans-serif; --bn:"Hind Siliguri","Inter",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0b0f1a; --surface:#121827; --surface-2:#182033; --fg:#e7ecf6; --muted:#9aa6bf; --faint:#66728c; --line:#232c42;
+  --accent:#818cf8; --r1:#34d399; --r2:#f472b6; --ok:#34d399; --bad:#fb7185; --warn:#fbbf24;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6);
+  --code-bg:#1e1e1e; --code-line:#2d2d30;
+}}
+:root[data-theme="dark"]{
+  --bg:#0b0f1a; --surface:#121827; --surface-2:#182033; --fg:#e7ecf6; --muted:#9aa6bf; --faint:#66728c; --line:#232c42;
+  --accent:#818cf8; --r1:#34d399; --r2:#f472b6; --ok:#34d399; --bad:#fb7185; --warn:#fbbf24;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6);
+  --code-bg:#1e1e1e; --code-line:#2d2d30;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.75 var(--bn);-webkit-font-smoothing:antialiased}
+a{color:var(--accent)}
+button,input{font:inherit;color:inherit}
+code{font-family:var(--mono);font-size:.86em;font-weight:500;background:color-mix(in srgb,var(--accent) 10%,var(--surface));color:color-mix(in srgb,var(--accent) 72%,var(--fg));padding:.1em .4em;border-radius:6px}
+.wrap{max-width:920px;margin:0 auto;padding:20px 18px 80px}
+
+.topnav{display:flex;align-items:center;gap:10px}
+.brand{display:flex;align-items:center;gap:10px;color:var(--fg);text-decoration:none;font:800 16px var(--sans);letter-spacing:-.02em}
+.logo{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:#fff;font:800 13px var(--mono);background:var(--hero)}
+.topnav .sp{flex:1}
+.pill{border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:6px 14px;font:600 13px var(--sans);cursor:pointer;text-decoration:none}
+.pill:hover{color:var(--fg)}
+
+.hero{margin-top:22px;border-radius:22px;padding:30px 32px;color:#fff;background:var(--hero);position:relative;overflow:hidden}
+.hero::after{content:"";position:absolute;right:-70px;top:-90px;width:320px;height:320px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.2),transparent 65%);pointer-events:none}
+.eyebrow{font:600 12px var(--sans);letter-spacing:.1em;text-transform:uppercase;opacity:.85}
+.hero h1{margin:8px 0 10px;font:800 clamp(26px,4.4vw,40px)/1.2 var(--bn);letter-spacing:-.02em}
+.hero p{margin:0;max-width:700px;font-size:16.5px;opacity:.94}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow)}
+.note{margin:18px 0 0;padding:14px 16px;font-size:14.5px;color:var(--muted);border-left:4px solid var(--warn)}
+.note b{color:var(--fg)}
+
+.tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:26px 0 8px}
+.chip{border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:6px 14px;font:600 13px var(--sans);cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+.search{flex:1;min-width:180px;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:7px 16px;font:500 14px var(--sans);outline:none}
+.search:focus{border-color:var(--accent)}
+.count{font:500 12.5px var(--mono);color:var(--faint)}
+
+.round{margin:38px 0 14px;display:flex;align-items:center;gap:12px;font:800 clamp(20px,2.8vw,24px)/1.25 var(--bn);letter-spacing:-.02em}
+.round .dot{width:12px;height:12px;border-radius:50%;background:var(--c)}
+.round small{font:500 13px var(--bn);color:var(--muted)}
+
+details.q{margin:0 0 12px;overflow:hidden}
+details.q>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:12px;padding:14px 16px}
+details.q>summary::-webkit-details-marker{display:none}
+details.q>summary::after{content:"";margin-left:auto;flex:none;width:8px;height:8px;border-right:2px solid var(--faint);border-bottom:2px solid var(--faint);transform:rotate(45deg);transition:transform .15s}
+details.q[open]>summary::after{transform:rotate(-135deg)}
+.qn{flex:none;width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:#fff;font:700 14px var(--sans);background:var(--c)}
+.qt{font:600 16px/1.45 var(--bn)}
+.tag{flex:none;font:600 11px var(--sans);padding:2px 9px;border-radius:999px;color:var(--c);background:color-mix(in srgb,var(--c) 11%,transparent)}
+.body{padding:2px 20px 20px 62px;border-top:1px solid var(--line)}
+@media (max-width:640px){.body{padding:2px 16px 18px}.tag{display:none}}
+.body h4{margin:18px 0 6px;font:700 14.5px var(--bn);color:var(--c)}
+.body p{margin:8px 0}
+.body ul,.body ol{margin:6px 0;padding-left:22px}
+.body li{margin:4px 0}
+.body b{color:var(--fg)}
+pre.code{margin:10px 0;padding:12px 14px;border-radius:12px;background:var(--code-bg);border:1px solid var(--code-line);font:13px/1.65 var(--mono);white-space:pre;overflow-x:auto;font-variant-ligatures:none}
+.lang{display:inline-block;margin-top:10px;font:600 11px var(--mono);color:var(--muted)}
+.lang+pre.code{margin-top:4px}
+.tip{margin:12px 0;padding:10px 14px;border-radius:10px;background:color-mix(in srgb,var(--c) 8%,var(--surface));border:1px solid color-mix(in srgb,var(--c) 22%,var(--line));font-size:15px}
+.tbl{width:100%;border-collapse:collapse;margin:10px 0;font-size:14.5px;display:block;overflow-x:auto}
+.tbl th,.tbl td{border:1px solid var(--line);padding:7px 10px;text-align:left;vertical-align:top}
+.tbl th{background:var(--surface-2);font:700 13px var(--sans)}
+.r1{--c:var(--r1)}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:4px 18px;align-items:start}
+.cols .tbl{display:table}
+.cap{margin:12px 0 0;font:700 12.5px var(--mono);color:var(--muted)}
+.out{--c:var(--ok)}
+.hidden{display:none}
+footer{margin-top:50px;color:var(--faint);font-size:13.5px}
+/* bn-type: Bengali glyphs/digits need normal tracking */
+h1,h2,h3,h4,h5{letter-spacing:0!important}
+.hero h1,.page-head h1,.p-hero h1,.prose h1,header.top h1{line-height:1.32!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<nav class="topnav">
+  <a class="brand" href="../../index.html"><span class="logo">WD</span>WellDev Prep</a>
+  <span class="sp"></span>
+  <button class="pill" id="expand">সব খোলো</button>
+  <button class="pill" id="theme">Theme</button>
+</nav>
+
+<header class="hero">
+  <div class="eyebrow">DBMS &amp; SQL · WellDev Interview</div>
+  <h1>WellDev-এ জিজ্ঞেস করা SQL প্রশ্ন</h1>
+  <p>চারটি প্রশ্ন, যেগুলো প্রায় প্রতিবার আসে। প্রতিটির জন্য problem statement, example table, solution আর PostgreSQL-এ চালানো আসল output দেওয়া আছে।</p>
+</header>
+
+<div class="card note">
+  <b>দ্রষ্টব্য:</b> Query-গুলো PostgreSQL 18-এ সত্যিই চালিয়ে output নেওয়া হয়েছে। Order-এর তারিখ আজকের তারিখের সাপেক্ষে ধরা হয়েছে, তাই "আজ থেকে N দিন আগে" লেখা। প্রশ্ন ধরে ধরে খুলে দেখো।
+</div>
+
+<div class="tools"><span class="count">4 questions</span></div>
+
+<details class="card q r1">
+<summary><span class="qn">1</span><span class="qt">N-তম সবচেয়ে বেশি salary (Nth highest salary)</span><span class="tag">Ranking</span></summary>
+<div class="body">
+<h4>Problem statement</h4>
+<p><code>employees</code> table থেকে <b>দ্বিতীয় সর্বোচ্চ</b> (generally N-তম সর্বোচ্চ) salary বের করো। একই salary একাধিকজনের হলে সেটা একবারই গোনা হবে।</p>
+<h4>Example table</h4>
+<div class="cols"><div><div class="cap">employees</div><table class="tbl"><tr><th>id</th><th>name</th><th>dept_id</th><th>salary</th></tr><tr><td>1</td><td>Rahim</td><td>1</td><td>90000</td></tr><tr><td>2</td><td>Karim</td><td>1</td><td>75000</td></tr><tr><td>3</td><td>Sumi</td><td>1</td><td>90000</td></tr><tr><td>4</td><td>Nila</td><td>2</td><td>60000</td></tr><tr><td>5</td><td>Tanvir</td><td>2</td><td>80000</td></tr><tr><td>6</td><td>Mitu</td><td>3</td><td>50000</td></tr><tr><td>7</td><td>Arif</td><td>3</td><td>50000</td></tr></table></div></div>
+<h4>Solution</h4><span class="lang">SQL</span>
+<pre class="code">-- ১) LIMIT / OFFSET: N = 2 হলে OFFSET 1 (অর্থাৎ N-1)
+SELECT DISTINCT salary
+FROM employees
+ORDER BY salary DESC
+LIMIT 1 OFFSET 1;
+
+-- ২) DENSE_RANK: সবচেয়ে নিরাপদ, ties ঠিকমতো সামলায়
+SELECT DISTINCT salary
+FROM (
+    SELECT salary, DENSE_RANK() OVER (ORDER BY salary DESC) AS rnk
+    FROM employees
+) t
+WHERE rnk = 2;</pre>
+<h4>Output (PostgreSQL 18-এ চালানো)</h4>
+<pre class="code"> salary 
+--------
+  80000
+(1 row)</pre>
+<div class="tip"><b>ব্যাখ্যা:</b> salary গুলো বড় থেকে ছোট সাজালে হয় 90000, 90000, 80000, 75000, ... <code>DISTINCT</code> না দিলে OFFSET 1 আবার 90000-ই দিত (Rahim আর Sumi দুজনের salary সমান)। <code>DISTINCT</code> বা <code>DENSE_RANK</code> দুটোই ties সামলায়; <code>RANK</code> ব্যবহার করলে 90000-এর পর rank সরাসরি 3 হয়ে যায়, তাই 2 নম্বর rank-ই থাকে না। N জানা না থাকলে (parameter) <code>OFFSET $1 - 1</code> লেখা যায়। কোনো department-এর ভেতরে N-তম বের করতে window-এ <code>PARTITION BY dept_id</code> বসাও।</div>
+</div>
+</details>
+<details class="card q r1">
+<summary><span class="qn">2</span><span class="qt">Duplicate row বের করো</span><span class="tag">GROUP BY · HAVING</span></summary>
+<div class="body">
+<h4>Problem statement</h4>
+<p><code>users</code> table-এ কোন <code>email</code> একাধিকবার আছে আর কতবার আছে, তা দেখাও।</p>
+<h4>Example table</h4>
+<div class="cols"><div><div class="cap">users</div><table class="tbl"><tr><th>id</th><th>name</th><th>email</th></tr><tr><td>1</td><td>Rahim</td><td>r@x.com</td></tr><tr><td>2</td><td>Karim</td><td>k@x.com</td></tr><tr><td>3</td><td>Rahim B</td><td>r@x.com</td></tr><tr><td>4</td><td>Sumi</td><td>s@x.com</td></tr><tr><td>5</td><td>Karim K</td><td>k@x.com</td></tr><tr><td>6</td><td>Rahim C</td><td>r@x.com</td></tr></table></div></div>
+<h4>Solution</h4><span class="lang">SQL</span>
+<pre class="code">SELECT email, COUNT(*) AS times
+FROM users
+GROUP BY email
+HAVING COUNT(*) &gt; 1;</pre>
+<h4>Output (PostgreSQL 18-এ চালানো)</h4>
+<pre class="code">  email  | times 
+---------+-------
+ r@x.com |     3
+ k@x.com |     2
+(2 rows)</pre>
+<div class="tip"><b>ব্যাখ্যা:</b> <code>GROUP BY email</code> একই email-এর row গুলোকে এক group করে, <code>COUNT(*)</code> প্রতি group-এর row গুনে। group তৈরির <b>পরে</b> filter করতে হয় বলে শর্ত যায় <code>HAVING</code>-এ; <code>WHERE</code>-এ aggregate চলে না। <code>COUNT(*)</code>-এর ভেতরে অবশ্যই <code>*</code> বা column দিতে হয়, <code>COUNT()</code> error দেয়। পুরো row দেখতে চাইলে <code>WHERE email IN (…এই query…)</code> বা <code>ROW_NUMBER() OVER (PARTITION BY email ORDER BY id)</code> দিয়ে rn &gt; 1 ধরো। ভবিষ্যতে ঠেকাতে <code>UNIQUE (email)</code> constraint বসাও।</div>
+</div>
+</details>
+<details class="card q r1">
+<summary><span class="qn">3</span><span class="qt">গত ৩০ দিনে যারা order করেনি</span><span class="tag">LEFT JOIN · Anti join</span></summary>
+<div class="body">
+<h4>Problem statement</h4>
+<p><code>customers</code> table থেকে সেই customer-দের নাম দেখাও যারা <b>গত ৩০ দিনে একটিও order করেনি</b> (কখনো order না করলেও তারা তালিকায় থাকবে)।</p>
+<h4>Example table</h4>
+<div class="cols"><div><div class="cap">customers</div><table class="tbl"><tr><th>id</th><th>name</th></tr><tr><td>1</td><td>Rahim</td></tr><tr><td>2</td><td>Karim</td></tr><tr><td>3</td><td>Sumi</td></tr><tr><td>4</td><td>Nila</td></tr></table></div><div><div class="cap">orders</div><table class="tbl"><tr><th>id</th><th>customer_id</th><th>order_date</th></tr><tr><td>1</td><td>1</td><td>আজ থেকে 5 দিন আগে</td></tr><tr><td>2</td><td>1</td><td>আজ থেকে 40 দিন আগে</td></tr><tr><td>3</td><td>2</td><td>আজ থেকে 45 দিন আগে</td></tr><tr><td>4</td><td>3</td><td>আজ থেকে 10 দিন আগে</td></tr></table></div></div>
+<h4>Solution</h4><span class="lang">SQL</span>
+<pre class="code">SELECT c.name
+FROM customers c
+LEFT JOIN orders o
+       ON c.id = o.customer_id
+      AND o.order_date &gt;= CURRENT_DATE - INTERVAL '30 days'
+WHERE o.id IS NULL;
+
+-- সমতুল্য: NOT EXISTS
+SELECT c.name
+FROM customers c
+WHERE NOT EXISTS (
+    SELECT 1 FROM orders o
+    WHERE o.customer_id = c.id
+      AND o.order_date &gt;= CURRENT_DATE - INTERVAL '30 days'
+);</pre>
+<h4>Output (PostgreSQL 18-এ চালানো)</h4>
+<pre class="code"> name  
+-------
+ Karim
+ Nila
+(2 rows)</pre>
+<div class="tip"><b>ব্যাখ্যা:</b> Rahim-এর 5 দিন আগের আর Sumi-র 10 দিন আগের order আছে, তাই তারা বাদ। Karim-এর একমাত্র order 45 দিন আগের (৩০ দিনের বাইরে), আর Nila কখনো order করেনি, তাই দুজনেই আসে। <b>ফাঁদ:</b> তারিখের শর্তটা অবশ্যই <code>ON</code>-এ থাকবে। এটা <code>WHERE</code>-এ নিলে LEFT JOIN আসলে INNER JOIN হয়ে যায় আর Nila (order নেই) হারিয়ে যায়। <code>o.id IS NULL</code> মানে "মিলল না", এটাই anti-join।</div>
+</div>
+</details>
+<details class="card q r1">
+<summary><span class="qn">4</span><span class="qt">Department অনুযায়ী সর্বোচ্চ salary</span><span class="tag">Correlated subquery</span></summary>
+<div class="body">
+<h4>Problem statement</h4>
+<p>প্রতিটি department-এর সবচেয়ে বেশি salary পাওয়া employee-এর department-এর নাম, employee-এর নাম আর salary দেখাও।</p>
+<h4>Example table</h4>
+<div class="cols"><div><div class="cap">employees</div><table class="tbl"><tr><th>id</th><th>name</th><th>dept_id</th><th>salary</th></tr><tr><td>1</td><td>Rahim</td><td>1</td><td>90000</td></tr><tr><td>2</td><td>Karim</td><td>1</td><td>75000</td></tr><tr><td>3</td><td>Sumi</td><td>1</td><td>90000</td></tr><tr><td>4</td><td>Nila</td><td>2</td><td>60000</td></tr><tr><td>5</td><td>Tanvir</td><td>2</td><td>80000</td></tr><tr><td>6</td><td>Mitu</td><td>3</td><td>50000</td></tr><tr><td>7</td><td>Arif</td><td>3</td><td>50000</td></tr></table></div><div><div class="cap">departments</div><table class="tbl"><tr><th>id</th><th>name</th></tr><tr><td>1</td><td>Engineering</td></tr><tr><td>2</td><td>Sales</td></tr><tr><td>3</td><td>HR</td></tr></table></div></div>
+<h4>Solution</h4><span class="lang">SQL</span>
+<pre class="code">SELECT d.name AS dept, e.name, e.salary
+FROM employees e
+JOIN departments d ON e.dept_id = d.id
+WHERE e.salary = (
+    SELECT MAX(salary)
+    FROM employees
+    WHERE dept_id = e.dept_id
+)
+ORDER BY d.name, e.name;
+
+-- window function দিয়ে (বড় table-এ সাধারণত ভালো)
+SELECT dept, name, salary
+FROM (
+    SELECT d.name AS dept, e.name, e.salary,
+           RANK() OVER (PARTITION BY e.dept_id ORDER BY e.salary DESC) AS rnk
+    FROM employees e
+    JOIN departments d ON e.dept_id = d.id
+) t
+WHERE rnk = 1;</pre>
+<h4>Output (PostgreSQL 18-এ চালানো)</h4>
+<pre class="code">    dept     |  name  | salary 
+-------------+--------+--------
+ Engineering | Rahim  |  90000
+ Engineering | Sumi   |  90000
+ HR          | Arif   |  50000
+ HR          | Mitu   |  50000
+ Sales       | Tanvir |  80000
+(5 rows)</pre>
+<div class="tip"><b>ব্যাখ্যা:</b> ভেতরের subquery বাইরের row-এর <code>dept_id</code> ধরে ওই department-এর <code>MAX(salary)</code> বের করে (একে correlated subquery বলে), আর বাইরের query শুধু সেই salary-র employee রাখে। দুজনের salary সমান হলে (Engineering-এ Rahim ও Sumi) দুজনই আসে। শুধু একজন চাইলে <code>ROW_NUMBER()</code> ব্যবহার করে tie-break ঠিক করো। শুধু department-এর max salary চাইলে নাম ছাড়া <code>GROUP BY dept_id</code> আর <code>MAX(salary)</code>-ই যথেষ্ট।</div>
+</div>
+</details>
+
+<footer>আরও SQL practice: <a href="../top-50-sql/index.html">SQL 50 — Visual Guide</a> · <a href="../../asked/index.html">WellDev-এ যা জিজ্ঞেস করা হয়েছে</a></footer>
+</div>
+<script>
+(function () {
+  var root = document.documentElement;
+  try { var s = localStorage.getItem("theme"); if (s) root.setAttribute("data-theme", s); } catch (e) {}
+  document.getElementById("theme").addEventListener("click", function () {
+    var dark = root.getAttribute("data-theme") === "dark" ||
+      (!root.getAttribute("data-theme") && matchMedia("(prefers-color-scheme: dark)").matches);
+    var next = dark ? "light" : "dark";
+    root.setAttribute("data-theme", next);
+    try { localStorage.setItem("theme", next); } catch (e) {}
+  });
+  var items = [].slice.call(document.querySelectorAll("details.q")), expanded = false;
+  document.getElementById("expand").addEventListener("click", function () {
+    expanded = !expanded;
+    items.forEach(function (el) { el.open = expanded; });
+    this.textContent = expanded ? "সব বন্ধ করো" : "সব খোলো";
+  });
+  if (items[0]) items[0].open = true;
+})();
+</script>
+</body>
+</html>

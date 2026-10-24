@@ -1,0 +1,105 @@
+{
+  "id": "quiz-7",
+  "title": "আল-কুরআন কুইজ",
+  "title_en": "The Qur'an quiz",
+  "description": "৫টি প্রশ্নের সঠিক উত্তর দিন",
+  "description_en": "Answer all 5 questions",
+  "image": "https://mdabarik.github.io/welldev/islamic-quiz/images/quiz-7.png",
+  "questions": [
+    {
+      "question": "কুরআনে মোট কতটি সূরা আছে?",
+      "question_en": "How many surahs are in the Qur'an?",
+      "options": [
+        "১১০টি",
+        "১১৪টি",
+        "১২০টি",
+        "১০০টি"
+      ],
+      "options_en": [
+        "110",
+        "114",
+        "120",
+        "100"
+      ],
+      "answer": 1,
+      "explanation": "কুরআনে ১১৪টি সূরা আছে; প্রথম সূরা আল-ফাতিহা আর শেষ সূরা আন-নাস।",
+      "explanation_en": "The Qur'an has 114 surahs, from Al-Fatihah to An-Nas."
+    },
+    {
+      "question": "কুরআনের সবচেয়ে বড় সূরা কোনটি?",
+      "question_en": "Which is the longest surah of the Qur'an?",
+      "options": [
+        "সূরা আলে ইমরান",
+        "সূরা আন-নিসা",
+        "সূরা আল-বাকারা",
+        "সূরা ইয়াসিন"
+      ],
+      "options_en": [
+        "Surah Al Imran",
+        "Surah An-Nisa",
+        "Surah Al-Baqarah",
+        "Surah Ya-Sin"
+      ],
+      "answer": 2,
+      "explanation": "সূরা আল-বাকারায় ২৮৬টি আয়াত, এটিই কুরআনের সবচেয়ে বড় সূরা।",
+      "explanation_en": "Surah Al-Baqarah, with 286 verses, is the longest surah."
+    },
+    {
+      "question": "কুরআনের সবচেয়ে ছোট সূরা কোনটি?",
+      "question_en": "Which is the shortest surah of the Qur'an?",
+      "options": [
+        "সূরা আল-কাওসার",
+        "সূরা আল-ইখলাস",
+        "সূরা আন-নাস",
+        "সূরা আল-আসর"
+      ],
+      "options_en": [
+        "Surah Al-Kawthar",
+        "Surah Al-Ikhlas",
+        "Surah An-Nas",
+        "Surah Al-Asr"
+      ],
+      "answer": 0,
+      "explanation": "সূরা আল-কাওসারে মাত্র ৩টি আয়াত, এটিই কুরআনের সবচেয়ে ছোট সূরা।",
+      "explanation_en": "Surah Al-Kawthar, with only 3 verses, is the shortest."
+    },
+    {
+      "question": "কোন সূরার শুরুতে ‘বিসমিল্লাহ’ নেই?",
+      "question_en": "Which surah does not begin with 'Bismillah'?",
+      "options": [
+        "সূরা আল-ফাতিহা",
+        "সূরা আত-তাওবা",
+        "সূরা আন-নামল",
+        "সূরা আল-মুলক"
+      ],
+      "options_en": [
+        "Surah Al-Fatihah",
+        "Surah At-Tawbah",
+        "Surah An-Naml",
+        "Surah Al-Mulk"
+      ],
+      "answer": 1,
+      "explanation": "সূরা আত-তাওবার শুরুতে বিসমিল্লাহ নেই। আর সূরা আন-নামলে বিসমিল্লাহ দুইবার আছে।",
+      "explanation_en": "Surah At-Tawbah has no Bismillah at its start, while Surah An-Naml has it twice."
+    },
+    {
+      "question": "কুরআন কোন মাসে নাজিল হওয়া শুরু হয়?",
+      "question_en": "In which month did the revelation of the Qur'an begin?",
+      "options": [
+        "মুহাররম",
+        "রবিউল আউয়াল",
+        "রমজান",
+        "শাবান"
+      ],
+      "options_en": [
+        "Muharram",
+        "Rabi' al-Awwal",
+        "Ramadan",
+        "Sha'ban"
+      ],
+      "answer": 2,
+      "explanation": "সূরা আল-বাকারার ১৮৫ নম্বর আয়াতে আছে, রমজান মাসে কুরআন নাজিল হয়েছে; লাইলাতুল কদরে এর শুরু।",
+      "explanation_en": "Al-Baqarah 2:185 says the Qur'an was sent down in Ramadan, beginning on Laylat al-Qadr."
+    }
+  ]
+}

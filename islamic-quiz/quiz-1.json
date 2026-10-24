@@ -1,0 +1,55 @@
+{
+  "id": "quiz-1",
+  "title": "জুমার দিনের কুইজ",
+  "title_en": "Friday quiz",
+  "description": "৫টি প্রশ্নের সঠিক উত্তর দিন",
+  "description_en": "Answer all 5 questions",
+  "image": "https://mdabarik.github.io/welldev/islamic-quiz/images/quiz-1.png",
+  "questions": [
+    {
+      "question": "জুমার নামাজ কয় রাকাত ফরজ?",
+      "question_en": "How many fard rakats is Jumu'ah?",
+      "options": ["২ রাকাত", "৪ রাকাত", "৩ রাকাত", "৬ রাকাত"],
+      "options_en": ["2 rakats", "4 rakats", "3 rakats", "6 rakats"],
+      "answer": 0,
+      "explanation": "জুমার ফরজ ২ রাকাত, যা যোহরের ৪ রাকাতের জায়গা নেয়।",
+      "explanation_en": "Jumu'ah is 2 fard rakats, in place of Dhuhr's 4."
+    },
+    {
+      "question": "কুরআনের কোন সূরায় জুমার নামাজের দিকে দ্রুত যাওয়ার নির্দেশ এসেছে?",
+      "question_en": "Which surah of the Quran commands hastening to the Jumu'ah prayer?",
+      "options": ["সূরা আল-কাহফ", "সূরা আল-জুমু'আ", "সূরা ইয়াসিন", "সূরা আল-মুলক"],
+      "options_en": ["Surah Al-Kahf", "Surah Al-Jumu'ah", "Surah Ya-Sin", "Surah Al-Mulk"],
+      "answer": 1,
+      "explanation": "সূরা আল-জুমু'আর ৯ নম্বর আয়াতে জুমার আযান হলে আল্লাহর স্মরণের দিকে দ্রুত যেতে এবং বেচাকেনা বন্ধ করতে বলা হয়েছে।",
+      "explanation_en": "Verse 9 of Surah Al-Jumu'ah tells believers to hasten to the remembrance of Allah and leave trade when the Friday call is made."
+    },
+    {
+      "question": "জুমার দিনে কোন সূরা তিলাওয়াত করার বিশেষ ফজিলত হাদিসে এসেছে?",
+      "question_en": "Which surah has a special virtue for reciting on Friday, according to hadith?",
+      "options": ["সূরা আর-রহমান", "সূরা আল-ওয়াকিয়া", "সূরা আল-কাহফ", "সূরা আল-ফাতিহা"],
+      "options_en": ["Surah Ar-Rahman", "Surah Al-Waqi'ah", "Surah Al-Kahf", "Surah Al-Fatihah"],
+      "answer": 2,
+      "explanation": "হাদিসে এসেছে, যে ব্যক্তি জুমার দিনে সূরা আল-কাহফ পড়ে, তার জন্য দুই জুমার মাঝের সময় নূর দিয়ে আলোকিত করা হয়।",
+      "explanation_en": "A hadith says whoever recites Surah Al-Kahf on Friday will have light for them between the two Fridays."
+    },
+    {
+      "question": "হাদিস অনুযায়ী জুমার দিনে কোন নবীকে সৃষ্টি করা হয়েছিল?",
+      "question_en": "According to hadith, which prophet was created on a Friday?",
+      "options": ["হযরত নূহ (আ.)", "হযরত ইব্রাহিম (আ.)", "হযরত মূসা (আ.)", "হযরত আদম (আ.)"],
+      "options_en": ["Prophet Nuh (AS)", "Prophet Ibrahim (AS)", "Prophet Musa (AS)", "Prophet Adam (AS)"],
+      "answer": 3,
+      "explanation": "সহিহ মুসলিমের হাদিসে এসেছে, জুমার দিনেই হযরত আদম (আ.)-কে সৃষ্টি করা হয়েছে এবং এই দিনেই কিয়ামত সংঘটিত হবে।",
+      "explanation_en": "A hadith in Sahih Muslim says Adam (AS) was created on Friday, and the Hour will also be established on a Friday."
+    },
+    {
+      "question": "ইমাম খুতবা দেওয়ার সময় মুসল্লিদের কী করা উচিত?",
+      "question_en": "What should worshippers do while the imam is giving the khutbah?",
+      "options": ["চুপ থেকে মনোযোগ দিয়ে শোনা", "নফল নামাজ পড়া", "জোরে জিকির করা", "পাশের জনের সাথে কথা বলা"],
+      "options_en": ["Stay silent and listen attentively", "Pray voluntary prayers", "Do dhikr out loud", "Talk with the person beside you"],
+      "answer": 0,
+      "explanation": "হাদিসে এসেছে, খুতবার সময় পাশের জনকে ‘চুপ করো’ বললেও তা অনর্থক কাজ হয়ে যায়, তাই চুপ থেকে শোনা জরুরি।",
+      "explanation_en": "A hadith says even telling your neighbour \"be quiet\" during the khutbah is idle talk, so one must stay silent and listen."
+    }
+  ]
+}

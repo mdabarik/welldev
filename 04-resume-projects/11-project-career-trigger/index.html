@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Career Trigger (Next.js + Express + MongoDB) - Interview Questions</title>
+<meta name="description" content="Career community platform: role-based dashboard (Admin / Editor / User), post ও category ম্যানেজমেন্ট, JWT access + refresh token auth।">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Hind+Siliguri:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f5f7fc;--surface:#fff;--surface-2:#f1f4fa;--fg:#0f172a;--muted:#5b6478;--line:#e4e8f1;--accent:#6366f1;--hero:linear-gradient(135deg,#4f46e5,#7c3aed 45%,#db2777);--sans:"Inter","Hind Siliguri",system-ui,sans-serif;--bn:"Hind Siliguri","Inter",system-ui,sans-serif;--mono:"JetBrains Mono",ui-monospace,monospace}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0b0f1a;--surface:#121827;--surface-2:#182033;--fg:#e7ecf6;--muted:#9aa6bf;--line:#232c42;--accent:#818cf8}}
+:root[data-theme="dark"]{--bg:#0b0f1a;--surface:#121827;--surface-2:#182033;--fg:#e7ecf6;--muted:#9aa6bf;--line:#232c42;--accent:#818cf8}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 var(--bn);-webkit-font-smoothing:antialiased}
+code{font-family:var(--mono);font-size:.86em;background:color-mix(in srgb,var(--accent) 10%,var(--surface));padding:.1em .4em;border-radius:6px}
+.wrap{max-width:860px;margin:0 auto;padding:20px 18px 70px}
+.topnav{display:flex;align-items:center;gap:10px}
+.brand{display:flex;align-items:center;gap:10px;color:var(--fg);text-decoration:none;font:800 16px var(--sans)}
+.logo{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:#fff;font:800 13px var(--mono);background:var(--hero)}
+.sp{flex:1}
+.pill{border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:6px 14px;font:600 13px var(--sans);cursor:pointer;text-decoration:none}
+.hero{margin-top:20px;border-radius:22px;padding:26px 30px;color:#fff;background:var(--hero)}
+.hero .eyebrow{font:600 12px var(--sans);letter-spacing:.1em;text-transform:uppercase;opacity:.85}
+.hero h1{margin:6px 0 8px;font:800 clamp(24px,4vw,34px)/1.15 var(--sans);letter-spacing:-.03em}
+.hero p{margin:0;opacity:.94}
+.hero a{color:#fff;font:600 13px var(--sans);margin-right:14px}
+h2{margin:36px 0 4px;font:800 20px var(--sans);letter-spacing:-.02em}
+h2 span{color:var(--accent);margin-right:6px}
+details{margin-top:10px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:0 18px}
+summary{cursor:pointer;padding:14px 0;font:600 16px/1.45 var(--sans);list-style:none;display:flex;gap:10px}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"+";color:var(--accent);font:800 18px var(--mono);width:14px}
+details[open] summary::before{content:"\2212"}
+details .a{padding:0 0 14px 24px;color:var(--muted)}
+details .a b{color:var(--fg)}
+details .a ul{margin:6px 0 0;padding-left:18px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="topnav"><a class="brand" href="../../index.html"><span class="logo">W</span>WellDev</a><span class="sp"></span><button class="pill" id="theme" type="button">Theme</button></nav>
+  <header class="hero">
+    <div class="eyebrow">Resume Project &middot; Interview</div>
+    <h1>Career Trigger (Next.js + Express + MongoDB)</h1>
+    <p>Career community platform: role-based dashboard (Admin / Editor / User), post ও category ম্যানেজমেন্ট, JWT access + refresh token auth।</p>
+    <p style="margin-top:12px"><a href="https://github.com/mdabarik/career-trigger-client" target="_blank" rel="noopener">Client</a> <a href="https://github.com/mdabarik/career-trigger-server" target="_blank" rel="noopener">Server</a></p>
+  </header>
+  <h2>Project Overview</h2>
+  <details><summary>Project-টা কী? Architecture এক লাইনে বলো।</summary><div class="a">Career-সংক্রান্ত post শেয়ার করার community platform। <b>Next.js + Tailwind</b> frontend, <b>Node + Express + TypeScript + Mongoose (MongoDB)</b> REST API (<code>/api/v1</code>)।</div></details>
+  <details><summary>কেন Next.js? React থেকে আলাদা কী?</summary><div class="a">File-based routing, SSR/SSG (SEO ভালো), middleware, built-in optimization। Post-ভিত্তিক public page-এর জন্য SEO গুরুত্বপূর্ণ।</div></details>
+  <details><summary>Backend-এর structure কেমন?</summary><div class="a">Modular layered: Auth, Users, Posts, Categories module; প্রতিটিতে route → controller → service → model। সাথে <code>AppError</code> class আর <code>catchAsync</code> wrapper।</div></details>
+  <h2>Auth &amp; Security</h2>
+  <details><summary>Access token আর Refresh token কেন দুটো?</summary><div class="a">Access token ছোট মেয়াদের (মিনিট), চুরি গেলে ক্ষতি কম। Refresh token দীর্ঘমেয়াদি, শুধু নতুন access token নিতে ব্যবহার হয় এবং <b>HttpOnly cookie</b>-তে রাখা নিরাপদ।</div></details>
+  <details><summary>Token কোথায় রাখো - localStorage না cookie?</summary><div class="a">localStorage-এ XSS-এ চুরি যায়। HttpOnly + Secure + SameSite cookie JS পড়তে পারে না; তবে CSRF ভাবতে হয় (SameSite/CSRF token)।</div></details>
+  <details><summary>Role-based access (RBAC) কীভাবে বানিয়েছ?</summary><div class="a">JWT-তে role থাকে; backend middleware (<code>auth('admin','editor')</code>) role মিলিয়ে route আটকায়। Frontend-এ protected route শুধু UX, আসল check সবসময় <b>server-এ</b>।</div></details>
+  <details><summary>Password কীভাবে store করো?</summary><div class="a"><b>bcrypt</b> দিয়ে hash + salt; plain text কখনো না। Encryption নয়, hashing - ফেরত আনা যায় না।</div></details>
+  <details><summary>Validation কোথায় কীভাবে?</summary><div class="a">Zod/Joi schema দিয়ে server-এ validate; client-এ React Hook Form + Zod UX-এর জন্য। Client validation কখনোই যথেষ্ট না।</div></details>
+  <h2>Frontend &amp; Performance</h2>
+  <details><summary>State আর data fetching কীভাবে ম্যানেজ করো?</summary><div class="a">Redux Toolkit/RTK Query বা Axios interceptor (token refresh auto); server state cache হয়, loading/error সহজ হয়।</div></details>
+  <details><summary>Optimistic UI কী? Like/comment-এ কীভাবে?</summary><div class="a">API উত্তরের আগেই UI আপডেট; fail করলে rollback। অনুভূত গতি বাড়ে।</div></details>
+  <details><summary>Performance কীভাবে বাড়িয়েছ?</summary><div class="a">Lazy loading, code splitting, <code>next/image</code>, pagination, MongoDB index।</div></details>
+  <h2>Database</h2>
+  <details><summary>MongoDB কেন, SQL না কেন?</summary><div class="a">Post/category নমনীয় document, schema প্রায়ই বদলায়। তবে strong relation/transaction লাগলে SQL ভালো - trade-off বলতে পারলেই হবে।</div></details>
+  <details><summary>Post-এর সাথে author/category কীভাবে relate করেছ?</summary><div class="a">Mongoose <code>ref</code> + <code>populate()</code>; অথবা embed করা। Read-heavy হলে embed, বদলায় বেশি হলে reference।</div></details>
+
+</div>
+<script>
+(function(){const r=document.documentElement,b=document.getElementById('theme');
+try{const t=localStorage.getItem('theme');if(t)r.dataset.theme=t}catch(e){}
+const dark=()=>r.dataset.theme?r.dataset.theme==='dark':matchMedia('(prefers-color-scheme:dark)').matches;
+b.onclick=()=>{r.dataset.theme=dark()?'light':'dark';try{localStorage.setItem('theme',r.dataset.theme)}catch(e){}}})();
+</script>
+</body>
+</html>

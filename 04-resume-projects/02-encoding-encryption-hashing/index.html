@@ -1,0 +1,637 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Encoding Encryption Hashing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ===== WellDev theme — shared tokens (same look as the SQL 50 guide and the hub page) ===== */
+:root{
+  --bg:#f5f7fc; --surface:#ffffff; --surface-2:#f1f4fa; --side:rgba(255,255,255,.86);
+  --ink:#0f172a; --ink-2:#4b5565; --ink-3:#8a95ab; --line:#e4e8f1;
+  --text:var(--ink); --muted:var(--ink-2); --faint:var(--ink-3); --soft:var(--surface-2);
+  --accent:#6366f1; --accent-soft:color-mix(in srgb,#6366f1 12%,transparent);
+  --c1:#6366f1; --c2:#10b981; --c3:#ec4899; --c4:#f59e0b; --c5:#0ea5e9; --c6:#8b5cf6;
+  --good:#059669; --bad:#e11d48;
+  --hero:linear-gradient(135deg,#4f46e5 0%,#7c3aed 45%,#db2777 100%);
+  --shadow:0 1px 2px rgba(15,23,42,.04),0 10px 30px -12px rgba(15,23,42,.14);
+  --shadow-lg:0 2px 4px rgba(15,23,42,.05),0 24px 48px -20px rgba(30,41,99,.3);
+  /* VS Code Light+ */
+  --code-bg:#ffffff; --code-bar:#f3f4f8; --code-line:#e6e9f1; --code-gutter:#237893; --code-ink:#1f1f1f;
+  --t-kw:#0000ff; --t-str:#a31515; --t-com:#008000; --t-num:#098658; --t-type:#267f99; --t-fn:#795e26; --t-attr:#001080;
+  --sans:"Inter","Hind Siliguri",ui-sans-serif,-apple-system,"Segoe UI",sans-serif;
+  --bn:"Hind Siliguri","Inter",ui-sans-serif,sans-serif;
+  --serif:"Inter","Hind Siliguri",sans-serif;
+  --mono:"JetBrains Mono","SF Mono",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0b0f1a; --surface:#121827; --surface-2:#182033; --side:rgba(18,24,39,.88);
+  --ink:#e7ecf6; --ink-2:#a3aec6; --ink-3:#6b7791; --line:#232c42;
+  --accent:#818cf8; --c1:#818cf8; --c2:#34d399; --c3:#f472b6; --c4:#fbbf24; --c5:#38bdf8; --c6:#a78bfa;
+  --good:#34d399; --bad:#fb7185;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6); --shadow-lg:0 24px 48px -20px rgba(0,0,0,.75);
+  --code-bg:#1e1e1e; --code-bar:#252526; --code-line:#2d2d30; --code-gutter:#858585; --code-ink:#d4d4d4;
+  --t-kw:#569cd6; --t-str:#ce9178; --t-com:#6a9955; --t-num:#b5cea8; --t-type:#4ec9b0; --t-fn:#dcdcaa; --t-attr:#9cdcfe;
+}}
+:root[data-theme="dark"]{
+  --bg:#0b0f1a; --surface:#121827; --surface-2:#182033; --side:rgba(18,24,39,.88);
+  --ink:#e7ecf6; --ink-2:#a3aec6; --ink-3:#6b7791; --line:#232c42;
+  --accent:#818cf8; --c1:#818cf8; --c2:#34d399; --c3:#f472b6; --c4:#fbbf24; --c5:#38bdf8; --c6:#a78bfa;
+  --good:#34d399; --bad:#fb7185;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6); --shadow-lg:0 24px 48px -20px rgba(0,0,0,.75);
+  --code-bg:#1e1e1e; --code-bar:#252526; --code-line:#2d2d30; --code-gutter:#858585; --code-ink:#d4d4d4;
+  --t-kw:#569cd6; --t-str:#ce9178; --t-com:#6a9955; --t-num:#b5cea8; --t-type:#4ec9b0; --t-fn:#dcdcaa; --t-attr:#9cdcfe;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15.5px;line-height:1.65;-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto 0;height:460px;z-index:-1;pointer-events:none;
+  background:radial-gradient(620px 260px at 25% -40px,color-mix(in srgb,#6366f1 15%,transparent),transparent 70%),
+             radial-gradient(540px 240px at 90% -60px,color-mix(in srgb,#ec4899 12%,transparent),transparent 70%)}
+a{color:var(--accent)}
+button{font:inherit;color:inherit}
+
+/* ----- code: VS Code look ----- */
+.code{margin:16px 0 22px;border-radius:12px;overflow:hidden;background:var(--code-bg);border:1px solid var(--code-line);box-shadow:var(--shadow)}
+.code-bar{display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--code-bar);border-bottom:1px solid var(--code-line);font:500 12px var(--mono);color:var(--ink-2)}
+.code-bar::before{content:"";flex:none;width:11px;height:11px;border-radius:50%;background:#ff5f57;box-shadow:17px 0 0 #febc2e,34px 0 0 #28c840;margin-right:36px}
+.code-bar > span:first-of-type{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.copy{margin-left:auto;border:1px solid var(--code-line);background:var(--code-bg);color:var(--ink-2);border-radius:7px;padding:2px 10px;font:500 11.5px var(--sans);cursor:pointer}
+.copy:hover{color:var(--ink);border-color:var(--ink-3)}
+.code pre{margin:0;padding:12px 0;overflow-x:auto;font-family:var(--mono);font-size:13.5px;line-height:1.7;color:var(--code-ink);tab-size:4;counter-reset:ln;scrollbar-width:thin}
+.code pre:not(.numbered){padding:12px 18px}
+.code .ln-row{display:block;padding-right:18px;min-height:1.7em}
+.code .ln-row::before{counter-increment:ln;content:counter(ln);display:inline-block;width:46px;padding-right:16px;text-align:right;color:var(--code-gutter);opacity:.85;user-select:none;-webkit-user-select:none}
+.code .ln-row:hover{background:color-mix(in srgb,var(--accent) 6%,transparent)}
+.hljs-keyword,.hljs-meta .hljs-keyword,.t-kw{color:var(--t-kw)}
+.hljs-built_in{color:var(--t-type)}
+.hljs-string,.hljs-regexp,.t-str{color:var(--t-str)}
+.hljs-comment,.hljs-quote,.t-com{color:var(--t-com);font-style:italic}
+.hljs-number,.hljs-literal,.t-num{color:var(--t-num)}
+.hljs-title,.hljs-title.class_,.hljs-type,.t-type{color:var(--t-type)}
+.hljs-title.function_,.hljs-function .hljs-title,.t-fn{color:var(--t-fn)}
+.hljs-attr,.hljs-variable,.hljs-property,.hljs-meta{color:var(--t-attr)}
+.hljs-params{color:var(--code-ink)}
+
+/* ----- tables ----- */
+.table-wrap{overflow-x:auto;margin:18px 0 22px;border:1px solid var(--line);border-radius:14px;background:var(--surface);box-shadow:var(--shadow)}
+table{border-collapse:collapse;width:100%;font-size:14.5px;line-height:1.6}
+th,td{padding:10px 14px;text-align:left;vertical-align:top;border-bottom:1px solid var(--line)}
+th{background:color-mix(in srgb,var(--accent) 8%,var(--surface));color:color-mix(in srgb,var(--accent) 70%,var(--ink));font:600 12px var(--sans);letter-spacing:.04em;text-transform:uppercase;white-space:nowrap;border-bottom-color:color-mix(in srgb,var(--accent) 22%,var(--line))}
+tbody tr:nth-child(even) td{background:color-mix(in srgb,var(--surface-2) 55%,transparent)}
+tbody tr:hover td{background:color-mix(in srgb,var(--accent) 6%,var(--surface))}
+tr:last-child td{border-bottom:0}
+
+:not(pre)>code{font-family:var(--mono);font-size:.84em;font-weight:500;background:color-mix(in srgb,var(--accent) 9%,var(--surface));color:color-mix(in srgb,var(--accent) 72%,var(--ink));border:0;padding:.12em .45em;border-radius:6px}
+::selection{background:color-mix(in srgb,#8b5cf6 25%,transparent)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+code,pre,kbd{font-variant-ligatures:none;font-feature-settings:"liga" 0,"calt" 0}
+
+
+  
+  
+  
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 76px; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Hind Siliguri", system-ui, -apple-system, "Segoe UI", sans-serif;
+    line-height: 1.65;
+    font-size: 16px;
+  }
+  code, .mono { font-family: "JetBrains Mono", ui-monospace, Menlo, monospace; font-size: .88em; }
+
+  /* ---------- Top bar ---------- */
+  .topbar {
+    position: sticky; top: 0; z-index: 10;
+    background: color-mix(in srgb, var(--bg) 85%, transparent);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border);
+  }
+  .topbar-inner {
+    max-width: 1180px; margin: 0 auto; padding: 12px 16px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .brand { font-weight: 700; white-space: nowrap; }
+  .nav { display: flex; gap: 6px; overflow-x: auto; flex: 1; scrollbar-width: none; }
+  .nav::-webkit-scrollbar { display: none; }
+  .nav a {
+    text-decoration: none; color: var(--muted); font-weight: 500; font-size: 14px;
+    padding: 6px 12px; border-radius: 999px; white-space: nowrap;
+    border: 1px solid transparent; transition: .15s;
+  }
+  .nav a:hover, .nav a.active { color: var(--text); background: var(--surface); border-color: var(--border); }
+  .theme-btn {
+    border: 1px solid var(--border); background: var(--surface); color: var(--text);
+    width: 36px; height: 36px; border-radius: 10px; cursor: pointer; font-size: 16px; flex: none;
+  }
+
+  /* ---------- Hero ---------- */
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 16px; }
+  .hero { padding: 48px 0 28px; }
+  .eyebrow {
+    display: inline-block; font-size: 13px; font-weight: 600; letter-spacing: .04em;
+    color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent);
+    padding: 4px 10px; border-radius: 999px; margin-bottom: 14px;
+  }
+  .hero h1 { font-size: clamp(28px, 5vw, 44px); line-height: 1.2; margin: 0 0 12px; }
+  .hero p { color: var(--muted); font-size: 17px; max-width: 720px; margin: 0; }
+
+  .cards {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 14px; margin-top: 28px;
+  }
+  .card {
+    display: block; text-decoration: none; color: inherit;
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 18px; box-shadow: var(--shadow); transition: transform .15s, border-color .15s;
+    border-top: 4px solid var(--c);
+  }
+  .card:hover { transform: translateY(-2px); border-color: var(--c); }
+  .card .num { font-size: 13px; font-weight: 600; color: var(--c); }
+  .card h3 { margin: 4px 0 6px; font-size: 19px; }
+  .card p { margin: 0; color: var(--muted); font-size: 14.5px; }
+
+  /* ---------- Sections ---------- */
+  section.topic { padding: 36px 0; border-top: 1px solid var(--border); }
+  .topic-head { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+  .badge {
+    flex: none; width: 42px; height: 42px; border-radius: 12px;
+    display: grid; place-items: center; font-weight: 700; color: #fff; background: var(--c);
+  }
+  .topic-head h2 { margin: 0; font-size: clamp(22px, 3.4vw, 30px); line-height: 1.25; }
+  .topic-head .sub { color: var(--muted); font-size: 15px; }
+
+  .figure {
+    margin: 0; background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden;
+  }
+  .figure button {
+    all: unset; display: block; width: 100%; cursor: zoom-in; position: relative;
+  }
+  .figure img { display: block; width: 100%; height: auto; background: #fff; }
+  .zoom-hint {
+    position: absolute; right: 12px; bottom: 12px; font-size: 13px; font-weight: 600;
+    background: rgba(0, 0, 0, .65); color: #fff; padding: 4px 10px; border-radius: 999px;
+    opacity: 0; transition: opacity .15s;
+  }
+  .figure button:hover .zoom-hint, .figure button:focus-visible .zoom-hint { opacity: 1; }
+  .figure figcaption {
+    padding: 10px 16px; font-size: 14px; color: var(--muted);
+    border-top: 1px solid var(--border); display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+  }
+  .figure figcaption a { color: var(--accent); text-decoration: none; font-weight: 500; }
+
+  .points {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 14px; margin-top: 18px;
+  }
+  .point {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 16px 18px;
+  }
+  .point h4 { margin: 0 0 8px; font-size: 16px; color: var(--c); }
+  .point ul { margin: 0; padding-left: 18px; }
+  .point li { margin: 3px 0; }
+  .point code {
+    background: var(--surface-2); padding: 1px 6px; border-radius: 6px; word-break: break-word;
+  }
+
+  /* ---------- Compare table ---------- */
+  .table-wrap {
+    overflow-x: auto; background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); box-shadow: var(--shadow);
+  }
+  table { border-collapse: collapse; width: 100%; min-width: 640px; font-size: 15px; }
+  th, td { padding: 12px 14px; text-align: left; border-bottom: 1px solid var(--border); vertical-align: top; }
+  thead th { background: var(--surface-2); font-weight: 600; }
+  tbody th { font-weight: 600; color: var(--muted); white-space: nowrap; }
+  tr:last-child td, tr:last-child th { border-bottom: 0; }
+  .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--c); margin-right: 6px; }
+
+  footer { padding: 28px 0 48px; color: var(--muted); font-size: 14px; text-align: center; border-top: 1px solid var(--border); }
+
+  /* ---------- Lightbox ---------- */
+  .lightbox {
+    position: fixed; inset: 0; z-index: 50; background: rgba(8, 10, 16, .92);
+    display: none; overflow: auto; padding: 56px 16px 24px;
+  }
+  .lightbox.open { display: block; }
+  .lightbox img { display: block; margin: 0 auto; max-width: none; width: min(100%, 1800px); border-radius: 8px; cursor: zoom-out; }
+  .lightbox.full img { width: auto; max-width: none; cursor: zoom-out; }
+  .lb-bar {
+    position: fixed; top: 10px; right: 12px; left: 12px; display: flex; justify-content: space-between; align-items: center; gap: 8px;
+    color: #fff; font-size: 14px;
+  }
+  .lb-bar button {
+    background: rgba(255, 255, 255, .12); color: #fff; border: 1px solid rgba(255, 255, 255, .2);
+    padding: 6px 12px; border-radius: 8px; cursor: pointer; font: inherit;
+  }
+  .lb-actions { display: flex; gap: 8px; }
+
+  @media (max-width: 600px) {
+    .brand { display: none; }
+    .hero { padding-top: 32px; }
+    .zoom-hint { opacity: 1; }
+  }
+  @media print {
+    .topbar, .theme-btn, .zoom-hint, .lightbox { display: none !important; }
+    section.topic { break-inside: avoid-page; }
+  }
+
+/* ===== WellDev theme overrides — picture guides (Security, Encoding, OS) ===== */
+:root{--border:var(--line);--card:var(--surface);--soft:var(--surface-2);--font:var(--sans);--radius:18px;
+  --xss:#f97316;--sql:#e11d48;--csrf:#8b5cf6;--jwt:#10b981}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--xss:#fb923c;--sql:#fb7185;--csrf:#a78bfa;--jwt:#34d399}}
+:root[data-theme="dark"]{--xss:#fb923c;--sql:#fb7185;--csrf:#a78bfa;--jwt:#34d399}
+body{font-family:var(--sans)}
+p,li,figcaption,.lead,.intro,.sec-note{font-family:var(--bn)}
+
+/* top bar (security pages) */
+.topbar{background:color-mix(in srgb,var(--surface) 80%,transparent)!important;backdrop-filter:blur(14px)}
+.brand{font-weight:800;letter-spacing:-.02em}
+.nav a{border-radius:999px}
+.nav a.active,.nav a:hover{background:color-mix(in srgb,var(--accent) 12%,transparent)!important;color:var(--accent)!important;border-color:transparent!important}
+.theme-btn,#themeBtn{border:1px solid var(--line)!important;background:var(--surface)!important;border-radius:999px!important;box-shadow:var(--shadow)}
+
+/* hero → gradient card */
+.hero{border-radius:24px;padding:38px 40px!important;margin-top:24px;color:#fff;background:var(--hero);box-shadow:var(--shadow-lg);position:relative;overflow:hidden}
+.hero::after{content:"";position:absolute;right:-70px;top:-90px;width:340px;height:340px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.22),transparent 65%);pointer-events:none}
+.hero .eyebrow{color:#fff!important;background:rgba(255,255,255,.16)!important;border:1px solid rgba(255,255,255,.25);opacity:1}
+.hero h1{font-weight:800!important;letter-spacing:-.03em!important;color:#fff}
+.hero p,.hero .hero-meta,.hero .hero-meta b{color:#fff!important;opacity:.93}
+.hero .cards,.hero .roadmap{position:relative;z-index:1}
+.hero .card{color:var(--ink)}
+.roadmap a{background:rgba(255,255,255,.16)!important;border-color:rgba(255,255,255,.28)!important;color:#fff!important;box-shadow:none!important;backdrop-filter:blur(6px)}
+.roadmap .dot{background:#fff!important;color:var(--hue)!important}
+.roadmap .arrow{color:rgba(255,255,255,.7)!important}
+
+/* cards & sections */
+.card{border-radius:16px!important;border-top:4px solid var(--c)!important;box-shadow:var(--shadow)!important}
+.card:hover{box-shadow:var(--shadow-lg)!important}
+.card h3{font-weight:750;letter-spacing:-.015em}
+section.topic{border-top:0!important}
+.topic-head h2,.part-head h2,.summary h2{font-weight:800;letter-spacing:-.025em}
+.badge{background:linear-gradient(135deg,var(--c),color-mix(in srgb,var(--c) 55%,#ec4899))!important;border-radius:13px!important;box-shadow:0 8px 18px -10px var(--c)}
+.figure,.lesson,.summary{border-radius:20px!important;box-shadow:var(--shadow)!important;border:1px solid var(--line)!important;background:var(--surface)!important}
+.figure img,.frame img{background:#fff}
+.figure figcaption{background:var(--surface-2)}
+.point{border-radius:16px!important;border-top:4px solid var(--c,var(--accent))!important;box-shadow:var(--shadow);background:var(--surface)!important}
+.point h4{font-weight:750}
+.subhead{font-weight:800;letter-spacing:-.02em}
+th{font-family:var(--sans)}
+
+/* OS page */
+.part-num{background:linear-gradient(135deg,var(--hue),color-mix(in srgb,var(--hue) 55%,#ec4899));-webkit-background-clip:text;background-clip:text;color:transparent!important;font-weight:800!important}
+.lesson{border-top:4px solid var(--hue)!important}
+.lesson h3{font-weight:750;letter-spacing:-.015em}
+.pill{color:#fff!important;background:var(--hue)!important}
+.frame{border-radius:14px!important}
+.remember{border-radius:0 14px 14px 0!important}
+.toc-part > a .num{font-family:var(--mono)}
+.toc li a.active{background:color-mix(in srgb,var(--hue) 12%,transparent)!important}
+.summary .dot{box-shadow:0 6px 14px -8px var(--hue)}
+#progress{background:linear-gradient(90deg,#6366f1,#8b5cf6,#ec4899)!important}
+#tocBtn{box-shadow:var(--shadow-lg)}
+.home-link{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;text-decoration:none;color:var(--ink-2);border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:4px 12px;box-shadow:var(--shadow)}
+.home-link:hover{color:var(--ink)}
+.hero .card p{color:var(--ink-2)!important;opacity:1!important}
+.hero .card .num{color:var(--c)}
+.hero .eyebrow{display:inline-block!important;padding:3px 11px;border-radius:999px;font-size:12px!important;letter-spacing:.06em}
+/* bn-type: Bengali glyphs/digits need normal tracking */
+h1,h2,h3,h4,h5{letter-spacing:0!important}
+.hero h1,.page-head h1,.p-hero h1,.prose h1,header.top h1{line-height:1.32!important}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <span class="brand">🔐 Data Security</span>
+    <nav class="nav" id="nav">
+      <a href="#encoding">Encoding</a>
+      <a href="#encryption">Encryption</a>
+      <a href="#hashing">Hashing</a>
+      <a href="#compare">তুলনা</a>
+    </nav>
+    <a class="home-link" href="../../index.html">⌂ WellDev</a>
+    <button class="theme-btn" id="themeBtn" aria-label="Toggle theme" title="Light / Dark">🌓</button>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero">
+    <span class="eyebrow">Interview Prep · Data Security</span>
+    <h1>Encoding, Encryption ও Hashing</h1>
+    <p>তিনটাই data-কে অন্য রূপে বদলায়, কিন্তু উদ্দেশ্য সম্পূর্ণ আলাদা — format বদলানো, গোপন রাখা, আর verify করা। যেকোনো ছবিতে click করলে বড় করে দেখা যাবে।</p>
+
+    <div class="cards">
+      <a class="card" href="#encoding" style="--c: var(--c1)">
+        <div class="num">01</div>
+        <h3>Encoding</h3>
+        <p>Format / representation বদলানো। কোনো key নেই, security নেই।</p>
+      </a>
+      <a class="card" href="#encryption" style="--c: var(--c3)">
+        <div class="num">02</div>
+        <h3>Encryption</h3>
+        <p>Key দিয়ে data গোপন করা। সঠিক key থাকলে আবার ফেরত আনা যায়।</p>
+      </a>
+      <a class="card" href="#hashing" style="--c: var(--c4)">
+        <div class="num">03</div>
+        <h3>Hashing</h3>
+        <p>One-way fixed-length fingerprint। Password storage-এর জন্য।</p>
+      </a>
+    </div>
+  </section>
+
+  <!-- ===================== 1. Encoding ===================== -->
+  <section class="topic" id="encoding" style="--c: var(--c1)">
+    <div class="topic-head">
+      <div class="badge">1</div>
+      <div>
+        <h2>Encoding</h2>
+        <div class="sub">নির্দিষ্ট নিয়ম (agreed rule) দিয়ে data-এর format বদলানো</div>
+      </div>
+    </div>
+
+    <figure class="figure">
+      <button type="button" data-zoom="src/encoding.webp" data-title="Encoding">
+        <img src="src/encoding.webp" alt="Encoding infographic: flow, ASCII/UTF-8 and Base64 examples, common encodings" loading="lazy">
+        <span class="zoom-hint">🔍 বড় করে দেখুন</span>
+      </button>
+      <figcaption>
+        <span>Encoding কী এবং কীভাবে কাজ করে?</span>
+        <a href="src/encoding.webp" target="_blank" rel="noopener">নতুন tab-এ খুলুন ↗</a>
+      </figcaption>
+    </figure>
+
+    <div class="points">
+      <div class="point">
+        <h4>কীভাবে কাজ করে</h4>
+        <ul>
+          <li>Original data → Encoder (rule) → Encoded output → Decoder → Original।</li>
+          <li>Rule জানা থাকলে যে কেউ decode করতে পারে।</li>
+        </ul>
+      </div>
+      <div class="point">
+        <h4>উদাহরণ</h4>
+        <ul>
+          <li><code>"A"</code> → ASCII <code>65</code> → <code>01000001</code></li>
+          <li><code>"Man"</code> → Base64 <code>TWFu</code></li>
+          <li>ASCII, UTF-8, UTF-16, Base64, URL Encoding।</li>
+        </ul>
+      </div>
+      <div class="point">
+        <h4>মনে রাখো</h4>
+        <ul>
+          <li>Encoding <b>≠</b> Encryption — data লুকানোর জন্য না।</li>
+          <li>উদ্দেশ্য: data transfer, storage compatibility, binary-কে text হিসেবে পাঠানো।</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== 2. Encryption ===================== -->
+  <section class="topic" id="encryption" style="--c: var(--c3)">
+    <div class="topic-head">
+      <div class="badge">2</div>
+      <div>
+        <h2>Encryption</h2>
+        <div class="sub">Plaintext → Ciphertext, শুধু সঠিক key দিয়ে ফেরত আনা যায়</div>
+      </div>
+    </div>
+
+    <figure class="figure">
+      <button type="button" data-zoom="src/encryption.webp" data-title="Encryption">
+        <img src="src/encryption.webp" alt="Encryption infographic: flow, symmetric vs asymmetric encryption, key concepts" loading="lazy">
+        <span class="zoom-hint">🔍 বড় করে দেখুন</span>
+      </button>
+      <figcaption>
+        <span>Encryption কী এবং কীভাবে কাজ করে?</span>
+        <a href="src/encryption.webp" target="_blank" rel="noopener">নতুন tab-এ খুলুন ↗</a>
+      </figcaption>
+    </figure>
+
+    <div class="points">
+      <div class="point">
+        <h4>Symmetric</h4>
+        <ul>
+          <li>Encrypt ও decrypt — <b>একই key</b>।</li>
+          <li>উদাহরণ: <b>AES</b>।</li>
+          <li>দ্রুত, বড় data-র জন্য ভালো; কিন্তু key নিরাপদে share করা কঠিন।</li>
+        </ul>
+      </div>
+      <div class="point">
+        <h4>Asymmetric</h4>
+        <ul>
+          <li><b>Public key</b> দিয়ে encrypt, <b>Private key</b> দিয়ে decrypt।</li>
+          <li>উদাহরণ: <b>RSA</b>, <b>ECC</b>।</li>
+          <li>ধীর, কিন্তু key exchange ও digital signature-এ দরকারি (HTTPS)।</li>
+        </ul>
+      </div>
+      <div class="point">
+        <h4>কেন ব্যবহার হয়</h4>
+        <ul>
+          <li>Data confidentiality।</li>
+          <li>Secure communication (HTTPS / TLS)।</li>
+          <li>File ও database সুরক্ষিত রাখা, secure messaging।</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== 3. Hashing ===================== -->
+  <section class="topic" id="hashing" style="--c: var(--c4)">
+    <div class="topic-head">
+      <div class="badge">3</div>
+      <div>
+        <h2>Hashing ও Password Security</h2>
+        <div class="sub">One-way function — password + salt → hash</div>
+      </div>
+    </div>
+
+    <figure class="figure">
+      <button type="button" data-zoom="src/hashing.webp" data-title="Hashing ও Password Security">
+        <img src="src/hashing.webp" alt="Hashing infographic: password registration and login verification, salt, cost factor, good practices" loading="lazy">
+        <span class="zoom-hint">🔍 বড় করে দেখুন</span>
+      </button>
+      <figcaption>
+        <span>Hashing কী এবং Password Security-তে কীভাবে কাজ করে?</span>
+        <a href="src/hashing.webp" target="_blank" rel="noopener">নতুন tab-এ খুলুন ↗</a>
+      </figcaption>
+    </figure>
+
+    <div class="points">
+      <div class="point">
+        <h4>Sign up ও Login</h4>
+        <ul>
+          <li><b>Sign up:</b> password + random salt → hash → DB-তে algorithm, salt, cost, hash রাখা।</li>
+          <li><b>Login:</b> DB থেকে salt + settings নিয়ে আবার hash করে compare।</li>
+          <li>Hash মিললে login success, না মিললে fail।</li>
+        </ul>
+      </div>
+      <div class="point">
+        <h4>Salt ও Cost Factor</h4>
+        <ul>
+          <li><b>Salt:</b> প্রতিটা password-এর জন্য unique random value — rainbow table আটকায়।</li>
+          <li><b>Cost factor:</b> hashing ইচ্ছা করে slow করে — brute-force কঠিন হয়।</li>
+          <li>bcrypt cost <code>10–14</code>, Argon2 <code>m, t, p</code>।</li>
+        </ul>
+      </div>
+      <div class="point">
+        <h4>Good Practices</h4>
+        <ul>
+          <li><b>bcrypt / Argon2 / scrypt</b> ব্যবহার করো।</li>
+          <li>শুধু <code>SHA-256</code> password-এর জন্য যথেষ্ট না (খুব fast)।</li>
+          <li>কখনো plain password store করবে না।</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== Compare ===================== -->
+  <section class="topic" id="compare" style="--c: var(--accent)">
+    <div class="topic-head">
+      <div class="badge">⚖</div>
+      <div>
+        <h2>Quick তুলনা</h2>
+        <div class="sub">Interview-এর আগে এক নজরে</div>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th></th>
+            <th><span class="dot" style="--c: var(--c1)"></span>Encoding</th>
+            <th><span class="dot" style="--c: var(--c3)"></span>Encryption</th>
+            <th><span class="dot" style="--c: var(--c4)"></span>Hashing</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th>উদ্দেশ্য</th>
+            <td>Format / representation বদলানো</td>
+            <td>Data গোপন রাখা (confidentiality)</td>
+            <td>Verify করা (integrity, password)</td>
+          </tr>
+          <tr>
+            <th>Reversible?</th>
+            <td>হ্যাঁ — rule জানলেই</td>
+            <td>হ্যাঁ — শুধু সঠিক key দিয়ে</td>
+            <td>না — one-way</td>
+          </tr>
+          <tr>
+            <th>Key লাগে?</th>
+            <td>না</td>
+            <td>হ্যাঁ</td>
+            <td>না (তবে salt ব্যবহার হয়)</td>
+          </tr>
+          <tr>
+            <th>Security দেয়?</th>
+            <td>না</td>
+            <td>হ্যাঁ</td>
+            <td>হ্যাঁ (সঠিক algorithm দিলে)</td>
+          </tr>
+          <tr>
+            <th>Output length</th>
+            <td>Input-এর উপর নির্ভর করে</td>
+            <td>Input-এর উপর নির্ভর করে</td>
+            <td>সবসময় fixed-length</td>
+          </tr>
+          <tr>
+            <th>উদাহরণ</th>
+            <td>ASCII, UTF-8, Base64, URL</td>
+            <td>AES, RSA, ECC</td>
+            <td>bcrypt, Argon2, scrypt, SHA-256</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">WellDev · 04-resume-projects / 02-encoding-encryption-hashing</div>
+</footer>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Image viewer">
+  <div class="lb-bar">
+    <span id="lbTitle"></span>
+    <div class="lb-actions">
+      <button type="button" id="lbFull">Actual size</button>
+      <button type="button" id="lbClose">✕ Close</button>
+    </div>
+  </div>
+  <img id="lbImg" alt="">
+</div>
+
+<script>
+  // Theme toggle (remembered per browser)
+  (function () {
+    const root = document.documentElement;
+    try {
+      const saved = localStorage.getItem("theme");
+      if (saved) root.dataset.theme = saved;
+    } catch (e) {}
+    document.getElementById("themeBtn").addEventListener("click", () => {
+      const isDark = root.dataset.theme
+        ? root.dataset.theme === "dark"
+        : matchMedia("(prefers-color-scheme: dark)").matches;
+      root.dataset.theme = isDark ? "light" : "dark";
+      try { localStorage.setItem("theme", root.dataset.theme); } catch (e) {}
+    });
+  })();
+
+  // Lightbox
+  (function () {
+    const lb = document.getElementById("lightbox");
+    const img = document.getElementById("lbImg");
+    const title = document.getElementById("lbTitle");
+    const fullBtn = document.getElementById("lbFull");
+
+    function open(src, t) {
+      img.src = src; img.alt = t; title.textContent = t;
+      lb.classList.remove("full"); fullBtn.textContent = "Actual size";
+      lb.classList.add("open"); document.body.style.overflow = "hidden";
+    }
+    function close() {
+      lb.classList.remove("open"); document.body.style.overflow = "";
+    }
+    document.querySelectorAll("[data-zoom]").forEach(btn =>
+      btn.addEventListener("click", () => open(btn.dataset.zoom, btn.dataset.title))
+    );
+    fullBtn.addEventListener("click", () => {
+      const full = lb.classList.toggle("full");
+      fullBtn.textContent = full ? "Fit to screen" : "Actual size";
+    });
+    document.getElementById("lbClose").addEventListener("click", close);
+    img.addEventListener("click", close);
+    lb.addEventListener("click", e => { if (e.target === lb) close(); });
+    document.addEventListener("keydown", e => { if (e.key === "Escape") close(); });
+  })();
+
+  // Highlight active nav link on scroll
+  (function () {
+    const links = [...document.querySelectorAll("#nav a")];
+    const map = new Map(links.map(a => [a.getAttribute("href").slice(1), a]));
+    const io = new IntersectionObserver(entries => {
+      entries.forEach(en => {
+        if (en.isIntersecting) {
+          links.forEach(l => l.classList.remove("active"));
+          map.get(en.target.id)?.classList.add("active");
+        }
+      });
+    }, { rootMargin: "-40% 0px -55% 0px" });
+    map.forEach((_, id) => { const el = document.getElementById(id); if (el) io.observe(el); });
+  })();
+</script>
+</body>
+</html>

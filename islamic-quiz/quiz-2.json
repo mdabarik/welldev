@@ -1,0 +1,118 @@
+{
+  "id": "quiz-2",
+  "title": "নবী ও আখিরাত কুইজ",
+  "title_en": "Prophets & Hereafter quiz",
+  "description": "১২টি প্রশ্নের সঠিক উত্তর দিন",
+  "description_en": "Answer all 12 questions",
+  "image": "https://mdabarik.github.io/welldev/islamic-quiz/images/quiz-2.png",
+  "questions": [
+    {
+      "question": "কিয়ামতের দিন শিঙ্গায় ফুঁ দেবেন কোন ফেরেশতা?",
+      "question_en": "Which angel will blow the trumpet on the Day of Judgment?",
+      "options": ["হযরত জিবরাইল (আ.)", "হযরত মিকাইল (আ.)", "হযরত ইসরাফিল (আ.)", "হযরত আজরাইল (আ.)"],
+      "options_en": ["Jibril (AS)", "Mikail (AS)", "Israfil (AS)", "Azrail (AS)"],
+      "answer": 2,
+      "explanation": "ইসলামী বর্ণনা অনুযায়ী হযরত ইসরাফিল (আ.) শিঙ্গায় ফুঁ দেবেন, যার মাধ্যমে কিয়ামত শুরু হবে।",
+      "explanation_en": "According to Islamic tradition, Israfil (AS) will blow the trumpet that begins the Day of Judgment."
+    },
+    {
+      "question": "জাহান্নামের উপর স্থাপিত যে সেতু পার হয়ে জান্নাতে যেতে হবে, তার নাম কী?",
+      "question_en": "What is the bridge over Hell that must be crossed to reach Paradise called?",
+      "options": ["মিজান", "পুলসিরাত", "আরাফ", "সিদরাতুল মুনতাহা"],
+      "options_en": ["Mizan", "Pul Sirat", "A'raf", "Sidratul Muntaha"],
+      "answer": 1,
+      "explanation": "সহিহ হাদিসে এসেছে, জাহান্নামের উপর একটি সেতু স্থাপন করা হবে, যাকে পুলসিরাত বলা হয়। আমল অনুযায়ী মানুষ তা পার হবে।",
+      "explanation_en": "Authentic hadith describe a bridge, the Sirat, set over Hell; people will cross it according to their deeds."
+    },
+    {
+      "question": "হাশরের ময়দানে রাসূলুল্লাহ (সা.)-এর হাউজের নাম কী?",
+      "question_en": "What is the name of the Prophet's (SAW) pond on the Day of Gathering?",
+      "options": ["হাউজে কাওসার", "সালসাবিল", "জমজম", "তাসনিম"],
+      "options_en": ["Hawd al-Kawthar", "Salsabil", "Zamzam", "Tasnim"],
+      "answer": 0,
+      "explanation": "হাউজে কাওসার থেকে মুমিনরা পান করবে। হাদিসে এসেছে, এর পানি দুধের চেয়ে সাদা ও মধুর চেয়ে মিষ্টি।",
+      "explanation_en": "Believers will drink from al-Kawthar; hadith say its water is whiter than milk and sweeter than honey."
+    },
+    {
+      "question": "কোন নবী মাছের পেটে থেকে আল্লাহর কাছে দোয়া করেছিলেন?",
+      "question_en": "Which prophet prayed to Allah from inside the belly of a fish?",
+      "options": ["হযরত মূসা (আ.)", "হযরত ইউসুফ (আ.)", "হযরত নূহ (আ.)", "হযরত ইউনুস (আ.)"],
+      "options_en": ["Musa (AS)", "Yusuf (AS)", "Nuh (AS)", "Yunus (AS)"],
+      "answer": 3,
+      "explanation": "হযরত ইউনুস (আ.) মাছের পেটে ‘লা ইলাহা ইল্লা আন্তা সুবহানাকা ইন্নি কুনতু মিনাজ জালিমীন’ দোয়া পড়েছিলেন (সূরা আল-আম্বিয়া ২১:৮৭)।",
+      "explanation_en": "Yunus (AS) called out from the fish's belly: \"There is no god but You, glory be to You, I was among the wrongdoers\" (Quran 21:87)."
+    },
+    {
+      "question": "কোন নবীকে ‘খলিলুল্লাহ’ (আল্লাহর বন্ধু) বলা হয়?",
+      "question_en": "Which prophet is called 'Khalilullah' (the Friend of Allah)?",
+      "options": ["হযরত ঈসা (আ.)", "হযরত ইব্রাহিম (আ.)", "হযরত দাউদ (আ.)", "হযরত আদম (আ.)"],
+      "options_en": ["Isa (AS)", "Ibrahim (AS)", "Dawud (AS)", "Adam (AS)"],
+      "answer": 1,
+      "explanation": "আল্লাহ তাআলা হযরত ইব্রাহিম (আ.)-কে বন্ধু হিসেবে গ্রহণ করেছেন (সূরা আন-নিসা ৪:১২৫)।",
+      "explanation_en": "Allah took Ibrahim (AS) as a close friend (Quran 4:125)."
+    },
+    {
+      "question": "পৃথিবীর প্রথম মানুষ ও প্রথম নবী কে?",
+      "question_en": "Who was the first human and the first prophet?",
+      "options": ["হযরত শীস (আ.)", "হযরত ইদরিস (আ.)", "হযরত আদম (আ.)", "হযরত নূহ (আ.)"],
+      "options_en": ["Shith (AS)", "Idris (AS)", "Adam (AS)", "Nuh (AS)"],
+      "answer": 2,
+      "explanation": "হযরত আদম (আ.) মানবজাতির পিতা এবং প্রথম নবী।",
+      "explanation_en": "Adam (AS) is the father of mankind and the first prophet."
+    },
+    {
+      "question": "মহাপ্লাবনের সময় কোন নবী আল্লাহর নির্দেশে নৌকা তৈরি করেছিলেন?",
+      "question_en": "Which prophet built the ark by Allah's command before the great flood?",
+      "options": ["হযরত নূহ (আ.)", "হযরত হুদ (আ.)", "হযরত সালেহ (আ.)", "হযরত লূত (আ.)"],
+      "options_en": ["Nuh (AS)", "Hud (AS)", "Salih (AS)", "Lut (AS)"],
+      "answer": 0,
+      "explanation": "আল্লাহ হযরত নূহ (আ.)-কে নৌকা তৈরির নির্দেশ দেন এবং মুমিনদের সেই নৌকায় রক্ষা করেন (সূরা হুদ ১১:৩৭)।",
+      "explanation_en": "Allah commanded Nuh (AS) to build the ark and saved the believers in it (Quran 11:37)."
+    },
+    {
+      "question": "কোন নবীকে ‘কালিমুল্লাহ’ বলা হয়, কারণ আল্লাহ তাঁর সাথে সরাসরি কথা বলেছেন?",
+      "question_en": "Which prophet is called 'Kalimullah' because Allah spoke to him directly?",
+      "options": ["হযরত হারুন (আ.)", "হযরত ইয়াকুব (আ.)", "হযরত সুলাইমান (আ.)", "হযরত মূসা (আ.)"],
+      "options_en": ["Harun (AS)", "Ya'qub (AS)", "Sulaiman (AS)", "Musa (AS)"],
+      "answer": 3,
+      "explanation": "কুরআনে এসেছে, ‘আর আল্লাহ মূসার সাথে সরাসরি কথা বলেছেন’ (সূরা আন-নিসা ৪:১৬৪)।",
+      "explanation_en": "The Quran says, \"And Allah spoke to Musa directly\" (Quran 4:164)."
+    },
+    {
+      "question": "আসমানি কিতাব ‘যাবুর’ কোন নবীর উপর নাজিল হয়েছিল?",
+      "question_en": "To which prophet was the scripture Zabur revealed?",
+      "options": ["হযরত মূসা (আ.)", "হযরত দাউদ (আ.)", "হযরত ঈসা (আ.)", "হযরত ইব্রাহিম (আ.)"],
+      "options_en": ["Musa (AS)", "Dawud (AS)", "Isa (AS)", "Ibrahim (AS)"],
+      "answer": 1,
+      "explanation": "আল্লাহ বলেন, ‘আর আমি দাউদকে যাবুর দিয়েছি’ (সূরা আন-নিসা ৪:১৬৩)।",
+      "explanation_en": "Allah says, \"And to Dawud We gave the Zabur\" (Quran 4:163)."
+    },
+    {
+      "question": "কোন নবীকে আল্লাহ জীবিত অবস্থায় আসমানে তুলে নিয়েছেন এবং কিয়ামতের আগে তিনি আবার আসবেন?",
+      "question_en": "Which prophet did Allah raise alive to the heavens, and will return before the Day of Judgment?",
+      "options": ["হযরত ঈসা (আ.)", "হযরত ইদরিস (আ.)", "হযরত ইলিয়াস (আ.)", "হযরত যাকারিয়া (আ.)"],
+      "options_en": ["Isa (AS)", "Idris (AS)", "Ilyas (AS)", "Zakariya (AS)"],
+      "answer": 0,
+      "explanation": "কুরআনে এসেছে, আল্লাহ হযরত ঈসা (আ.)-কে নিজের কাছে তুলে নিয়েছেন (সূরা আন-নিসা ৪:১৫৮), এবং সহিহ হাদিসে তাঁর পুনরাগমনের কথা আছে।",
+      "explanation_en": "The Quran says Allah raised Isa (AS) up to Himself (Quran 4:158), and authentic hadith describe his return."
+    },
+    {
+      "question": "কবরে প্রশ্ন করার জন্য যে দুইজন ফেরেশতা আসবেন, তাঁদের নাম কী?",
+      "question_en": "What are the names of the two angels who question a person in the grave?",
+      "options": ["হারুত ও মারুত", "কিরামান ও কাতিবীন", "মুনকার ও নাকির", "জিবরাইল ও মিকাইল"],
+      "options_en": ["Harut and Marut", "Kiraman and Katibin", "Munkar and Nakir", "Jibril and Mikail"],
+      "answer": 2,
+      "explanation": "তিরমিজির হাদিসে এসেছে, কবরে মুনকার ও নাকির নামে দুইজন ফেরেশতা এসে বান্দাকে প্রশ্ন করবেন।",
+      "explanation_en": "A hadith in Tirmidhi says two angels named Munkar and Nakir come to question a person in the grave."
+    },
+    {
+      "question": "জান্নাতের যে দরজা দিয়ে শুধু রোজাদাররা প্রবেশ করবে, তার নাম কী?",
+      "question_en": "What is the name of the gate of Paradise reserved for those who fast?",
+      "options": ["বাবুস সালাম", "বাবুর রাইয়ান", "বাবুল জিহাদ", "বাবুস সাদাকা"],
+      "options_en": ["Bab as-Salam", "Bab ar-Rayyan", "Bab al-Jihad", "Bab as-Sadaqah"],
+      "answer": 1,
+      "explanation": "সহিহ বুখারির হাদিসে এসেছে, জান্নাতে ‘রাইয়ান’ নামে একটি দরজা আছে, যা দিয়ে কেবল রোজাদাররাই প্রবেশ করবে।",
+      "explanation_en": "A hadith in Sahih al-Bukhari says Paradise has a gate called ar-Rayyan, through which only those who fast will enter."
+    }
+  ]
+}

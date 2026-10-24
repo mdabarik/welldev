@@ -1,0 +1,486 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>API Design - API কী ও API-র ধরন</title>
+<meta name="description" content="API কী, কত ধরনের API আছে (Public, Partner, Private, Composite, REST, SOAP, GraphQL, gRPC, WebSocket, Webhook) আর কোনটা কীভাবে কাজ করে: সহজ ভাষায়, ধাপে ধাপে D3 animation-এ।">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<style>
+/* One card per interview question: short answer, 2-3 bullets, and a step-by-step D3 scene.
+   Scenes are plain data (see TOPICS at the bottom): each step adds / modifies / deletes nodes by id
+   and the tiny engine animates the difference. */
+:root{
+  --bg:#f5f7fc; --surface:#ffffff; --surface-2:#f1f4fa; --fg:#0f172a; --muted:#5b6478; --faint:#94a0b8; --line:#e4e8f1;
+  --accent:#6366f1;
+  --a:#4f46e5; --b:#db2777; --g:#059669; --o:#d97706; --r:#e11d48; --s:#0284c7;
+  --hero:linear-gradient(135deg,#4f46e5 0%,#7c3aed 45%,#db2777 100%);
+  --shadow:0 1px 2px rgba(15,23,42,.04),0 10px 30px -12px rgba(15,23,42,.14);
+  --sans:"Inter","Hind Siliguri",system-ui,sans-serif; --bn:"Hind Siliguri","Inter",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0b0f1a; --surface:#121827; --surface-2:#182033; --fg:#e7ecf6; --muted:#9aa6bf; --faint:#66728c; --line:#232c42;
+  --accent:#818cf8; --a:#818cf8; --b:#f472b6; --g:#34d399; --o:#fbbf24; --r:#fb7185; --s:#38bdf8;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6);
+}}
+:root[data-theme="dark"]{
+  --bg:#0b0f1a; --surface:#121827; --surface-2:#182033; --fg:#e7ecf6; --muted:#9aa6bf; --faint:#66728c; --line:#232c42;
+  --accent:#818cf8; --a:#818cf8; --b:#f472b6; --g:#34d399; --o:#fbbf24; --r:#fb7185; --s:#38bdf8;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 var(--bn);-webkit-font-smoothing:antialiased}
+a{color:var(--accent)}
+button{font:inherit;color:inherit}
+code{font-family:var(--mono);font-size:.86em;font-weight:500;background:color-mix(in srgb,var(--accent) 10%,var(--surface));color:color-mix(in srgb,var(--accent) 72%,var(--fg));padding:.1em .4em;border-radius:6px}
+.wrap{max-width:1000px;margin:0 auto;padding:20px 18px 70px}
+
+.topnav{display:flex;align-items:center;gap:10px}
+.brand{display:flex;align-items:center;gap:10px;color:var(--fg);text-decoration:none;font:800 16px var(--sans);letter-spacing:-.02em}
+.logo{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:#fff;font:800 13px var(--mono);background:var(--hero)}
+.topnav .sp{flex:1}
+.pill{border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:6px 14px;font:600 13px var(--sans);cursor:pointer;text-decoration:none}
+.pill:hover{color:var(--fg)}
+
+.hero{margin-top:20px;border-radius:22px;padding:26px 30px;color:#fff;background:var(--hero)}
+.hero .eyebrow{font:600 12px var(--sans);letter-spacing:.1em;text-transform:uppercase;opacity:.85}
+.hero h1{margin:6px 0 8px;font:800 clamp(26px,4.2vw,38px)/1.15 var(--sans);letter-spacing:-.03em}
+.hero p{margin:0;max-width:680px;opacity:.94}
+.jump{display:flex;flex-wrap:wrap;gap:6px;margin-top:16px}
+.jump a{min-width:32px;padding:0 6px;height:32px;display:grid;place-items:center;border-radius:9px;text-decoration:none;font:700 13px var(--sans);color:#fff;background:rgba(255,255,255,.18)}
+.jump a:hover{background:rgba(255,255,255,.34)}
+
+.parts{position:sticky;top:0;z-index:5;margin:14px -18px 0;padding:10px 18px;display:flex;gap:8px;overflow-x:auto;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);scrollbar-width:none}
+.parts a{flex:none;text-decoration:none;font:600 13px var(--sans);color:var(--muted);border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 13px}
+.parts a:hover{color:var(--fg)}
+.parts a b{color:var(--accent);margin-right:4px}
+
+.part{margin-top:44px;scroll-margin-top:60px}
+.part>h2{margin:0;font:800 clamp(20px,2.6vw,25px)/1.25 var(--sans);letter-spacing:-.02em}
+.part>h2 span{color:var(--accent);margin-right:8px}
+
+.q{margin-top:16px;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:20px 22px;box-shadow:var(--shadow);scroll-margin-top:64px}
+.q h3{display:flex;gap:12px;align-items:flex-start;margin:0 0 10px;font:700 18px/1.4 var(--sans);letter-spacing:-.01em}
+.skip{display:inline-block;margin-left:8px;padding:1px 10px;border-radius:999px;font:600 12px var(--sans);font-style:normal;white-space:nowrap;color:var(--muted);background:var(--surface-2);border:1px dashed var(--faint);vertical-align:middle}
+.num{flex:none;min-width:34px;height:34px;padding:0 8px;border-radius:10px;display:grid;place-items:center;color:#fff;font:800 14px var(--sans);background:var(--hero)}
+.ans{margin:0 0 10px;padding:10px 14px;border-left:4px solid var(--accent);border-radius:0 10px 10px 0;background:color-mix(in srgb,var(--accent) 8%,var(--surface))}
+.q ul{margin:0 0 12px;padding-left:20px;color:var(--muted)}
+.q li{margin:2px 0}
+.q li b,.ans b{color:var(--fg)}
+.extra{margin:0 0 12px;overflow-x:auto}
+.extra table{border-collapse:collapse;font:500 13px var(--mono)}
+.extra th,.extra td{border:1px solid var(--line);padding:3px 10px;text-align:center}
+.extra th{background:var(--surface-2)}
+.extra .cmp td,.extra .cmp th{text-align:left;vertical-align:top;font:500 13.5px/1.55 var(--bn);min-width:150px}
+.extra .cmp td:first-child{font-weight:700;white-space:nowrap;min-width:0}
+
+.viz{border:1px solid var(--line);border-radius:14px;background:var(--surface-2);overflow:hidden}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;padding:10px 12px 0}
+.tabs button{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:3px 12px;font:600 12.5px var(--sans);color:var(--muted);cursor:pointer}
+.tabs button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.stage{overflow-x:auto;padding-top:8px}
+.stage svg{display:block;width:100%;min-width:680px;height:auto;cursor:pointer;user-select:none}
+.cap{padding:10px 16px;min-height:3.4em;border-top:1px dashed var(--line);font-size:15px}
+.ctl{display:flex;align-items:center;gap:8px;padding:0 12px 12px}
+.b{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:5px 14px;font:600 13px var(--sans);cursor:pointer}
+.b:hover:not(:disabled){border-color:var(--accent)}
+.b:disabled{opacity:.4;cursor:default}
+.b.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+.cnt{margin-left:auto;font:500 12px var(--mono);color:var(--faint)}
+
+/* svg scene */
+svg text,svg tspan{white-space:pre}
+svg text{font-family:var(--sans);font-size:13px;fill:var(--fg);dominant-baseline:central}
+.c-n{--cc:var(--muted)} .c-a{--cc:var(--a)} .c-b{--cc:var(--b)} .c-g{--cc:var(--g)}
+.c-o{--cc:var(--o)} .c-r{--cc:var(--r)} .c-s{--cc:var(--s)} .c-f{--cc:var(--fg)}
+.box rect,.circ circle{fill:color-mix(in srgb,var(--cc) 14%,var(--surface));stroke:var(--cc);stroke-width:1.6;transition:fill .45s,stroke .45s}
+.dash rect,.dash circle{stroke-dasharray:6 4;fill:color-mix(in srgb,var(--cc) 4%,transparent)}
+.hl rect,.hl circle{stroke-width:3.4;filter:drop-shadow(0 0 7px color-mix(in srgb,var(--cc) 65%,transparent))}
+.text text{fill:var(--cc);transition:fill .45s}
+.text.b text,.text.lg text{font-weight:700}
+.text.lg text{font-size:15px}
+.sm text{font-size:11.5px}
+.m text{font-family:var(--mono);font-size:12px}
+.path path{fill:none;stroke:var(--cc);stroke-width:3.4;stroke-linecap:round}
+.arrow line{stroke:var(--cc);stroke-width:2.2;transition:stroke .4s}
+.arrow.dash line{stroke-dasharray:6 4}
+.arrow.hl line{stroke-width:3.4}
+footer{margin-top:50px;text-align:center;color:var(--faint);font:500 13px var(--sans)}
+/* bn-type: Bengali glyphs/digits need normal tracking */
+h1,h2,h3,h4,h5{letter-spacing:0!important}
+.hero h1,.page-head h1,.p-hero h1,.prose h1,header.top h1{line-height:1.32!important}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs id="defs"></defs></svg>
+<div class="wrap">
+  <nav class="topnav">
+    <a class="brand" href="../../index.html"><span class="logo">W</span>WellDev</a>
+    <span class="sp"></span>
+    <button class="pill" id="theme" type="button">Theme</button>
+  </nav>
+
+  <header class="hero">
+    <div class="eyebrow">API Design · Interview</div>
+    <h1>API Design: API কী ও কত ধরনের</h1>
+    <p>সহজ ভাষায় ১০টা প্রশ্ন: API কী, কত ধরনের, আর প্রতিটা কীভাবে কাজ করে। scene-এ ক্লিক করো বা <b>Next</b> চাপো, ধাপে ধাপে দেখো।</p>
+    <div class="jump" id="jump"></div>
+  </header>
+  <nav class="parts" id="parts"></nav>
+  <main id="app"></main>
+  <footer>Trainee Software Engineer · API design</footer>
+</div>
+
+<script>
+/* ---------- theme ---------- */
+(function(){
+  const root=document.documentElement,btn=document.getElementById('theme');
+  try{const t=localStorage.getItem('theme');if(t)root.dataset.theme=t;}catch(e){}
+  const dark=()=>root.dataset.theme?root.dataset.theme==='dark':matchMedia('(prefers-color-scheme:dark)').matches;
+  const label=()=>btn.textContent=dark()?'Light':'Dark';
+  btn.onclick=()=>{root.dataset.theme=dark()?'light':'dark';try{localStorage.setItem('theme',root.dataset.theme);}catch(e){}label();};
+  label();
+})();
+
+/* ---------- scene engine ---------- */
+const COLORS=['n','a','b','g','o','r','s','f'];
+document.getElementById('defs').innerHTML=COLORS.map(c=>
+  `<marker id="ah-${c}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" style="fill:var(--${c==='n'?'muted':c==='f'?'fg':c})"/></marker>`).join('');
+
+const B=(id,x,y,w,h,label,c='n',o={})=>({id,k:'box',x,y,w,h,label,c,...o});
+const T=(id,x,y,label,o={})=>({id,k:'text',x,y,label,c:'n',...o});
+const A=(id,x1,y1,x2,y2,c='n',o={})=>({id,k:'arrow',x:0,y:0,x1,y1,x2,y2,c,...o});
+const C=(id,x,y,r,label,c='n',o={})=>({id,k:'circ',x,y,r,label,c,...o});
+const S=(cap,o={})=>({cap,...o});
+const P=(id,d,c='n',o={})=>({id,k:'path',x:0,y:0,d,c,...o});
+const F=(x1,y1,x2,y2,c='a',o={})=>({x1,y1,x2,y2,c,...o});
+
+function stateAt(steps,i){
+  const m=new Map();
+  for(let k=0;k<=i;k++){
+    const s=steps[k];
+    (s.del||[]).forEach(id=>m.delete(id));
+    (s.add||[]).forEach(n=>m.set(n.id,{...n}));
+    Object.entries(s.mod||{}).forEach(([id,p])=>{if(m.has(id))Object.assign(m.get(id),p);});
+  }
+  return [...m.values()];
+}
+
+function setText(g,cls,str,x,y,anchor,lh=15.5){
+  let tx=g.select('text.'+cls);
+  if(tx.empty())tx=g.append('text').attr('class',cls);
+  const ls=String(str??'').split('\n');
+  tx.attr('text-anchor',anchor);
+  tx.selectAll('tspan').data(ls).join('tspan').attr('x',x).attr('y',(d,i)=>y-(ls.length-1)*lh/2+i*lh).text(d=>d);
+}
+
+function upd(g,d,t){
+  g.attr('class',`n ${d.k} c-${d.c||'n'}${d.dash?' dash':''}${d.hl?' hl':''}${d.s?' '+d.s:''}${d.m?' m':''}`);
+  if(d.k==='box'){
+    let r=g.select('rect');
+    if(r.empty())r=g.insert('rect',':first-child').attr('rx',9).attr('width',d.w).attr('height',d.h);
+    r.transition(t).attr('width',d.w).attr('height',d.h);
+    setText(g,'lb',d.label,d.w/2,d.h/2,'middle');
+  }else if(d.k==='circ'){
+    let r=g.select('circle');
+    if(r.empty())r=g.insert('circle',':first-child').attr('r',d.r);
+    r.transition(t).attr('r',d.r);
+    setText(g,'lb',d.label,0,0,'middle');
+  }else if(d.k==='text'){
+    setText(g,'lb',d.label,0,0,d.a||'start');
+  }else if(d.k==='path'){
+    let p=g.select('path');
+    if(p.empty()){p=g.append('path').attr('d',d.d);const L=p.node().getTotalLength();p.attr('stroke-dasharray',L).attr('stroke-dashoffset',L).transition(t).attr('stroke-dashoffset',0);}
+  }else if(d.k==='arrow'){
+    let l=g.select('line');
+    if(l.empty())l=g.append('line').attr('x1',d.x1).attr('y1',d.y1).attr('x2',d.x2).attr('y2',d.y2);
+    l.attr('marker-end',`url(#ah-${d.c||'n'})`).transition(t).attr('x1',d.x1).attr('y1',d.y1).attr('x2',d.x2).attr('y2',d.y2);
+  }
+}
+
+function draw(svg,nodes,dur){
+  const t=d3.transition().duration(dur).ease(d3.easeCubicInOut);
+  svg.select('.layer').selectAll('g.n').data(nodes,d=>d.id).join(
+    en=>en.append('g').attr('opacity',0).attr('transform',d=>`translate(${d.x},${d.y})`),
+    up=>up,
+    ex=>ex.transition(t).attr('opacity',0).remove()
+  ).each(function(d){upd(d3.select(this),d,t);})
+   .transition(t).attr('transform',d=>`translate(${d.x},${d.y})`).attr('opacity',d=>d.o??1);
+}
+
+/* moving packets: step.fly = [F(x1,y1,x2,y2,colour,{n,gap,dur,r,d0,per,once})] - loops until the step changes */
+let flyGen=0;
+function flyRun(svg,list){
+  const my=++flyGen,fx=svg.select('.fx');
+  fx.selectAll('circle').interrupt().remove();
+  (list||[]).forEach(f=>{
+    const n=f.n??3,gap=f.gap??380,dur=f.dur??1200,per=f.per??Math.max(n*gap+300,dur+300),r=f.r??6;
+    const col=f.c==='n'?'muted':f.c==='f'?'fg':(f.c||'a');
+    for(let i=0;i<n;i++){
+      const dot=fx.append('circle').attr('r',r).attr('cx',f.x1).attr('cy',f.y1).attr('opacity',0)
+        .style('fill',`var(--${col})`).style('stroke','var(--surface)').style('stroke-width',1.5);
+      const go=delay=>{
+        if(my!==flyGen)return;
+        dot.attr('cx',f.x1).attr('cy',f.y1).attr('opacity',0)
+          .transition().delay(delay).duration(0).attr('opacity',1)
+          .transition().duration(dur).ease(d3.easeLinear).attr('cx',f.x2).attr('cy',f.y2)
+          .transition().duration(0).attr('opacity',0)
+          .on('end',()=>{if(!f.once)go(per-dur);});
+      };
+      go((f.d0??500)+i*gap);
+    }
+  });
+}
+
+function mount(host,topic){
+  const tabs=topic.tabs||[{n:'',steps:topic.steps}];
+  host.innerHTML='<div class="tabs"></div><div class="stage"><svg viewBox="0 0 760 240" role="img"><g class="layer"></g><g class="fx"></g></svg></div><div class="cap"></div><div class="ctl"><button class="b prev" type="button">◀</button><button class="b pri next" type="button">Next ▶</button><span class="cnt"></span></div>';
+  const svg=d3.select(host).select('svg'),cap=host.querySelector('.cap'),cnt=host.querySelector('.cnt');
+  const prev=host.querySelector('.prev'),next=host.querySelector('.next'),tabBox=host.querySelector('.tabs');
+  let ti=0,si=0,steps;
+  function show(dur){
+    draw(svg,stateAt(steps,si),dur);
+    flyRun(svg,steps[si].fly);
+    cap.innerHTML=steps[si].cap;
+    cnt.textContent=`${si+1} / ${steps.length}`;
+    prev.disabled=si===0;
+    next.textContent=si===steps.length-1?'↻ আবার':'Next ▶';
+  }
+  function load(i){
+    ti=i;si=0;
+    const tb=tabs[ti];steps=typeof tb.steps==='function'?tb.steps():tb.steps;
+    tabBox.querySelectorAll('button').forEach((b,k)=>b.classList.toggle('on',k===ti));
+    show(0);
+  }
+  if(tabs.length>1){
+    tabs.forEach((tb,i)=>{const b=document.createElement('button');b.type='button';b.textContent=tb.n;b.onclick=()=>load(i);tabBox.appendChild(b);});
+  }else tabBox.remove();
+  const go=()=>{si=si===steps.length-1?0:si+1;show(600);};
+  next.onclick=go;svg.on('click',go);
+  prev.onclick=()=>{if(si>0){si--;show(600);}};
+  load(0);
+}
+
+/* ---------- content ---------- */
+const PARTS=[['A','API-র মূল কথা'],['B','API-র ধরন: কোনটা কীভাবে কাজ করে'],['C','নিরাপত্তা ও সঠিকটা বাছা']];
+
+const TOPICS=[
+{p:0,q:'API কী (What is an API)?',
+ ans:'<b>API</b> (Application Programming Interface) হলো এক software-এর সাথে আরেক software-এর <b>কথা বলার দরজা ও নিয়ম</b>। তুমি শুধু বলো কী চাই, ভেতরে কীভাবে হয় তা জানতে হয় না। যেমন রেস্তোরাঁর <b>ওয়েটার</b>: তুমি অর্ডার দাও, ওয়েটার রান্নাঘর থেকে খাবার এনে দেয়।',
+ pts:['<b>Client</b> request পাঠায়, <b>API</b> সেটা server-এ পৌঁছে দেয়, <b>server</b> কাজ করে response ফেরত দেয়।','API একটা <b>চুক্তি</b>: কী চাইতে পারবে, কীভাবে চাইবে, কী ফেরত পাবে, সব আগে থেকে ঠিক করা।','উদাহরণ: weather app আবহাওয়ার API ডাকে, "bKash দিয়ে pay করো" বোতাম payment API ডাকে, নিজের site-এ Google Map আসে API দিয়ে।'],
+ tabs:[
+  {n:'1. ওয়েটারের উপমা',steps:[
+   S('তুমি টেবিলে বসে আছো। নিজে রান্নাঘরে ঢুকে রান্না করা যায় না। মাঝে আছে <b>ওয়েটার</b>, সে-ই তোমার আর রান্নাঘরের যোগসূত্র।',{add:[B('cu',20,80,130,80,'তুমি\n(client)','a'),B('wa',315,80,130,80,'ওয়েটার\n(API)','b'),B('ki',610,80,130,80,'রান্নাঘর\n(server)','g'),A('x1',152,110,313,110,'n'),A('x2',447,110,608,110,'n')]}),
+   S('তুমি ওয়েটারকে বলো, "একটা বিরিয়ানি।" এটা তোমার <b>request</b>।',{add:[T('t1',232,92,'"একটা বিরিয়ানি"',{a:'middle',c:'a',s:'sm b'})],mod:{x1:{c:'a'},cu:{hl:1}},fly:[F(152,110,313,110,'a',{n:1,dur:1100,per:3200})]}),
+   S('ওয়েটার অর্ডারটা রান্নাঘরে পৌঁছে দেয়।',{add:[T('t2',528,92,'অর্ডার',{a:'middle',c:'b',s:'sm b'})],mod:{x2:{c:'b'},cu:{hl:0},wa:{hl:1}},fly:[F(447,110,608,110,'b',{n:1,dur:1100,per:3200})]}),
+   S('রান্নাঘর খাবার বানায়। ভেতরে কীভাবে হয় তুমি জানো না, জানার দরকারও নেই। এটাই API-র সুবিধা।',{mod:{ki:{hl:1,label:'রান্নাঘর\n(রান্না চলছে)'},wa:{hl:0}},add:[T('t3',640,196,'ভেতরের ব্যাপার লুকানো',{a:'middle',c:'g',s:'sm b'})]}),
+   S('ওয়েটার খাবার এনে দেয়। এটা <b>response</b>। অর্ডার (request) আর খাবার (response): এই হলো API-র কাজ।',{mod:{ki:{hl:0,label:'রান্নাঘর\n(server)'},cu:{hl:1}},add:[A('y2',608,140,447,140,'g'),A('y1',313,140,152,140,'g'),T('t4',380,184,'খাবার ফিরে এল = response',{a:'middle',c:'g',s:'b'})],fly:[F(608,140,447,140,'g',{n:1,dur:1100,per:3200}),F(313,140,152,140,'g',{n:1,dur:1100,per:3200,d0:1300})]})
+  ]},
+  {n:'2. Software-এ API',steps:[
+   S('এবার software-এ। একটা <b>weather app</b> (client), মাঝে <b>API</b>, আর আবহাওয়ার <b>server</b>।',{add:[B('ap',20,80,120,80,'Weather app\n(client)','a'),B('api',250,80,130,80,'API','b'),B('sv',480,80,120,80,'আবহাওয়ার\nserver','g')]}),
+   S('App request পাঠায়: <code>GET /weather?city=Dhaka</code>, মানে "ঢাকার আবহাওয়া দাও।"',{add:[B('rq',20,22,330,34,'GET /weather?city=Dhaka','a',{m:1,s:'sm'}),A('x1',142,110,248,110,'a')],mod:{ap:{hl:1}},fly:[F(142,110,248,110,'a',{n:1,dur:900,per:3000})]}),
+   S('API আগে দেখে request ঠিক আছে কিনা: নিয়ম মেলে? অনুমতি আছে? ঠিক থাকলে server-কে দেয়।',{add:[A('x2',382,110,478,110,'b'),T('ck',490,196,'✓ নিয়ম মেলে   ✓ অনুমতি আছে',{a:'middle',c:'b',s:'sm b'})],mod:{ap:{hl:0},api:{hl:1}},fly:[F(382,110,478,110,'b',{n:1,dur:800,per:3000})]}),
+   S('Server <b>database</b> থেকে data খুঁজে আনে। App এটা দেখে না, শুধু API-কে চেনে।',{add:[B('db',650,90,90,60,'Database','o'),A('x3',602,120,648,120,'o')],mod:{api:{hl:0},sv:{hl:1,label:'আবহাওয়ার\nserver\n(data খুঁজছে)'}},fly:[F(602,120,648,120,'o',{n:2,gap:400,dur:500,per:2000})]}),
+   S('API উত্তর (<b>response</b>) ফেরত দেয়, সাধারণত <b>JSON</b>-এ। App সেটা সুন্দর করে দেখায়।',{del:['ck'],mod:{sv:{hl:0,label:'আবহাওয়ার\nserver'},ap:{hl:1}},add:[B('rs',20,196,300,34,'{ "temp": 32, "sky": "রোদ" }','g',{m:1,s:'sm'}),A('b2',478,145,382,145,'g'),A('b1',248,145,142,145,'g')],fly:[F(478,145,382,145,'g',{n:1,dur:800,per:3000}),F(248,145,142,145,'g',{n:1,dur:800,per:3000,d0:900})]})
+  ]},
+  {n:'3. API কেন লাগে',steps:[
+   S('<b>API ছাড়া:</b> app সরাসরি database-এ ঢুকলে সব data খোলা। কোনো নিয়ম নেই, যে কেউ যা খুশি পড়তে বা মুছতে পারে।',{add:[B('ap',20,70,120,70,'App','a'),B('db',620,70,120,70,'Database','o'),A('dir',142,105,618,105,'r',{dash:1}),T('wr',380,86,'সব data খোলা ⚠',{a:'middle',c:'r',s:'b'})],fly:[F(142,105,618,105,'r',{n:3,gap:500,dur:1600,per:3000,r:5})]}),
+   S('<b>API সহ:</b> মাঝে একটা পাহারা-দেওয়া দরজা। যা দেওয়ার ততটুকুই যায়, বাকিটা লুকানো থাকে।',{del:['dir','wr'],add:[B('api',320,70,120,70,'API\n(দরজা)','b'),A('a1',142,105,318,105,'a'),A('a2',442,105,618,105,'o'),T('ok',380,50,'নিয়ম মেনে যাও ✓',{a:'middle',c:'b',s:'b'})],fly:[F(142,105,318,105,'a',{n:2,gap:500,dur:800,per:2400}),F(442,105,618,105,'o',{n:2,gap:500,dur:800,per:2400,d0:900})]}),
+   S('তিনটা লাভ: <b>নিরাপদ</b> (সরাসরি ঢোকা যায় না), <b>পুনর্ব্যবহার</b> (একই API অনেক app ব্যবহার করে), <b>স্বাধীনতা</b> (ভেতরে বদলালেও app ভাঙে না)।',{add:[B('b1',40,168,210,48,'নিরাপদ','g',{s:'sm'}),B('b2',275,168,210,48,'একই API বহু app-এর জন্য','a',{s:'sm'}),B('b3',510,168,210,48,'ভেতরে বদলালে app ভাঙে না','o',{s:'sm'})]})
+  ]}
+ ]},
+
+{p:0,q:'API-র ধরন (কে ব্যবহার করতে পারে): Public, Partner, Private, Composite',
+ ans:'কারা API ব্যবহার করতে পারবে তার ভিত্তিতে চার ধরন: <b>Public</b> (সবার জন্য খোলা), <b>Partner</b> (শুধু চুক্তি-করা সঙ্গীর জন্য), <b>Private</b> (শুধু কোম্পানির নিজের ভেতরে), আর <b>Composite</b> (কয়েকটা API জুড়ে একটা বানানো)।',
+ pts:['<b>Public:</b> সবার জন্য, সাধারণত API key লাগে। যেমন আবহাওয়া, মুদ্রার হার।','<b>Partner:</b> ব্যবসার সঙ্গীদের জন্য, চুক্তি লাগে। যেমন online shop-কে courier বা payment-এর API।','<b>Private (Internal):</b> কোম্পানির ভেতরে। যেমন নিজের frontend ↔ নিজের backend।','<b>Composite:</b> অনেক API একসাথে ডেকে একটা উত্তর দেয়, তাই app-এর request কমে।'],
+ extra:'<table class="cmp"><tr><th>ধরন</th><th>কে ডাকতে পারে</th><th>উদাহরণ</th></tr><tr><td>Public</td><td>যে কেউ (API key নিয়ে)</td><td>আবহাওয়ার API, মুদ্রার হার</td></tr><tr><td>Partner</td><td>চুক্তি-করা সঙ্গী</td><td>payment gateway, courier</td></tr><tr><td>Private</td><td>শুধু ভেতরের team</td><td>নিজের app ↔ নিজের backend</td></tr><tr><td>Composite</td><td>app / client</td><td>একটা call-এ user + order + payment</td></tr></table>',
+ tabs:[
+  {n:'1. Private, Partner, Public',steps:[
+   S('<b>Private API:</b> শুধু কোম্পানির নিজের ভেতরে। Frontend আর backend কথা বলে, বাইরের কেউ দেখতেই পায় না।',{add:[B('co',250,12,260,214,'','n',{dash:1}),T('cot',380,28,'কোম্পানির system',{a:'middle',c:'f',s:'sm b'}),B('fe',320,44,120,34,'Frontend','a',{s:'sm'}),B('be',320,100,120,56,'Backend\nAPI','a'),B('db',330,178,100,34,'Database','o',{s:'sm'}),A('p1',380,80,380,98,'g'),A('p2',380,158,380,176,'g')],fly:[F(380,80,380,98,'g',{n:2,gap:500,dur:500,per:1800})]}),
+   S('<b>Partner API:</b> শুধু চুক্তি-করা সঙ্গীর জন্য। সঙ্গীর কাছে বিশেষ চাবি আছে, তাই সে ভেতরে ঢুকতে পারে।',{add:[B('pa',20,100,150,56,'Partner\nকোম্পানি','b'),B('g1',226,110,40,36,'🔑','b',{s:'sm'}),A('q1',172,128,224,128,'b'),A('q2',268,128,318,128,'b'),T('pl',95,176,'চুক্তি + চাবি লাগে',{a:'middle',c:'b',s:'sm b'})],fly:[F(172,128,318,128,'b',{n:2,gap:500,dur:900,per:2400})]}),
+   S('<b>Public API:</b> সবার জন্য খোলা। যে কেউ ডাকতে পারে (সাধারণত একটা API key নিয়ে)।',{add:[B('pu',590,100,150,56,'যে কেউ\n(public)','o'),B('g2',494,110,40,36,'🔑','o',{s:'sm'}),A('r1',588,128,536,128,'o'),A('r2',492,128,442,128,'o'),T('ul',665,176,'সবার জন্য খোলা',{a:'middle',c:'o',s:'sm b'})],fly:[F(588,128,442,128,'o',{n:2,gap:500,dur:900,per:2400})]}),
+   S('<b>সারকথা:</b> ভেতরের দরজা (private) সবচেয়ে সুরক্ষিত, মাঝেরটা (partner) চুক্তির, বাইরেরটা (public) সবার জন্য।',{mod:{be:{hl:1}}})
+  ]},
+  {n:'2. Composite API',steps:[
+   S('<b>Composite ছাড়া:</b> Mobile app একটা পাতা দেখাতে তিনটা আলাদা service-কে তিনবার ডাকে। ধীর, আর মোবাইলের data খরচ।',{add:[B('ap',20,80,110,80,'Mobile app','a'),B('s1',560,20,170,50,'User service','g'),B('s2',560,95,170,50,'Order service','g'),B('s3',560,170,170,50,'Payment service','g'),A('c1',132,108,558,48,'a'),A('c2',132,120,558,120,'a'),A('c3',132,132,558,196,'a'),T('c3t',345,222,'৩টা request, ৩ বার অপেক্ষা',{a:'middle',c:'r',s:'sm b'})],fly:[F(132,108,558,48,'a',{n:1,dur:1300,per:2800}),F(132,120,558,120,'a',{n:1,dur:1300,per:2800,d0:150}),F(132,132,558,196,'a',{n:1,dur:1300,per:2800,d0:300})]}),
+   S('<b>Composite API সহ:</b> app মাত্র <b>একটা</b> request পাঠায়। মাঝের composite API নিজে তিনটা service ডেকে উত্তর জুড়ে এক করে দেয়।',{del:['c1','c2','c3','c3t'],add:[B('cp',300,80,140,80,'Composite\nAPI','b'),A('d0',132,120,298,120,'a'),A('d1',442,108,558,48,'b'),A('d2',442,120,558,120,'b'),A('d3',442,132,558,196,'b')],fly:[F(132,120,298,120,'a',{n:1,dur:900,per:3000}),F(442,108,558,48,'b',{n:1,dur:900,per:3000,d0:1000}),F(442,120,558,120,'b',{n:1,dur:900,per:3000,d0:1000}),F(442,132,558,196,'b',{n:1,dur:900,per:3000,d0:1000})]}),
+   S('<b>ফল:</b> app-এর request ৩ থেকে ১, আর উত্তর একবারে আসে। বিশেষ করে মোবাইলে data আর সময় দুটোই বাঁচে।',{add:[B('res',40,196,260,34,'১টা request, ১টা উত্তর ✓','g',{s:'sm',hl:1})],mod:{cp:{hl:1}}})
+  ]}
+ ]},
+
+{p:1,q:'REST API কী ও কীভাবে কাজ করে?',
+ ans:'<b>REST</b> হলো web-এর সবচেয়ে চলতি API ধরন। সবকিছুকে একটা <b>resource</b> (যেমন user, product) ধরে তাকে একটা URL দেওয়া হয় (<code>/users/42</code>), আর <b>HTTP method</b> (GET, POST, PUT, DELETE) বলে দেয় তাকে নিয়ে কী করতে চাই। উত্তর সাধারণত <b>JSON</b>-এ আসে।',
+ pts:['URL বলে <b>কী</b> (noun), method বলে <b>কী করব</b> (verb): <code>GET /users</code>, <code>DELETE /users/42</code>।','<b>Stateless:</b> প্রতিটা request আলাদা, server আগের request মনে রাখে না। তাই প্রতিবার token পাঠাতে হয়।','Status code ফল জানায়: 200 সফল, 201 তৈরি হয়েছে, 404 পাওয়া যায়নি, 500 server-এ গোলমাল।'],
+ extra:'<table class="cmp"><tr><th>Method</th><th>কাজ (CRUD)</th><th>উদাহরণ</th></tr><tr><td>GET</td><td>পড়া (Read)</td><td>GET /users/1</td></tr><tr><td>POST</td><td>নতুন তৈরি (Create)</td><td>POST /users</td></tr><tr><td>PUT / PATCH</td><td>বদলানো (Update): পুরো / আংশিক</td><td>PUT /users/2</td></tr><tr><td>DELETE</td><td>মোছা (Delete)</td><td>DELETE /users/1</td></tr></table>',
+ tabs:[
+  {n:'1. CRUD ধাপে ধাপে',steps:[
+   S('Server-এ একটা <b>users</b> resource আছে: Rahim (id 1) আর Karim (id 2)। Client এখন এটা নিয়ে কাজ করবে।',{add:[B('c',20,48,110,112,'Client\n(app)','a'),B('s',620,48,120,112,'REST API\nserver','g'),B('db',510,168,230,70,'users\n1  Rahim\n2  Karim','o',{s:'sm'}),A('sd',680,162,680,167,'o')]}),
+   S('<b>GET</b>: "১ নম্বর user-কে দাও।" Server খুঁজে <b>200 OK</b> দিয়ে তার data ফেরত পাঠায়।',{add:[B('rq',160,52,430,34,'GET /users/1','a',{m:1,s:'sm'}),B('rs',160,108,430,34,'200 OK   { "id": 1, "name": "Rahim" }','g',{m:1,s:'sm'})],fly:[F(132,69,618,69,'a',{n:1,dur:1100,per:3400}),F(618,125,132,125,'g',{n:1,dur:1100,per:3400,d0:1400})]}),
+   S('<b>POST</b>: "নতুন একজন user তৈরি করো: Sumi।" Server তৈরি করে <b>201 Created</b> দেয়। তালিকায় ৩ নম্বর যোগ হলো।',{mod:{rq:{label:'POST /users   { "name": "Sumi" }'},rs:{label:'201 Created   { "id": 3 }'},db:{label:'users\n1  Rahim\n2  Karim\n3  Sumi',hl:1}},fly:[F(132,69,618,69,'a',{n:1,dur:1100,per:3400}),F(618,125,132,125,'g',{n:1,dur:1100,per:3400,d0:1400})]}),
+   S('<b>PUT / PATCH</b>: "২ নম্বর user-এর নাম বদলে Karima করো।" ফল <b>200 OK</b>।',{mod:{rq:{label:'PATCH /users/2   { "name": "Karima" }'},rs:{label:'200 OK   { "id": 2, "name": "Karima" }'},db:{label:'users\n1  Rahim\n2  Karima\n3  Sumi',hl:1}},fly:[F(132,69,618,69,'a',{n:1,dur:1100,per:3400}),F(618,125,132,125,'g',{n:1,dur:1100,per:3400,d0:1400})]}),
+   S('<b>DELETE</b>: "১ নম্বর user-কে মুছে দাও।" মুছে গেলে <b>204 No Content</b>, মানে কাজ হয়েছে, ফেরত দেওয়ার কিছু নেই।',{mod:{rq:{label:'DELETE /users/1'},rs:{label:'204 No Content'},db:{label:'users\n2  Karima\n3  Sumi',hl:1}},fly:[F(132,69,618,69,'a',{n:1,dur:1100,per:3400}),F(618,125,132,125,'g',{n:1,dur:1100,per:3400,d0:1400})]})
+  ]},
+  {n:'2. URL পড়তে শেখা',steps:[
+   S('একটা REST request-এর ঠিকানা কয়েকটা টুকরো দিয়ে গড়া। একটা একটা করে দেখি: <code>GET https://api.shop.com/v1/products/42?lang=bn</code>',{add:[B('m',20,50,70,40,'GET','a'),B('h',94,50,160,40,'api.shop.com','g',{s:'sm'}),B('v',258,50,56,40,'/v1','o',{s:'sm'}),B('r',318,50,120,40,'/products','b',{s:'sm'}),B('i',442,50,60,40,'/42','r',{s:'sm'}),B('q',506,50,120,40,'?lang=bn','n',{s:'sm'})],mod:{h:{c:'n'},v:{c:'n'},r:{c:'n'},i:{c:'n'},q:{c:'n'}}}),
+   S('<b>GET</b> = কী করতে চাই। এখানে "পড়তে চাই।"',{mod:{m:{hl:1}},add:[T('d1',55,118,'কী করব?',{a:'middle',c:'a',s:'sm b'})]}),
+   S('<b>api.shop.com</b> = কোন server-এর সাথে কথা বলছি।',{mod:{m:{hl:0},h:{c:'g',hl:1}},add:[T('d2',174,118,'কোন server?',{a:'middle',c:'g',s:'sm b'})]}),
+   S('<b>/v1</b> = API-র version। পরে নিয়ম বদলালে /v2 আসে, পুরনো app ভাঙে না।',{mod:{h:{hl:0},v:{c:'o',hl:1}},add:[T('d3',286,146,'version',{a:'middle',c:'o',s:'sm b'})]}),
+   S('<b>/products</b> = কোন ধরনের জিনিস (resource)। <b>/42</b> = তার মধ্যে কোনটা।',{mod:{v:{hl:0},r:{c:'b',hl:1},i:{c:'r',hl:1}},add:[T('d4',378,118,'কোন জিনিস?',{a:'middle',c:'b',s:'sm b'}),T('d5',472,146,'কোনটা?',{a:'middle',c:'r',s:'sm b'})]}),
+   S('<b>?lang=bn</b> = বাড়তি শর্ত (query)। মিলিয়ে অর্থ: <b>"products-এর ৪২ নম্বরটা দাও, বাংলায়।"</b>',{mod:{r:{hl:0},i:{hl:0},q:{c:'g',hl:1}},add:[T('d6',566,118,'বাড়তি শর্ত',{a:'middle',c:'g',s:'sm b'}),B('all',20,184,606,40,'"products-এর ৪২ নম্বরটা দাও, বাংলায়"','f',{s:'sm',hl:1})]})
+  ]},
+  {n:'3. Status code',steps:[
+   S('Server কাজের ফল জানায় একটা তিন-অঙ্কের <b>status code</b> দিয়ে। প্রথম অঙ্ক দেখলেই বোঝা যায় কেমন খবর।',{add:[T('h2',135,22,'2xx: সফল',{a:'middle',c:'g',s:'b'}),T('h4',380,22,'4xx: তোমার ভুল',{a:'middle',c:'o',s:'b'}),T('h5',625,22,'5xx: server-এর ভুল',{a:'middle',c:'r',s:'b'})]}),
+   S('<b>2xx সফল:</b> <code>200</code> ঠিক আছে, <code>201</code> নতুন তৈরি হয়েছে।',{add:[B('a1',20,40,230,44,'200 OK\nসফল','g',{s:'sm'}),B('a2',20,92,230,44,'201 Created\nনতুন কিছু তৈরি হয়েছে','g',{s:'sm'})]}),
+   S('<b>4xx তোমার (client-এর) ভুল:</b> ভুল request, login নেই, অনুমতি নেই, বা জিনিসটাই নেই।',{add:[B('b1',265,40,230,34,'400 Bad Request: request-এ ভুল','o',{s:'sm'}),B('b2',265,80,230,34,'401 Unauthorized: login লাগবে','o',{s:'sm'}),B('b3',265,120,230,34,'403 Forbidden: অনুমতি নেই','o',{s:'sm'}),B('b4',265,160,230,34,'404 Not Found: পাওয়া যায়নি','o',{s:'sm'})]}),
+   S('<b>5xx server-এর ভুল:</b> তোমার request ঠিক ছিল, কিন্তু server নিজে গোলমালে পড়েছে।',{add:[B('c1',510,40,230,44,'500 Internal Server Error\nserver-এ গোলমাল','r',{s:'sm'}),B('c2',510,92,230,44,'503 Service Unavailable\nএখন ব্যস্ত বা বন্ধ','r',{s:'sm'})]})
+  ]}
+ ]},
+
+{p:1,q:'SOAP API কী ও কীভাবে কাজ করে?',
+ ans:'<b>SOAP</b> হলো পুরনো, কড়া নিয়মের API ধরন। বার্তা সবসময় <b>XML</b>-এর একটা <b>খামে (Envelope)</b> ভরে পাঠানো হয়। সেবার কী কী কাজ আছে তা একটা <b>WSDL</b> ফাইলে আগে থেকে লেখা থাকে। ব্যাংক, বীমার মতো জায়গায় এখনো চলে।',
+ pts:['খামের গঠন: <b>Envelope</b> → <b>Header</b> (অতিরিক্ত তথ্য, security) + <b>Body</b> (আসল কাজ)।','নিয়ম কড়া তাই ভুল কম, কিন্তু XML ভারী ও ধীর।','<b>WSDL</b> = সেবার মেনু কার্ড: কী কী অপারেশন আছে, কী পাঠাতে হবে, কী ফিরবে।'],
+ tabs:[
+  {n:'1. খামের ভেতরে',steps:[
+   S('SOAP বার্তা মানে একটা <b>Envelope</b> (খাম)। এটা XML-এ লেখা। খামের ভেতরে দুটো ভাগ।',{add:[B('env',60,12,640,216,'','n',{dash:1}),T('et',80,28,'Envelope (খাম)',{c:'f',s:'b'})]}),
+   S('<b>Header</b> (ঐচ্ছিক): অতিরিক্ত তথ্য, যেমন login পরিচয় বা security।',{add:[B('hd',90,46,580,50,'Header: login তথ্য, security','o',{s:'sm'})]}),
+   S('<b>Body</b> (আবশ্যক): আসল কাজ। এখানে "১০০১ নম্বর account-এর balance দাও।"',{add:[B('bd',90,112,580,50,'<GetBalance>  <account>1001</account>  </GetBalance>','a',{m:1,s:'sm'})]}),
+   S('সব মিলিয়ে একটা নিয়মমাফিক XML খাম। গঠন একটু ভুল হলে server <b>Fault</b> (ত্রুটির খাম) ফেরত দেয়।',{add:[B('ft',90,176,580,40,'ভুল হলে ফিরবে: <Fault> কী ভুল হয়েছে </Fault>','r',{m:1,s:'sm'})]})
+  ]},
+  {n:'2. SOAP কীভাবে চলে',steps:[
+   S('আগে client server-এর <b>WSDL</b> (মেনু কার্ড) পড়ে নেয়: কী কী অপারেশন আছে, কী পাঠাতে হবে।',{add:[B('c',20,80,120,80,'Client','a'),B('sv',620,80,120,80,'SOAP\nserver','g'),B('w',320,20,160,50,'WSDL ফাইল\n(মেনু কার্ড)','o',{s:'sm'}),A('w1',142,96,318,56,'o')],fly:[F(142,96,318,56,'o',{n:1,dur:1000,per:3400})]}),
+   S('Client নিয়ম মেনে XML খাম বানায় আর HTTP <code>POST</code>-এ server-কে পাঠায়।',{add:[A('x1',142,120,618,120,'a'),B('rq',200,72,340,36,'POST  <Envelope>…GetBalance…</Envelope>','a',{m:1,s:'sm'})],del:['w1'],mod:{c:{hl:1}},fly:[F(142,120,618,120,'a',{n:1,dur:1300,per:3400})]}),
+   S('Server খাম খুলে কাজ করে আর উত্তর আরেকটা XML খামে ফেরত দেয়।',{add:[A('x2',618,146,142,146,'g'),B('rs',180,156,380,36,'<Envelope> <balance>5000</balance> </Envelope>','g',{m:1,s:'sm'})],mod:{c:{hl:0},sv:{hl:1}},fly:[F(618,146,142,146,'g',{n:1,dur:1300,per:3400})]}),
+   S('<b>সুবিধা:</b> কড়া নিয়ম, বিল্ট-ইন security (WS-Security), পুরনো enterprise system-এর সাথে ভালো মেলে। <b>অসুবিধা:</b> ভারী ও ধীর।',{mod:{sv:{hl:0}},add:[B('pro',20,204,330,30,'কড়া নিয়ম, নিরাপদ','g',{s:'sm'}),B('con',410,204,330,30,'ভারী XML, ধীর','r',{s:'sm'})]})
+  ]}
+ ]},
+
+{p:1,q:'GraphQL API কী ও কীভাবে কাজ করে?',
+ ans:'<b>GraphQL</b> হলো এমন API যেখানে <b>একটাই URL</b> থাকে আর client নিজে বলে দেয় <b>ঠিক কোন কোন field</b> চাই। বেশিও আসে না, কমও না। যেমন buffet-এ নিজের পছন্দের প্লেট বানানো, আগে থেকে ঠিক করা সেট-মেনুর বদলে।',
+ pts:['REST-এর সমস্যা: দরকারের বেশি data আসে (<b>over-fetching</b>) অথবা একাধিক request লাগে (<b>under-fetching</b>)। GraphQL এটা মেটায়।','তিন ধরনের কাজ: <b>Query</b> (পড়া), <b>Mutation</b> (বদলানো), <b>Subscription</b> (live খবর)।','একটা <b>schema</b> থাকে (কী কী type আর field আছে), তাই কী চাওয়া যাবে আগে থেকেই বোঝা যায়।'],
+ tabs:[
+  {n:'1. REST বনাম GraphQL',steps:[
+   S('ধরো একটা পাতায় দেখাতে চাই: user-এর <b>নাম</b> আর তার <b>পোস্টের শিরোনাম</b>। শুধু এটুকুই দরকার।',{add:[B('c',20,48,110,112,'Client\n(app)','a'),B('s',620,48,120,112,'Server','g'),B('need',160,170,430,40,'দরকার: নাম + পোস্টের শিরোনাম','f',{s:'sm'})]}),
+   S('<b>REST:</b> ১ম request। উত্তরে নামের সাথে email, ফোন, ঠিকানা সবই আসে। দরকারের <b>বেশি</b> data (over-fetching)।',{add:[B('rq',160,48,430,34,'GET /users/1','a',{m:1,s:'sm'}),B('rs',160,100,430,50,'{ name, email, phone, address, age, avatar … }','r',{m:1,s:'sm'})],fly:[F(132,65,618,65,'a',{n:1,dur:1000,per:3200}),F(618,125,132,125,'r',{n:1,dur:1000,per:3200,d0:1200})]}),
+   S('<b>REST:</b> পোস্টের জন্য আলাদা আরেকটা request লাগল। মোট <b>২টা</b> request (under-fetching), আর এবারও অনেক বাড়তি field।',{mod:{rq:{label:'GET /users/1/posts'},rs:{label:'[ { title, body, tags, likes, comments … } ]'}},fly:[F(132,65,618,65,'a',{n:1,dur:1000,per:3200}),F(618,125,132,125,'r',{n:1,dur:1000,per:3200,d0:1200})]}),
+   S('<b>GraphQL:</b> একটাই request। Client নিজে লিখে দেয় ঠিক কী কী চাই।',{del:['need'],mod:{rq:{h:50,label:'POST /graphql\n{ user(id:1) { name posts { title } } }',c:'b'},rs:{h:34,y:108,label:'…',c:'g'}},fly:[F(132,70,618,70,'b',{n:1,dur:1000,per:3200})]}),
+   S('উত্তরে এল <b>ঠিক ততটুকুই</b>, যতটুকু চাওয়া হয়েছিল। বাড়তি নেই, কম নেই, আর request মাত্র ১টা।',{mod:{rs:{label:'{ "name": "Rahim", "posts": [ { "title": "…" } ] }',c:'g'}},add:[B('ok',160,170,430,40,'১টা request · ঠিক যতটুকু চাই ✓','g',{s:'sm',hl:1})],fly:[F(618,125,132,125,'g',{n:1,dur:1000,per:3200})]})
+  ]},
+  {n:'2. Query, Mutation, Subscription',steps:[
+   S('GraphQL-এ তিন ধরনের কাজ। একটা schema আছে, যা বলে দেয় কী কী পাওয়া যায়।',{add:[B('sc',230,12,300,40,'Schema: type User { id, name, posts }','f',{m:1,s:'sm'})]}),
+   S('<b>Query</b> = পড়া (REST-এর GET-এর মতো)। "আমাকে user ১-এর নাম দাও।"',{add:[B('q',30,76,220,110,'Query\n\n{ user(id:1) {\n    name } }','a',{s:'sm',m:1})]}),
+   S('<b>Mutation</b> = বদলানো (POST / PUT / DELETE-এর মতো)। "user ১-এর নাম বদলাও।"',{add:[B('m',270,76,220,110,'Mutation\n\nmutation {\n  updateName(id:1,\n  name:"Rahim") }','o',{s:'sm',m:1})]}),
+   S('<b>Subscription</b> = live খবর। একবার বলে রাখলে নতুন কিছু ঘটলেই server নিজে পাঠিয়ে দেয় (চ্যাট, live score)।',{add:[B('s',510,76,220,110,'Subscription\n\nsubscription {\n  newMessage }','g',{s:'sm',m:1})]})
+  ]}
+ ]},
+
+{p:1,q:'gRPC API কী ও কীভাবে কাজ করে?',
+ ans:'<b>gRPC</b> (Google-এর বানানো) হলো খুব দ্রুত API, মূলত <b>server-to-server</b> কথার জন্য। JSON-এর বদলে ছোট <b>binary</b> (Protocol Buffers) পাঠায় আর <b>HTTP/2</b> ব্যবহার করে। তুমি দূরের server-এর কাজ একটা সাধারণ function-এর মতো ডাকতে পারো।',
+ pts:['<code>.proto</code> ফাইলে বার্তা আর function লেখা হয়। তা থেকে যেকোনো ভাষার code আপনা-আপনি তৈরি হয়।','JSON-এর চেয়ে অনেক ছোট ও দ্রুত। লাগাতার data (streaming) পাঠানোও সহজ।','Browser থেকে সরাসরি ডাকা কঠিন, তাই microservice-এর ভেতরের যোগাযোগেই বেশি চলে।'],
+ tabs:[
+  {n:'1. Function ডাকার মতো',steps:[
+   S('দুই পক্ষ একই <b>.proto</b> ফাইল রাখে। এটা চুক্তি: কোন function আছে, কী পাঠাতে হবে, কী ফিরবে।',{add:[B('a',20,80,130,80,'Service A\n(client)','a'),B('b',610,80,130,80,'Service B\n(server)','g'),B('pr',250,20,260,56,'user.proto\nGetUser(id) → User','o',{s:'sm',m:1})]}),
+   S('Service A নিজের ভাষার সাধারণ function-এর মতো ডাকে: <code>client.GetUser(42)</code>। যেন নিজের code-ই চালাচ্ছে।',{add:[B('call',200,100,350,36,'client.GetUser(42)','a',{m:1,s:'sm'})],mod:{a:{hl:1}}}),
+   S('Call-টা ছোট <b>binary</b>-তে (০১১০…) ভেঙে <b>HTTP/2</b> দিয়ে Service B-তে যায়। JSON-এর চেয়ে ছোট, তাই দ্রুত।',{add:[A('x1',152,140,608,140,'a'),B('bin',270,148,210,30,'0A 02 08 2A  (binary)','n',{m:1,s:'sm'})],mod:{a:{hl:0}},fly:[F(152,140,608,140,'a',{n:2,gap:500,dur:1100,per:2600,r:5})]}),
+   S('Service B binary খুলে ওই function চালায় আর উত্তরও binary-তে ফেরত পাঠায়। Service A আবার তা সাধারণ object-এর মতো পায়।',{add:[A('x2',608,190,152,190,'g')],mod:{b:{hl:1}},fly:[F(608,190,152,190,'g',{n:2,gap:500,dur:1100,per:2600,r:5})]})
+  ]},
+  {n:'2. JSON বনাম Protobuf',steps:[
+   S('একই data: <code>id = 42, name = "Rahim"</code>। দেখি দুই ভাবে কত জায়গা নেয়।',{add:[T('h',380,22,'একই data: id = 42, name = "Rahim"',{a:'middle',c:'f',s:'b'})]}),
+   S('<b>JSON</b> (REST-এ সাধারণত): মানুষ পড়তে পারে, কিন্তু field-এর নাম প্রতিবার লিখতে হয়। মোট <b>24 byte</b>।',{add:[B('jb',40,70,240,40,'{"id":42,"name":"Rahim"}','r',{m:1,s:'sm'}),T('jt',300,90,'24 byte',{c:'r',s:'b'})]}),
+   S('<b>Protobuf</b> (gRPC): field-এর নাম লাগে না, শুধু নম্বর আর মান। একই data মাত্র <b>9 byte</b>।',{add:[B('pb',40,140,90,40,'binary','g',{m:1,s:'sm'}),T('pt',150,160,'9 byte',{c:'g',s:'b'})]}),
+   S('<b>ফল:</b> প্রায় ২.৬ গুণ ছোট। লাখো request-এর সময় network আর CPU অনেক বাঁচে। দাম: মানুষ সরাসরি পড়তে পারে না।',{add:[B('sm',40,198,440,32,'ছোট, দ্রুত, কিন্তু মানুষের পড়ার অযোগ্য','o',{s:'sm'})]})
+  ]}
+ ]},
+
+{p:1,q:'WebSocket কী ও কীভাবে কাজ করে?',
+ ans:'<b>WebSocket</b> হলো এমন যোগাযোগ যেখানে সংযোগ <b>একবার খুলে খোলা রাখা হয়</b>, আর দুই পক্ষই যখন খুশি একে অপরকে বার্তা পাঠাতে পারে। যেমন ফোন কল: একবার ধরলে দুজনেই কথা বলতে থাকো, প্রতিবার নতুন করে dial করতে হয় না।',
+ pts:['সাধারণ HTTP-তে client জিজ্ঞেস করলে তবেই server উত্তর দেয়। WebSocket-এ server <b>নিজে থেকেও</b> পাঠাতে পারে।','শুরু হয় HTTP দিয়ে (Upgrade request), তারপর সংযোগ WebSocket-এ বদলে যায়।','ব্যবহার: chat, live score, share-এর দাম, online game, live notification।'],
+ tabs:[
+  {n:'1. Polling বনাম WebSocket',steps:[
+   S('<b>HTTP polling:</b> chat app বারবার জিজ্ঞেস করে "নতুন বার্তা আছে?" বেশিরভাগ বারই উত্তর "না": অপচয়।',{add:[B('c',20,70,110,90,'Chat app\n(client)','a'),B('s',630,70,110,90,'Server','g'),A('q',132,100,628,100,'a'),A('r',628,132,132,132,'n'),T('qt',380,84,'নতুন বার্তা আছে?',{a:'middle',c:'a',s:'sm b'}),T('rt',380,150,'না',{a:'middle',c:'n',s:'sm b'})],fly:[F(132,100,628,100,'a',{n:2,gap:900,dur:1000,per:3200,r:5}),F(628,132,132,132,'n',{n:2,gap:900,dur:1000,per:3200,r:5,d0:1000})]}),
+   S('অবশেষে বার্তা এল, কিন্তু client তা জানল পরের বার জিজ্ঞেস করার সময়। তাই <b>দেরি</b> আর অনেক বাড়তি request।',{mod:{r:{c:'g'},rt:{label:'হ্যাঁ! একটা বার্তা',c:'g'}},fly:[F(132,100,628,100,'a',{n:2,gap:900,dur:1000,per:3200,r:5}),F(628,132,132,132,'g',{n:2,gap:900,dur:1000,per:3200,r:5,d0:1000})]}),
+   S('<b>WebSocket:</b> একবার সংযোগ খুলে খোলা রাখা হলো। এটা একটা দু-মুখো খোলা পথ।',{del:['q','r','qt','rt'],add:[B('pipe',140,80,480,70,'খোলা সংযোগ (দু-মুখো)','g',{dash:1,s:'sm'})]}),
+   S('এখন যে কেউ যখন খুশি পাঠাতে পারে। Server নতুন বার্তা পেলেই <b>নিজে ঠেলে দেয়</b> (push), জিজ্ঞেস না করেই।',{mod:{pipe:{hl:1}},fly:[F(140,100,620,100,'g',{n:3,gap:700,dur:1100,per:3000,d0:300}),F(620,130,140,130,'a',{n:2,gap:900,dur:1100,per:3000,d0:1000})]})
+  ]},
+  {n:'2. সংযোগ শুরু (handshake)',steps:[
+   S('WebSocket শুরু হয় সাধারণ HTTP request দিয়েই। Client বলে: "আমি সংযোগটাকে WebSocket-এ বদলাতে চাই।"',{add:[B('c',20,80,120,80,'Client\n(browser)','a'),B('s',620,80,120,80,'Server','g'),B('rq',170,52,400,40,'GET /chat   Upgrade: websocket','a',{m:1,s:'sm'}),A('x1',142,104,618,104,'a')],fly:[F(142,104,618,104,'a',{n:1,dur:1200,per:3400})]}),
+   S('Server রাজি হলে উত্তর দেয় <b>101 Switching Protocols</b>, মানে "ঠিক আছে, এখন থেকে WebSocket।"',{add:[B('rs',170,112,400,36,'101 Switching Protocols','g',{m:1,s:'sm'}),A('x2',618,160,142,160,'g')],fly:[F(618,160,142,160,'g',{n:1,dur:1200,per:3400,d0:1000})]}),
+   S('এখন সংযোগ খোলা। দুই দিকেই ছোট ছোট বার্তা চলতে থাকে, প্রতিবার নতুন করে HTTP request-এর ঝামেলা ছাড়াই।',{del:['rq','rs','x1','x2'],add:[B('pipe',150,100,460,60,'ws:// খোলা সংযোগ','g',{dash:1,s:'sm',hl:1})],fly:[F(150,118,610,118,'a',{n:2,gap:800,dur:1000,per:2800}),F(610,142,150,142,'g',{n:2,gap:800,dur:1000,per:2800,d0:500})]})
+  ]}
+ ]},
+
+{p:1,q:'Webhook কী ও কীভাবে কাজ করে?',
+ ans:'<b>Webhook</b> হলো উল্টো ধরনের API: তুমি বারবার জিজ্ঞেস করার বদলে, <b>কিছু ঘটলে অন্য server নিজেই তোমার URL-এ খবর পাঠিয়ে দেয়</b>। যেমন কুরিয়ার: পার্সেল এলে তারাই ফোন করে, তুমি বারবার ফোন করে জিজ্ঞেস করো না।',
+ pts:['তুমি আগে একটা URL জমা রাখো (যেমন <code>https://myshop.com/hook</code>)। ঘটনা ঘটলে সেখানে HTTP <code>POST</code> আসে।','উদাহরণ: payment সফল হলে bKash/Stripe তোমার server-কে জানায়, code-এ push করলে GitHub জানায়।','নিরাপত্তা: আসা request সত্যিই ওদের কিনা তা <b>signature</b> দিয়ে যাচাই করতে হয়।'],
+ tabs:[
+  {n:'1. Polling বনাম Webhook',steps:[
+   S('<b>Polling:</b> আমার server বারবার payment service-কে জিজ্ঞেস করে "payment হয়েছে?" বেশিরভাগ সময় উত্তর "না"।',{add:[B('me',20,70,130,90,'আমার\nserver','a'),B('ps',610,70,130,90,'Payment\nservice','g'),A('q',152,100,608,100,'a'),A('r',608,132,152,132,'n'),T('qt',380,84,'payment হয়েছে?',{a:'middle',c:'a',s:'sm b'}),T('rt',380,150,'না',{a:'middle',c:'n',s:'sm b'})],fly:[F(152,100,608,100,'a',{n:2,gap:900,dur:1000,per:3200,r:5}),F(608,132,152,132,'n',{n:2,gap:900,dur:1000,per:3200,r:5,d0:1000})]}),
+   S('<b>Webhook:</b> আমি একবার বলে রাখি: "payment হলে এই URL-এ জানিও।" এরপর আমি আর জিজ্ঞেস করি না।',{del:['q','r','qt','rt'],add:[B('url',160,58,430,36,'জমা রাখলাম: https://myshop.com/hook','a',{m:1,s:'sm'}),A('x1',152,120,608,120,'a')],fly:[F(152,120,608,120,'a',{n:1,dur:1300,per:3400})]}),
+   S('Customer payment করল। Payment service দেখে ঘটনা ঘটেছে, আর <b>নিজেই</b> আমার URL-এ খবর পাঠায়।',{del:['url'],add:[B('ev',160,58,430,36,'POST /hook   { "event": "payment.success" }','g',{m:1,s:'sm'}),A('x2',608,130,152,130,'g')],mod:{ps:{hl:1}},fly:[F(608,130,152,130,'g',{n:2,gap:500,dur:1300,per:3400})]}),
+   S('<b>ফল:</b> খবর সাথে সাথে আসে, অকারণ জিজ্ঞেস করতে হয় না। কম request, কম দেরি।',{mod:{ps:{hl:0},me:{hl:1}},add:[B('ok',160,180,430,40,'ঘটনা ঘটলেই খবর, অপচয় নেই ✓','g',{s:'sm',hl:1})]})
+  ]},
+  {n:'2. ধাপে ধাপে',steps:[
+   S('<b>ধাপ ১ - জমা রাখা:</b> আমি payment service-কে আমার URL (webhook URL) জানিয়ে রাখি আর বলি কোন কোন ঘটনার খবর চাই।',{add:[B('me',20,70,130,90,'আমার\nserver','a'),B('ps',610,70,130,90,'Payment\nservice','g'),A('a1',152,100,608,100,'a'),T('t1',380,84,'এই URL-এ খবর দিও',{a:'middle',c:'a',s:'sm b'})],fly:[F(152,100,608,100,'a',{n:1,dur:1200,per:3400})]}),
+   S('<b>ধাপ ২ - ঘটনা:</b> customer আমার shop-এ payment করল। Payment service-এ ঘটনা ঘটে গেল।',{mod:{ps:{hl:1,label:'Payment\nservice\n(payment পেল)'},a1:{c:'n'}},del:['t1'],add:[T('t2',380,84,'payment হলো!',{a:'middle',c:'o',s:'sm b'})]}),
+   S('<b>ধাপ ৩ - খবর পাঠানো:</b> service আমার URL-এ <code>POST</code> করে, সাথে একটা <b>signature</b> (গোপন সই) পাঠায়।',{del:['t2'],add:[A('a2',608,130,152,130,'g'),T('t3',380,148,'POST + signature',{a:'middle',c:'g',s:'sm b'})],mod:{ps:{hl:0,label:'Payment\nservice'}},fly:[F(608,130,152,130,'g',{n:1,dur:1200,per:3400})]}),
+   S('<b>ধাপ ৪ - যাচাই:</b> আমার server signature মিলিয়ে দেখে খবরটা সত্যিই payment service-এর কিনা। মিললে order "paid" করে, আর <code>200 OK</code> জানায়।',{mod:{me:{hl:1,label:'আমার server\n✓ signature ঠিক\norder = paid'}},add:[T('t4',380,196,'যাচাই না করলে যে কেউ ভুয়া খবর পাঠাতে পারে',{a:'middle',c:'r',s:'sm b'})]})
+  ]}
+ ]},
+
+{p:2,q:'API-র নিরাপত্তা: API key, Token আর Rate limit',
+ ans:'API খোলা থাকলে যে কেউ অপব্যবহার করতে পারে। তাই তিন পাহারা: <b>Authentication</b> (তুমি কে?) <b>API key বা token</b> দিয়ে, <b>Authorization</b> (তুমি কী করতে পারো?), আর <b>Rate limit</b> (কতবার ডাকতে পারো?)।',
+ pts:['<b>API key</b> = একটা গোপন নম্বর যা বলে "আমি অমুক app"। <b>Token</b> (যেমন JWT, OAuth) = অস্থায়ী পাস, সময় ফুরোলে বাতিল।','Key বা token সবসময় <b>HTTPS</b>-এ পাঠাও, আর কখনো frontend code বা GitHub-এ রেখো না।','<b>Rate limit:</b> মিনিটে নির্দিষ্টবারের বেশি ডাকলে <code>429 Too Many Requests</code>।'],
+ tabs:[
+  {n:'1. দরজার পাহারাদার',steps:[
+   S('API-র সামনে একজন পাহারাদার দাঁড়িয়ে। প্রথমে <b>পরিচয়</b> না দেখালে ভেতরে ঢোকা যায় না।',{add:[B('c',20,80,120,80,'Client','a'),B('g',300,70,160,100,'API\nপাহারাদার','b'),B('s',620,80,120,80,'Server','g'),A('x1',142,120,298,120,'n'),A('x2',462,120,618,120,'n')]}),
+   S('<b>চাবি ছাড়া:</b> client কোনো key না দিয়ে ডাকল। পাহারাদার ফিরিয়ে দেয় <b>401 Unauthorized</b> ("তুমি কে চিনি না")।',{add:[B('rq',150,44,250,30,'GET /data (key নেই)','a',{m:1,s:'sm'}),T('r401',220,196,'401 Unauthorized',{a:'middle',c:'r',s:'b'})],mod:{g:{c:'r',hl:1}},fly:[F(142,120,298,120,'a',{n:1,dur:900,per:2800})]}),
+   S('<b>চাবি সহ:</b> client <code>Authorization: Bearer …</code> পাঠায়। পাহারাদার চাবি মিলিয়ে দেখে ঠিক আছে, তাই ভেতরে যেতে দেয়: <b>200 OK</b>।',{del:['r401'],mod:{g:{c:'g',hl:1},rq:{label:'GET /data   + token ✓',c:'g'},x1:{c:'g'},x2:{c:'g'}},add:[T('r200',540,196,'200 OK',{a:'middle',c:'g',s:'b'})],fly:[F(142,120,298,120,'g',{n:1,dur:900,per:2800}),F(462,120,618,120,'g',{n:1,dur:900,per:2800,d0:1000})]}),
+   S('<b>অনুমতি নেই:</b> চাবি ঠিক, কিন্তু সে শুধু পড়তে পারে, মুছতে নয়। <code>DELETE</code> চাইলে <b>403 Forbidden</b>। এটা Authorization।',{del:['r200'],mod:{g:{c:'o',hl:1},rq:{label:'DELETE /data   + token (শুধু পড়ার অনুমতি)',c:'o',w:340},x2:{c:'n'}},add:[T('r403',220,196,'403 Forbidden',{a:'middle',c:'o',s:'b'})],fly:[F(142,120,298,120,'o',{n:1,dur:900,per:2800})]})
+  ]},
+  {n:'2. Rate limit',steps:[
+   S('ধরো নিয়ম: একজন client <b>মিনিটে সর্বোচ্চ ৩ বার</b> ডাকতে পারবে। এটাই <b>rate limit</b>। না থাকলে একজনই server ভরিয়ে ফেলতে পারে।',{add:[B('c',20,80,110,80,'Client','a'),B('g',300,70,170,100,'API\nব্যবহার: 0 / 3','b'),B('s',630,80,110,80,'Server','g'),A('x1',132,120,298,120,'a'),A('x2',472,120,628,120,'n')]}),
+   S('<b>১ম request:</b> ঠিক আছে, <b>200 OK</b>। ব্যবহার 1 / 3।',{mod:{g:{label:'API\nব্যবহার: 1 / 3',hl:1},x2:{c:'g'}},add:[T('s1',380,206,'১ম: 200 OK',{a:'middle',c:'g',s:'b'})],fly:[F(132,120,298,120,'a',{n:1,dur:700,per:2600}),F(472,120,628,120,'g',{n:1,dur:700,per:2600,d0:800})]}),
+   S('<b>২য় ও ৩য় request:</b> এখনো সীমার মধ্যে, দুটোই <b>200 OK</b>। ব্যবহার 3 / 3।',{mod:{g:{label:'API\nব্যবহার: 3 / 3'}},fly:[F(132,120,298,120,'a',{n:2,gap:500,dur:700,per:2600}),F(472,120,628,120,'g',{n:2,gap:500,dur:700,per:2600,d0:800})]}),
+   S('<b>৪র্থ request:</b> সীমা পার! API server-এ যেতেই দেয় না, ফেরত দেয় <b>429 Too Many Requests</b>: "একটু অপেক্ষা করো।"',{mod:{g:{c:'r',hl:1,label:'API\nসীমা শেষ ✗'},x2:{c:'n',dash:1}},del:['s1'],add:[T('s4',220,206,'429 Too Many Requests',{a:'middle',c:'r',s:'b'})],fly:[F(132,120,298,120,'r',{n:1,dur:700,per:2600})]}),
+   S('মিনিট শেষ হলে গণনা আবার 0 থেকে শুরু। <b>লাভ:</b> একজন সবার সেবা নষ্ট করতে পারে না, আর আক্রমণ ঠেকে।',{mod:{g:{c:'b',hl:0,label:'API\nব্যবহার: 0 / 3'},x2:{c:'g',dash:0}},del:['s4'],add:[T('s5',380,206,'নতুন মিনিট, নতুন করে ৩টা সুযোগ ✓',{a:'middle',c:'g',s:'b'})]})
+  ]}
+ ]},
+
+{p:2,q:'কোন API কখন বাছবো? (REST, SOAP, GraphQL, gRPC, WebSocket, Webhook)',
+ ans:'সব সমস্যার জন্য একটাই সেরা API নেই। <b>REST</b> সাধারণ web/mobile app-এ, <b>GraphQL</b> যখন client-এর চাহিদা অনেক আলাদা, <b>gRPC</b> ভেতরের দ্রুত যোগাযোগে, <b>WebSocket</b> live দু-মুখো কথায়, <b>Webhook</b> ঘটনার খবরে, <b>SOAP</b> পুরনো কড়া-নিয়মের enterprise-এ।',
+ pts:['Interview-তে আগে বলো কী দরকার (live? দ্রুত? সরল? পুরনো system?), তারপর বাছো।','বেশিরভাগ project-এ শুরুতে <b>REST-ই</b> যথেষ্ট।','একই system-এ একাধিক ধরন মিলিয়েও ব্যবহার হয়: REST + WebSocket + Webhook।'],
+ extra:'<table class="cmp"><tr><th>ধরন</th><th>বার্তার রূপ</th><th>কীসে ভালো</th><th>উদাহরণ</th></tr><tr><td>REST</td><td>JSON</td><td>সরল, সবখানে চলে</td><td>সাধারণ web / mobile app</td></tr><tr><td>SOAP</td><td>XML</td><td>কড়া নিয়ম, নিরাপত্তা</td><td>ব্যাংক, বীমা</td></tr><tr><td>GraphQL</td><td>JSON</td><td>client নিজে field বাছে</td><td>জটিল UI, social app</td></tr><tr><td>gRPC</td><td>binary</td><td>খুব দ্রুত, ছোট</td><td>microservice-এর ভেতরে</td></tr><tr><td>WebSocket</td><td>যেকোনো</td><td>live, দু-মুখো</td><td>chat, live score</td></tr><tr><td>Webhook</td><td>JSON (POST)</td><td>ঘটনার খবর পাওয়া</td><td>payment সফল হলো</td></tr></table>',
+ tabs:[
+  {n:'কোনটা বাছবো?',steps:[
+   S('নিজেকে একটা একটা করে প্রশ্ন করো। প্রথম প্রশ্ন: <b>live, দু-মুখো কথা</b> লাগবে?',{add:[B('q1',20,8,400,30,'live, দু-মুখো কথা লাগবে? (chat, live score)','n',{s:'sm'}),B('a1',460,8,280,30,'→ WebSocket','b',{s:'sm'})],mod:{}}),
+   S('না হলে: <b>ঘটনা ঘটলে অন্য server-এর কাছ থেকে খবর</b> পেতে চাই?',{add:[B('q2',20,46,400,30,'কিছু ঘটলে অন্যের কাছ থেকে খবর চাই? (payment)','n',{s:'sm'}),B('a2',460,46,280,30,'→ Webhook','o',{s:'sm'})]}),
+   S('না হলে: <b>ভেতরের দুই service</b>-এর মধ্যে খুব দ্রুত যোগাযোগ?',{add:[B('q3',20,84,400,30,'ভেতরের service-এ খুব দ্রুত যোগাযোগ?','n',{s:'sm'}),B('a3',460,84,280,30,'→ gRPC','g',{s:'sm'})]}),
+   S('না হলে: <b>client নিজে ঠিক করবে</b> কোন field চাই (জটিল UI)?',{add:[B('q4',20,122,400,30,'client নিজে field বাছবে? (জটিল UI)','n',{s:'sm'}),B('a4',460,122,280,30,'→ GraphQL','r',{s:'sm'})]}),
+   S('না হলে: <b>পুরনো enterprise / ব্যাংকের system</b>-এর সাথে মেলাতে হবে?',{add:[B('q5',20,160,400,30,'পুরনো কড়া-নিয়মের system মেলাতে হবে?','n',{s:'sm'}),B('a5',460,160,280,30,'→ SOAP','a',{s:'sm'})]}),
+   S('এর কিছুই না? তাহলে সোজা <b>REST</b>। সবচেয়ে সাধারণ, সহজ আর সব জায়গায় সমর্থিত।',{add:[B('q6',20,198,400,30,'এর কিছুই না','n',{s:'sm'}),B('a6',460,198,280,30,'→ REST (সাধারণ পছন্দ)','g',{s:'sm',hl:1})]})
+  ]}
+ ]}
+];
+
+/* ---------- build page ---------- */
+const app=document.getElementById('app'),jump=document.getElementById('jump'),partsNav=document.getElementById('parts');
+PARTS.forEach((pt,pi)=>{
+  const a=document.createElement('a');a.href='#part'+pi;a.innerHTML=`<b>${pt[0]}</b>${pt[1]}`;partsNav.appendChild(a);
+  const sec=document.createElement('section');sec.className='part';sec.id='part'+pi;
+  sec.innerHTML=`<h2><span>${pt[0]}</span>${pt[1]}</h2>`;app.appendChild(sec);
+});
+TOPICS.forEach((t,i)=>{
+  const n=String(i+1);
+  const j=document.createElement('a');j.href='#q'+n;j.textContent=n;j.title=t.q;jump.appendChild(j);
+  const card=document.createElement('article');card.className='q';card.id='q'+n;
+  card.innerHTML=`<h3><span class="num">${n}</span><span>${t.q}</span></h3><p class="ans">${t.ans}</p><ul>${t.pts.map(x=>`<li>${x}</li>`).join('')}</ul>${t.extra?`<div class="extra">${t.extra}</div>`:''}<div class="viz"></div>`;
+  document.getElementById('part'+t.p).appendChild(card);
+  mount(card.querySelector('.viz'),t);
+});
+</script>
+</body>
+</html>

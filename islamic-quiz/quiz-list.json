@@ -1,0 +1,51 @@
+[
+  {
+    "title": "জুমার দিনের কুইজ",
+    "subtitle": "৫টি প্রশ্ন · জুমা ও খুতবা",
+    "description": "জুমার নামাজ, খুতবা, সূরা আল-কাহফ এবং জুমার দিনের ফজিলত নিয়ে ৫টি সহজ প্রশ্নের উত্তর দিন।",
+    "image": "https://mdabarik.github.io/welldev/islamic-quiz/images/quiz-1.png",
+    "link": "https://mdabarik.github.io/welldev/islamic-quiz/quiz-1.json"
+  },
+  {
+    "title": "নবী ও আখিরাত কুইজ",
+    "subtitle": "১২টি প্রশ্ন · নবী-রাসূল ও আখিরাত",
+    "description": "হযরত আদম (আ.) থেকে হযরত ঈসা (আ.) পর্যন্ত নবীদের জীবন এবং কবর, হাশর, পুলসিরাত ও জান্নাত নিয়ে ১২টি প্রশ্নের উত্তর দিন।",
+    "image": "https://mdabarik.github.io/welldev/islamic-quiz/images/quiz-2.png",
+    "link": "https://mdabarik.github.io/welldev/islamic-quiz/quiz-2.json"
+  },
+  {
+    "title": "রাসূলুল্লাহ (সা.)-এর জীবনী",
+    "subtitle": "৫টি প্রশ্ন · নবীর জীবনী",
+    "description": "রাসূলুল্লাহ (সা.)-এর জন্ম, প্রথম ওহি, হিজরত ও বদরের যুদ্ধ নিয়ে ৫টি প্রশ্নের উত্তর দিন।",
+    "image": "https://mdabarik.github.io/welldev/islamic-quiz/images/quiz-3.png",
+    "link": "https://mdabarik.github.io/welldev/islamic-quiz/quiz-3.json"
+  },
+  {
+    "title": "হযরত ইউসুফ (আ.)-এর জীবনী",
+    "subtitle": "৫টি প্রশ্ন · নবীর জীবনী",
+    "description": "হযরত ইউসুফ (আ.)-এর স্বপ্ন, কূপ, কারাগার ও মিশরের জীবন নিয়ে ৫টি প্রশ্নের উত্তর দিন।",
+    "image": "https://mdabarik.github.io/welldev/islamic-quiz/images/quiz-4.png",
+    "link": "https://mdabarik.github.io/welldev/islamic-quiz/quiz-4.json"
+  },
+  {
+    "title": "হযরত আবু বকর (রা.)-এর জীবনী",
+    "subtitle": "৫টি প্রশ্ন · সাহাবির জীবনী",
+    "description": "প্রথম খলিফা হযরত আবু বকর সিদ্দিক (রা.)-এর জীবন নিয়ে ৫টি প্রশ্নের উত্তর দিন।",
+    "image": "https://mdabarik.github.io/welldev/islamic-quiz/images/quiz-5.png",
+    "link": "https://mdabarik.github.io/welldev/islamic-quiz/quiz-5.json"
+  },
+  {
+    "title": "হযরত উমর (রা.)-এর জীবনী",
+    "subtitle": "৫টি প্রশ্ন · সাহাবির জীবনী",
+    "description": "দ্বিতীয় খলিফা হযরত উমর ফারুক (রা.)-এর জীবন নিয়ে ৫টি প্রশ্নের উত্তর দিন।",
+    "image": "https://mdabarik.github.io/welldev/islamic-quiz/images/quiz-6.png",
+    "link": "https://mdabarik.github.io/welldev/islamic-quiz/quiz-6.json"
+  },
+  {
+    "title": "আল-কুরআন কুইজ",
+    "subtitle": "৫টি প্রশ্ন · কুরআন",
+    "description": "কুরআনের সূরা, আয়াত ও নাজিল হওয়া নিয়ে ৫টি প্রশ্নের উত্তর দিন।",
+    "image": "https://mdabarik.github.io/welldev/islamic-quiz/images/quiz-7.png",
+    "link": "https://mdabarik.github.io/welldev/islamic-quiz/quiz-7.json"
+  }
+]

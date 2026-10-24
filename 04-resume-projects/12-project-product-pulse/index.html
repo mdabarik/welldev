@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Product Pulse (MERN + Stripe) - Interview Questions</title>
+<meta name="description" content="Tech product showcase: upvote/downvote, review, report, coupon, Stripe subscription আর Admin / Moderator / User role।">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Hind+Siliguri:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f5f7fc;--surface:#fff;--surface-2:#f1f4fa;--fg:#0f172a;--muted:#5b6478;--line:#e4e8f1;--accent:#6366f1;--hero:linear-gradient(135deg,#4f46e5,#7c3aed 45%,#db2777);--sans:"Inter","Hind Siliguri",system-ui,sans-serif;--bn:"Hind Siliguri","Inter",system-ui,sans-serif;--mono:"JetBrains Mono",ui-monospace,monospace}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0b0f1a;--surface:#121827;--surface-2:#182033;--fg:#e7ecf6;--muted:#9aa6bf;--line:#232c42;--accent:#818cf8}}
+:root[data-theme="dark"]{--bg:#0b0f1a;--surface:#121827;--surface-2:#182033;--fg:#e7ecf6;--muted:#9aa6bf;--line:#232c42;--accent:#818cf8}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 var(--bn);-webkit-font-smoothing:antialiased}
+code{font-family:var(--mono);font-size:.86em;background:color-mix(in srgb,var(--accent) 10%,var(--surface));padding:.1em .4em;border-radius:6px}
+.wrap{max-width:860px;margin:0 auto;padding:20px 18px 70px}
+.topnav{display:flex;align-items:center;gap:10px}
+.brand{display:flex;align-items:center;gap:10px;color:var(--fg);text-decoration:none;font:800 16px var(--sans)}
+.logo{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:#fff;font:800 13px var(--mono);background:var(--hero)}
+.sp{flex:1}
+.pill{border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:6px 14px;font:600 13px var(--sans);cursor:pointer;text-decoration:none}
+.hero{margin-top:20px;border-radius:22px;padding:26px 30px;color:#fff;background:var(--hero)}
+.hero .eyebrow{font:600 12px var(--sans);letter-spacing:.1em;text-transform:uppercase;opacity:.85}
+.hero h1{margin:6px 0 8px;font:800 clamp(24px,4vw,34px)/1.15 var(--sans);letter-spacing:-.03em}
+.hero p{margin:0;opacity:.94}
+.hero a{color:#fff;font:600 13px var(--sans);margin-right:14px}
+h2{margin:36px 0 4px;font:800 20px var(--sans);letter-spacing:-.02em}
+h2 span{color:var(--accent);margin-right:6px}
+details{margin-top:10px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:0 18px}
+summary{cursor:pointer;padding:14px 0;font:600 16px/1.45 var(--sans);list-style:none;display:flex;gap:10px}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"+";color:var(--accent);font:800 18px var(--mono);width:14px}
+details[open] summary::before{content:"\2212"}
+details .a{padding:0 0 14px 24px;color:var(--muted)}
+details .a b{color:var(--fg)}
+details .a ul{margin:6px 0 0;padding-left:18px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="topnav"><a class="brand" href="../../index.html"><span class="logo">W</span>WellDev</a><span class="sp"></span><button class="pill" id="theme" type="button">Theme</button></nav>
+  <header class="hero">
+    <div class="eyebrow">Resume Project &middot; Interview</div>
+    <h1>Product Pulse (MERN + Stripe)</h1>
+    <p>Tech product showcase: upvote/downvote, review, report, coupon, Stripe subscription আর Admin / Moderator / User role।</p>
+    <p style="margin-top:12px"><a href="https://github.com/mdabarik/product-pulse-mern-app-client" target="_blank" rel="noopener">Client</a> <a href="https://github.com/mdabarik/product-pulse-mern-app-server" target="_blank" rel="noopener">Server</a></p>
+  </header>
+  <h2>Project Overview</h2>
+  <details><summary>Project-টা কী? কে কী করতে পারে?</summary><div class="a"><ul><li><b>User</b> - product যোগ, upvote/downvote (নিজের product-এ নয়), review, report, Stripe subscribe</li><li><b>Moderator</b> - report/pending product approve বা reject</li><li><b>Admin</b> - user role বদলানো, statistics, coupon তৈরি</li></ul></div></details>
+  <details><summary>Tech stack আর কেন?</summary><div class="a">React + Vite + Tailwind (client, Firebase hosting), Node/Express + MongoDB (server, Vercel), Firebase Auth, Stripe। Vite = দ্রুত dev build।</div></details>
+  <h2>Auth &amp; Security</h2>
+  <details><summary>Firebase Auth আর নিজের JWT - কীভাবে একসাথে কাজ করে?</summary><div class="a">Firebase দিয়ে login/Google sign-in; তারপর server নিজের <b>JWT</b> ইস্যু করে বা Firebase ID token verify করে। প্রতিটি protected API-তে <code>verifyToken</code> + <code>verifyAdmin/Moderator</code> middleware।</div></details>
+  <details><summary>কেউ সরাসরি API ডাকলে admin route বাঁচবে কীভাবে?</summary><div class="a">UI লুকালে যথেষ্ট না; server-এ token verify করে DB থেকে role চেক করতে হয়।</div></details>
+  <details><summary>নিজের product-এ vote ঠেকাও কীভাবে? একজন দুইবার vote?</summary><div class="a">Server-এ owner email মিলিয়ে reject; vote collection-এ (user, product) unique বা product-এ voter array + একবার-চেক। শুধু frontend-এ আটকালে হবে না।</div></details>
+  <details><summary>Secret/API key কোথায় রাখো?</summary><div class="a"><code>.env</code>-এ (git-এ commit না, <code>.env-example</code> দাও); Stripe secret কখনো client-এ না।</div></details>
+  <h2>Payments &amp; Features</h2>
+  <details><summary>Stripe payment flow কেমন?</summary><div class="a">Client → server <b>PaymentIntent</b> বানায় (amount server ঠিক করে) → <code>clientSecret</code> ফেরত → Stripe Elements দিয়ে confirm → সফল হলে server-এ user-কে subscriber mark। ভালো practice: Stripe <b>webhook</b> দিয়ে নিশ্চিত করা।</div></details>
+  <details><summary>Coupon কীভাবে কাজ করে?</summary><div class="a">Admin code, discount আর expiry বানায়; checkout-এ server validate করে amount কমায় - client-এর পাঠানো দাম বিশ্বাস করা যায় না।</div></details>
+  <details><summary>Search, pagination আর trending কীভাবে?</summary><div class="a">MongoDB regex/text index দিয়ে tag/name search, <code>skip/limit</code> pagination, vote count দিয়ে sort।</div></details>
+  <details><summary>React-এ data fetching কী দিয়ে? Caching?</summary><div class="a">TanStack Query + Axios (interceptor-এ token); cache, refetch, loading state অটো। Mutation-এর পর <code>invalidateQueries</code>।</div></details>
+  <h2>Deployment &amp; Improvement</h2>
+  <details><summary>Deploy কীভাবে করেছ? CORS?</summary><div class="a">Client Firebase Hosting, server Vercel। Server-এ শুধু client origin allow করে CORS বাঁধা।</div></details>
+  <details><summary>কী উন্নত করতে চাও?</summary><div class="a">TypeScript, rate limiting, input validation (Zod), test, Stripe webhook, image upload CDN, role-ভিত্তিক audit log।</div></details>
+
+</div>
+<script>
+(function(){const r=document.documentElement,b=document.getElementById('theme');
+try{const t=localStorage.getItem('theme');if(t)r.dataset.theme=t}catch(e){}
+const dark=()=>r.dataset.theme?r.dataset.theme==='dark':matchMedia('(prefers-color-scheme:dark)').matches;
+b.onclick=()=>{r.dataset.theme=dark()?'light':'dark';try{localStorage.setItem('theme',r.dataset.theme)}catch(e){}}})();
+</script>
+</body>
+</html>

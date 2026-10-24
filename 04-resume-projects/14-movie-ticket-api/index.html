@@ -1,0 +1,665 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>API Design: কী কী লাগে (Movie Ticket Booking)</title>
+<meta name="description" content="একটা API design করতে কী কী লাগে, Movie ticket booking উদাহরণে ধাপে ধাপে। সাথে React থেকে সত্যিকারের request পাঠিয়ে দেখার জায়গা।">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Hind+Siliguri:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#fafafa; --surface:#ffffff; --fg:#0f172a; --muted:#64748b; --line:#e5e7eb; --soft:#f4f4f5;
+  --accent:#4f46e5; --accent-soft:#eef2ff; --ok:#059669; --warn:#d97706; --bad:#dc2626;
+  --sans:"Inter","Hind Siliguri",system-ui,sans-serif; --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  --code-bg:#ffffff; --code-fg:#1f1f1f; --c-com:#008000; --c-str:#a31515; --c-num:#098658; --c-kw:#0000ff; --c-ctl:#af00db; --c-fn:#795e26; --c-var:#001080; --c-type:#267f99; --c-key:#0451a5;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0b0b0f; --surface:#131318; --fg:#ececf1; --muted:#9a9aa8; --line:#26262e; --soft:#1a1a21;
+  --accent:#8b8bff; --accent-soft:#1c1c33; --ok:#34d399; --warn:#fbbf24; --bad:#f87171;
+  --code-bg:#1e1e1e; --code-fg:#d4d4d4; --c-com:#6a9955; --c-str:#ce9178; --c-num:#b5cea8; --c-kw:#569cd6; --c-ctl:#c586c0; --c-fn:#dcdcaa; --c-var:#9cdcfe; --c-type:#4ec9b0; --c-key:#9cdcfe;
+}}
+:root[data-theme="dark"]{
+  --bg:#0b0b0f; --surface:#131318; --fg:#ececf1; --muted:#9a9aa8; --line:#26262e; --soft:#1a1a21;
+  --accent:#8b8bff; --accent-soft:#1c1c33; --ok:#34d399; --warn:#fbbf24; --bad:#f87171;
+  --code-bg:#1e1e1e; --code-fg:#d4d4d4; --c-com:#6a9955; --c-str:#ce9178; --c-num:#b5cea8; --c-kw:#569cd6; --c-ctl:#c586c0; --c-fn:#dcdcaa; --c-var:#9cdcfe; --c-type:#4ec9b0; --c-key:#9cdcfe;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.75 var(--sans);-webkit-font-smoothing:antialiased}
+a{color:var(--accent)}
+code,pre,kbd{font-family:var(--mono)}
+code{font-size:.86em;background:var(--soft);padding:.12em .42em;border-radius:6px}
+.wrap{max-width:760px;margin:0 auto;padding:0 22px}
+
+/* top bar */
+.bar{position:sticky;top:0;z-index:10;background:color-mix(in srgb,var(--bg) 85%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.bar .wrap{display:flex;align-items:center;gap:14px;height:54px}
+.brand{display:flex;align-items:center;gap:9px;color:var(--fg);text-decoration:none;font-weight:700;font-size:15px}
+.logo{width:26px;height:26px;border-radius:8px;background:var(--accent);color:#fff;display:grid;place-items:center;font:700 12px var(--mono)}
+.bar .sp{flex:1}
+.bar a.l{color:var(--muted);text-decoration:none;font-size:14px;font-weight:500}
+.bar a.l:hover{color:var(--fg)}
+.pill{border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:5px 13px;font:600 13px var(--sans);cursor:pointer}
+.pill:hover{color:var(--fg)}
+
+/* hero */
+.hero{padding:72px 0 36px}
+.hero .tag{display:inline-block;font:600 12px var(--sans);color:var(--accent);background:var(--accent-soft);padding:4px 12px;border-radius:999px;letter-spacing:.04em}
+.hero h1{margin:16px 0 12px;font:700 clamp(32px,6vw,48px)/1.25 var(--sans);letter-spacing:0}
+.hero p{margin:0;color:var(--muted);font-size:18px;max-width:600px}
+.hero .go{display:flex;gap:10px;flex-wrap:wrap;margin-top:26px}
+.btn{display:inline-block;text-decoration:none;font:600 14px var(--sans);padding:10px 18px;border-radius:11px;border:1px solid var(--line);background:var(--surface);color:var(--fg);cursor:pointer}
+.btn:hover{border-color:var(--accent)}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+
+/* steps */
+h2.sec{margin:64px 0 6px;font:700 26px/1.3 var(--sans);letter-spacing:0}
+.lead{margin:0 0 8px;color:var(--muted)}
+.step{display:grid;grid-template-columns:44px 1fr;gap:6px 18px;padding:28px 0;border-top:1px solid var(--line)}
+.step:first-of-type{border-top:0}
+.n{width:34px;height:34px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font:700 14px var(--sans);margin-top:2px}
+.step h3{margin:0 0 4px;font:600 19px/1.4 var(--sans);letter-spacing:0}
+.step p{margin:0 0 12px;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:2px 0 4px}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:3px 13px;font:500 14px var(--sans)}
+.chip.m{font-family:var(--mono);font-size:13px}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:4px 16px}
+.row{display:grid;grid-template-columns:130px 1fr;gap:10px;padding:9px 0;border-top:1px solid var(--line);font-size:15px;align-items:baseline}
+.row:first-child{border-top:0}
+.row b{font:600 13px var(--mono)}
+.row span{color:var(--muted)}
+.x{color:var(--bad)} .v{color:var(--ok)}
+.get{color:var(--ok)} .post{color:var(--accent)} .put{color:var(--warn)} .patch{color:#0891b2} .del{color:var(--bad)}
+pre{margin:0;padding:14px 16px;background:var(--code-bg);color:var(--code-fg);border:1px solid var(--line);border-radius:12px;font:400 13px/1.65 var(--mono);overflow-x:auto;white-space:pre;tab-size:2;font-variant-ligatures:none}
+.t-c{color:var(--c-com);font-style:italic}.t-s{color:var(--c-str)}.t-n{color:var(--c-num)}.t-k{color:var(--c-kw)}.t-x{color:var(--c-ctl)}.t-f{color:var(--c-fn)}.t-v{color:var(--c-var)}.t-t{color:var(--c-type)}.t-p{color:var(--c-key)}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:640px){.cols{grid-template-columns:1fr}.row{grid-template-columns:1fr;gap:2px}.step{grid-template-columns:34px 1fr;gap:6px 12px}}
+.codes{display:flex;flex-wrap:wrap;gap:8px}
+.codes div{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:8px 12px;min-width:150px;flex:1}
+.codes b{font:700 15px var(--mono);display:block}
+.codes span{font-size:13px;color:var(--muted);line-height:1.4;display:block}
+.c2 b{color:var(--ok)} .c4 b{color:var(--warn)} .c5 b{color:var(--bad)}
+
+/* tester */
+.tester{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:18px;margin-top:18px}
+.tok{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:13px;color:var(--muted);margin-bottom:14px}
+.tok code{max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;vertical-align:middle}
+.mini{border:1px solid var(--line);background:var(--soft);color:var(--fg);border-radius:8px;padding:4px 11px;font:600 12.5px var(--sans);cursor:pointer}
+.mini:hover{border-color:var(--accent)}
+.presets{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.presets button{border:1px solid var(--line);background:var(--bg);color:var(--fg);border-radius:999px;padding:4px 12px;font:500 13px var(--sans);cursor:pointer}
+.presets button:hover{border-color:var(--accent);color:var(--accent)}
+.line{display:flex;gap:8px}
+.line select,.line input{font:500 14px var(--mono);color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:9px 11px;outline:none}
+.line select{width:104px;font-weight:700}
+.line input{flex:1;min-width:0}
+.line button.send{background:var(--accent);color:#fff;border:0;border-radius:10px;padding:0 20px;font:600 14px var(--sans);cursor:pointer}
+.line select:focus,.line input:focus,textarea:focus{border-color:var(--accent)}
+textarea{width:100%;margin-top:8px;height:92px;font:500 13px/1.6 var(--mono);color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;outline:none;resize:vertical}
+.lab{margin:14px 0 6px;font:600 12px var(--sans);color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+.status{display:inline-flex;align-items:center;gap:8px;font:700 14px var(--mono);padding:3px 12px;border-radius:999px;border:1px solid}
+.status.s2{color:var(--ok);border-color:var(--ok)} .status.s4{color:var(--warn);border-color:var(--warn)} .status.s5{color:var(--bad);border-color:var(--bad)}
+.status small{font:500 12px var(--sans);color:var(--muted)}
+.muted{color:var(--muted)}
+footer{margin:80px 0 50px;padding-top:22px;border-top:1px solid var(--line);color:var(--muted);font-size:14px;display:flex;flex-wrap:wrap;gap:6px 18px}
+
+/* method tabs */
+.tabs{display:flex;flex-wrap:wrap;gap:8px;margin:20px 0 14px}
+.tabs button{border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:6px 16px;font:700 13px var(--mono);cursor:pointer}
+.tabs button:hover{color:var(--fg)}
+.tabs button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.mp h3{margin:0 0 6px;font:600 20px/1.4 var(--sans);letter-spacing:0}
+.mp p{margin:0 0 10px;color:var(--muted)}
+.mp .cl{margin:18px 0 8px;font:600 12px var(--sans);letter-spacing:.06em;text-transform:uppercase;display:flex;align-items:center;gap:8px}
+.mp .cl i{width:8px;height:8px;border-radius:50%;background:var(--accent);display:inline-block}
+.mp .cl.sv i{background:var(--ok)}
+.mp .cl{color:var(--muted)}
+.cwrap{position:relative}
+.cwrap .cp{position:absolute;top:8px;right:8px;border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:7px;padding:2px 9px;font:600 11px var(--sans);cursor:pointer}
+.cwrap .cp:hover{color:var(--fg);border-color:var(--accent)}
+.cwrap pre{padding-right:64px}
+.tbl{overflow-x:auto;margin-top:26px}
+.tbl table{width:100%;border-collapse:collapse;font-size:14px;background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.tbl th,.tbl td{padding:9px 12px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+.tbl th{font:600 12px var(--sans);color:var(--muted);letter-spacing:.04em;background:var(--soft)}
+.tbl tr:last-child td{border-bottom:0}
+.tbl td:first-child{font:700 13px var(--mono)}
+.note{margin:14px 0 0;padding:12px 16px;border-radius:12px;background:var(--accent-soft);color:var(--fg);font-size:15px}
+</style>
+</head>
+<body>
+<header class="bar"><div class="wrap">
+  <a class="brand" href="../../index.html"><span class="logo">W</span>WellDev</a>
+  <span class="sp"></span>
+  <a class="l" href="#methods">Method ও কোড</a>
+  <a class="l" href="#build">ধাপগুলো</a>
+  <a class="l" href="#try">Request পাঠাও</a>
+  <button class="pill" id="theme" type="button">Theme</button>
+</div></header>
+
+<main class="wrap">
+
+<section class="hero">
+  <span class="tag">API DESIGN</span>
+  <h1>একটা API design করতে<br>কী কী লাগে?</h1>
+  <p>Movie ticket booking বানাতে বানাতে ধাপে ধাপে দেখি। শেষে React থেকে সত্যিকারের request পাঠিয়ে উত্তর দেখবে।</p>
+  <div class="go">
+    <a class="btn pri" href="#methods">শুরু করো ↓</a>
+    <a class="btn" href="#try">Request পাঠিয়ে দেখো</a>
+    <a class="btn" href="demo/index.html" target="_blank" rel="noopener">পুরো app ↗</a>
+  </div>
+</section>
+
+<!-- ===================== প্রথমে: ৫টা method, client ও server কোড ===================== -->
+<h2 class="sec" id="methods" style="margin-top:48px">প্রথমে: পাঁচটা method, client আর server কোড</h2>
+<p class="lead">React (<code>fetch</code>) থেকে request পাঠাই, Express-এ সেটা ধরি। প্রতিটা method-এ কী পাঠাতে হয় আর server-এ কোথা থেকে কী পাওয়া যায়, পাশাপাশি দেখো।</p>
+<div class="tabs" id="mtabs" role="tablist"></div>
+<div class="mp" id="mpanel"></div>
+
+<div class="tbl"><table>
+  <thead><tr><th>মেথড</th><th>URL</th><th>বডি লাগে?</th><th>সার্ভারে কী পাওয়া যায়</th><th>সফল হলে স্ট্যাটাস</th></tr></thead>
+  <tbody>
+    <tr><td>POST</td><td><code>/users</code></td><td>হ্যাঁ</td><td><code>req.body</code></td><td>201</td></tr>
+    <tr><td>GET</td><td><code>/users/5</code> বা <code>/users?page=2</code></td><td>না</td><td><code>req.params</code>, <code>req.query</code></td><td>200</td></tr>
+    <tr><td>PUT</td><td><code>/users/5</code></td><td>হ্যাঁ (পুরো অবজেক্ট)</td><td><code>req.params</code>, <code>req.body</code></td><td>200</td></tr>
+    <tr><td>PATCH</td><td><code>/users/5</code></td><td>হ্যাঁ (শুধু পরিবর্তন)</td><td><code>req.params</code>, <code>req.body</code></td><td>200</td></tr>
+    <tr><td>DELETE</td><td><code>/users/5</code></td><td>না</td><td><code>req.params</code></td><td>204 বা 200</td></tr>
+  </tbody>
+</table></div>
+
+<div class="note">সবগুলোতেই <code>Authorization</code> header একইভাবে যাচ্ছে, কারণ প্রতিটা request-এ পরিচয় দিতে হয়। আর যেখানে বডি আছে (POST, PUT, PATCH), শুধু সেখানেই <code>Content-Type: application/json</code> দরকার।</div>
+
+<div class="cl-mw" style="margin-top:26px">
+  <h3 style="margin:0 0 6px;font:600 19px var(--sans);letter-spacing:0">প্রতি route-এ আলাদা করে token না দেখে: middleware</h3>
+  <p style="margin:0 0 10px;color:var(--muted)">বাস্তব project-এ প্রতিটা route-এ আলাদা করে token যাচাই না করে একটা <b>middleware</b> বানিয়ে একবারেই লাগিয়ে দেওয়া হয়। এই project-এও তাই করা আছে।</p>
+  <div class="cwrap"><button class="cp" type="button">Copy</button><pre id="mwcode"></pre></div>
+</div>
+
+<!-- ===================== API design-এর ধাপ ===================== -->
+<h2 class="sec" id="build">ধাপে ধাপে API design</h2>
+<p class="lead">কোড লেখার আগে এই ১০টা প্রশ্নের উত্তর ঠিক করলেই API-র নকশা হয়ে যায়।</p>
+
+<div class="step"><div class="n">1</div><div>
+  <h3>কোন কোন জিনিস নিয়ে কাজ?</h3>
+  <p>আগে ঠিক করো system-এ কী কী "জিনিস" (<b>resource</b>) আছে। API এই জিনিসগুলোর চারপাশেই গড়া হয়।</p>
+  <div class="chips"><span class="chip">🎬 movie</span><span class="chip">🕒 showtime</span><span class="chip">🎟 booking</span><span class="chip">👤 user</span></div>
+  <p style="margin:10px 0 0">সম্পর্ক: একটা movie-র অনেক showtime, একটা showtime-এ অনেক booking (প্রতিটায় কয়েকটা seat)।</p>
+</div></div>
+
+<div class="step"><div class="n">2</div><div>
+  <h3>প্রতিটার একটা URL (endpoint)</h3>
+  <p>নিয়ম: URL-এ থাকবে <b>জিনিসের নাম</b> (বহুবচন), কাজের নাম নয়। কাজ বোঝাবে method।</p>
+  <div class="box">
+    <div class="row"><b class="x">✗ ভুল</b><span><code>/getMovies</code> · <code>/createBooking</code> · <code>/deleteMovie?id=4</code></span></div>
+    <div class="row"><b class="v">✓ ঠিক</b><span><code>/movies</code> · <code>/movies/4</code> · <code>/movies/4/showtimes</code> · <code>/bookings</code></span></div>
+  </div>
+</div></div>
+
+<div class="step"><div class="n">3</div><div>
+  <h3>কাজ বোঝাতে HTTP method</h3>
+  <p>একই URL, কিন্তু method বদলালে কাজ বদলায়।</p>
+  <div class="box">
+    <div class="row"><b class="get">GET</b><span>পড়া: <code>GET /movies/4</code></span></div>
+    <div class="row"><b class="post">POST</b><span>নতুন তৈরি: <code>POST /bookings</code></span></div>
+    <div class="row"><b class="put">PUT</b><span>পুরোটা বদলানো: <code>PUT /movies/4</code> (সব field পাঠাতে হয়)</span></div>
+    <div class="row"><b class="patch">PATCH</b><span>আংশিক বদল: <code>PATCH /movies/4</code> <code>{ "rating": 9.1 }</code></span></div>
+    <div class="row"><b class="del">DELETE</b><span>মোছা: <code>DELETE /bookings/7</code></span></div>
+  </div>
+</div></div>
+
+<div class="step"><div class="n">4</div><div>
+  <h3>Request-এ কী কী পাঠানো যায়</h3>
+  <p>চারটা জায়গা, প্রতিটার আলাদা কাজ।</p>
+  <div class="box">
+    <div class="row"><b>path</b><span>কোন জিনিস: <code>/movies/<b>4</b></code></span></div>
+    <div class="row"><b>query</b><span>ছাঁকনি, পাতা: <code>?search=inc&amp;page=2</code></span></div>
+    <div class="row"><b>header</b><span>পরিচয় আর ধরন: <code>Authorization</code>, <code>Content-Type</code></span></div>
+    <div class="row"><b>body</b><span>নতুন বা বদলের data (JSON): <code>{ "seats": ["A1"] }</code></span></div>
+  </div>
+</div></div>
+
+<div class="step"><div class="n">5</div><div>
+  <h3>Response-এর একটা নির্দিষ্ট আকার</h3>
+  <p>সফল আর ব্যর্থ দুই ক্ষেত্রেই সবসময় একই ছাঁচ, যাতে client সহজে পড়তে পারে।</p>
+  <div class="cols">
+    <pre>// সফল
+{ "data": { "id": 7, "status": "pending" } }
+
+// তালিকা
+{ "data": [ … ],
+  "meta": { "page": 1, "total": 3 } }</pre>
+    <pre>// ব্যর্থ
+{ "error": {
+    "code": "SEAT_TAKEN",
+    "message": "এই seat আগেই booked: A2",
+    "details": { "seats": ["A2"] } } }</pre>
+  </div>
+</div></div>
+
+<div class="step"><div class="n">6</div><div>
+  <h3>Status code দিয়ে ফল জানানো</h3>
+  <p>প্রথম অঙ্ক দেখলেই বোঝা যায় কেমন খবর: 2 সফল, 4 তোমার ভুল, 5 server-এর ভুল।</p>
+  <div class="codes">
+    <div class="c2"><b>200 OK</b><span>সফল (GET, PUT, PATCH)</span></div>
+    <div class="c2"><b>201 Created</b><span>নতুন তৈরি (POST)</span></div>
+    <div class="c2"><b>204 No Content</b><span>মোছা হয়েছে, body নেই</span></div>
+    <div class="c4"><b>400 Bad Request</b><span>input ভুল</span></div>
+    <div class="c4"><b>401 Unauthorized</b><span>token নেই বা ভুল</span></div>
+    <div class="c4"><b>403 Forbidden</b><span>অনুমতি নেই</span></div>
+    <div class="c4"><b>404 Not Found</b><span>জিনিসটা নেই</span></div>
+    <div class="c4"><b>409 Conflict</b><span>সংঘর্ষ (seat আগেই নেওয়া)</span></div>
+    <div class="c5"><b>500 Server Error</b><span>server-এ গোলমাল</span></div>
+  </div>
+</div></div>
+
+<div class="step"><div class="n">7</div><div>
+  <h3>কে ডাকছে? (Authentication)</h3>
+  <p>একবার login করে <b>token</b> নাও। এরপর প্রতিটা request-এর header-এ সেটা দেখাও। Server শুধু token যাচাই করে।</p>
+  <pre>POST /api/auth/login   { "email": "…", "password": "…" }   →  { "token": "eyJhbGci…" }
+
+GET  /api/bookings
+Authorization: Bearer eyJhbGci…</pre>
+  <p style="margin:12px 0 0"><b>401</b> = তুমি কে জানি না (token নেই/ভুল)। <b>403</b> = জানি, কিন্তু এই কাজ তোমার নয় (user হয়ে admin-এর কাজ)।</p>
+</div></div>
+
+<div class="step"><div class="n">8</div><div>
+  <h3>ব্যবসার নিয়ম আর validation</h3>
+  <p>URL আর method ঠিক থাকলেও API-র আসল কাজ নিয়মগুলো মানানো। Server-এই এগুলো ঠিক করবে, client-এর ওপর ভরসা করে নয়।</p>
+  <div class="box">
+    <div class="row"><b>input যাচাই</b><span>ভুল seat, খালি title → <b>400</b>, কোন field ভুল তা সহ</span></div>
+    <div class="row"><b>seat সংঘর্ষ</b><span>দুজন একই seat চাইলে প্রথমজন পায়, দ্বিতীয়জন <b>409</b></span></div>
+    <div class="row"><b>মালিকানা</b><span>নিজের booking ছাড়া দেখা যাবে না → <b>403</b></span></div>
+    <div class="row"><b>সময়ের নিয়ম</b><span>pending seat ১০ মিনিট আটকে থাকে, পরে ছাড়া পায় (<b>410</b>)</span></div>
+  </div>
+</div></div>
+
+<div class="step"><div class="n">9</div><div>
+  <h3>বড় হলে: pagination, filter, version</h3>
+  <p>তালিকা বড় হলে একবারে সব না পাঠিয়ে ভাগ করে দাও। আর পরে নিয়ম বদলালে পুরনো client যেন না ভাঙে।</p>
+  <div class="box">
+    <div class="row"><b>pagination</b><span><code>/movies?page=2&amp;limit=10</code> → <code>meta.totalPages</code></span></div>
+    <div class="row"><b>filter</b><span><code>/movies?genre=Sci-Fi&amp;search=inc</code></span></div>
+    <div class="row"><b>version</b><span><code>/api/v1/movies</code>, বদল এলে <code>/api/v2</code></span></div>
+  </div>
+</div></div>
+
+<div class="step"><div class="n">10</div><div>
+  <h3>Document আর test</h3>
+  <p>Endpoint-এর তালিকা লিখে রাখো (method, URL, auth, সফল হলে কোন code)। আর প্রতিটা endpoint একবার করে চালিয়ে status code মিলিয়ে দেখো। এই project-এ ৫৩টা check আছে (<code>npm test</code>)।</p>
+</div></div>
+
+<!-- ===================== React থেকে request ===================== -->
+<h2 class="sec" id="try">React থেকে request পাঠানো</h2>
+<p class="lead">React-এ আলাদা কিছু নেই। সাধারণ <code>fetch</code>, শুধু header আর body ঠিকমতো বসাতে হয়।</p>
+
+<pre>const headers = { Accept: 'application/json', 'Content-Type': 'application/json' };
+const token = localStorage.getItem('token');
+if (token) headers.Authorization = `Bearer ${token}`;      // ← Bearer token
+
+const res  = await fetch('/api/bookings', {
+  method: 'POST',
+  headers,
+  body: JSON.stringify({ showtimeId: 1, seats: ['A1', 'A2'] }),
+});
+const data = res.status === 204 ? null : await res.json(); // 204-এ body থাকে না
+if (!res.ok) throw new Error(data.error.message);          // 400, 401, 409 …</pre>
+
+<p class="lead" style="margin-top:26px">নিচে এই <code>fetch</code>-ই চলছে, একটা নকল server-এর বিরুদ্ধে। যেকোনো request বানিয়ে পাঠাও।</p>
+
+<div class="tester" id="tester">
+  <div class="tok">
+    <span>Token:</span> <code id="tokv">নেই</code>
+    <button class="mini" data-login="user@demo.com|user123">user হিসেবে login</button>
+    <button class="mini" data-login="admin@demo.com|admin123">admin হিসেবে login</button>
+    <button class="mini" id="clr">মুছো</button>
+  </div>
+
+  <div class="lab" style="margin-top:0">উদাহরণ</div>
+  <div class="presets" id="presets"></div>
+
+  <div class="line">
+    <select id="method"><option>GET</option><option>POST</option><option>PUT</option><option>PATCH</option><option>DELETE</option></select>
+    <input id="path" value="/api/movies" spellcheck="false" aria-label="path">
+    <button class="send" id="send" type="button">Send</button>
+  </div>
+  <textarea id="body" spellcheck="false" placeholder="Body (JSON), শুধু POST / PUT / PATCH-এ"></textarea>
+
+  <div class="lab">Request</div>
+  <pre id="req"></pre>
+
+  <div class="lab">Response</div>
+  <div id="stat" class="muted">Send চাপো…</div>
+  <pre id="res" style="margin-top:8px">&nbsp;</pre>
+</div>
+
+</main>
+
+<main class="wrap">
+<footer>
+  <a href="demo/index.html" target="_blank" rel="noopener">পুরো React app (demo) ↗</a>
+  <a href="https://github.com/mdabarik/welldev/tree/main/04-resume-projects/14-movie-ticket-api" target="_blank" rel="noopener">Source code ↗</a>
+  <a href="https://github.com/mdabarik/welldev/blob/main/04-resume-projects/14-movie-ticket-api/README.md" target="_blank" rel="noopener">সব endpoint (README) ↗</a>
+</footer>
+</main>
+
+<script>
+/* theme */
+(function(){
+  const root=document.documentElement,btn=document.getElementById('theme');
+  try{const t=localStorage.getItem('theme');if(t)root.dataset.theme=t;}catch(e){}
+  const dark=()=>root.dataset.theme?root.dataset.theme==='dark':matchMedia('(prefers-color-scheme:dark)').matches;
+  const label=()=>btn.textContent=dark()?'Light':'Dark';
+  btn.onclick=()=>{root.dataset.theme=dark()?'light':'dark';try{localStorage.setItem('theme',root.dataset.theme);}catch(e){}label();};
+  label();
+})();
+</script>
+
+
+<script>
+/* ছোট syntax highlighter, রং VS Code Light+ (dark mode-এ Dark+) */
+(function(){
+  const CTL=/^(if|else|return|try|catch|throw|await|import|export|from|for|while|switch|case|break|continue|default|async)$/;
+  const KW=/^(const|let|var|function|new|typeof|instanceof|of|in|class|extends|this|true|false|null|undefined)$/;
+  const RE=/(\/\/[^\n]*|\/\*[\s\S]*?\*\/)|("(?:\\.|[^"\\\n])*"|'(?:\\.|[^'\\\n])*'|`(?:\\.|[^`\\])*`)(\s*:)?|(\b\d+(?:\.\d+)?\b)|(\.)([A-Za-z_$][\w$]*)(\s*\()?|([A-Za-z_$][\w$]*)(\s*\()?/g;
+  const esc=(x)=>x.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const span=(c,x)=>'<span class="t-'+c+'">'+esc(x)+'</span>';
+  window.hl=function(el){
+    const t=el.textContent; let out='',last=0,m; RE.lastIndex=0;
+    while((m=RE.exec(t))){
+      out+=esc(t.slice(last,m.index));
+      if(m[1]) out+=span('c',m[1]);
+      else if(m[2]) out+=span(m[3]?'p':'s',m[2])+(m[3]?esc(m[3]):'');
+      else if(m[4]) out+=span('n',m[4]);
+      else if(m[5]) out+=esc('.')+(m[7]?span('f',m[6]):span('v',m[6]))+(m[7]?esc(m[7]):'');
+      else { const w=m[8];
+        if(CTL.test(w)) out+=span('x',w);
+        else if(KW.test(w)) out+=span('k',w);
+        else if(m[9]) out+=span('f',w);
+        else if(/^[A-Z]/.test(w)) out+=span('t',w);
+        else out+=span('v',w);
+        if(m[9]) out+=esc(m[9]);
+      }
+      last=RE.lastIndex;
+    }
+    el.innerHTML=out+esc(t.slice(last));
+  };
+  document.addEventListener('DOMContentLoaded',()=>document.querySelectorAll('main pre:not(#req):not(#res)').forEach(window.hl));
+})();
+</script>
+<script>
+/* ৫টা method: client (fetch) আর server (Express) কোড */
+(function(){
+  const M = {
+   POST: {
+    title: '১. POST (নতুন ডেটা তৈরি করা)',
+    desc: 'নতুন ইউজার বানাতে ডেটা বডিতে পাঠানো হয়।',
+    blocks: [
+     ['client','ক্লায়েন্ট সাইড (fetch)',`fetch("https://example.com/users", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    "Authorization": "Bearer " + token,
+  },
+  body: JSON.stringify({ name: "Karim", email: "karim@mail.com" }),
+});`],
+     ['server','সার্ভার সাইড (Express)',`app.use(express.json());   // বডির JSON পার্স করার জন্য
+
+app.post("/users", (req, res) => {
+  const token = req.headers.authorization;  // "Bearer eyJ..."
+  const data  = req.body;                   // { name: "Karim", email: "..." }
+
+  // টোকেন যাচাই করো, তারপর ডাটাবেসে নতুন ইউজার সেভ করো
+  res.status(201).json({ message: "ইউজার তৈরি হয়েছে" });
+});`]
+    ]
+   },
+   GET: {
+    title: '২. GET (ডেটা চাওয়া বা পড়া)',
+    desc: 'GET-এ বডি থাকে না, তাই Content-Type লাগে না। কোন ইউজার চাই সেটা যায় URL-এ।',
+    blocks: [
+     ['client','ক্লায়েন্ট সাইড (fetch)',`// একজন নির্দিষ্ট ইউজার
+fetch("https://example.com/users/5", {
+  method: "GET",   // GET ডিফল্ট, না লিখলেও চলে
+  headers: {
+    "Authorization": "Bearer " + token,
+  },
+});
+
+// অনেকজন ইউজার, query parameter দিয়ে ফিল্টার করে
+fetch("https://example.com/users?page=2&limit=10", {
+  headers: {
+    "Authorization": "Bearer " + token,
+  },
+});`],
+     ['server','সার্ভার সাইড (Express)',`app.get("/users/:id", (req, res) => {
+  const token = req.headers.authorization;  // "Bearer eyJ..."
+  const id    = req.params.id;              // "5" (URL থেকে আসে)
+
+  // টোকেন যাচাই করো, তারপর ডাটাবেস থেকে ইউজার খুঁজে আনো
+  res.json({ id: id, name: "Karim", email: "karim@mail.com" });
+});
+
+app.get("/users", (req, res) => {
+  const page  = req.query.page;             // "2"
+  const limit = req.query.limit;            // "10"
+
+  // সেই অনুযায়ী ইউজার লিস্ট ফেরত দাও
+  res.json([ /* ইউজারদের লিস্ট */ ]);
+});`]
+    ],
+    note: '<code>req.params</code> আসে URL-এর পাথ থেকে (<code>/users/5</code>), আর <code>req.query</code> আসে <code>?</code> এর পরের অংশ থেকে (<code>?page=2</code>)।'
+   },
+   PUT: {
+    title: '৩. PUT (পুরো ডেটা বদলে দেওয়া)',
+    desc: 'PUT-এ পুরো অবজেক্ট পাঠাতে হয়। যে ফিল্ড পাঠাবে না, সেটা মুছে যেতে পারে বা খালি হয়ে যেতে পারে (সার্ভার কীভাবে লেখা তার উপর নির্ভর করে)।',
+    blocks: [
+     ['client','ক্লায়েন্ট সাইড (fetch)',`fetch("https://example.com/users/5", {
+  method: "PUT",
+  headers: {
+    "Content-Type": "application/json",
+    "Authorization": "Bearer " + token,
+  },
+  body: JSON.stringify({
+    name: "Karim Hasan",
+    email: "karim.new@mail.com",
+    age: 25,
+  }),
+});`],
+     ['server','সার্ভার সাইড (Express)',`app.put("/users/:id", (req, res) => {
+  const token = req.headers.authorization;  // "Bearer eyJ..."
+  const id    = req.params.id;              // "5"
+  const data  = req.body;                   // পুরো নতুন অবজেক্ট
+
+  // টোকেন যাচাই করো, তারপর ৫ নম্বর ইউজারের পুরো ডেটা এটা দিয়ে বদলে দাও
+  res.json({ message: "ইউজার পুরোপুরি আপডেট হয়েছে" });
+});`]
+    ]
+   },
+   PATCH: {
+    title: '৪. PATCH (ডেটার একটা অংশ আপডেট করা)',
+    desc: 'PATCH-এ শুধু যেটুকু বদলাতে চাও সেটুকু পাঠালেই হয়। বাকি ফিল্ড আগের মতোই থাকে।',
+    blocks: [
+     ['client','ক্লায়েন্ট সাইড (fetch)',`fetch("https://example.com/users/5", {
+  method: "PATCH",
+  headers: {
+    "Content-Type": "application/json",
+    "Authorization": "Bearer " + token,
+  },
+  body: JSON.stringify({ email: "karim.new@mail.com" }),  // শুধু ইমেইল
+});`],
+     ['server','সার্ভার সাইড (Express)',`app.patch("/users/:id", (req, res) => {
+  const token   = req.headers.authorization;  // "Bearer eyJ..."
+  const id      = req.params.id;              // "5"
+  const changes = req.body;                   // { email: "karim.new@mail.com" }
+
+  // টোকেন যাচাই করো, তারপর শুধু এই ফিল্ডগুলো আপডেট করো, বাকিগুলো যেমন আছে থাকবে
+  res.json({ message: "ইউজারের তথ্য আংশিক আপডেট হয়েছে" });
+});`]
+    ]
+   },
+   DELETE: {
+    title: '৫. DELETE (ডেটা মুছে ফেলা)',
+    desc: 'DELETE-এ সাধারণত বডি থাকে না। কোনটা মুছবে সেটা URL-এই বলে দেওয়া হয়।',
+    blocks: [
+     ['client','ক্লায়েন্ট সাইড (fetch)',`fetch("https://example.com/users/5", {
+  method: "DELETE",
+  headers: {
+    "Authorization": "Bearer " + token,
+  },
+});`],
+     ['server','সার্ভার সাইড (Express)',`app.delete("/users/:id", (req, res) => {
+  const token = req.headers.authorization;  // "Bearer eyJ..."
+  const id    = req.params.id;              // "5"
+
+  // টোকেন যাচাই করো, তারপর ডাটাবেস থেকে ৫ নম্বর ইউজার মুছে ফেলো
+  res.status(204).send();   // 204 মানে সফল, কিন্তু ফেরত দেওয়ার মতো কিছু নেই
+});`]
+    ]
+   }
+  };
+
+  const MW = `// এই project-এর server/src/middleware/auth.js (সংক্ষেপে)
+export function auth(req, res, next) {
+  const [scheme, token] = (req.headers.authorization || "").split(" ");
+  if (scheme !== "Bearer" || !token) return res.status(401).json({ error: "token নেই" });
+  try {
+    const payload = jwt.verify(token, JWT_SECRET);   // সই আর মেয়াদ যাচাই
+    req.user = findUser(payload.sub);
+    next();                                          // ঠিক থাকলে route-এ যাও
+  } catch {
+    res.status(401).json({ error: "token ভুল বা মেয়াদ শেষ" });
+  }
+}
+
+// একবার লিখে যেকোনো route-এ বসাও:
+app.get("/users/:id",    auth, getUser);
+app.delete("/users/:id", auth, requireAdmin, deleteUser);`;
+
+  const tabs = document.getElementById('mtabs'), panel = document.getElementById('mpanel');
+  const copy = (btn, text) => btn.onclick = () => {
+    (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(() => { btn.textContent = 'Copied ✓'; setTimeout(() => btn.textContent = 'Copy', 1400); }).catch(() => {});
+  };
+  function codeBlock(text) {
+    const w = document.createElement('div'); w.className = 'cwrap';
+    const b = document.createElement('button'); b.className = 'cp'; b.type = 'button'; b.textContent = 'Copy'; copy(b, text);
+    const pre = document.createElement('pre'); pre.textContent = text; hl(pre);
+    w.append(b, pre); return w;
+  }
+  function show(name) {
+    [...tabs.children].forEach((b) => b.classList.toggle('on', b.dataset.m === name));
+    const m = M[name];
+    panel.innerHTML = '';
+    const h = document.createElement('h3'); h.textContent = m.title;
+    const p = document.createElement('p'); p.textContent = m.desc;
+    panel.append(h, p);
+    m.blocks.forEach(([kind, label, code]) => {
+      const l = document.createElement('div'); l.className = 'cl ' + (kind === 'server' ? 'sv' : ''); l.innerHTML = '<i></i>' + label;
+      panel.append(l, codeBlock(code));
+    });
+    if (m.note) { const n = document.createElement('p'); n.style.marginTop = '12px'; n.innerHTML = m.note; panel.append(n); }
+  }
+  Object.keys(M).forEach((k) => {
+    const b = document.createElement('button'); b.type = 'button'; b.dataset.m = k; b.textContent = k;
+    b.onclick = () => show(k); tabs.append(b);
+  });
+  const mw = document.getElementById('mwcode'); mw.textContent = MW; hl(mw);
+  copy(mw.parentElement.querySelector('.cp'), MW);
+  show('POST');
+})();
+</script>
+
+<script type="module">
+/* নকল API server (browser-এর ভেতরে): client/src/mockServer.js, আসল server/-এর একই নিয়ম */
+import { installMock } from './client/src/mockServer.js';
+installMock({ latency: 120 });
+
+const $ = (id) => document.getElementById(id);
+let token = null;
+
+const PRESETS = [
+  { l: 'সব movie',           m: 'GET',    p: '/api/movies' },
+  { l: 'Movie খোঁজো',        m: 'GET',    p: '/api/movies?search=inter&limit=5' },
+  { l: 'Seat map',           m: 'GET',    p: '/api/showtimes/1/seats' },
+  { l: 'Login',              m: 'POST',   p: '/api/auth/login', b: { email: 'user@demo.com', password: 'user123' } },
+  { l: 'Booking (token লাগে)', m: 'POST', p: '/api/bookings', b: { showtimeId: 1, seats: ['A1', 'A2'] } },
+  { l: 'আমার booking',       m: 'GET',    p: '/api/bookings' },
+  { l: 'Pay',                m: 'POST',   p: '/api/bookings/1/pay', b: { method: 'bkash' } },
+  { l: 'Movie বদলাও (PATCH)', m: 'PATCH', p: '/api/movies/1', b: { rating: 9.1 } },
+  { l: 'Movie মোছো (admin)',  m: 'DELETE', p: '/api/movies/3' },
+  { l: 'ভুল seat (400)',     m: 'POST',   p: '/api/bookings', b: { showtimeId: 1, seats: ['Z9'] } },
+];
+
+const fmtBody = () => { const t = $('body').value.trim(); return t ? t : undefined; };
+const pretty = (t) => { try { return JSON.stringify(JSON.parse(t), null, 2); } catch { return t; } };
+
+function renderReq() {
+  const method = $('method').value, path = $('path').value, body = fmtBody();
+  const lines = [`${method} ${path} HTTP/1.1`, 'Accept: application/json'];
+  if (body !== undefined && method !== 'GET' && method !== 'DELETE') lines.push('Content-Type: application/json');
+  if (token) lines.push(`Authorization: Bearer ${token.slice(0, 22)}…`);
+  let out = lines.join('\n');
+  if (body !== undefined && method !== 'GET' && method !== 'DELETE') out += '\n\n' + pretty(body);
+  $('req').textContent = out;
+}
+
+function setToken(t) {
+  token = t;
+  $('tokv').textContent = t ? t.slice(0, 26) + '…' : 'নেই';
+  renderReq();
+}
+
+async function send() {
+  const method = $('method').value, path = $('path').value.trim(), raw = fmtBody();
+  const headers = { Accept: 'application/json' };
+  const hasBody = raw !== undefined && method !== 'GET' && method !== 'DELETE';
+  if (hasBody) headers['Content-Type'] = 'application/json';
+  if (token) headers.Authorization = `Bearer ${token}`;
+  $('stat').textContent = '…'; $('res').textContent = '';
+  const t0 = performance.now();
+  let res, text;
+  try {
+    res = await fetch(path, { method, headers, body: hasBody ? raw : undefined });
+    text = res.status === 204 ? '' : await res.text();
+  } catch (e) {
+    $('stat').textContent = 'Request পাঠানো যায়নি'; $('res').textContent = String(e); return;
+  }
+  const ms = Math.round(performance.now() - t0);
+  const cls = 's' + String(res.status)[0];
+  const names = { 200: 'OK', 201: 'Created', 204: 'No Content', 400: 'Bad Request', 401: 'Unauthorized', 403: 'Forbidden', 404: 'Not Found', 409: 'Conflict', 410: 'Gone' };
+  const loc = res.headers.get('Location');
+  $('stat').innerHTML = `<span class="status ${cls}">${res.status} ${names[res.status] || ''} <small>${ms} ms</small></span>` +
+    (loc ? ` <span class="muted" style="font-size:13px">Location: <code>${loc}</code></span>` : '');
+  $('res').textContent = res.status === 204 ? '(খালি: 204 No Content, কোনো body নেই)' : pretty(text);
+  if (res.status !== 204) window.hl($('res'));
+  // login বা register হলে token নিজেই ধরে নিই
+  if (res.ok && /\/auth\/(login|register)$/.test(path)) { try { setToken(JSON.parse(text).token); } catch {} }
+}
+
+async function quickLogin(cred) {
+  const [email, password] = cred.split('|');
+  const res = await fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
+  setToken((await res.json()).token);
+}
+
+function load(p) {
+  $('method').value = p.m;
+  $('path').value = p.p;
+  $('body').value = p.b ? JSON.stringify(p.b, null, 2) : '';
+  renderReq();
+}
+
+PRESETS.forEach((p) => {
+  const b = document.createElement('button'); b.type = 'button'; b.textContent = p.l;
+  b.onclick = () => { load(p); send(); };
+  $('presets').appendChild(b);
+});
+document.querySelectorAll('[data-login]').forEach((b) => (b.onclick = () => quickLogin(b.dataset.login)));
+$('clr').onclick = () => setToken(null);
+$('send').onclick = send;
+['method', 'path', 'body'].forEach((id) => $(id).addEventListener('input', renderReq));
+load(PRESETS[0]);
+</script>
+</body>
+</html>

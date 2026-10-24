@@ -1,0 +1,105 @@
+{
+  "id": "quiz-6",
+  "title": "হযরত উমর (রা.)-এর জীবনী",
+  "title_en": "Life of Umar ibn al-Khattab (RA)",
+  "description": "৫টি প্রশ্নের সঠিক উত্তর দিন",
+  "description_en": "Answer all 5 questions",
+  "image": "https://mdabarik.github.io/welldev/islamic-quiz/images/quiz-6.png",
+  "questions": [
+    {
+      "question": "হযরত উমর (রা.)-এর উপাধি কী?",
+      "question_en": "What was the title of Umar (RA)?",
+      "options": [
+        "সিদ্দিক",
+        "ফারুক",
+        "যুন্নুরাইন",
+        "আসাদুল্লাহ"
+      ],
+      "options_en": [
+        "As-Siddiq",
+        "Al-Faruq",
+        "Dhun-Nurayn",
+        "Asadullah"
+      ],
+      "answer": 1,
+      "explanation": "সত্য ও মিথ্যার মধ্যে পার্থক্যকারী হিসেবে তিনি ‘ফারুক’ উপাধি পান। ‘যুন্নুরাইন’ ছিলেন উসমান (রা.)।",
+      "explanation_en": "He was called Al-Faruq, the one who separates truth from falsehood. Dhun-Nurayn was Uthman (RA)."
+    },
+    {
+      "question": "ইসলামের দ্বিতীয় খলিফা কে?",
+      "question_en": "Who was the second caliph of Islam?",
+      "options": [
+        "হযরত আলী (রা.)",
+        "হযরত উসমান (রা.)",
+        "হযরত উমর (রা.)",
+        "হযরত আবু বকর (রা.)"
+      ],
+      "options_en": [
+        "Ali (RA)",
+        "Uthman (RA)",
+        "Umar (RA)",
+        "Abu Bakr (RA)"
+      ],
+      "answer": 2,
+      "explanation": "আবু বকর (রা.)-এর পর ১৩ হিজরিতে উমর (রা.) খলিফা হন এবং প্রায় সাড়ে দশ বছর খিলাফত করেন।",
+      "explanation_en": "Umar (RA) succeeded Abu Bakr (RA) in 13 AH and ruled for about ten and a half years."
+    },
+    {
+      "question": "উমর (রা.) কোন সূরার আয়াত পড়ে ইসলাম গ্রহণে উদ্বুদ্ধ হন?",
+      "question_en": "Reading which surah moved Umar (RA) to accept Islam?",
+      "options": [
+        "সূরা ত্বা-হা",
+        "সূরা ইয়াসিন",
+        "সূরা ফাতিহা",
+        "সূরা মুলক"
+      ],
+      "options_en": [
+        "Surah Ta-Ha",
+        "Surah Ya-Sin",
+        "Surah Al-Fatihah",
+        "Surah Al-Mulk"
+      ],
+      "answer": 0,
+      "explanation": "প্রসিদ্ধ বর্ণনা অনুযায়ী বোন ফাতিমা (রা.)-এর ঘরে সূরা ত্বা-হার আয়াত পড়ে তাঁর মন বদলে যায়।",
+      "explanation_en": "By the well-known account, reading Surah Ta-Ha at his sister Fatimah's (RA) house changed his heart."
+    },
+    {
+      "question": "হিজরি সাল গণনা কার খিলাফতে চালু হয়?",
+      "question_en": "Under whose caliphate was the Hijri calendar started?",
+      "options": [
+        "হযরত আবু বকর (রা.)",
+        "হযরত উমর (রা.)",
+        "হযরত উসমান (রা.)",
+        "হযরত আলী (রা.)"
+      ],
+      "options_en": [
+        "Abu Bakr (RA)",
+        "Umar (RA)",
+        "Uthman (RA)",
+        "Ali (RA)"
+      ],
+      "answer": 1,
+      "explanation": "উমর (রা.) হিজরতের বছর থেকে গুনে হিজরি সাল চালু করেন।",
+      "explanation_en": "Umar (RA) began the Hijri calendar, counting from the year of the Hijrah."
+    },
+    {
+      "question": "উমর (রা.)-এর খিলাফতকালে কোন পবিত্র শহর মুসলমানদের অধীনে আসে?",
+      "question_en": "Which holy city came under Muslim rule in Umar's (RA) caliphate?",
+      "options": [
+        "মক্কা",
+        "মদিনা",
+        "বায়তুল মাকদিস (জেরুজালেম)",
+        "তায়েফ"
+      ],
+      "options_en": [
+        "Makkah",
+        "Madinah",
+        "Bayt al-Maqdis (Jerusalem)",
+        "Ta'if"
+      ],
+      "answer": 2,
+      "explanation": "১৫-১৬ হিজরিতে বায়তুল মাকদিস মুসলমানদের হাতে আসে; উমর (রা.) নিজে গিয়ে শহরের চাবি গ্রহণ করেন।",
+      "explanation_en": "Jerusalem came under Muslim rule around 15-16 AH; Umar (RA) went himself to receive the city."
+    }
+  ]
+}

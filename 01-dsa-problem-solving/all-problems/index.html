@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="bn">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Blind 75, LeetCode Top Interview 150 এবং NeetCode 150—original category ও sequence সহ filterable problem tracker।">
+  <meta name="color-scheme" content="light dark">
+  <title>DSA Problem Lists · WellDev</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="data.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <div class="page-shell">
+    <nav class="topbar" aria-label="Primary navigation">
+      <a class="brand" href="../../index.html" aria-label="WellDev home">
+        <span class="brand-mark" aria-hidden="true">W</span>
+        <span>WellDev</span>
+      </a>
+      <button class="icon-button" id="theme-toggle" type="button" aria-label="Theme পরিবর্তন করুন">
+        <span class="theme-icon" aria-hidden="true">◐</span>
+        <span class="theme-label">Theme</span>
+      </button>
+    </nav>
+
+    <header class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow">DSA interview preparation</p>
+        <h1 id="page-title">Problem Lists</h1>
+        <p id="page-description" class="hero-description"></p>
+        <a id="source-link" class="source-link" href="#" target="_blank" rel="noopener noreferrer" hidden>
+          Official source <span aria-hidden="true">↗</span>
+        </a>
+      </div>
+      <div class="progress-card" aria-label="Completion progress">
+        <div class="progress-copy">
+          <span>Progress</span>
+          <strong id="progress-number">0 / 0</strong>
+        </div>
+        <div class="progress-track" aria-hidden="true"><span id="progress-fill"></span></div>
+        <small id="progress-percent">0% complete</small>
+      </div>
+    </header>
+
+    <section class="list-switcher" aria-labelledby="list-switcher-title">
+      <div class="section-heading">
+        <div>
+          <p class="kicker">Choose a track</p>
+          <h2 id="list-switcher-title">কোন list দেখতে চান?</h2>
+        </div>
+        <p>প্রতিটি list তার নিজস্ব category ও original order-এ দেখাবে।</p>
+      </div>
+      <div class="source-tabs" id="source-tabs" role="tablist" aria-label="Problem lists"></div>
+    </section>
+
+    <section class="stats-grid" id="stats" aria-label="Selected list summary"></section>
+
+    <section class="controls" aria-label="Problem filters">
+      <div class="search-wrap">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21 21-4.35-4.35m2.35-5.65a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z"/></svg>
+        <input id="search" type="search" autocomplete="off" placeholder="Problem বা category খুঁজুন…" aria-label="Problem search">
+        <kbd>/</kbd>
+      </div>
+      <div class="filter-row">
+        <div class="filter-group" id="difficulty-filters" aria-label="Difficulty filter"></div>
+        <span class="result-count" id="result-count" aria-live="polite"></span>
+      </div>
+      <div class="category-filters" id="category-filters" aria-label="Category filter"></div>
+    </section>
+
+    <main id="problem-list"></main>
+    <div class="empty-state" id="empty-state" hidden>
+      <span aria-hidden="true">⌕</span>
+      <h2>কোন problem পাওয়া যায়নি</h2>
+      <p>Search বা filter একটু পরিবর্তন করে দেখুন।</p>
+      <button type="button" id="clear-filters">সব filter clear করুন</button>
+    </div>
+
+    <footer>
+      <p>✓ completion এই browser-এ save থাকে। Problem title-এ click করলে LeetCode খুলবে।</p>
+    </footer>
+  </div>
+</body>
+</html>

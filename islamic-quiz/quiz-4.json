@@ -1,0 +1,105 @@
+{
+  "id": "quiz-4",
+  "title": "হযরত ইউসুফ (আ.)-এর জীবনী",
+  "title_en": "Life of Prophet Yusuf (AS)",
+  "description": "৫টি প্রশ্নের সঠিক উত্তর দিন",
+  "description_en": "Answer all 5 questions",
+  "image": "https://mdabarik.github.io/welldev/islamic-quiz/images/quiz-4.png",
+  "questions": [
+    {
+      "question": "হযরত ইউসুফ (আ.)-এর পিতা কে ছিলেন?",
+      "question_en": "Who was the father of Prophet Yusuf (AS)?",
+      "options": [
+        "হযরত ইসহাক (আ.)",
+        "হযরত ইয়াকুব (আ.)",
+        "হযরত ইব্রাহিম (আ.)",
+        "হযরত ইসমাইল (আ.)"
+      ],
+      "options_en": [
+        "Ishaq (AS)",
+        "Ya'qub (AS)",
+        "Ibrahim (AS)",
+        "Isma'il (AS)"
+      ],
+      "answer": 1,
+      "explanation": "ইউসুফ (আ.) ছিলেন নবী ইয়াকুব (আ.)-এর পুত্র, ইসহাক (আ.)-এর নাতি আর ইব্রাহিম (আ.)-এর প্রপৌত্র।",
+      "explanation_en": "Yusuf (AS) was the son of Ya'qub (AS), grandson of Ishaq (AS) and great-grandson of Ibrahim (AS)."
+    },
+    {
+      "question": "শৈশবে ইউসুফ (আ.) স্বপ্নে কী সিজদা করতে দেখেছিলেন?",
+      "question_en": "In his childhood dream, what did Yusuf (AS) see prostrating to him?",
+      "options": [
+        "৭টি গাভী",
+        "১১টি তারা, সূর্য ও চাঁদ",
+        "১২টি পাখি",
+        "৭টি শস্যের শীষ"
+      ],
+      "options_en": [
+        "7 cows",
+        "11 stars, the sun and the moon",
+        "12 birds",
+        "7 ears of grain"
+      ],
+      "answer": 1,
+      "explanation": "সূরা ইউসুফের ৪ নম্বর আয়াতে আছে, তিনি এগারোটি তারা, সূর্য ও চাঁদকে তাঁকে সিজদা করতে দেখেন।",
+      "explanation_en": "Surah Yusuf 12:4: he saw eleven stars, the sun and the moon prostrating to him."
+    },
+    {
+      "question": "ইউসুফ (আ.)-এর ভাইয়েরা তাঁকে কোথায় ফেলে দিয়েছিল?",
+      "question_en": "Where did Yusuf's (AS) brothers throw him?",
+      "options": [
+        "নদীতে",
+        "কূপে",
+        "মরুভূমিতে",
+        "গুহায়"
+      ],
+      "options_en": [
+        "Into a river",
+        "Into a well",
+        "In the desert",
+        "In a cave"
+      ],
+      "answer": 1,
+      "explanation": "হিংসায় ভাইয়েরা তাঁকে একটি কূপে ফেলে দেয়; পরে এক কাফেলা তাঁকে তুলে মিশরে বিক্রি করে।",
+      "explanation_en": "Out of envy his brothers cast him into a well; a caravan pulled him out and sold him in Egypt."
+    },
+    {
+      "question": "কারাগারে ইউসুফ (আ.) বাদশাহর কোন স্বপ্নের ব্যাখ্যা দেন?",
+      "question_en": "Which dream of the king did Yusuf (AS) interpret?",
+      "options": [
+        "৭টি মোটা গাভীকে ৭টি শীর্ণ গাভী খাচ্ছে",
+        "সূর্য পশ্চিমে উঠছে",
+        "নীলনদ শুকিয়ে গেছে",
+        "আকাশ থেকে পাথর পড়ছে"
+      ],
+      "options_en": [
+        "7 lean cows eating 7 fat cows",
+        "The sun rising in the west",
+        "The Nile drying up",
+        "Stones falling from the sky"
+      ],
+      "answer": 0,
+      "explanation": "তিনি ব্যাখ্যা দেন: ৭ বছর ভালো ফসল, তারপর ৭ বছর দুর্ভিক্ষ; তাই শস্য জমিয়ে রাখতে হবে।",
+      "explanation_en": "He explained it as 7 years of good harvest, then 7 of famine - so grain must be stored."
+    },
+    {
+      "question": "কুরআনে কোন সূরাকে ‘আহসানুল কাসাস’ (সবচেয়ে সুন্দর কাহিনি) বলা হয়েছে?",
+      "question_en": "Which surah does the Qur'an call 'the best of stories'?",
+      "options": [
+        "সূরা ইউসুফ",
+        "সূরা মারইয়াম",
+        "সূরা কাহফ",
+        "সূরা কাসাস"
+      ],
+      "options_en": [
+        "Surah Yusuf",
+        "Surah Maryam",
+        "Surah Al-Kahf",
+        "Surah Al-Qasas"
+      ],
+      "answer": 0,
+      "explanation": "সূরা ইউসুফের ৩ নম্বর আয়াতে আল্লাহ এই কাহিনিকে ‘আহসানুল কাসাস’ বলেছেন। এটি কুরআনের ১২তম সূরা।",
+      "explanation_en": "In Surah Yusuf 12:3 Allah calls it 'the best of stories'. It is the 12th surah."
+    }
+  ]
+}

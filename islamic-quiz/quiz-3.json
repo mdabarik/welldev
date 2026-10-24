@@ -1,0 +1,105 @@
+{
+  "id": "quiz-3",
+  "title": "রাসূলুল্লাহ (সা.)-এর জীবনী",
+  "title_en": "Life of the Prophet Muhammad (SAW)",
+  "description": "৫টি প্রশ্নের সঠিক উত্তর দিন",
+  "description_en": "Answer all 5 questions",
+  "image": "https://mdabarik.github.io/welldev/islamic-quiz/images/quiz-3.png",
+  "questions": [
+    {
+      "question": "রাসূলুল্লাহ (সা.) কোন শহরে জন্মগ্রহণ করেন?",
+      "question_en": "In which city was the Prophet (SAW) born?",
+      "options": [
+        "মদিনা",
+        "মক্কা",
+        "তায়েফ",
+        "জেরুজালেম"
+      ],
+      "options_en": [
+        "Madinah",
+        "Makkah",
+        "Ta'if",
+        "Jerusalem"
+      ],
+      "answer": 1,
+      "explanation": "রাসূলুল্লাহ (সা.) হস্তীবর্ষে (আমুল ফিল) মক্কায় কুরাইশ বংশে জন্মগ্রহণ করেন।",
+      "explanation_en": "The Prophet (SAW) was born in Makkah, into the Quraysh, in the Year of the Elephant."
+    },
+    {
+      "question": "রাসূলুল্লাহ (সা.)-এর আম্মার নাম কী?",
+      "question_en": "What was the name of the Prophet's (SAW) mother?",
+      "options": [
+        "হযরত হালিমা (রা.)",
+        "হযরত খাদিজা (রা.)",
+        "হযরত আমিনা",
+        "হযরত ফাতিমা (রা.)"
+      ],
+      "options_en": [
+        "Halimah (RA)",
+        "Khadijah (RA)",
+        "Aminah",
+        "Fatimah (RA)"
+      ],
+      "answer": 2,
+      "explanation": "তাঁর আম্মা আমিনা বিনতে ওয়াহাব। হালিমা সাদিয়া (রা.) ছিলেন তাঁর দুধমা।",
+      "explanation_en": "His mother was Aminah bint Wahb; Halimah as-Sa'diyyah (RA) was his wet nurse."
+    },
+    {
+      "question": "প্রথম ওহি নাজিল হয় কোন গুহায়?",
+      "question_en": "In which cave did the first revelation come?",
+      "options": [
+        "গারে সাওর",
+        "গারে হেরা",
+        "গারে উহুদ",
+        "গারে কাহফ"
+      ],
+      "options_en": [
+        "Cave of Thawr",
+        "Cave of Hira",
+        "Cave of Uhud",
+        "Cave of Kahf"
+      ],
+      "answer": 1,
+      "explanation": "৪০ বছর বয়সে হেরা গুহায় জিবরাইল (আ.) সূরা আলাকের প্রথম আয়াতগুলো নিয়ে আসেন।",
+      "explanation_en": "At 40, in the Cave of Hira, Jibril (AS) brought the first verses of Surah Al-Alaq."
+    },
+    {
+      "question": "হিজরতের সময় রাসূলুল্লাহ (সা.)-এর সফরসঙ্গী কে ছিলেন?",
+      "question_en": "Who accompanied the Prophet (SAW) on the Hijrah?",
+      "options": [
+        "হযরত আবু বকর (রা.)",
+        "হযরত উমর (রা.)",
+        "হযরত আলী (রা.)",
+        "হযরত উসমান (রা.)"
+      ],
+      "options_en": [
+        "Abu Bakr (RA)",
+        "Umar (RA)",
+        "Ali (RA)",
+        "Uthman (RA)"
+      ],
+      "answer": 0,
+      "explanation": "হযরত আবু বকর (রা.) তাঁর সাথে মদিনায় হিজরত করেন; পথে দুজনে সাওর গুহায় তিন দিন লুকিয়ে ছিলেন।",
+      "explanation_en": "Abu Bakr (RA) made the Hijrah with him; on the way they hid three days in the Cave of Thawr."
+    },
+    {
+      "question": "মুসলমানদের প্রথম বড় যুদ্ধ কোনটি?",
+      "question_en": "What was the first major battle of the Muslims?",
+      "options": [
+        "উহুদের যুদ্ধ",
+        "খন্দকের যুদ্ধ",
+        "বদরের যুদ্ধ",
+        "হুনাইনের যুদ্ধ"
+      ],
+      "options_en": [
+        "Battle of Uhud",
+        "Battle of the Trench",
+        "Battle of Badr",
+        "Battle of Hunayn"
+      ],
+      "answer": 2,
+      "explanation": "দ্বিতীয় হিজরির রমজানে বদরের যুদ্ধ হয়; ৩১৩ জন সাহাবি নিয়ে মুসলমানরা জয়ী হন।",
+      "explanation_en": "Badr was fought in Ramadan, 2 AH; about 313 Companions won the day."
+    }
+  ]
+}

@@ -1,0 +1,105 @@
+{
+  "id": "quiz-5",
+  "title": "হযরত আবু বকর (রা.)-এর জীবনী",
+  "title_en": "Life of Abu Bakr as-Siddiq (RA)",
+  "description": "৫টি প্রশ্নের সঠিক উত্তর দিন",
+  "description_en": "Answer all 5 questions",
+  "image": "https://mdabarik.github.io/welldev/islamic-quiz/images/quiz-5.png",
+  "questions": [
+    {
+      "question": "হযরত আবু বকর (রা.)-এর উপাধি কী?",
+      "question_en": "What was the title of Abu Bakr (RA)?",
+      "options": [
+        "ফারুক",
+        "সিদ্দিক",
+        "গনি",
+        "সাইফুল্লাহ"
+      ],
+      "options_en": [
+        "Al-Faruq",
+        "As-Siddiq",
+        "Al-Ghani",
+        "Saifullah"
+      ],
+      "answer": 1,
+      "explanation": "মিরাজের ঘটনা শুনে বিনা দ্বিধায় বিশ্বাস করায় তিনি ‘সিদ্দিক’ (সত্যবাদী, সত্যায়নকারী) উপাধি পান।",
+      "explanation_en": "He was called As-Siddiq for believing the Night Journey without hesitation."
+    },
+    {
+      "question": "প্রাপ্তবয়স্ক স্বাধীন পুরুষদের মধ্যে প্রথম ইসলাম গ্রহণ করেন কে?",
+      "question_en": "Who was the first free adult man to accept Islam?",
+      "options": [
+        "হযরত আবু বকর (রা.)",
+        "হযরত উমর (রা.)",
+        "হযরত হামজা (রা.)",
+        "হযরত বিলাল (রা.)"
+      ],
+      "options_en": [
+        "Abu Bakr (RA)",
+        "Umar (RA)",
+        "Hamzah (RA)",
+        "Bilal (RA)"
+      ],
+      "answer": 0,
+      "explanation": "নারীদের মধ্যে প্রথম খাদিজা (রা.), শিশুদের মধ্যে আলী (রা.), আর প্রাপ্তবয়স্ক পুরুষদের মধ্যে আবু বকর (রা.)।",
+      "explanation_en": "Khadijah (RA) was first among women, Ali (RA) among children, and Abu Bakr (RA) among adult men."
+    },
+    {
+      "question": "ইসলামের প্রথম খলিফা কে?",
+      "question_en": "Who was the first caliph of Islam?",
+      "options": [
+        "হযরত উমর (রা.)",
+        "হযরত আবু বকর (রা.)",
+        "হযরত উসমান (রা.)",
+        "হযরত আলী (রা.)"
+      ],
+      "options_en": [
+        "Umar (RA)",
+        "Abu Bakr (RA)",
+        "Uthman (RA)",
+        "Ali (RA)"
+      ],
+      "answer": 1,
+      "explanation": "রাসূলুল্লাহ (সা.)-এর ইন্তেকালের পর ১১ হিজরিতে আবু বকর (রা.) প্রথম খলিফা হন।",
+      "explanation_en": "After the Prophet (SAW) passed away in 11 AH, Abu Bakr (RA) became the first caliph."
+    },
+    {
+      "question": "আবু বকর (রা.)-এর কোন মেয়ে উম্মুল মুমিনিন ছিলেন?",
+      "question_en": "Which daughter of Abu Bakr (RA) was a Mother of the Believers?",
+      "options": [
+        "হযরত হাফসা (রা.)",
+        "হযরত আয়েশা (রা.)",
+        "হযরত যয়নব (রা.)",
+        "হযরত উম্মে সালামা (রা.)"
+      ],
+      "options_en": [
+        "Hafsah (RA)",
+        "Aishah (RA)",
+        "Zaynab (RA)",
+        "Umm Salamah (RA)"
+      ],
+      "answer": 1,
+      "explanation": "তাঁর কন্যা আয়েশা (রা.) ছিলেন রাসূলুল্লাহ (সা.)-এর স্ত্রী। হাফসা (রা.) ছিলেন উমর (রা.)-এর কন্যা।",
+      "explanation_en": "His daughter Aishah (RA) was the Prophet's (SAW) wife; Hafsah (RA) was Umar's (RA) daughter."
+    },
+    {
+      "question": "আবু বকর (রা.)-এর খিলাফতে কোন কাজটি প্রথম শুরু হয়?",
+      "question_en": "What major work began in the caliphate of Abu Bakr (RA)?",
+      "options": [
+        "কুরআন এক মুসহাফে সংকলন",
+        "হিজরি সাল গণনা চালু",
+        "কাবাঘর পুনর্নির্মাণ",
+        "আজান চালু"
+      ],
+      "options_en": [
+        "Compiling the Qur'an into one volume",
+        "Starting the Hijri calendar",
+        "Rebuilding the Ka'bah",
+        "Starting the adhan"
+      ],
+      "answer": 0,
+      "explanation": "ইয়ামামার যুদ্ধে বহু হাফেজ শহীদ হওয়ায় উমর (রা.)-এর পরামর্শে তিনি যায়েদ ইবনে সাবিত (রা.)-কে দিয়ে কুরআন একত্রে সংকলন করান। হিজরি সাল চালু করেন উমর (রা.)।",
+      "explanation_en": "After many huffaz fell at Yamamah, on Umar's (RA) advice he had Zayd ibn Thabit (RA) compile the Qur'an. The Hijri calendar came under Umar (RA)."
+    }
+  ]
+}

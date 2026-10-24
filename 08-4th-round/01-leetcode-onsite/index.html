@@ -1,0 +1,678 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LeetCode Onsite Round</title>
+<meta name="description" content="WellDev 4th round: onsite-এ ১ ঘণ্টায় ৩টি coding problem। Candidate-দের জানানো problem, C++ solution, complexity, mock set আর 60 মিনিটের timer।">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f5f7fc; --surface:#ffffff; --surface-2:#f1f4fa; --fg:#0f172a; --muted:#5b6478; --faint:#94a0b8; --line:#e4e8f1;
+  --accent:#e11d48; --easy:#059669; --med:#d97706; --hard:#dc2626;
+  --hero:linear-gradient(135deg,#be123c 0%,#e11d48 45%,#f97316 100%);
+  --shadow:0 1px 2px rgba(15,23,42,.04),0 10px 30px -12px rgba(15,23,42,.14);
+  --code-bg:#ffffff; --code-line:#e6e9f1; --code-fg:#1f1f1f;
+  --k:#0000ff; --ty:#267f99; --s:#a31515; --n:#098658; --cm:#008000; --fn:#795e26; --pp:#af00db;
+  --sans:"Inter","Hind Siliguri",system-ui,sans-serif; --bn:"Hind Siliguri","Inter",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0b0f1a; --surface:#121827; --surface-2:#182033; --fg:#e7ecf6; --muted:#9aa6bf; --faint:#66728c; --line:#232c42;
+  --accent:#fb7185; --easy:#34d399; --med:#fbbf24; --hard:#f87171;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6);
+  --code-bg:#1e1e1e; --code-line:#2d2d30; --code-fg:#d4d4d4;
+  --k:#569cd6; --ty:#4ec9b0; --s:#ce9178; --n:#b5cea8; --cm:#6a9955; --fn:#dcdcaa; --pp:#c586c0;
+}}
+:root[data-theme="dark"]{
+  --bg:#0b0f1a; --surface:#121827; --surface-2:#182033; --fg:#e7ecf6; --muted:#9aa6bf; --faint:#66728c; --line:#232c42;
+  --accent:#fb7185; --easy:#34d399; --med:#fbbf24; --hard:#f87171;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6);
+  --code-bg:#1e1e1e; --code-line:#2d2d30; --code-fg:#d4d4d4;
+  --k:#569cd6; --ty:#4ec9b0; --s:#ce9178; --n:#b5cea8; --cm:#6a9955; --fn:#dcdcaa; --pp:#c586c0;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.75 var(--bn);-webkit-font-smoothing:antialiased}
+a{color:var(--accent)}
+button,input{font:inherit;color:inherit}
+code{font-family:var(--mono);font-size:.86em;font-weight:500;background:color-mix(in srgb,var(--accent) 10%,var(--surface));color:color-mix(in srgb,var(--accent) 72%,var(--fg));padding:.1em .4em;border-radius:6px}
+.wrap{max-width:920px;margin:0 auto;padding:20px 16px 80px}
+h1,h2,h3,h4{letter-spacing:0}
+
+.topnav{display:flex;align-items:center;gap:10px}
+.brand{display:flex;align-items:center;gap:10px;color:var(--fg);text-decoration:none;font:800 16px var(--sans)}
+.logo{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:#fff;font:800 13px var(--mono);background:var(--hero)}
+.topnav .sp{flex:1}
+.pill{border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:6px 14px;font:600 13px var(--sans);cursor:pointer;text-decoration:none}
+.pill:hover{color:var(--fg)}
+
+.hero{margin-top:22px;border-radius:22px;padding:30px 32px;color:#fff;background:var(--hero);position:relative;overflow:hidden}
+.hero::after{content:"";position:absolute;right:-70px;top:-90px;width:320px;height:320px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.22),transparent 65%);pointer-events:none}
+.eyebrow{font:600 12px var(--sans);letter-spacing:.1em;text-transform:uppercase;opacity:.88}
+.hero h1{margin:8px 0 10px;font:800 clamp(26px,4.4vw,40px)/1.32 var(--bn)}
+.hero p{margin:0;max-width:700px;font-size:16.5px;opacity:.95}
+@media (max-width:640px){.hero{padding:24px 20px}}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow)}
+.note{margin:18px 0 0;padding:14px 16px;font-size:14.5px;color:var(--muted);border-left:4px solid var(--med)}
+.note b{color:var(--fg)}
+
+/* timeline of the round */
+.flow{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:26px 0 0}
+@media (max-width:640px){.flow{grid-template-columns:1fr}}
+.step{padding:16px 18px;position:relative}
+.step .t{font:700 12px var(--mono);color:var(--accent)}
+.step h3{margin:4px 0 4px;font:700 17px var(--bn)}
+.step p{margin:0;font-size:14.5px;color:var(--muted)}
+.step .bar{position:absolute;left:0;top:14px;bottom:14px;width:4px;border-radius:0 4px 4px 0;background:var(--accent)}
+
+.sec{margin:42px 0 14px;display:flex;align-items:center;gap:12px;font:800 clamp(20px,2.8vw,24px)/1.32 var(--bn)}
+.sec .dot{width:12px;height:12px;border-radius:50%;background:var(--accent)}
+.sec small{font:500 13px var(--bn);color:var(--muted)}
+
+/* mock set + timer */
+.mock{padding:18px 20px}
+.mock .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.clock{font:700 34px var(--mono);letter-spacing:.02em;min-width:130px}
+.clock.low{color:var(--hard)}
+.btn{border:1px solid var(--line);background:var(--surface-2);border-radius:10px;padding:7px 14px;font:600 13.5px var(--sans);cursor:pointer}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn:hover{filter:brightness(1.05)}
+.mock ol{margin:14px 0 0;padding-left:22px}
+.mock li{margin:6px 0}
+.mock li a{font-weight:600;text-decoration:none}
+.mock .hint{margin:10px 0 0;font-size:14px;color:var(--muted)}
+
+.tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0 14px}
+.chip{border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:6px 14px;font:600 13px var(--sans);cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+.search{flex:1;min-width:180px;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:7px 16px;font:500 14px var(--sans);outline:none}
+.search:focus{border-color:var(--accent)}
+.count{font:500 12.5px var(--mono);color:var(--faint)}
+
+details.q{margin:0 0 12px;overflow:hidden}
+details.q>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:12px;padding:14px 16px}
+details.q>summary::-webkit-details-marker{display:none}
+details.q>summary::after{content:"";margin-left:4px;flex:none;width:8px;height:8px;border-right:2px solid var(--faint);border-bottom:2px solid var(--faint);transform:rotate(45deg);transition:transform .15s}
+details.q[open]>summary::after{transform:rotate(-135deg)}
+.qn{flex:none;width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:#fff;font:700 14px var(--sans);background:var(--c)}
+.qt{font:600 16px/1.45 var(--bn);flex:1}
+.qt small{display:block;font:500 12.5px var(--mono);color:var(--faint)}
+.lvl{flex:none;font:700 11px var(--sans);padding:2px 9px;border-radius:999px;color:var(--c);background:color-mix(in srgb,var(--c) 12%,transparent)}
+.easy{--c:var(--easy)} .med{--c:var(--med)} .hard{--c:var(--hard)}
+.src{flex:none;font:600 11px var(--sans);padding:2px 9px;border-radius:999px;color:var(--muted);border:1px dashed var(--faint)}
+.body{padding:4px 20px 20px 62px;border-top:1px solid var(--line)}
+@media (max-width:640px){.body{padding:4px 16px 18px}.src{display:none}}
+.body h4{margin:18px 0 6px;font:700 14.5px var(--bn);color:var(--c)}
+.body p{margin:8px 0}
+.body ul,.body ol{margin:6px 0;padding-left:22px}
+.body li{margin:4px 0}
+.ex{margin:10px 0;padding:10px 14px;border-radius:10px;background:var(--surface-2);font:13.5px/1.7 var(--mono);white-space:pre-wrap}
+.cx{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 0}
+.cx span{font:600 12px var(--mono);padding:3px 10px;border-radius:8px;background:color-mix(in srgb,var(--c) 10%,var(--surface));color:var(--fg)}
+.lang{display:inline-block;margin-top:10px;font:600 11px var(--mono);color:var(--muted)}
+pre.code{margin:4px 0 10px;padding:12px 14px;border-radius:12px;background:var(--code-bg);color:var(--code-fg);border:1px solid var(--code-line);font:13px/1.65 var(--mono);white-space:pre;overflow-x:auto;font-variant-ligatures:none}
+pre.code .k{color:var(--k)} pre.code .ty{color:var(--ty)} pre.code .s{color:var(--s)} pre.code .n{color:var(--n)}
+pre.code .cm{color:var(--cm);font-style:italic} pre.code .fn{color:var(--fn)} pre.code .pp{color:var(--pp)}
+.tip{margin:12px 0;padding:10px 14px;border-radius:10px;background:color-mix(in srgb,var(--c) 8%,var(--surface));border:1px solid color-mix(in srgb,var(--c) 22%,var(--line));font-size:15px}
+.lc{font:600 13px var(--sans);text-decoration:none}
+
+.check{padding:6px 20px 14px}
+.check label{display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px dashed var(--line);cursor:pointer}
+.check label:last-child{border-bottom:0}
+.check input{margin-top:6px;accent-color:var(--accent);width:16px;height:16px;flex:none}
+.check b{display:block}
+.check span{color:var(--muted);font-size:14.5px}
+.hidden{display:none}
+footer{margin-top:50px;color:var(--faint);font-size:13.5px}
+footer a{color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<nav class="topnav">
+  <a class="brand" href="../../index.html"><span class="logo">WD</span>WellDev Prep</a>
+  <span class="sp"></span>
+  <a class="pill" href="../02-coo-round/index.html">COO Round →</a>
+  <button class="pill" id="theme" type="button">Theme</button>
+</nav>
+
+<header class="hero">
+  <div class="eyebrow">4th Round · Onsite · Part 1</div>
+  <h1>LeetCode Onsite: ১ ঘণ্টায় ৩টি problem</h1>
+  <p>Final round-এর শুরুতেই office-এ বসে IDE-তে ৩টি coding problem solve করতে হয়, সব test case pass করতে হয়। তারপর engineer-রা তোমার code review করেন। Candidate-রা যেসব problem পেয়েছেন, সেগুলোর C++ solution আর practice-এর জন্য একটা 60 মিনিটের mock set নিচে।</p>
+</header>
+
+<div class="card note">
+  <b>সূত্র:</b> Glassdoor-এ WellDev-এর Trainee / Junior Software Engineer review, <a href="https://tahanima.github.io/recruitment-stories-experience-of-shariar-at-welldev/" target="_blank" rel="noopener">Shariar-এর recruitment story</a> আর <a href="https://tamimehsan.github.io/interview-questions-bangladesh/companies/welldev" target="_blank" rel="noopener">Interview Questions Bangladesh</a>-এর WellDev পাতা। সবই candidate-দের নিজের বলা অভিজ্ঞতা, অফিসিয়াল তালিকা নয়। Problem বছর আর পদ অনুযায়ী বদলায়, তাই pattern শেখো, মুখস্থ নয়।
+</div>
+
+<div class="flow">
+  <div class="card step"><span class="bar"></span><div class="t">00:00 – 60:00</div><h3>Coding test</h3><p>৩টি easy থেকে medium problem। IDE-তে লিখতে হয়, code run হতে হবে, সব test case pass।</p></div>
+  <div class="card step"><span class="bar"></span><div class="t">+ ~30 min</div><h3>Code review</h3><p>Engineer-রা code পড়েন, নতুন test দেন, জিজ্ঞেস করেন কেন এই approach, complexity কত।</p></div>
+  <div class="card step"><span class="bar"></span><div class="t">+ ~30 min</div><h3>COO session</h3><p>Behavioral প্রশ্ন, mindset আর কাজের ধরন। আলাদা পাতায়: <a href="../02-coo-round/index.html">COO Round</a>।</p></div>
+</div>
+
+<!-- ============ MOCK ============ -->
+<h2 class="sec"><span class="dot"></span>Mock onsite <small>৩টি random problem + 60 মিনিট</small></h2>
+<div class="card mock">
+  <div class="row">
+    <span class="clock" id="clock">60:00</span>
+    <button class="btn primary" id="start" type="button">Start</button>
+    <button class="btn" id="reset" type="button">Reset</button>
+    <span class="sp" style="flex:1"></span>
+    <button class="btn" id="shuffle" type="button">নতুন set ↻</button>
+  </div>
+  <ol id="set"></ol>
+  <p class="hint">প্রতিটা set-এ দুটো easy আর একটা medium থাকে, আসল round-এর মতো। আগে solution দেখো না। শেষ হলে নিচের review checklist মিলিয়ে নাও।</p>
+</div>
+
+<!-- ============ PROBLEMS ============ -->
+<h2 class="sec"><span class="dot"></span>Problem ও solution <small>C++ · প্রতিটায় idea, code, complexity</small></h2>
+
+<div class="tools">
+  <button class="chip" data-f="all" aria-pressed="true">সব</button>
+  <button class="chip" data-f="final" aria-pressed="false">Final round-এ এসেছে</button>
+  <button class="chip" data-f="earlier" aria-pressed="false">আগের round থেকে</button>
+  <input class="search" id="q" type="search" placeholder="খোঁজো (যেমন stack, map, DP)">
+  <span class="count" id="count"></span>
+</div>
+
+<!-- 1 -->
+<details class="card q med" data-src="final" data-lvl="med" data-id="coin">
+<summary><span class="qn">1</span><span class="qt">Coin Change: সবচেয়ে কম coin-এ amount বানাও<small>LeetCode 322 · DP</small></span><span class="src">Final round</span><span class="lvl">Medium</span></summary>
+<div class="body">
+<p>কিছু coin-এর মান আর একটা <code>amount</code> দেওয়া। প্রতিটা coin যতবার খুশি নেওয়া যায়। সবচেয়ে কম কয়টা coin লাগবে? বানানো না গেলে <code>-1</code>।</p>
+<div class="ex">coins = [1, 2, 5], amount = 11  →  3   (5 + 5 + 1)
+coins = [2], amount = 3           →  -1</div>
+<h4>Greedy কেন ভুল</h4>
+<p>Candidate-কে "greedy coin change" বলা হয়েছিল। বড় coin আগে নেওয়া (greedy) টাকার মতো coin-এ (1, 2, 5, 10) কাজ করে, কিন্তু সব সময় না। <code>coins = [1, 3, 4]</code>, <code>amount = 6</code>: greedy নেয় 4 + 1 + 1 = ৩টি, অথচ 3 + 3 = ২টি। তাই interviewer-কে বলো: coin system standard হলে greedy চলে, নাহলে DP লাগবে। দুটোই লিখে রাখো।</p>
+<h4>Idea (DP)</h4>
+<p><code>dp[x]</code> = x টাকা বানাতে সবচেয়ে কম coin। প্রতিটা coin <code>c</code>-র জন্য <code>dp[x] = min(dp[x], dp[x - c] + 1)</code>।</p>
+<span class="lang">C++</span>
+<pre class="code">int coinChange(vector&lt;int&gt;&amp; coins, int amount) {
+    const int INF = amount + 1;                 // এর চেয়ে বেশি coin কখনো লাগে না
+    vector&lt;int&gt; dp(amount + 1, INF);
+    dp[0] = 0;
+    for (int x = 1; x &lt;= amount; x++)
+        for (int c : coins)
+            if (c &lt;= x) dp[x] = min(dp[x], dp[x - c] + 1);
+    return dp[amount] == INF ? -1 : dp[amount];
+}
+
+// Greedy: শুধু standard coin (1, 2, 5, 10...) হলে ঠিক
+int coinGreedy(vector&lt;int&gt; coins, int amount) {
+    sort(coins.rbegin(), coins.rend());         // বড় থেকে ছোট
+    int cnt = 0;
+    for (int c : coins) { cnt += amount / c; amount %= c; }
+    return amount == 0 ? cnt : -1;
+}</pre>
+<div class="cx"><span>DP Time O(amount × n)</span><span>Space O(amount)</span><span>Greedy O(n log n)</span></div>
+</div>
+</details>
+
+<!-- 2 -->
+<details class="card q easy" data-src="final" data-lvl="easy" data-id="fib">
+<summary><span class="qn">2</span><span class="qt">Fibonacci series: শুধু দুটো variable দিয়ে<small>LeetCode 509 · Iteration</small></span><span class="src">Final round</span><span class="lvl">Easy</span></summary>
+<div class="body">
+<p>প্রথম <code>n</code>টা Fibonacci সংখ্যা print করো, অথবা <code>F(n)</code> return করো। F(0) = 0, F(1) = 1, F(n) = F(n-1) + F(n-2)।</p>
+<div class="ex">n = 7  →  0 1 1 2 3 5 8</div>
+<h4>Idea</h4>
+<p>Recursion লিখলে একই মান বারবার হিসাব হয়, time O(2ⁿ)। শুধু শেষ দুটো মান রাখলেই চলে: <code>a</code> আর <code>b</code>। প্রতি ধাপে <code>b = a + b</code>, <code>a = পুরনো b</code>। আগের round-এ ঠিক এটাই জিজ্ঞেস করা হয়েছিল ("only two variables"), তাই third variable ছাড়া লেখার trick-টাও জেনে রাখো।</p>
+<span class="lang">C++</span>
+<pre class="code">void printFib(int n) {
+    long long a = 0, b = 1;
+    for (int i = 0; i &lt; n; i++) {
+        cout &lt;&lt; a &lt;&lt; " ";
+        b = a + b;      // নতুন মান
+        a = b - a;      // পুরনো b (third variable ছাড়াই)
+    }
+}
+
+int fib(int n) {
+    int a = 0, b = 1;
+    while (n--) { b = a + b; a = b - a; }
+    return a;
+}</pre>
+<div class="cx"><span>Time O(n)</span><span>Space O(1)</span></div>
+<div class="tip">Review-এ প্রায়ই আসে: n বড় হলে <code>int</code> overflow হবে (F(47) আর int-এ ধরে না)। <code>long long</code> ব্যবহার করো, বা modulo চাইলে <code>% 1e9+7</code>।</div>
+</div>
+</details>
+
+<!-- 3 -->
+<details class="card q easy" data-src="final" data-lvl="easy" data-id="clock">
+<summary><span class="qn">3</span><span class="qt">দুটো ঘড়ির সময়ের পার্থক্য বের করো<small>Custom · LeetCode 539-এর কাছাকাছি · String parsing</small></span><span class="src">Final round</span><span class="lvl">Easy</span></summary>
+<div class="body">
+<p>দুটো সময় <code>"HH:MM"</code> (24-hour) দেওয়া: start আর end। মাঝে কত ঘণ্টা কত মিনিট গেছে? end যদি start-এর আগে হয়, ধরো মাঝরাত পেরিয়ে পরের দিন।</p>
+<div class="ex">start = "09:45", end = "17:10"  →  7 hour 25 min
+start = "22:30", end = "01:15"  →  2 hour 45 min   (রাত পার হয়েছে)</div>
+<h4>Idea</h4>
+<p>দুটো সময়কেই মিনিটে বদলাও: <code>h × 60 + m</code>। পার্থক্য negative হলে ২৪ ঘণ্টা (1440 মিনিট) যোগ করো। শেষে আবার ঘণ্টা আর মিনিটে ভাগ করো। 12-hour format ("09:45 PM") দিলে আগে AM/PM বুঝে 24-hour-এ নিয়ে নাও; interviewer-কে format জিজ্ঞেস করো।</p>
+<span class="lang">C++</span>
+<pre class="code">int toMin(const string&amp; t) {                   // "HH:MM" → মিনিট
+    int h = stoi(t.substr(0, 2));
+    int m = stoi(t.substr(3, 2));
+    return h * 60 + m;
+}
+
+pair&lt;int, int&gt; timeDiff(const string&amp; start, const string&amp; end) {
+    int d = toMin(end) - toMin(start);
+    if (d &lt; 0) d += 24 * 60;                    // মাঝরাত পার হয়েছে
+    return {d / 60, d % 60};
+}
+
+// LeetCode 539: অনেকগুলো সময়ের মধ্যে সবচেয়ে কম পার্থক্য
+int findMinDifference(vector&lt;string&gt;&amp; times) {
+    vector&lt;int&gt; m;
+    for (auto&amp; t : times) m.push_back(toMin(t));
+    sort(m.begin(), m.end());
+    int best = 1440 - m.back() + m[0];         // শেষ থেকে ঘুরে প্রথমে
+    for (int i = 1; i &lt; (int)m.size(); i++) best = min(best, m[i] - m[i - 1]);
+    return best;
+}</pre>
+<div class="cx"><span>Time O(1)</span><span>539: O(n log n)</span></div>
+<div class="tip"><b>Edge case:</b> start আর end একই হলে উত্তর 0 নাকি 24 ঘণ্টা? এটা আগে জিজ্ঞেস করো। এমন প্রশ্ন করাটাই review-এ ভালো নম্বর দেয়।</div>
+</div>
+</details>
+
+<!-- 4 -->
+<details class="card q easy" data-src="final" data-lvl="easy" data-id="cycle">
+<summary><span class="qn">4</span><span class="qt">Linked list-এ cycle আছে কিনা বের করো<small>LeetCode 141 · Fast &amp; slow pointer</small></span><span class="src">Final round</span><span class="lvl">Easy</span></summary>
+<div class="body">
+<p>একটা linked list-এর head দেওয়া। কোনো node-এর <code>next</code> যদি আগের কোনো node-এ ফিরে যায়, তাহলে cycle আছে। <code>true</code> / <code>false</code> return করো।</p>
+<div class="ex">3 → 2 → 0 → -4 ─┐
+     ↑           │      →  true
+     └───────────┘</div>
+<h4>Idea (Floyd's tortoise &amp; hare)</h4>
+<p>দুটো pointer: <code>slow</code> এক ঘর যায়, <code>fast</code> দুই ঘর। Cycle না থাকলে <code>fast</code> শেষে <code>nullptr</code>-এ পৌঁছায়। Cycle থাকলে <code>fast</code> ঘুরে এসে একসময় <code>slow</code>-কে ধরে ফেলে, যেমন দৌড়ের মাঠে দ্রুত দৌড়বিদ ধীরজনকে এক চক্কর পেছন থেকে ধরে।</p>
+<span class="lang">C++</span>
+<pre class="code">struct ListNode { int val; ListNode* next; };
+
+bool hasCycle(ListNode* head) {
+    ListNode* slow = head;
+    ListNode* fast = head;
+    while (fast &amp;&amp; fast-&gt;next) {
+        slow = slow-&gt;next;
+        fast = fast-&gt;next-&gt;next;
+        if (slow == fast) return true;          // দেখা হয়ে গেছে
+    }
+    return false;                               // fast শেষে পৌঁছেছে
+}</pre>
+<div class="cx"><span>Time O(n)</span><span>Space O(1)</span></div>
+<div class="tip"><b>Follow-up (LeetCode 142):</b> cycle কোথা থেকে শুরু? দেখা হওয়ার পর একটা pointer head-এ রাখো, দুটোকেই এক ঘর করে চালাও, যেখানে মিলবে সেটাই শুরু। আরেকটা সহজ উপায়: <code>unordered_set&lt;ListNode*&gt;</code>-এ visited রাখা, কিন্তু তাতে O(n) space লাগে।</div>
+</div>
+</details>
+
+<!-- 5 -->
+<details class="card q easy" data-src="final" data-lvl="easy" data-id="revstack">
+<summary><span class="qn">5</span><span class="qt">Stack ব্যবহার করে string উল্টাও<small>Stack · LIFO</small></span><span class="src">Final round</span><span class="lvl">Easy</span></summary>
+<div class="body">
+<p>একটা string দেওয়া, stack দিয়ে উল্টো করে দাও।</p>
+<div class="ex">"WellDev"  →  "veDlleW"</div>
+<h4>Idea</h4>
+<p>Stack-এ যা শেষে ঢোকে, তা আগে বের হয় (LIFO)। তাই সব character push করে তারপর pop করলে উল্টো ক্রম পাওয়া যায়।</p>
+<span class="lang">C++</span>
+<pre class="code">string reverseWithStack(const string&amp; s) {
+    stack&lt;char&gt; st;
+    for (char c : s) st.push(c);
+    string out;
+    while (!st.empty()) {
+        out += st.top();
+        st.pop();
+    }
+    return out;
+}
+
+// Follow-up: প্রতিটা word উল্টাও, word-এর ক্রম ঠিক রেখে
+// "hello world" → "olleh dlrow"
+string reverseEachWord(const string&amp; s) {
+    stack&lt;char&gt; st;
+    string out;
+    for (char c : s + " ") {
+        if (c == ' ') {
+            while (!st.empty()) { out += st.top(); st.pop(); }
+            out += ' ';
+        } else st.push(c);
+    }
+    out.pop_back();                             // শেষের বাড়তি space
+    return out;
+}</pre>
+<div class="cx"><span>Time O(n)</span><span>Space O(n)</span></div>
+<div class="tip">Interviewer জিজ্ঞেস করতে পারেন stack ছাড়া কীভাবে: two pointer দিয়ে দুই মাথা থেকে swap (<code>std::reverse</code>), space O(1)। দুটোর পার্থক্য বলতে পারলে ভালো।</div>
+</div>
+</details>
+
+<!-- 6 -->
+<details class="card q easy" data-src="final" data-lvl="easy" data-id="dup">
+<summary><span class="qn">6</span><span class="qt">Map দিয়ে array-এর duplicate খুঁজে বের করো<small>LeetCode 217 / 442 · Hash map</small></span><span class="src">Final round</span><span class="lvl">Easy</span></summary>
+<div class="body">
+<p>একটা array দেওয়া। যেসব সংখ্যা একাধিকবার এসেছে সেগুলো (আর কতবার এসেছে) বের করো।</p>
+<div class="ex">nums = [4, 3, 2, 7, 8, 2, 3, 1, 3]  →  2 (2 বার), 3 (3 বার)</div>
+<h4>Idea</h4>
+<p>একবার পুরো array ঘুরে <code>unordered_map</code>-এ প্রতিটা সংখ্যার count রাখো। তারপর যাদের count &gt; 1, তারাই duplicate। Nested loop দিলে O(n²), map দিলে O(n)।</p>
+<span class="lang">C++</span>
+<pre class="code">vector&lt;pair&lt;int, int&gt;&gt; findDuplicates(const vector&lt;int&gt;&amp; nums) {
+    unordered_map&lt;int, int&gt; freq;
+    for (int x : nums) freq[x]++;
+
+    vector&lt;pair&lt;int, int&gt;&gt; dup;
+    for (auto&amp; [val, cnt] : freq)
+        if (cnt &gt; 1) dup.push_back({val, cnt});
+    return dup;
+}
+
+// LeetCode 217: duplicate আছে কি না
+bool containsDuplicate(vector&lt;int&gt;&amp; nums) {
+    unordered_set&lt;int&gt; seen;
+    for (int x : nums)
+        if (!seen.insert(x).second) return true; // আগেই ছিল
+    return false;
+}</pre>
+<div class="cx"><span>Time O(n)</span><span>Space O(n)</span></div>
+<div class="tip">Output sorted চাইলে <code>map</code> (ordered, O(n log n)) ব্যবহার করো। আর মান যদি 1..n-এর মধ্যে হয় (LeetCode 442), তাহলে index-এ চিহ্ন দিয়ে O(1) space-এও করা যায়।</div>
+</div>
+</details>
+
+<!-- 7 -->
+<details class="card q easy" data-src="earlier" data-lvl="easy" data-id="twosum">
+<summary><span class="qn">7</span><span class="qt">Two Sum<small>LeetCode 1 · Hash map</small></span><span class="src">আগের round</span><span class="lvl">Easy</span></summary>
+<div class="body">
+<p>Array থেকে এমন দুটো index বের করো যাদের মান যোগ করলে <code>target</code> হয়।</p>
+<div class="ex">nums = [2, 7, 11, 15], target = 9  →  [0, 1]</div>
+<h4>Idea</h4>
+<p>প্রতিটা সংখ্যা <code>x</code>-এর জন্য দেখো <code>target - x</code> আগে দেখা হয়েছে কি না। আগে দেখা মানগুলো map-এ index সহ রাখো।</p>
+<span class="lang">C++</span>
+<pre class="code">vector&lt;int&gt; twoSum(vector&lt;int&gt;&amp; nums, int target) {
+    unordered_map&lt;int, int&gt; pos;                // মান → index
+    for (int i = 0; i &lt; (int)nums.size(); i++) {
+        auto it = pos.find(target - nums[i]);
+        if (it != pos.end()) return {it-&gt;second, i};
+        pos[nums[i]] = i;
+    }
+    return {};
+}</pre>
+<div class="cx"><span>Time O(n)</span><span>Space O(n)</span></div>
+</div>
+</details>
+
+<!-- 8 -->
+<details class="card q easy" data-src="earlier" data-lvl="easy" data-id="zeroes">
+<summary><span class="qn">8</span><span class="qt">Move Zeroes: সব 0 শেষে পাঠাও<small>LeetCode 283 · Two pointers</small></span><span class="src">আগের round</span><span class="lvl">Easy</span></summary>
+<div class="body">
+<p>সব 0 array-এর শেষে সরাও, বাকিদের ক্রম না বদলে। নতুন array বানানো যাবে না।</p>
+<div class="ex">[0, 1, 0, 3, 12]  →  [1, 3, 12, 0, 0]</div>
+<h4>Idea</h4>
+<p><code>w</code> হলো পরের non-zero কোথায় বসবে। Non-zero পেলে <code>nums[w]</code>-এর সাথে swap করে <code>w++</code>।</p>
+<span class="lang">C++</span>
+<pre class="code">void moveZeroes(vector&lt;int&gt;&amp; nums) {
+    int w = 0;
+    for (int i = 0; i &lt; (int)nums.size(); i++)
+        if (nums[i] != 0) swap(nums[w++], nums[i]);
+}</pre>
+<div class="cx"><span>Time O(n)</span><span>Space O(1)</span></div>
+</div>
+</details>
+
+<!-- 9 -->
+<details class="card q easy" data-src="earlier" data-lvl="easy" data-id="longpal">
+<summary><span class="qn">9</span><span class="qt">Longest Palindrome: অক্ষর দিয়ে সবচেয়ে বড় palindrome<small>LeetCode 409 · Counting</small></span><span class="src">আগের round</span><span class="lvl">Easy</span></summary>
+<div class="body">
+<p>একটা string-এর অক্ষরগুলো দিয়ে সবচেয়ে লম্বা কত দৈর্ঘ্যের palindrome বানানো যায়? (case-sensitive)</p>
+<div class="ex">"abccccdd"  →  7   (যেমন "dccaccd")</div>
+<h4>Idea</h4>
+<p>প্রতিটা অক্ষরের জোড়া দুই পাশে বসানো যায়। তাই প্রতিটা count-এর জোড় অংশ যোগ করো। কোনো অক্ষর বিজোড়বার থাকলে একটাকে ঠিক মাঝখানে বসাও: +1।</p>
+<span class="lang">C++</span>
+<pre class="code">int longestPalindrome(string s) {
+    unordered_map&lt;char, int&gt; cnt;
+    for (char c : s) cnt[c]++;
+    int len = 0;
+    bool odd = false;
+    for (auto&amp; [c, k] : cnt) {
+        len += k / 2 * 2;                       // জোড় অংশ
+        if (k % 2) odd = true;
+    }
+    return len + (odd ? 1 : 0);                 // মাঝখানে একটা
+}</pre>
+<div class="cx"><span>Time O(n)</span><span>Space O(1) (৫২টা অক্ষর)</span></div>
+</div>
+</details>
+
+<!-- 10 -->
+<details class="card q med" data-src="earlier" data-lvl="med" data-id="anagram">
+<summary><span class="qn">10</span><span class="qt">Group Anagrams<small>LeetCode 49 · Hash map + sort</small></span><span class="src">আগের round</span><span class="lvl">Medium</span></summary>
+<div class="body">
+<p>একই অক্ষর দিয়ে বানানো শব্দগুলো (anagram) এক group-এ রাখো।</p>
+<div class="ex">["eat","tea","tan","ate","nat","bat"]  →  [["eat","tea","ate"], ["tan","nat"], ["bat"]]</div>
+<h4>Idea</h4>
+<p>Anagram-দের অক্ষর sort করলে একই string হয় ("eat" → "aet")। এই sorted রূপটাই map-এর key।</p>
+<span class="lang">C++</span>
+<pre class="code">vector&lt;vector&lt;string&gt;&gt; groupAnagrams(vector&lt;string&gt;&amp; strs) {
+    unordered_map&lt;string, vector&lt;string&gt;&gt; groups;
+    for (auto&amp; w : strs) {
+        string key = w;
+        sort(key.begin(), key.end());
+        groups[key].push_back(w);
+    }
+    vector&lt;vector&lt;string&gt;&gt; out;
+    for (auto&amp; [k, g] : groups) out.push_back(g);
+    return out;
+}</pre>
+<div class="cx"><span>Time O(n · k log k)</span><span>Space O(n · k)</span></div>
+</div>
+</details>
+
+<!-- 11 -->
+<details class="card q med" data-src="earlier" data-lvl="med" data-id="3sum">
+<summary><span class="qn">11</span><span class="qt">3Sum: যোগফল 0 এমন সব triplet<small>LeetCode 15 · Sort + two pointers</small></span><span class="src">আগের round</span><span class="lvl">Medium</span></summary>
+<div class="body">
+<p>Array-এর তিনটা ভিন্ন index-এর মান যোগ করে 0 হয় এমন সব আলাদা triplet বের করো (duplicate triplet নয়)।</p>
+<div class="ex">[-1, 0, 1, 2, -1, -4]  →  [[-1, -1, 2], [-1, 0, 1]]</div>
+<h4>Idea</h4>
+<p>Sort করো। প্রতিটা <code>i</code> fix করে বাকি অংশে two pointer (<code>l</code>, <code>r</code>) দিয়ে <code>-nums[i]</code> খোঁজো। একই মান পরপর এলে skip করো, তাতে duplicate আসে না।</p>
+<span class="lang">C++</span>
+<pre class="code">vector&lt;vector&lt;int&gt;&gt; threeSum(vector&lt;int&gt;&amp; nums) {
+    sort(nums.begin(), nums.end());
+    vector&lt;vector&lt;int&gt;&gt; res;
+    int n = nums.size();
+    for (int i = 0; i &lt; n - 2; i++) {
+        if (i &gt; 0 &amp;&amp; nums[i] == nums[i - 1]) continue;   // একই i বাদ
+        int l = i + 1, r = n - 1;
+        while (l &lt; r) {
+            int sum = nums[i] + nums[l] + nums[r];
+            if (sum &lt; 0) l++;
+            else if (sum &gt; 0) r--;
+            else {
+                res.push_back({nums[i], nums[l], nums[r]});
+                while (l &lt; r &amp;&amp; nums[l] == nums[l + 1]) l++;
+                while (l &lt; r &amp;&amp; nums[r] == nums[r - 1]) r--;
+                l++; r--;
+            }
+        }
+    }
+    return res;
+}</pre>
+<div class="cx"><span>Time O(n²)</span><span>Space O(1) (output বাদে)</span></div>
+</div>
+</details>
+
+<!-- 12 -->
+<details class="card q med" data-src="earlier" data-lvl="med" data-id="egg">
+<summary><span class="qn">12</span><span class="qt">Egg Drop: ২টা ডিম, n তলা<small>LeetCode 1884 · Math / DP</small></span><span class="src">আগের round</span><span class="lvl">Medium</span></summary>
+<div class="body">
+<p>২টা একই রকম ডিম আর <code>n</code> তলার বিল্ডিং। একটা তলা <code>f</code> আছে, তার উপর থেকে ফেললে ডিম ভাঙে, নিচ থেকে ভাঙে না। Worst case-এ সবচেয়ে কম কয়বার ফেলে <code>f</code> নিশ্চিত জানা যাবে?</p>
+<div class="ex">n = 2    →  2
+n = 100  →  14</div>
+<h4>Idea</h4>
+<p>প্রথম ডিম <code>m</code> তলা থেকে ফেলি। ভাঙলে দ্বিতীয় ডিম নিচ থেকে একটা একটা করে, সর্বোচ্চ <code>m - 1</code> বার। না ভাঙলে পরের বার <code>m - 1</code> তলা উপরে যাই (কারণ একটা চেষ্টা খরচ হয়ে গেছে)। তাহলে <code>m</code> বারে ঢাকা যায় m + (m-1) + … + 1 = m(m+1)/2 তলা। সবচেয়ে ছোট <code>m</code> যেখানে <code>m(m+1)/2 ≥ n</code>, সেটাই উত্তর।</p>
+<span class="lang">C++</span>
+<pre class="code">int twoEggDrop(int n) {
+    int m = 0, covered = 0;
+    while (covered &lt; n) {
+        m++;
+        covered += m;                           // 1 + 2 + … + m
+    }
+    return m;
+}</pre>
+<div class="cx"><span>Time O(√n)</span><span>Space O(1)</span></div>
+<div class="tip">k ডিমের সাধারণ রূপ (LeetCode 887) DP দিয়ে হয়: <code>dp[t][k] = dp[t-1][k-1] + dp[t-1][k] + 1</code> = t বার ফেলে k ডিমে কত তলা ঢাকা যায়।</div>
+</div>
+</details>
+
+<!-- 13 -->
+<details class="card q hard" data-src="earlier" data-lvl="hard" data-id="hist">
+<summary><span class="qn">13</span><span class="qt">Largest Rectangle in Histogram<small>LeetCode 84 · Monotonic stack</small></span><span class="src">আগের round</span><span class="lvl">Hard</span></summary>
+<div class="body">
+<p>প্রতিটা bar-এর width 1, height দেওয়া। Histogram-এর ভেতরে সবচেয়ে বড় আয়তক্ষেত্রের area কত?</p>
+<div class="ex">heights = [2, 1, 5, 6, 2, 3]  →  10   (5 আর 6 মিলে, height 5 × width 2)</div>
+<h4>Idea</h4>
+<p>প্রতিটা bar নিজের height নিয়ে বাঁয়ে-ডানে যতদূর যেতে পারে (যতক্ষণ ছোট bar না আসে), ততটা width। Stack-এ index রাখো, height বাড়তে থাকা ক্রমে। ছোট bar এলে stack-এর উপরের bar-এর ডানের সীমা পাওয়া গেল, আর stack-এ তার নিচের bar-টাই বাঁয়ের সীমা। শেষে 0 height-এর bar যোগ করলে সব bar হিসাবে আসে।</p>
+<span class="lang">C++</span>
+<pre class="code">int largestRectangleArea(vector&lt;int&gt;&amp; heights) {
+    heights.push_back(0);                       // শেষে সব pop করাতে
+    stack&lt;int&gt; st;                              // index, height বাড়তি ক্রমে
+    int best = 0;
+    for (int i = 0; i &lt; (int)heights.size(); i++) {
+        while (!st.empty() &amp;&amp; heights[st.top()] &gt; heights[i]) {
+            int h = heights[st.top()];
+            st.pop();
+            int left = st.empty() ? -1 : st.top();
+            best = max(best, h * (i - left - 1));
+        }
+        st.push(i);
+    }
+    heights.pop_back();
+    return best;
+}</pre>
+<div class="cx"><span>Time O(n)</span><span>Space O(n)</span></div>
+<div class="tip">শুরুতে brute force বলো (প্রতিটা bar থেকে দুই দিকে ছড়ানো, O(n²)), তারপর stack-এ optimize করো। এই ধাপে ধাপে ভাবাটাই interviewer দেখতে চান।</div>
+</div>
+</details>
+
+<!-- ============ STRATEGY ============ -->
+<h2 class="sec"><span class="dot"></span>১ ঘণ্টা কীভাবে ভাগ করবে</h2>
+<div class="card check" style="--c:var(--accent)">
+  <label><input type="checkbox"><div><b>প্রথম ৩ মিনিট: তিনটাই পড়ো</b><span>সবচেয়ে সহজটা আগে ধরো। শুরুতেই একটা pass হলে চাপ কমে।</span></div></label>
+  <label><input type="checkbox"><div><b>প্রতিটায় ~১৫ মিনিট, ৫ মিনিট বাড়তি</b><span>একটায় ২০ মিনিটের বেশি আটকে থাকলে পরেরটায় যাও, পরে ফিরে এসো।</span></div></label>
+  <label><input type="checkbox"><div><b>Code-এর আগে example হাতে মিলাও</b><span>Input-output খাতায় একবার চালিয়ে দেখো, তারপর লেখো। Edge case লিখে রাখো: খালি input, একটা element, negative, বড় সংখ্যা।</span></div></label>
+  <label><input type="checkbox"><div><b>Code run করো, নিজের test দাও</b><span>দেওয়া example ছাড়াও edge case দিয়ে চালাও। "সব test case pass" দরকার।</span></div></label>
+  <label><input type="checkbox"><div><b>শেষ ৫ মিনিট: পরিষ্কার করো</b><span>অর্থবোধক নাম, debug print মুছে ফেলা, ছোট function। এর পরেই code review।</span></div></label>
+</div>
+
+<h2 class="sec"><span class="dot"></span>Code review-এ যা জিজ্ঞেস করে <small>নিজের code মিলিয়ে নাও</small></h2>
+<div class="card check" style="--c:var(--accent)">
+  <label><input type="checkbox"><div><b>"এই approach কেন?"</b><span>Brute force কী ছিল, কেন এটা ভালো, এক লাইনে বলতে পারো কি না।</span></div></label>
+  <label><input type="checkbox"><div><b>Time আর space complexity</b><span>Big-O বলো, আর কোন loop বা data structure-এর জন্য সেটা হয়।</span></div></label>
+  <label><input type="checkbox"><div><b>নতুন test case</b><span>Reviewer নিজে input দেবেন: খালি array, সব একই মান, overflow। Code ভাঙলে শান্তভাবে ঠিক করো।</span></div></label>
+  <label><input type="checkbox"><div><b>Naming আর readability</b><span><code>a, b, x</code> নয়, <code>freq, slow, fast</code>। দরকার হলে ছোট comment।</span></div></label>
+  <label><input type="checkbox"><div><b>"আরও ভালো করা যায়?"</b><span>Space কমানো, sort বাদ দেওয়া, early return। অন্তত একটা উন্নতির কথা ভেবে রাখো।</span></div></label>
+</div>
+
+<footer>
+  এই পাতা শুধু প্রস্তুতির জন্য। Problem-এর তালিকা candidate-দের জানানো অভিজ্ঞতা থেকে, আর solution সাধারণ প্রচলিত পদ্ধতিতে লেখা। পরের ধাপ: <a href="../02-coo-round/index.html">COO Round →</a>
+</footer>
+
+</div>
+
+<script>
+(function () {
+  var root = document.documentElement;
+  try { var saved = localStorage.getItem("welldev-theme"); if (saved) root.dataset.theme = saved; } catch (e) {}
+  document.getElementById("theme").addEventListener("click", function () {
+    var dark = root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+    root.dataset.theme = dark ? "light" : "dark";
+    try { localStorage.setItem("welldev-theme", root.dataset.theme); } catch (e) {}
+  });
+
+  // C++ syntax highlight (VS Code Light+ / Dark+ colours)
+  var KW = /^(int|long|char|bool|void|const|auto|return|if|else|for|while|struct|true|false|nullptr|continue|break)$/;
+  var TY = /^(vector|string|stack|pair|unordered_map|unordered_set|map|ListNode)$/;
+  var tok = /(\/\/[^\n]*)|("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)')|(\b\d+(?:\.\d+)?(?:e\d+)?\b)|([A-Za-z_]\w*)(?=\s*\()|([A-Za-z_]\w*)/g;
+  document.querySelectorAll("pre.code").forEach(function (pre) {
+    var src = pre.textContent;
+    var esc = function (s) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); };
+    var out = "", last = 0, m;
+    while ((m = tok.exec(src))) {
+      out += esc(src.slice(last, m.index));
+      var t = esc(m[0]), cls = "";
+      if (m[1]) cls = "cm"; else if (m[2]) cls = "s"; else if (m[3]) cls = "n";
+      else if (m[4]) cls = KW.test(m[4]) ? "k" : TY.test(m[4]) ? "ty" : "fn";
+      else if (m[5]) cls = KW.test(m[5]) ? "k" : TY.test(m[5]) ? "ty" : "";
+      out += cls ? '<span class="' + cls + '">' + t + "</span>" : t;
+      last = tok.lastIndex;
+    }
+    pre.innerHTML = out + esc(src.slice(last));
+  });
+
+  // filter + search
+  var items = [].slice.call(document.querySelectorAll("details.q"));
+  var chips = [].slice.call(document.querySelectorAll(".chip"));
+  var input = document.getElementById("q"), count = document.getElementById("count"), filter = "all";
+  function apply() {
+    var term = input.value.trim().toLowerCase(), shown = 0;
+    items.forEach(function (el) {
+      var ok = (filter === "all" || el.dataset.src === filter) && (!term || el.textContent.toLowerCase().indexOf(term) !== -1);
+      el.classList.toggle("hidden", !ok);
+      if (ok) shown++;
+    });
+    count.textContent = shown + " / " + items.length;
+  }
+  chips.forEach(function (c) {
+    c.addEventListener("click", function () {
+      filter = c.dataset.f;
+      chips.forEach(function (x) { x.setAttribute("aria-pressed", x === c ? "true" : "false"); });
+      apply();
+    });
+  });
+  input.addEventListener("input", apply);
+  apply();
+
+  // mock set: 2 easy + 1 medium/hard, like the real round
+  var setEl = document.getElementById("set");
+  function title(el) { return el.querySelector(".qt").firstChild.textContent.trim(); }
+  function pick(arr, k) { arr = arr.slice(); for (var i = arr.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = arr[i]; arr[i] = arr[j]; arr[j] = t; } return arr.slice(0, k); }
+  function shuffle() {
+    var easy = items.filter(function (e) { return e.dataset.lvl === "easy"; });
+    var tough = items.filter(function (e) { return e.dataset.lvl !== "easy"; });
+    var chosen = pick(easy, 2).concat(pick(tough, 1));
+    setEl.innerHTML = chosen.map(function (el) {
+      var lvl = el.querySelector(".lvl").textContent;
+      return '<li><a href="#' + el.dataset.id + '" data-go="' + el.dataset.id + '">' + title(el) + '</a> <span class="lvl ' + el.dataset.lvl + '">' + lvl + "</span></li>";
+    }).join("");
+  }
+  items.forEach(function (el) { el.id = el.dataset.id; });
+  setEl.addEventListener("click", function (e) {
+    var a = e.target.closest("a[data-go]");
+    if (a) { var d = document.getElementById(a.dataset.go); d.classList.remove("hidden"); d.open = true; }
+  });
+  document.getElementById("shuffle").addEventListener("click", shuffle);
+  shuffle();
+
+  // 60-minute timer
+  var LEFT = 3600, left = LEFT, timer = null;
+  var clock = document.getElementById("clock"), startBtn = document.getElementById("start");
+  function draw() {
+    var m = Math.floor(left / 60), s = left % 60;
+    clock.textContent = (m < 10 ? "0" : "") + m + ":" + (s < 10 ? "0" : "") + s;
+    clock.classList.toggle("low", left <= 300);
+  }
+  startBtn.addEventListener("click", function () {
+    if (timer) { clearInterval(timer); timer = null; startBtn.textContent = "Start"; return; }
+    startBtn.textContent = "Pause";
+    timer = setInterval(function () {
+      if (left > 0) left--;
+      if (!left) { clearInterval(timer); timer = null; startBtn.textContent = "Start"; clock.textContent = "সময় শেষ"; return; }
+      draw();
+    }, 1000);
+  });
+  document.getElementById("reset").addEventListener("click", function () {
+    clearInterval(timer); timer = null; left = LEFT; startBtn.textContent = "Start"; draw();
+  });
+  draw();
+})();
+</script>
+</body>
+</html>

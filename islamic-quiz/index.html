@@ -1,0 +1,499 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ইসলামিক কুইজ</title>
+<link rel="icon" href="images/logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* Muslim Days' own colours: the launcher icon's navy and gold. */
+  :root {
+    --navy: #0b2a47;
+    --navy-light: #1c5c8f;
+    --gold: #e6b24a;
+    --gold-light: #ffd98a;
+    --bg: #f4f6f9;
+    --card: #ffffff;
+    --ink: #1e1b17;
+    --muted: #5d6670;
+    --line: #e2e7ee;
+    --ok: #2fae66;
+    --bad: #e5484d;
+    --retry: #d9640b;
+    --radius: 22px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --navy: #060d16;
+      --navy-light: #12243a;
+      --bg: #0b1118;
+      --card: #141c26;
+      --ink: #eef2f6;
+      --muted: #9aa6b2;
+      --line: #263241;
+    }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  [hidden] { display: none !important; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Hind Siliguri", system-ui, sans-serif;
+    font-size: 17px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: inherit; }
+
+  /* The navy hero: the app's mark and name, then the picture. */
+  .hero {
+    background: linear-gradient(180deg, var(--navy-light), var(--navy));
+    border-radius: 0 0 28px 28px;
+    padding: max(16px, env(safe-area-inset-top)) 16px 22px;
+  }
+  .hero-inner, main { max-width: 680px; margin: 0 auto; }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .mark {
+    flex: none;
+    width: 46px; height: 46px;
+    border-radius: 50%;
+    padding: 1.5px;
+    background: linear-gradient(135deg, var(--gold-light), var(--gold));
+    box-shadow: 0 0 10px rgba(230, 178, 74, .3);
+  }
+  .mark span {
+    display: block; width: 100%; height: 100%;
+    border-radius: 50%;
+    background: url(images/logo.png) center / 128% no-repeat,
+                linear-gradient(135deg, #1c5c8f, #0b2a47);
+  }
+  .brand-name { color: #fff; font-weight: 700; font-size: 18px; line-height: 1.25; }
+  .brand-sub { color: var(--gold); font-weight: 600; font-size: 15px; line-height: 1.3; }
+  .back {
+    margin-left: auto;
+    color: #fff;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+    background: rgba(255, 255, 255, .14);
+    padding: 8px 14px;
+    border-radius: 99px;
+    white-space: nowrap;
+  }
+  .picture {
+    margin-top: 16px;
+    aspect-ratio: 16 / 9;
+    border-radius: var(--radius);
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 8px 18px rgba(0, 0, 0, .33);
+    border: 1px solid rgba(255, 255, 255, .28);
+  }
+  .picture img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+  /* With no picture: the quiz mark in the gold ring, as in the app. */
+  .fallback {
+    position: absolute; inset: 0;
+    display: grid; place-items: center;
+    background:
+      radial-gradient(circle, rgba(230, 178, 74, .28), rgba(230, 178, 74, 0) 60%),
+      linear-gradient(135deg, #2a6fa8, #0b2a47);
+  }
+  .fallback .ring {
+    width: 92px; height: 92px;
+    border-radius: 50%;
+    padding: 2px;
+    background: linear-gradient(135deg, var(--gold-light), var(--gold));
+    box-shadow: 0 0 24px rgba(230, 178, 74, .35);
+  }
+  .fallback .ring span {
+    width: 100%; height: 100%;
+    border-radius: 50%;
+    display: grid; place-items: center;
+    background: linear-gradient(135deg, #1c5c8f, #0b2a47);
+  }
+  .fallback svg { width: 44px; height: 44px; fill: var(--gold-light); }
+
+  main { padding: 18px 16px 120px; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 20px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, .06);
+  }
+  .card + .card, .card + .banner, .banner + .card { margin-top: 14px; }
+  .rule { width: 36px; height: 4px; border-radius: 2px; background: var(--gold); margin-bottom: 12px; }
+  h1 { font-size: 23px; line-height: 1.35; font-weight: 700; }
+  .lead { color: var(--muted); margin-top: 4px; }
+  .count { color: var(--muted); font-size: 14px; margin-top: 8px; font-weight: 500; }
+
+  .banner {
+    display: flex; gap: 10px; align-items: flex-start;
+    border-radius: 18px;
+    padding: 14px 16px;
+    font-weight: 600;
+    border: 1px solid;
+  }
+  .banner.ok { background: color-mix(in srgb, var(--ok) 12%, var(--card)); border-color: color-mix(in srgb, var(--ok) 45%, transparent); }
+  .banner.bad { background: color-mix(in srgb, var(--bad) 10%, var(--card)); border-color: color-mix(in srgb, var(--bad) 40%, transparent); }
+  .banner b { font-size: 20px; line-height: 1.3; }
+
+  .q.is-ok { border: 1.5px solid color-mix(in srgb, var(--ok) 60%, transparent); }
+  .q.is-bad { border: 1.5px solid color-mix(in srgb, var(--bad) 60%, transparent); }
+  .q-head { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 14px; }
+  .q-num {
+    flex: none;
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    display: grid; place-items: center;
+    background: var(--navy-light);
+    color: #fff; font-size: 14px; font-weight: 700;
+    margin-top: 2px;
+  }
+  .is-ok .q-num { background: var(--ok); }
+  .is-bad .q-num { background: var(--bad); }
+  .q-text { font-size: 17px; font-weight: 700; line-height: 1.5; }
+
+  .opt {
+    display: flex; align-items: center; gap: 10px;
+    width: 100%;
+    min-height: 50px;
+    padding: 10px 14px;
+    margin-top: 8px;
+    border: 1px solid color-mix(in srgb, var(--muted) 40%, transparent);
+    border-radius: 14px;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: border-color .15s, background .15s;
+  }
+  .opt:disabled { cursor: default; }
+  .opt .dot {
+    flex: none;
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    border: 2px solid var(--muted);
+    display: grid; place-items: center;
+    font-size: 12px; font-weight: 700; color: #fff;
+  }
+  .opt.picked { border: 1.6px solid var(--navy-light); background: color-mix(in srgb, var(--navy-light) 12%, transparent); font-weight: 600; }
+  .opt.picked .dot { border-color: var(--navy-light); background: radial-gradient(circle, var(--navy-light) 45%, transparent 50%); }
+  .opt.right { border-color: var(--ok); background: color-mix(in srgb, var(--ok) 12%, transparent); }
+  .opt.right .dot { border-color: var(--ok); background: var(--ok); }
+  .opt.wrong { border-color: var(--bad); background: color-mix(in srgb, var(--bad) 10%, transparent); }
+  .opt.wrong .dot { border-color: var(--bad); background: var(--bad); }
+  .explain { color: var(--muted); font-size: 15px; margin-top: 10px; }
+
+  /* One button at the foot, as in the app. */
+  .foot {
+    position: fixed; left: 0; right: 0; bottom: 0;
+    padding: 10px 16px max(18px, env(safe-area-inset-bottom));
+    background: linear-gradient(transparent, var(--bg) 35%);
+  }
+  .btn {
+    display: block;
+    max-width: 680px;
+    width: 100%;
+    margin: 0 auto;
+    min-height: 54px;
+    border: 0;
+    border-radius: 99px;
+    font: inherit; font-size: 17px; font-weight: 700;
+    color: #fff;
+    background: var(--navy-light);
+    cursor: pointer;
+    text-decoration: none;
+    text-align: center;
+    line-height: 54px;
+  }
+  .btn:disabled { opacity: .55; cursor: not-allowed; }
+  .btn.retry { background: var(--retry); }
+  .btn.done { background: var(--ok); }
+
+  /* The list of every quiz. */
+  .item {
+    display: flex; gap: 14px; align-items: center;
+    text-decoration: none;
+  }
+  .thumb {
+    flex: none;
+    width: 76px; height: 76px;
+    border-radius: 16px;
+    overflow: hidden;
+    position: relative;
+    background: var(--navy);
+  }
+  .thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .thumb .fallback .ring { width: 46px; height: 46px; }
+  .thumb .fallback svg { width: 22px; height: 22px; }
+  .item h2 { font-size: 17px; line-height: 1.4; }
+  .item p { color: var(--muted); font-size: 14px; }
+  .tag { display: inline-block; font-size: 13px; font-weight: 700; padding: 1px 10px; border-radius: 99px; margin-top: 4px; }
+  .tag.ok { color: var(--ok); background: color-mix(in srgb, var(--ok) 14%, transparent); }
+  .empty { text-align: center; color: var(--muted); padding: 40px 0; }
+  .spinner {
+    width: 32px; height: 32px; margin: 40px auto;
+    border: 3px solid var(--line); border-top-color: var(--navy-light);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="hero-inner">
+    <div class="brand">
+      <div class="mark"><span></span></div>
+      <div>
+        <div class="brand-name">Muslim Days</div>
+        <div class="brand-sub">ইসলামিক কুইজ</div>
+      </div>
+      <a class="back" id="back" href="./" hidden>সব কুইজ</a>
+    </div>
+    <div class="picture" id="picture" hidden></div>
+  </div>
+</header>
+<main id="main"><div class="spinner"></div></main>
+<div class="foot" id="foot" hidden><button class="btn" id="btn" type="button"></button></div>
+
+<template id="quiz-mark">
+  <div class="fallback"><div class="ring"><span>
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-5.99 13c-.59 0-1.05-.47-1.05-1.05 0-.59.47-1.04 1.05-1.04.59 0 1.04.45 1.04 1.04-.01.58-.45 1.05-1.04 1.05zm2.5-6.17c-.63.93-1.23 1.21-1.56 1.81-.13.24-.18.4-.18 1.18h-1.52c0-.41-.06-1.08.26-1.65.41-.73 1.18-1.16 1.63-1.8.48-.68.21-1.94-1.14-1.94-.88 0-1.32.67-1.5 1.23l-1.37-.57C11.51 5.96 12.52 5 13.99 5c1.23 0 2.08.56 2.51 1.26.37.61.58 1.73.01 2.57z"/></svg>
+  </span></div></div>
+</template>
+
+<script>
+  // Every quiz is a JSON file beside this page: quiz-1.json, quiz-2.json...
+  // the same file the app opens from a push's `quiz_url`. This page lists
+  // them all, and ?quiz=quiz-2 opens one. A quiz is downloaded once and
+  // kept; picks, every try - right or wrong - and a finish are kept in this
+  // browser, so a quiz left part-way opens where it was.
+  const bn = n => String(n).replace(/\d/g, d => "০১২৩৪৫৬৭৮৯"[d]);
+  const $ = id => document.getElementById(id);
+  const main = $("main"), foot = $("foot"), btn = $("btn");
+  const store = {
+    get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+  };
+
+  function el(tag, cls, text) {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  }
+  const mark = () => $("quiz-mark").content.firstElementChild.cloneNode(true);
+
+  /** A picture, or the quiz mark when there is none or it will not load. */
+  function picture(into, src) {
+    into.replaceChildren(mark());
+    if (!src) return;
+    const img = new Image();
+    img.alt = "";
+    img.onload = () => into.replaceChildren(img);
+    img.src = src;
+  }
+
+  /** The kept copy of the quiz, or - only the first time - its file. */
+  async function load(id) {
+    const kept = store.get("quiz-cache:" + id);
+    if (kept) return kept;
+    try {
+      const res = await fetch(`${id}.json`);
+      if (!res.ok) return null;
+      const quiz = await res.json();
+      store.set("quiz-cache:" + id, quiz);
+      return quiz;
+    } catch {
+      return null;
+    }
+  }
+
+  function valid(q) {
+    return q && Array.isArray(q.questions) && q.questions.length > 0 &&
+      q.questions.every(x => x.question && Array.isArray(x.options) &&
+        x.options.length >= 2 && Number.isInteger(x.answer) &&
+        x.answer >= 0 && x.answer < x.options.length);
+  }
+
+  async function showList() {
+    document.title = "ইসলামিক কুইজ";
+    const quizzes = [];
+    // No directory listing on GitHub Pages: count up until a file is missing.
+    for (let n = 1; n <= 100; n++) {
+      const q = await load("quiz-" + n);
+      if (!q) break;
+      if (valid(q)) quizzes.push(["quiz-" + n, q]);
+    }
+    main.replaceChildren();
+    if (!quizzes.length) {
+      main.append(el("p", "empty", "এখনো কোনো কুইজ নেই"));
+      return;
+    }
+    for (const [id, q] of quizzes.reverse()) {
+      const a = el("a", "card item");
+      a.href = "?quiz=" + encodeURIComponent(id);
+      const thumb = el("div", "thumb");
+      picture(thumb, q.image);
+      const text = el("div");
+      text.append(el("h2", null, q.title || "কুইজ"),
+                  el("p", null, `${bn(q.questions.length)}টি প্রশ্ন`));
+      if (store.get("quiz-done:" + (q.id || id))) text.append(el("span", "tag ok", "সম্পন্ন ✓"));
+      a.append(thumb, text);
+      main.append(a);
+    }
+  }
+
+  async function showQuiz(id) {
+    $("back").hidden = false;
+    const quiz = await load(id);
+    const pic = $("picture");
+    pic.hidden = false;
+    picture(pic, quiz && quiz.image);
+    if (!valid(quiz)) {
+      main.replaceChildren(el("p", "empty", quiz === null
+        ? "কুইজটি আনা যায়নি। ইন্টারনেট সংযোগ দেখে আবার চেষ্টা করুন।"
+        : "কুইজের ফাইলটি পড়া যাচ্ছে না।"));
+      return;
+    }
+    const key = "quiz-done:" + (quiz.id || id);
+    const qs = quiz.questions;
+    const total = qs.length;
+    document.title = quiz.title || "কুইজ";
+
+    const progressKey = "quiz-progress:" + (quiz.id || id);
+    const kept = store.get(progressKey);
+    const fits = kept && Array.isArray(kept.chosen) && kept.chosen.length === total;
+    let chosen = fits ? kept.chosen : Array(total).fill(null);
+    let wrong = new Set(fits ? kept.wrong || [] : []);  // shown until "try again"
+    let history = fits ? kept.history || [] : [];       // every try, right or wrong
+    let done = store.get(key);
+    const doneBefore = !!done;
+    if (done) { chosen = qs.map(q => q.answer); wrong = new Set(); }
+    const save = () => store.set(progressKey, { chosen, wrong: [...wrong], history });
+    const lastRight = () => history.length ? history[history.length - 1].right : 0;
+
+    const head = el("section", "card");
+    head.append(el("div", "rule"), el("h1", null, quiz.title || "কুইজ"));
+    if (quiz.description) head.append(el("p", "lead", quiz.description));
+    const count = el("p", "count");
+    head.append(count);
+    const banner = el("div", "banner");
+    banner.hidden = true;
+
+    const cards = qs.map((q, i) => {
+      const card = el("section", "card q");
+      const h = el("div", "q-head");
+      const num = el("span", "q-num", bn(i + 1));
+      h.append(num, el("p", "q-text", q.question));
+      card.append(h);
+      const opts = q.options.map((o, j) => {
+        const b = el("button", "opt");
+        b.type = "button";
+        const dot = el("span", "dot");
+        b.append(dot, el("span", null, o));
+        b.onclick = () => {
+          if (done || wrong.size) return;
+          chosen[i] = j;
+          save();
+          render();
+        };
+        card.append(b);
+        return { b, dot };
+      });
+      const explain = el("p", "explain", q.explanation || "");
+      explain.hidden = true;
+      card.append(explain);
+      return { card, num, opts, explain };
+    });
+    main.replaceChildren(head, banner, ...cards.map(c => c.card));
+
+    function render() {
+      const answered = chosen.filter(c => c !== null).length;
+      const reviewing = wrong.size > 0;
+      count.textContent = `${bn(total)}টি প্রশ্ন · ${bn(answered)}টির উত্তর দেওয়া হয়েছে`;
+      cards.forEach((c, i) => {
+        const isWrong = wrong.has(i);
+        const isRight = !!done || (reviewing && !isWrong);
+        c.card.className = "card q" + (isWrong ? " is-bad" : isRight ? " is-ok" : "");
+        c.num.textContent = isRight ? "✓" : bn(i + 1);
+        c.opts.forEach((o, j) => {
+          const picked = chosen[i] === j;
+          o.b.className = "opt" + (picked ? (isWrong ? " wrong" : isRight ? " right" : " picked") : "");
+          o.dot.textContent = picked && isWrong ? "✕" : picked && isRight ? "✓" : "";
+          o.b.disabled = !!done || reviewing;
+        });
+        c.explain.hidden = !(done && qs[i].explanation);
+      });
+
+      if (done) {
+        banner.className = "banner ok";
+        banner.replaceChildren(el("span", null, doneBefore
+          ? "আপনি এই কুইজটি আগেই সম্পন্ন করেছেন। আপনার ফলাফল এই ব্রাউজারে সংরক্ষিত আছে।"
+          : `মাশাআল্লাহ! সব উত্তর সঠিক। ${bn(done.attempts)} বারের চেষ্টায় সম্পন্ন - ফলাফল সংরক্ষিত হয়েছে।`));
+        banner.hidden = false;
+        btn.className = "btn done";
+        btn.textContent = "সব কুইজ দেখুন";
+        btn.disabled = false;
+      } else if (reviewing) {
+        banner.className = "banner bad";
+        banner.replaceChildren(el("span", null,
+          `${bn(total)}টির মধ্যে ${bn(lastRight())}টি সঠিক। লাল চিহ্নিতগুলো ভুল - "আবার চেষ্টা করুন" চাপলে কুইজ নতুন করে শুরু হবে।`));
+        banner.hidden = false;
+        btn.className = "btn retry";
+        btn.textContent = "আবার চেষ্টা করুন";
+        btn.disabled = false;
+      } else {
+        banner.hidden = true;
+        btn.className = "btn";
+        btn.textContent = answered === total
+          ? "উত্তর জমা দিন"
+          : `উত্তর জমা দিন · ${bn(answered)}/${bn(total)}`;
+        btn.disabled = answered < total;
+      }
+    }
+
+    btn.onclick = () => {
+      if (done) { location.href = "./"; return; }
+      if (wrong.size) {
+        // Try again: every answer cleared for a fresh go.
+        wrong = new Set();
+        chosen = Array(total).fill(null);
+        save();
+        render();
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        return;
+      }
+      if (chosen.includes(null)) return;
+      const bad = new Set(qs.map((q, i) => chosen[i] === q.answer ? -1 : i).filter(i => i >= 0));
+      history.push({ at: Date.now(), right: total - bad.size, total });
+      if (bad.size === 0) {
+        done = { at: Date.now(), attempts: history.length };
+        store.set(key, done);
+      } else {
+        wrong = bad;
+      }
+      save();
+      render();
+      banner.scrollIntoView({ behavior: "smooth", block: "center" });
+    };
+
+    foot.hidden = false;
+    render();
+  }
+
+  const id = new URLSearchParams(location.search).get("quiz");
+  (id && /^[\w-]+$/.test(id) ? showQuiz(id) : showList());
+</script>
+</body>
+</html>

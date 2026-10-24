@@ -1,0 +1,508 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>COO Round</title>
+<meta name="description" content="WellDev 4th round-এর শেষ ধাপ: COO-র সাথে behavioral আলাপ। ১৪টি সম্ভাব্য প্রশ্ন, উত্তরের কাঠামো, নমুনা উত্তর আর practice drill।">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f5f7fc; --surface:#ffffff; --surface-2:#f1f4fa; --fg:#0f172a; --muted:#5b6478; --faint:#94a0b8; --line:#e4e8f1;
+  --accent:#7c3aed; --easy:#059669; --med:#d97706; --hard:#dc2626;
+  --hero:linear-gradient(135deg,#4c1d95 0%,#7c3aed 50%,#0891b2 100%);
+  --shadow:0 1px 2px rgba(15,23,42,.04),0 10px 30px -12px rgba(15,23,42,.14);
+  --code-bg:#ffffff; --code-line:#e6e9f1; --code-fg:#1f1f1f;
+  --k:#0000ff; --ty:#267f99; --s:#a31515; --n:#098658; --cm:#008000; --fn:#795e26; --pp:#af00db;
+  --sans:"Inter","Hind Siliguri",system-ui,sans-serif; --bn:"Hind Siliguri","Inter",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0b0f1a; --surface:#121827; --surface-2:#182033; --fg:#e7ecf6; --muted:#9aa6bf; --faint:#66728c; --line:#232c42;
+  --accent:#a78bfa; --easy:#34d399; --med:#fbbf24; --hard:#f87171;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6);
+  --code-bg:#1e1e1e; --code-line:#2d2d30; --code-fg:#d4d4d4;
+  --k:#569cd6; --ty:#4ec9b0; --s:#ce9178; --n:#b5cea8; --cm:#6a9955; --fn:#dcdcaa; --pp:#c586c0;
+}}
+:root[data-theme="dark"]{
+  --bg:#0b0f1a; --surface:#121827; --surface-2:#182033; --fg:#e7ecf6; --muted:#9aa6bf; --faint:#66728c; --line:#232c42;
+  --accent:#a78bfa; --easy:#34d399; --med:#fbbf24; --hard:#f87171;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6);
+  --code-bg:#1e1e1e; --code-line:#2d2d30; --code-fg:#d4d4d4;
+  --k:#569cd6; --ty:#4ec9b0; --s:#ce9178; --n:#b5cea8; --cm:#6a9955; --fn:#dcdcaa; --pp:#c586c0;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.75 var(--bn);-webkit-font-smoothing:antialiased}
+a{color:var(--accent)}
+button,input{font:inherit;color:inherit}
+code{font-family:var(--mono);font-size:.86em;font-weight:500;background:color-mix(in srgb,var(--accent) 10%,var(--surface));color:color-mix(in srgb,var(--accent) 72%,var(--fg));padding:.1em .4em;border-radius:6px}
+.wrap{max-width:920px;margin:0 auto;padding:20px 16px 80px}
+h1,h2,h3,h4{letter-spacing:0}
+
+.topnav{display:flex;align-items:center;gap:10px}
+.brand{display:flex;align-items:center;gap:10px;color:var(--fg);text-decoration:none;font:800 16px var(--sans)}
+.logo{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:#fff;font:800 13px var(--mono);background:var(--hero)}
+.topnav .sp{flex:1}
+.pill{border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:6px 14px;font:600 13px var(--sans);cursor:pointer;text-decoration:none}
+.pill:hover{color:var(--fg)}
+
+.hero{margin-top:22px;border-radius:22px;padding:30px 32px;color:#fff;background:var(--hero);position:relative;overflow:hidden}
+.hero::after{content:"";position:absolute;right:-70px;top:-90px;width:320px;height:320px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.22),transparent 65%);pointer-events:none}
+.eyebrow{font:600 12px var(--sans);letter-spacing:.1em;text-transform:uppercase;opacity:.88}
+.hero h1{margin:8px 0 10px;font:800 clamp(26px,4.4vw,40px)/1.32 var(--bn)}
+.hero p{margin:0;max-width:700px;font-size:16.5px;opacity:.95}
+@media (max-width:640px){.hero{padding:24px 20px}}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow)}
+.note{margin:18px 0 0;padding:14px 16px;font-size:14.5px;color:var(--muted);border-left:4px solid var(--med)}
+.note b{color:var(--fg)}
+
+/* timeline of the round */
+.flow{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:26px 0 0}
+@media (max-width:640px){.flow{grid-template-columns:1fr}}
+.step{padding:16px 18px;position:relative}
+.step .t{font:700 12px var(--mono);color:var(--accent)}
+.step h3{margin:4px 0 4px;font:700 17px var(--bn)}
+.step p{margin:0;font-size:14.5px;color:var(--muted)}
+.step .bar{position:absolute;left:0;top:14px;bottom:14px;width:4px;border-radius:0 4px 4px 0;background:var(--accent)}
+
+.sec{margin:42px 0 14px;display:flex;align-items:center;gap:12px;font:800 clamp(20px,2.8vw,24px)/1.32 var(--bn)}
+.sec .dot{width:12px;height:12px;border-radius:50%;background:var(--accent)}
+.sec small{font:500 13px var(--bn);color:var(--muted)}
+
+/* mock set + timer */
+.mock{padding:18px 20px}
+.mock .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.clock{font:700 34px var(--mono);letter-spacing:.02em;min-width:130px}
+.clock.low{color:var(--hard)}
+.btn{border:1px solid var(--line);background:var(--surface-2);border-radius:10px;padding:7px 14px;font:600 13.5px var(--sans);cursor:pointer}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn:hover{filter:brightness(1.05)}
+.mock ol{margin:14px 0 0;padding-left:22px}
+.mock li{margin:6px 0}
+.mock li a{font-weight:600;text-decoration:none}
+.mock .hint{margin:10px 0 0;font-size:14px;color:var(--muted)}
+
+.tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0 14px}
+.chip{border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:6px 14px;font:600 13px var(--sans);cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+.search{flex:1;min-width:180px;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:7px 16px;font:500 14px var(--sans);outline:none}
+.search:focus{border-color:var(--accent)}
+.count{font:500 12.5px var(--mono);color:var(--faint)}
+
+details.q{margin:0 0 12px;overflow:hidden}
+details.q>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:12px;padding:14px 16px}
+details.q>summary::-webkit-details-marker{display:none}
+details.q>summary::after{content:"";margin-left:4px;flex:none;width:8px;height:8px;border-right:2px solid var(--faint);border-bottom:2px solid var(--faint);transform:rotate(45deg);transition:transform .15s}
+details.q[open]>summary::after{transform:rotate(-135deg)}
+.qn{flex:none;width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:#fff;font:700 14px var(--sans);background:var(--c)}
+.qt{font:600 16px/1.45 var(--bn);flex:1}
+.qt small{display:block;font:500 12.5px var(--mono);color:var(--faint)}
+.lvl{flex:none;font:700 11px var(--sans);padding:2px 9px;border-radius:999px;color:var(--c);background:color-mix(in srgb,var(--c) 12%,transparent)}
+.easy{--c:var(--easy)} .med{--c:var(--med)} .hard{--c:var(--hard)}
+.src{flex:none;font:600 11px var(--sans);padding:2px 9px;border-radius:999px;color:var(--muted);border:1px dashed var(--faint)}
+.body{padding:4px 20px 20px 62px;border-top:1px solid var(--line)}
+@media (max-width:640px){.body{padding:4px 16px 18px}.src{display:none}}
+.body h4{margin:18px 0 6px;font:700 14.5px var(--bn);color:var(--c)}
+.body p{margin:8px 0}
+.body ul,.body ol{margin:6px 0;padding-left:22px}
+.body li{margin:4px 0}
+.ex{margin:10px 0;padding:10px 14px;border-radius:10px;background:var(--surface-2);font:13.5px/1.7 var(--mono);white-space:pre-wrap}
+.cx{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 0}
+.cx span{font:600 12px var(--mono);padding:3px 10px;border-radius:8px;background:color-mix(in srgb,var(--c) 10%,var(--surface));color:var(--fg)}
+.lang{display:inline-block;margin-top:10px;font:600 11px var(--mono);color:var(--muted)}
+pre.code{margin:4px 0 10px;padding:12px 14px;border-radius:12px;background:var(--code-bg);color:var(--code-fg);border:1px solid var(--code-line);font:13px/1.65 var(--mono);white-space:pre;overflow-x:auto;font-variant-ligatures:none}
+pre.code .k{color:var(--k)} pre.code .ty{color:var(--ty)} pre.code .s{color:var(--s)} pre.code .n{color:var(--n)}
+pre.code .cm{color:var(--cm);font-style:italic} pre.code .fn{color:var(--fn)} pre.code .pp{color:var(--pp)}
+.tip{margin:12px 0;padding:10px 14px;border-radius:10px;background:color-mix(in srgb,var(--c) 8%,var(--surface));border:1px solid color-mix(in srgb,var(--c) 22%,var(--line));font-size:15px}
+.lc{font:600 13px var(--sans);text-decoration:none}
+
+.check{padding:6px 20px 14px}
+.check label{display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px dashed var(--line);cursor:pointer}
+.check label:last-child{border-bottom:0}
+.check input{margin-top:6px;accent-color:var(--accent);width:16px;height:16px;flex:none}
+.check b{display:block}
+.check span{color:var(--muted);font-size:14.5px}
+.hidden{display:none}
+footer{margin-top:50px;color:var(--faint);font-size:13.5px}
+footer a{color:var(--muted)}
+
+/* COO page extras */
+.say{margin:10px 0;padding:12px 16px;border-radius:12px;background:var(--surface-2);border-left:4px solid var(--c);font:15px/1.7 var(--sans);font-style:italic}
+.say::before{content:"বলতে পারো";display:block;font:700 11px var(--sans);font-style:normal;letter-spacing:.06em;text-transform:uppercase;color:var(--c);margin-bottom:4px}
+.dont{margin:10px 0 0;padding:10px 14px;border-radius:10px;background:color-mix(in srgb,var(--hard) 7%,var(--surface));border:1px solid color-mix(in srgb,var(--hard) 22%,var(--line));font-size:14.5px}
+.dont b{color:var(--hard)}
+.why{font-size:14.5px;color:var(--muted)}
+.star{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:16px}
+@media (max-width:640px){.star{grid-template-columns:1fr 1fr}}
+.star div{padding:12px 14px;border-radius:12px;background:color-mix(in srgb,var(--accent) 7%,var(--surface));border:1px solid color-mix(in srgb,var(--accent) 20%,var(--line))}
+.star b{display:block;font:800 22px var(--sans);color:var(--accent)}
+.star span{font-size:14px;color:var(--muted)}
+.drill{padding:18px 20px}
+.drill .qbox{margin:12px 0 0;font:700 19px/1.5 var(--bn);min-height:58px}
+.drill .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.ask{display:grid;gap:10px;padding:16px 20px}
+.ask div{padding:10px 14px;border-radius:10px;background:var(--surface-2);font:15px var(--sans)}
+.ask small{display:block;color:var(--muted);font:14px var(--bn)}
+.easy,.med,.hard{--c:var(--accent)}
+.c1{--c:#7c3aed} .c2{--c:#0891b2} .c3{--c:#db2777} .c4{--c:#059669}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .c1{--c:#a78bfa} :root:not([data-theme="light"]) .c2{--c:#22d3ee} :root:not([data-theme="light"]) .c3{--c:#f472b6} :root:not([data-theme="light"]) .c4{--c:#34d399}}
+:root[data-theme="dark"] .c1{--c:#a78bfa} :root[data-theme="dark"] .c2{--c:#22d3ee} :root[data-theme="dark"] .c3{--c:#f472b6} :root[data-theme="dark"] .c4{--c:#34d399}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<nav class="topnav">
+  <a class="brand" href="../../index.html"><span class="logo">WD</span>WellDev Prep</a>
+  <span class="sp"></span>
+  <a class="pill" href="../01-leetcode-onsite/index.html">← LeetCode Onsite</a>
+  <button class="pill" id="expand" type="button">সব খোলো</button>
+  <button class="pill" id="theme" type="button">Theme</button>
+</nav>
+
+<header class="hero">
+  <div class="eyebrow">4th Round · Onsite · Part 2</div>
+  <h1>COO Round: শেষ কথোপকথন</h1>
+  <p>Coding test আর code review-এর পর WellDev-এর COO-র সাথে প্রায় ৩০ মিনিটের মুখোমুখি আলাপ। প্রশ্ন বেশিরভাগ behavioral: তোমার background, mindset, কাজের ধরন আর তুমি টিকে থাকবে কি না। প্রতিটা প্রশ্নে কেন জিজ্ঞেস করে, উত্তরের কাঠামো আর একটা নমুনা উত্তর নিচে।</p>
+</header>
+
+<div class="card note">
+  <b>সূত্র:</b> Glassdoor-এ WellDev-এর Trainee / Junior Software Engineer review ("COO asked about background and industry experience", "behavioural session with COO"), <a href="https://tahanima.github.io/recruitment-stories-experience-of-shariar-at-welldev/" target="_blank" rel="noopener">Shariar-এর recruitment story</a> (mindset ও work approach নিয়ে প্রশ্ন) আর <a href="https://tamimehsan.github.io/interview-questions-bangladesh/companies/welldev" target="_blank" rel="noopener">Interview Questions Bangladesh</a>-এ HR round-এর প্রশ্ন। COO-র নির্দিষ্ট প্রশ্নের তালিকা কোথাও প্রকাশিত নেই, তাই HR round-এর যেসব প্রশ্ন final-এও আসার সম্ভাবনা বেশি, সেগুলো এখানে রাখা হলো। নমুনা উত্তর নিজের সত্যি গল্পে বদলে নাও।
+</div>
+
+<div class="flow">
+  <div class="card step"><span class="bar"></span><div class="t">কে নেন</div><h3>COO, একা</h3><p>Technical খুঁটিনাটি কম, মানুষটা কেমন সেটা বেশি। কিছু জায়গায় নিজেই IDE-তে ছোট live coding দেন।</p></div>
+  <div class="card step"><span class="bar"></span><div class="t">কী দেখেন</div><h3>Mindset ও fit</h3><p>শেখার আগ্রহ, দায়িত্ব নেওয়া, চাপ সামলানো, সৎ থাকা, আর training-এর পর থাকবে কি না।</p></div>
+  <div class="card step"><span class="bar"></span><div class="t">কীভাবে জিতবে</div><h3>ছোট, সত্যি গল্প</h3><p>প্রতিটা দাবির পেছনে একটা উদাহরণ। ১-২ মিনিটে শেষ। মুখস্থ বুলি নয়।</p></div>
+</div>
+
+<h2 class="sec"><span class="dot"></span>STAR কাঠামো <small>"একটা সময়ের কথা বলো যখন…" ধরনের প্রশ্নে</small></h2>
+<div class="card star">
+  <div><b>S</b><span><b style="font-size:14px;color:var(--fg)">Situation</b>কোথায়, কখন। এক লাইন।</span></div>
+  <div><b>T</b><span><b style="font-size:14px;color:var(--fg)">Task</b>তোমার দায়িত্ব কী ছিল।</span></div>
+  <div><b>A</b><span><b style="font-size:14px;color:var(--fg)">Action</b>তুমি নিজে কী করলে। সবচেয়ে বড় অংশ।</span></div>
+  <div><b>R</b><span><b style="font-size:14px;color:var(--fg)">Result</b>ফল কী হলো, কী শিখলে। সংখ্যা থাকলে ভালো।</span></div>
+</div>
+
+<h2 class="sec"><span class="dot"></span>Practice drill <small>random প্রশ্ন, ২ মিনিটে জোরে উত্তর দাও</small></h2>
+<div class="card drill">
+  <div class="row">
+    <button class="btn primary" id="next" type="button">নতুন প্রশ্ন ↻</button>
+    <span class="clock" id="clock" style="font-size:26px">02:00</span>
+    <button class="btn" id="start" type="button">Start</button>
+  </div>
+  <div class="qbox" id="qbox">"নতুন প্রশ্ন" চাপো।</div>
+  <p class="hint" style="margin:6px 0 0;font-size:14px;color:var(--muted)">উত্তর ফোনে record করে শুনে দেখো: খুব লম্বা হলো কি না, "উম্‌" বেশি কি না, উদাহরণ ছিল কি না।</p>
+</div>
+
+<h2 class="sec"><span class="dot"></span>প্রশ্ন ও উত্তর</h2>
+<div class="tools">
+  <button class="chip" data-f="all" aria-pressed="true">সব</button>
+  <button class="chip" data-f="c1" aria-pressed="false">নিজের কথা</button>
+  <button class="chip" data-f="c2" aria-pressed="false">Mindset</button>
+  <button class="chip" data-f="c3" aria-pressed="false">পরিস্থিতি</button>
+  <button class="chip" data-f="c4" aria-pressed="false">Commitment</button>
+  <input class="search" id="q" type="search" placeholder="খোঁজো (যেমন deadline, salary)">
+  <span class="count" id="count"></span>
+</div>
+
+<!-- ===== নিজের কথা ===== -->
+<details class="card q c1" data-cat="c1">
+<summary><span class="qn">1</span><span class="qt">Tell me about yourself / তোমার background বলো<small>Reported · প্রায় সবসময় প্রথম প্রশ্ন</small></span><span class="lvl">নিজের কথা</span></summary>
+<div class="body">
+<p class="why"><b>কেন জিজ্ঞেস করে:</b> শুরুটা সহজ করতে, আর দেখতে তুমি নিজেকে গুছিয়ে বলতে পারো কি না। Glassdoor-এ একজন জানিয়েছেন COO শুধু background আর industry experience নিয়েই কথা বলেছেন।</p>
+<h4>কাঠামো: Present → Past → Future (৬০-৯০ সেকেন্ড)</h4>
+<ul>
+<li><b>এখন:</b> কী পড়ছ / করছ, কোন stack-এ আরাম।</li>
+<li><b>আগে:</b> ১-২টা project বা internship, যেখানে আসল সমস্যা সমাধান করেছ।</li>
+<li><b>সামনে:</b> কেন এই role, কেন এখন।</li>
+</ul>
+<div class="say">I'm a CSE graduate from ___, and I enjoy building full-stack web apps. My strongest project is Return to Iman, a React + ASP.NET Core platform where I designed the database schema and the moderation workflow. I've also solved around ___ problems on LeetCode to keep my fundamentals sharp. Now I want to join a team where I can work on real production systems and grow fast, which is why I applied to WellDev.</div>
+<div class="dont"><b>এড়িয়ে চলো:</b> জন্মস্থান থেকে শুরু করে পুরো জীবনী, বা CV লাইন ধরে পড়ে যাওয়া। পরিবারের কথা জিজ্ঞেস করলে ছোট করে বলো।</div>
+</div>
+</details>
+
+<details class="card q c1" data-cat="c1">
+<summary><span class="qn">2</span><span class="qt">তোমার industry experience কী? কোন project-এ সবচেয়ে বেশি শিখেছ?<small>Reported · CV থেকে গভীরে</small></span><span class="lvl">নিজের কথা</span></summary>
+<div class="body">
+<p class="why"><b>কেন জিজ্ঞেস করে:</b> তুমি আসলেই কাজ করেছ, নাকি tutorial কপি করেছ, সেটা বুঝতে। Experience না থাকলেও সমস্যা নেই, project দিয়ে উত্তর দাও।</p>
+<h4>কাঠামো</h4>
+<ul>
+<li>একটা project বাছো আর বলো: কী সমস্যা, তুমি নিজে কোন অংশ বানিয়েছ, কোথায় আটকেছিলে, কীভাবে সমাধান করলে।</li>
+<li>একটা technical সিদ্ধান্তের কারণ বলো (যেমন কেন PostgreSQL, কেন JWT)। COO পেছনের "কেন" শুনতে চান।</li>
+<li>Internship না থাকলে সোজা বলো, তারপর project-এ চলে যাও।</li>
+</ul>
+<div class="say">I don't have full-time industry experience yet, but in my Inventory Management project I faced a real race condition: two users could stock-out the same item at once. I fixed it with a database transaction and row locking, and wrote a test that sends parallel requests. That taught me to think about concurrency, not just the happy path.</div>
+<div class="dont"><b>এড়িয়ে চলো:</b> যে অংশ নিজে করোনি সেটা নিজের বলে দাবি করা। পরের follow-up প্রশ্নে ধরা পড়ে যায়।</div>
+</div>
+</details>
+
+<details class="card q c1" data-cat="c1">
+<summary><span class="qn">3</span><span class="qt">আজকের coding test কেমন গেল? আবার করলে কী বদলাতে?<small>Final round-এ স্বাভাবিক প্রশ্ন</small></span><span class="lvl">নিজের কথা</span></summary>
+<div class="body">
+<p class="why"><b>কেন জিজ্ঞেস করে:</b> Code review-এর ঠিক পরেই COO-র সাথে দেখা। তুমি নিজের কাজ সৎভাবে মূল্যায়ন করতে পারো কি না, আর feedback কীভাবে নাও, সেটা দেখতে চান।</p>
+<h4>কাঠামো</h4>
+<ul>
+<li>কোনটা ভালো হয়েছে, এক লাইন।</li>
+<li>কোথায় আটকেছিলে বা কোন test ভেঙেছিল, সত্যি বলো।</li>
+<li>Reviewer-এর কোন comment থেকে কী শিখলে, আর পরের বার কী করবে।</li>
+</ul>
+<div class="say">The first two problems went smoothly. On the third one I missed an edge case with an empty input until the reviewer tested it. I'd now write my edge cases down before coding. The reviewer's point about naming was useful too, I'll keep that in mind.</div>
+<div class="dont"><b>এড়িয়ে চলো:</b> "সব perfect ছিল" বলা, বা প্রশ্ন / সময়কে দোষ দেওয়া।</div>
+</div>
+</details>
+
+<!-- ===== Mindset ===== -->
+<details class="card q c2" data-cat="c2">
+<summary><span class="qn">4</span><span class="qt">কেন WellDev? কী দেখে apply করলে?<small>HR round থেকে · final-এও আসে</small></span><span class="lvl">Mindset</span></summary>
+<div class="body">
+<p class="why"><b>কেন জিজ্ঞেস করে:</b> তুমি কোম্পানি সম্পর্কে খোঁজ নিয়েছ কি না, নাকি শুধু যেকোনো চাকরি চাও।</p>
+<h4>কাঠামো</h4>
+<ul>
+<li>কোম্পানির ১-২টা সত্যি তথ্য (website, LinkedIn, job post থেকে): কাজের ধরন, client, technology, trainee program।</li>
+<li>সেটা তোমার লক্ষ্যের সাথে মেলাও।</li>
+<li>যা জানো না তা অনুমানে বোলো না।</li>
+</ul>
+<div class="say">From your website and the job post I saw that ___, and that the trainee program is structured, which means I'd learn real engineering practices like code review and testing from day one. I also liked that the interview itself had a code review step: it tells me the team cares about code quality, and that's the kind of team I want to grow in.</div>
+<div class="dont"><b>এড়িয়ে চলো:</b> "ভালো বেতন" বা "বাসার কাছে" দিয়ে শুরু করা।</div>
+</div>
+</details>
+
+<details class="card q c2" data-cat="c2">
+<summary><span class="qn">5</span><span class="qt">নতুন বা পুরনো technology শিখতে রাজি? (যেমন ColdFusion)<small>HR round থেকে · TSE role-এর জন্য গুরুত্বপূর্ণ</small></span><span class="lvl">Mindset</span></summary>
+<div class="body">
+<p class="why"><b>কেন জিজ্ঞেস করে:</b> Candidate-দের ব্লগ অনুযায়ী WellDev-এর কিছু কাজ ColdFusion-এর মতো কম জনপ্রিয় stack-এ। তুমি শুধু "trendy" stack চাও, নাকি যা দরকার তা শিখবে, সেটা দেখেন।</p>
+<h4>কাঠামো</h4>
+<ul>
+<li>হ্যাঁ বলো, আর প্রমাণ দাও: আগে কোনো অচেনা জিনিস কত দ্রুত শিখেছ।</li>
+<li>বলো কীভাবে শেখো: official docs, ছোট project, অন্যের code পড়া।</li>
+<li>Fundamentals (HTTP, SQL, OOP) সব stack-এ এক, এটা বললে পরিণত শোনায়।</li>
+</ul>
+<div class="say">Yes. For my last project I had to learn ASP.NET Core from zero, and I had a working API in about two weeks by building small pieces and reading the docs. Languages change, but HTTP, SQL and clean design stay the same, so I'm comfortable picking up whatever stack the team uses, including ColdFusion.</div>
+<div class="dont"><b>এড়িয়ে চলো:</b> "আমি শুধু React / Node-এ কাজ করতে চাই" ধরনের শর্ত।</div>
+</div>
+</details>
+
+<details class="card q c2" data-cat="c2">
+<summary><span class="qn">6</span><span class="qt">তোমার শক্তি আর দুর্বলতা কী?<small>HR round থেকে</small></span><span class="lvl">Mindset</span></summary>
+<div class="body">
+<p class="why"><b>কেন জিজ্ঞেস করে:</b> নিজেকে চেনো কি না, আর দুর্বলতা নিয়ে কাজ করো কি না।</p>
+<h4>কাঠামো</h4>
+<ul>
+<li><b>শক্তি:</b> একটা, সাথে একটা উদাহরণ। Role-এর সাথে মেলে এমন (সমস্যা ভাঙা, debug, শেখা)।</li>
+<li><b>দুর্বলতা:</b> সত্যি কিন্তু কাজে মারাত্মক নয়, আর এখন কী করছ সেটা বলো।</li>
+</ul>
+<div class="say">My strength is debugging patiently: I break the problem down and check one assumption at a time, which is how I found a timezone bug in my project that others had missed. A weakness is that I used to say yes to too much and then rush. Now I break tasks into smaller pieces and give honest time estimates up front.</div>
+<div class="dont"><b>এড়িয়ে চলো:</b> "আমি perfectionist" বা "আমি বেশি কাজ করি" জাতীয় ছদ্ম-দুর্বলতা।</div>
+</div>
+</details>
+
+<details class="card q c2" data-cat="c2">
+<summary><span class="qn">7</span><span class="qt">Tight deadline আর best practice, দুটোর মধ্যে কীভাবে balance করো?<small>HR round থেকে · work approach</small></span><span class="lvl">Mindset</span></summary>
+<div class="body">
+<p class="why"><b>কেন জিজ্ঞেস করে:</b> তুমি বাস্তববাদী কি না। সবসময় "perfect" চাইলে ship হয় না, সবসময় shortcut নিলে code নষ্ট হয়।</p>
+<h4>কাঠামো</h4>
+<ul>
+<li>কোন জিনিসে কখনো আপস নয় (security, data ঠিক থাকা, মূল test)।</li>
+<li>কোথায় ছাড় দেওয়া যায় (UI polish, refactor পরে)।</li>
+<li>ছাড় দিলে সেটা লিখে রাখো (ticket / TODO) আর team-কে জানাও।</li>
+</ul>
+<div class="say">I separate must-haves from nice-to-haves. Correctness, security and tests for the core path are not negotiable. Things like refactoring or extra polish can wait, but I'd note them as a ticket and tell the lead, so the shortcut doesn't get forgotten.</div>
+</div>
+</details>
+
+<!-- ===== পরিস্থিতি ===== -->
+<details class="card q c3" data-cat="c3">
+<summary><span class="qn">8</span><span class="qt">বুঝছ deadline miss হবে। কী করবে?<small>HR round থেকে · situational</small></span><span class="lvl">পরিস্থিতি</span></summary>
+<div class="body">
+<p class="why"><b>কেন জিজ্ঞেস করে:</b> খারাপ খবর লুকাও নাকি আগে জানাও। Junior-এর সবচেয়ে বড় গুণ হলো সময়মতো জানানো।</p>
+<h4>কাঠামো</h4>
+<ol>
+<li>যত আগে বুঝবে, তত আগে lead-কে জানাও। শেষ দিনে নয়।</li>
+<li>সাথে নিয়ে যাও: কতটা শেষ, কেন দেরি, নতুন সম্ভাব্য সময়।</li>
+<li>বিকল্প দাও: scope ছোট করে আগে ship, বা কারো সাহায্য নেওয়া।</li>
+</ol>
+<div class="say">I'd tell my lead as soon as I see the risk, not on the last day. I'd show what's done, what's blocking me and a realistic new estimate, and suggest options, for example shipping the core part first and the rest in the next release.</div>
+<div class="dont"><b>এড়িয়ে চলো:</b> "সারা রাত জেগে শেষ করব" একমাত্র উত্তর হিসেবে। চেষ্টা ভালো, কিন্তু না জানানো ঝুঁকি।</div>
+</div>
+</details>
+
+<details class="card q c3" data-cat="c3">
+<summary><span class="qn">9</span><span class="qt">কঠিন সহকর্মী বা টিমে মতভেদ কীভাবে সামলাও?<small>HR round থেকে · STAR</small></span><span class="lvl">পরিস্থিতি</span></summary>
+<div class="body">
+<p class="why"><b>কেন জিজ্ঞেস করে:</b> Team-এ কাজ করতে পারো কি না, ego ছাড়া।</p>
+<h4>কাঠামো (STAR)</h4>
+<ul>
+<li>সত্যি একটা ঘটনা: group project, hackathon, club।</li>
+<li>Action-এ দেখাও: আগে শুনেছ, ব্যক্তি নয় সমস্যা নিয়ে কথা বলেছ, data / prototype দিয়ে সিদ্ধান্ত নিয়েছ।</li>
+<li>ফল আর শিক্ষা।</li>
+</ul>
+<div class="say">In a university project, a teammate and I disagreed on MongoDB versus PostgreSQL. Instead of arguing, we listed our actual queries and saw most of them were joins, so we went with PostgreSQL. He also turned out to be right about using JSON for one flexible field. We finished on time and I learned to settle debates with facts, not opinions.</div>
+<div class="dont"><b>এড়িয়ে চলো:</b> অন্যকে দোষারোপ করা গল্প, বা "আমার কখনো কারো সাথে সমস্যা হয়নি"।</div>
+</div>
+</details>
+
+<details class="card q c3" data-cat="c3">
+<summary><span class="qn">10</span><span class="qt">একটা ভুল বা ব্যর্থতার কথা বলো, যা থেকে শিখেছ<small>Mindset · STAR</small></span><span class="lvl">পরিস্থিতি</span></summary>
+<div class="body">
+<p class="why"><b>কেন জিজ্ঞেস করে:</b> দায় নাও কি না, আর ভুল থেকে process বদলাও কি না।</p>
+<h4>কাঠামো</h4>
+<ul>
+<li>সত্যি, ছোট একটা technical ভুল।</li>
+<li>"আমি" দিয়ে দায় নাও।</li>
+<li>কী ঠিক করলে, আর সেটা যেন আর না হয় তার জন্য কী অভ্যাস তৈরি করলে।</li>
+</ul>
+<div class="say">I once pushed a change that broke login on our demo day because I tested only on my machine. I owned it, rolled back, and fixed it within the hour. Since then I always run the full flow on a clean build before merging, and I added a simple test for login.</div>
+</div>
+</details>
+
+<details class="card q c3" data-cat="c3">
+<summary><span class="qn">11</span><span class="qt">এমন কিছু বলো যাতে আমি তোমাকে নিতে রাজি হই / Why should we hire you?<small>HR round থেকে · closing</small></span><span class="lvl">পরিস্থিতি</span></summary>
+<div class="body">
+<p class="why"><b>কেন জিজ্ঞেস করে:</b> শেষবার নিজের পক্ষে গুছিয়ে বলার সুযোগ।</p>
+<h4>কাঠামো: ৩টা প্রমাণ, ৩০ সেকেন্ডে</h4>
+<ul>
+<li>Fundamentals (আজকের test, LeetCode)।</li>
+<li>বানানোর অভিজ্ঞতা (একটা project, এক লাইনে)।</li>
+<li>Attitude (শেখা, দায়িত্ব নেওয়া, থাকতে চাওয়া)।</li>
+</ul>
+<div class="say">You've seen my problem solving today. I've also built and shipped full-stack projects on my own, so I can contribute early. And I learn fast and I'm looking for a place to grow long-term, not a short stop.</div>
+</div>
+</details>
+
+<!-- ===== Commitment ===== -->
+<details class="card q c4" data-cat="c4">
+<summary><span class="qn">12</span><span class="qt">Training-এর পর full-time থাকবে? ৫ বছর পর নিজেকে কোথায় দেখো?<small>HR round থেকে · retention</small></span><span class="lvl">Commitment</span></summary>
+<div class="body">
+<p class="why"><b>কেন জিজ্ঞেস করে:</b> Trainee-কে শেখাতে কোম্পানি সময় আর টাকা খরচ করে। তুমি ৬ মাস পরে চলে যাবে কি না, সেটা COO-র বড় চিন্তা।</p>
+<h4>কাঠামো</h4>
+<ul>
+<li>স্পষ্ট "হ্যাঁ, full-time থাকতে চাই"।</li>
+<li>৫ বছর: দায়িত্বশীল engineer, বড় feature বা module-এর owner, junior-দের সাহায্য করা।</li>
+<li>বিদেশে যাওয়া বা উচ্চশিক্ষার কথা জিজ্ঞেস করলে সৎ থাকো, তবে বর্তমান লক্ষ্যে জোর দাও।</li>
+</ul>
+<div class="say">Yes, I'm looking to join full-time after the training. In five years I see myself as a solid engineer who owns a module end to end and helps newer trainees, ideally growing with the same team.</div>
+<div class="dont"><b>এড়িয়ে চলো:</b> "Higher study-র জন্য অপেক্ষা করছি" বা "বিদেশে চলে যাব" দিয়ে উত্তর শুরু করা।</div>
+</div>
+</details>
+
+<details class="card q c4" data-cat="c4">
+<summary><span class="qn">13</span><span class="qt">Salary expectation কত?<small>HR round থেকে · final-এ আবার আসতে পারে</small></span><span class="lvl">Commitment</span></summary>
+<div class="body">
+<p class="why"><b>কেন জিজ্ঞেস করে:</b> Budget-এর সাথে মেলে কি না।</p>
+<h4>কাঠামো</h4>
+<ul>
+<li>আগে বাজার দেখে যাও (Glassdoor, পরিচিত trainee-রা): Dhaka-য় trainee software engineer-এর সাধারণ পরিসর।</li>
+<li>একটা পরিসর বলো, একক সংখ্যা নয়।</li>
+<li>শেখার সুযোগকে গুরুত্ব দাও, কিন্তু নিজেকে ছোট করো না।</li>
+</ul>
+<div class="say">Based on what I've seen for trainee roles in Dhaka, I'd expect something in the range of ___ to ___. But for me the learning and long-term growth here matter most, so I'm open to discussing it.</div>
+<div class="dont"><b>এড়িয়ে চলো:</b> "যা দেবেন তাই" (নিজের মূল্য কমায়), বা পরিসর ছাড়া অনেক বেশি একটা সংখ্যা।</div>
+</div>
+</details>
+
+<details class="card q c4" data-cat="c4">
+<summary><span class="qn">14</span><span class="qt">"তোমার কোনো প্রশ্ন আছে?"<small>প্রায় সবসময় শেষ প্রশ্ন</small></span><span class="lvl">Commitment</span></summary>
+<div class="body">
+<p class="why"><b>কেন জিজ্ঞেস করে:</b> আগ্রহ মাপতে। "না, কোনো প্রশ্ন নেই" বললে আগ্রহ কম মনে হয়। ২টা প্রশ্ন রেখে যাও।</p>
+<h4>COO-কে করার মতো প্রশ্ন</h4>
+<div class="ask" style="padding:4px 0">
+  <div>What does a trainee's first three months look like here?<small>প্রথম ৩ মাসে trainee কী করে, কীভাবে মূল্যায়ন হয়।</small></div>
+  <div>What makes a trainee successful at WellDev, in your experience?<small>আপনার দেখা সফল trainee-দের মধ্যে কী মিল।</small></div>
+  <div>Which products or stacks would a new trainee most likely work on?<small>নতুন trainee সাধারণত কোন product বা stack-এ কাজ করে।</small></div>
+  <div>How does the team do code reviews and mentoring?<small>Code review আর mentoring কীভাবে হয়।</small></div>
+</div>
+<div class="dont"><b>এড়িয়ে চলো:</b> প্রথমেই ছুটি, অফিস টাইম বা বেতন বৃদ্ধি নিয়ে প্রশ্ন। ওগুলো offer-এর পর HR-কে করো।</div>
+</div>
+</details>
+
+<h2 class="sec"><span class="dot"></span>শেষ মুহূর্তের checklist</h2>
+<div class="card check" style="--c:var(--accent)">
+  <label><input type="checkbox"><div><b>নিজের CV-র প্রতিটা লাইন ব্যাখ্যা করতে পারি</b><span>Candidate-দের অভিজ্ঞতায় CV থেকে অনেক ব্যবহারিক প্রশ্ন আসে।</span></div></label>
+  <label><input type="checkbox"><div><b>৩টা STAR গল্প তৈরি</b><span>একটা মতভেদ, একটা ভুল, একটা কঠিন bug। একই গল্প অনেক প্রশ্নে কাজে লাগে।</span></div></label>
+  <label><input type="checkbox"><div><b>WellDev সম্পর্কে ২টা সত্যি তথ্য জানি</b><span>Website, LinkedIn, job post থেকে।</span></div></label>
+  <label><input type="checkbox"><div><b>Salary-র পরিসর ঠিক করা</b><span>একক সংখ্যা নয়, পরিসর।</span></div></label>
+  <label><input type="checkbox"><div><b>COO-কে করার ২টা প্রশ্ন মনে আছে</b><span>উপরের তালিকা থেকে।</span></div></label>
+  <label><input type="checkbox"><div><b>ছোট live coding-এর জন্য তৈরি</b><span>কিছু জায়গায় COO নিজে IDE-তে runnable code চেয়েছেন। <a href="../01-leetcode-onsite/index.html">LeetCode Onsite</a> পাতাটা একবার ঝালিয়ে নাও।</span></div></label>
+</div>
+
+<footer>
+  এই পাতা শুধু প্রস্তুতির জন্য। প্রশ্নগুলো candidate-দের প্রকাশ করা অভিজ্ঞতা থেকে, নমুনা উত্তর উদাহরণ মাত্র: নিজের সত্যি গল্পে বদলে নাও। আগের ধাপ: <a href="../01-leetcode-onsite/index.html">← LeetCode Onsite</a>
+</footer>
+
+</div>
+
+<script>
+(function () {
+  var root = document.documentElement;
+  try { var saved = localStorage.getItem("welldev-theme"); if (saved) root.dataset.theme = saved; } catch (e) {}
+  document.getElementById("theme").addEventListener("click", function () {
+    var dark = root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+    root.dataset.theme = dark ? "light" : "dark";
+    try { localStorage.setItem("welldev-theme", root.dataset.theme); } catch (e) {}
+  });
+
+  var items = [].slice.call(document.querySelectorAll("details.q"));
+  var chips = [].slice.call(document.querySelectorAll(".chip"));
+  var input = document.getElementById("q"), count = document.getElementById("count"), filter = "all";
+  function apply() {
+    var term = input.value.trim().toLowerCase(), shown = 0;
+    items.forEach(function (el) {
+      var ok = (filter === "all" || el.dataset.cat === filter) && (!term || el.textContent.toLowerCase().indexOf(term) !== -1);
+      el.classList.toggle("hidden", !ok);
+      if (ok) shown++;
+    });
+    count.textContent = shown + " / " + items.length;
+  }
+  chips.forEach(function (c) {
+    c.addEventListener("click", function () {
+      filter = c.dataset.f;
+      chips.forEach(function (x) { x.setAttribute("aria-pressed", x === c ? "true" : "false"); });
+      apply();
+    });
+  });
+  input.addEventListener("input", apply);
+  apply();
+
+  var expanded = false;
+  document.getElementById("expand").addEventListener("click", function () {
+    expanded = !expanded;
+    items.forEach(function (el) { el.open = expanded; });
+    this.textContent = expanded ? "সব বন্ধ করো" : "সব খোলো";
+  });
+
+  // drill: random question + 2-minute timer
+  var qs = items.map(function (el) { return el.querySelector(".qt").firstChild.textContent.trim(); });
+  var qbox = document.getElementById("qbox"), lastI = -1;
+  var LEFT = 120, left = LEFT, timer = null;
+  var clock = document.getElementById("clock"), startBtn = document.getElementById("start");
+  function draw() {
+    var m = Math.floor(left / 60), s = left % 60;
+    clock.textContent = "0" + m + ":" + (s < 10 ? "0" : "") + s;
+    clock.classList.toggle("low", left <= 15);
+  }
+  function stop() { clearInterval(timer); timer = null; startBtn.textContent = "Start"; }
+  document.getElementById("next").addEventListener("click", function () {
+    var i; do { i = Math.floor(Math.random() * qs.length); } while (i === lastI && qs.length > 1);
+    lastI = i; qbox.textContent = qs[i];
+    stop(); left = LEFT; draw();
+  });
+  startBtn.addEventListener("click", function () {
+    if (timer) { stop(); return; }
+    if (!left) { left = LEFT; draw(); }
+    startBtn.textContent = "Pause";
+    timer = setInterval(function () {
+      if (left > 0) left--;
+      draw();
+      if (!left) stop();
+    }, 1000);
+  });
+  draw();
+})();
+</script>
+</body>
+</html>

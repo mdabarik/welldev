@@ -1,0 +1,588 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>System Design Basics - Interview Cheat Sheet</title>
+<meta name="description" content="Trainee Software Engineer interview-এর জন্য System Design-এর ১৪টি প্রশ্ন - প্রতিটির সংক্ষিপ্ত উত্তর আর ক্লিক করে ধাপে ধাপে দেখার D3 animation।">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<style>
+/* One card per interview question: short answer, 2-3 bullets, and a step-by-step D3 scene.
+   Scenes are plain data (see TOPICS at the bottom): each step adds / modifies / deletes nodes by id
+   and the tiny engine animates the difference. */
+:root{
+  --bg:#f5f7fc; --surface:#ffffff; --surface-2:#f1f4fa; --fg:#0f172a; --muted:#5b6478; --faint:#94a0b8; --line:#e4e8f1;
+  --accent:#6366f1;
+  --a:#4f46e5; --b:#db2777; --g:#059669; --o:#d97706; --r:#e11d48; --s:#0284c7;
+  --hero:linear-gradient(135deg,#4f46e5 0%,#7c3aed 45%,#db2777 100%);
+  --shadow:0 1px 2px rgba(15,23,42,.04),0 10px 30px -12px rgba(15,23,42,.14);
+  --sans:"Inter","Hind Siliguri",system-ui,sans-serif; --bn:"Hind Siliguri","Inter",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0b0f1a; --surface:#121827; --surface-2:#182033; --fg:#e7ecf6; --muted:#9aa6bf; --faint:#66728c; --line:#232c42;
+  --accent:#818cf8; --a:#818cf8; --b:#f472b6; --g:#34d399; --o:#fbbf24; --r:#fb7185; --s:#38bdf8;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6);
+}}
+:root[data-theme="dark"]{
+  --bg:#0b0f1a; --surface:#121827; --surface-2:#182033; --fg:#e7ecf6; --muted:#9aa6bf; --faint:#66728c; --line:#232c42;
+  --accent:#818cf8; --a:#818cf8; --b:#f472b6; --g:#34d399; --o:#fbbf24; --r:#fb7185; --s:#38bdf8;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 var(--bn);-webkit-font-smoothing:antialiased}
+a{color:var(--accent)}
+button{font:inherit;color:inherit}
+code{font-family:var(--mono);font-size:.86em;font-weight:500;background:color-mix(in srgb,var(--accent) 10%,var(--surface));color:color-mix(in srgb,var(--accent) 72%,var(--fg));padding:.1em .4em;border-radius:6px}
+.wrap{max-width:1000px;margin:0 auto;padding:20px 18px 70px}
+
+.topnav{display:flex;align-items:center;gap:10px}
+.brand{display:flex;align-items:center;gap:10px;color:var(--fg);text-decoration:none;font:800 16px var(--sans);letter-spacing:-.02em}
+.logo{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:#fff;font:800 13px var(--mono);background:var(--hero)}
+.topnav .sp{flex:1}
+.pill{border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:6px 14px;font:600 13px var(--sans);cursor:pointer;text-decoration:none}
+.pill:hover{color:var(--fg)}
+
+.hero{margin-top:20px;border-radius:22px;padding:26px 30px;color:#fff;background:var(--hero)}
+.hero .eyebrow{font:600 12px var(--sans);letter-spacing:.1em;text-transform:uppercase;opacity:.85}
+.hero h1{margin:6px 0 8px;font:800 clamp(26px,4.2vw,38px)/1.15 var(--sans);letter-spacing:-.03em}
+.hero p{margin:0;max-width:680px;opacity:.94}
+.jump{display:flex;flex-wrap:wrap;gap:6px;margin-top:16px}
+.jump a{min-width:32px;padding:0 6px;height:32px;display:grid;place-items:center;border-radius:9px;text-decoration:none;font:700 13px var(--sans);color:#fff;background:rgba(255,255,255,.18)}
+.jump a:hover{background:rgba(255,255,255,.34)}
+
+.parts{position:sticky;top:0;z-index:5;margin:14px -18px 0;padding:10px 18px;display:flex;gap:8px;overflow-x:auto;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);scrollbar-width:none}
+.parts a{flex:none;text-decoration:none;font:600 13px var(--sans);color:var(--muted);border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 13px}
+.parts a:hover{color:var(--fg)}
+.parts a b{color:var(--accent);margin-right:4px}
+
+.part{margin-top:44px;scroll-margin-top:60px}
+.part>h2{margin:0;font:800 clamp(20px,2.6vw,25px)/1.25 var(--sans);letter-spacing:-.02em}
+.part>h2 span{color:var(--accent);margin-right:8px}
+
+.q{margin-top:16px;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:20px 22px;box-shadow:var(--shadow);scroll-margin-top:64px}
+.q h3{display:flex;gap:12px;align-items:flex-start;margin:0 0 10px;font:700 18px/1.4 var(--sans);letter-spacing:-.01em}
+.skip{display:inline-block;margin-left:8px;padding:1px 10px;border-radius:999px;font:600 12px var(--sans);font-style:normal;white-space:nowrap;color:var(--muted);background:var(--surface-2);border:1px dashed var(--faint);vertical-align:middle}
+.num{flex:none;min-width:34px;height:34px;padding:0 8px;border-radius:10px;display:grid;place-items:center;color:#fff;font:800 14px var(--sans);background:var(--hero)}
+.ans{margin:0 0 10px;padding:10px 14px;border-left:4px solid var(--accent);border-radius:0 10px 10px 0;background:color-mix(in srgb,var(--accent) 8%,var(--surface))}
+.q ul{margin:0 0 12px;padding-left:20px;color:var(--muted)}
+.q li{margin:2px 0}
+.q li b,.ans b{color:var(--fg)}
+.extra{margin:0 0 12px;overflow-x:auto}
+.extra table{border-collapse:collapse;font:500 13px var(--mono)}
+.extra th,.extra td{border:1px solid var(--line);padding:3px 10px;text-align:center}
+.extra th{background:var(--surface-2)}
+.extra .cmp td,.extra .cmp th{text-align:left;vertical-align:top;font:500 13.5px/1.55 var(--bn);min-width:150px}
+.extra .cmp td:first-child{font-weight:700;white-space:nowrap;min-width:0}
+
+.viz{border:1px solid var(--line);border-radius:14px;background:var(--surface-2);overflow:hidden}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;padding:10px 12px 0}
+.tabs button{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:3px 12px;font:600 12.5px var(--sans);color:var(--muted);cursor:pointer}
+.tabs button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.stage{overflow-x:auto;padding-top:8px}
+.stage svg{display:block;width:100%;min-width:680px;height:auto;cursor:pointer;user-select:none}
+.cap{padding:10px 16px;min-height:3.4em;border-top:1px dashed var(--line);font-size:15px}
+.ctl{display:flex;align-items:center;gap:8px;padding:0 12px 12px}
+.b{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:5px 14px;font:600 13px var(--sans);cursor:pointer}
+.b:hover:not(:disabled){border-color:var(--accent)}
+.b:disabled{opacity:.4;cursor:default}
+.b.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+.cnt{margin-left:auto;font:500 12px var(--mono);color:var(--faint)}
+
+/* svg scene */
+svg text,svg tspan{white-space:pre}
+svg text{font-family:var(--sans);font-size:13px;fill:var(--fg);dominant-baseline:central}
+.c-n{--cc:var(--muted)} .c-a{--cc:var(--a)} .c-b{--cc:var(--b)} .c-g{--cc:var(--g)}
+.c-o{--cc:var(--o)} .c-r{--cc:var(--r)} .c-s{--cc:var(--s)} .c-f{--cc:var(--fg)}
+.box rect,.circ circle{fill:color-mix(in srgb,var(--cc) 14%,var(--surface));stroke:var(--cc);stroke-width:1.6;transition:fill .45s,stroke .45s}
+.dash rect,.dash circle{stroke-dasharray:6 4;fill:color-mix(in srgb,var(--cc) 4%,transparent)}
+.hl rect,.hl circle{stroke-width:3.4;filter:drop-shadow(0 0 7px color-mix(in srgb,var(--cc) 65%,transparent))}
+.text text{fill:var(--cc);transition:fill .45s}
+.text.b text,.text.lg text{font-weight:700}
+.text.lg text{font-size:15px}
+.sm text{font-size:11.5px}
+.m text{font-family:var(--mono);font-size:12px}
+.path path{fill:none;stroke:var(--cc);stroke-width:3.4;stroke-linecap:round}
+.arrow line{stroke:var(--cc);stroke-width:2.2;transition:stroke .4s}
+.arrow.dash line{stroke-dasharray:6 4}
+.arrow.hl line{stroke-width:3.4}
+footer{margin-top:50px;text-align:center;color:var(--faint);font:500 13px var(--sans)}
+/* bn-type: Bengali glyphs/digits need normal tracking */
+h1,h2,h3,h4,h5{letter-spacing:0!important}
+.hero h1,.page-head h1,.p-hero h1,.prose h1,header.top h1{line-height:1.32!important}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs id="defs"></defs></svg>
+<div class="wrap">
+  <nav class="topnav">
+    <a class="brand" href="../../index.html"><span class="logo">W</span>WellDev</a>
+    <span class="sp"></span>
+    <button class="pill" id="theme" type="button">Theme</button>
+  </nav>
+
+  <header class="hero">
+    <div class="eyebrow">System Design · Interview</div>
+    <h1>System Design Basics - ১৪টি প্রশ্ন, সোজা উত্তর</h1>
+    <p>প্রতিটি প্রশ্নে এক লাইনের উত্তর আর একটা animation। scene-এ ক্লিক করো বা <b>Next</b> চাপো - ধাপে ধাপে দেখো।</p>
+    <div class="jump" id="jump"></div>
+  </header>
+  <nav class="parts" id="parts"></nav>
+  <main id="app"></main>
+  <footer>Trainee Software Engineer · System design basics</footer>
+</div>
+
+<script>
+/* ---------- theme ---------- */
+(function(){
+  const root=document.documentElement,btn=document.getElementById('theme');
+  try{const t=localStorage.getItem('theme');if(t)root.dataset.theme=t;}catch(e){}
+  const dark=()=>root.dataset.theme?root.dataset.theme==='dark':matchMedia('(prefers-color-scheme:dark)').matches;
+  const label=()=>btn.textContent=dark()?'Light':'Dark';
+  btn.onclick=()=>{root.dataset.theme=dark()?'light':'dark';try{localStorage.setItem('theme',root.dataset.theme);}catch(e){}label();};
+  label();
+})();
+
+/* ---------- scene engine ---------- */
+const COLORS=['n','a','b','g','o','r','s','f'];
+document.getElementById('defs').innerHTML=COLORS.map(c=>
+  `<marker id="ah-${c}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" style="fill:var(--${c==='n'?'muted':c==='f'?'fg':c})"/></marker>`).join('');
+
+const B=(id,x,y,w,h,label,c='n',o={})=>({id,k:'box',x,y,w,h,label,c,...o});
+const T=(id,x,y,label,o={})=>({id,k:'text',x,y,label,c:'n',...o});
+const A=(id,x1,y1,x2,y2,c='n',o={})=>({id,k:'arrow',x:0,y:0,x1,y1,x2,y2,c,...o});
+const C=(id,x,y,r,label,c='n',o={})=>({id,k:'circ',x,y,r,label,c,...o});
+const S=(cap,o={})=>({cap,...o});
+const P=(id,d,c='n',o={})=>({id,k:'path',x:0,y:0,d,c,...o});
+const F=(x1,y1,x2,y2,c='a',o={})=>({x1,y1,x2,y2,c,...o});
+
+function stateAt(steps,i){
+  const m=new Map();
+  for(let k=0;k<=i;k++){
+    const s=steps[k];
+    (s.del||[]).forEach(id=>m.delete(id));
+    (s.add||[]).forEach(n=>m.set(n.id,{...n}));
+    Object.entries(s.mod||{}).forEach(([id,p])=>{if(m.has(id))Object.assign(m.get(id),p);});
+  }
+  return [...m.values()];
+}
+
+function setText(g,cls,str,x,y,anchor,lh=15.5){
+  let tx=g.select('text.'+cls);
+  if(tx.empty())tx=g.append('text').attr('class',cls);
+  const ls=String(str??'').split('\n');
+  tx.attr('text-anchor',anchor);
+  tx.selectAll('tspan').data(ls).join('tspan').attr('x',x).attr('y',(d,i)=>y-(ls.length-1)*lh/2+i*lh).text(d=>d);
+}
+
+function upd(g,d,t){
+  g.attr('class',`n ${d.k} c-${d.c||'n'}${d.dash?' dash':''}${d.hl?' hl':''}${d.s?' '+d.s:''}${d.m?' m':''}`);
+  if(d.k==='box'){
+    let r=g.select('rect');
+    if(r.empty())r=g.insert('rect',':first-child').attr('rx',9).attr('width',d.w).attr('height',d.h);
+    r.transition(t).attr('width',d.w).attr('height',d.h);
+    setText(g,'lb',d.label,d.w/2,d.h/2,'middle');
+  }else if(d.k==='circ'){
+    let r=g.select('circle');
+    if(r.empty())r=g.insert('circle',':first-child').attr('r',d.r);
+    r.transition(t).attr('r',d.r);
+    setText(g,'lb',d.label,0,0,'middle');
+  }else if(d.k==='text'){
+    setText(g,'lb',d.label,0,0,d.a||'start');
+  }else if(d.k==='path'){
+    let p=g.select('path');
+    if(p.empty()){p=g.append('path').attr('d',d.d);const L=p.node().getTotalLength();p.attr('stroke-dasharray',L).attr('stroke-dashoffset',L).transition(t).attr('stroke-dashoffset',0);}
+  }else if(d.k==='arrow'){
+    let l=g.select('line');
+    if(l.empty())l=g.append('line').attr('x1',d.x1).attr('y1',d.y1).attr('x2',d.x2).attr('y2',d.y2);
+    l.attr('marker-end',`url(#ah-${d.c||'n'})`).transition(t).attr('x1',d.x1).attr('y1',d.y1).attr('x2',d.x2).attr('y2',d.y2);
+  }
+}
+
+function draw(svg,nodes,dur){
+  const t=d3.transition().duration(dur).ease(d3.easeCubicInOut);
+  svg.select('.layer').selectAll('g.n').data(nodes,d=>d.id).join(
+    en=>en.append('g').attr('opacity',0).attr('transform',d=>`translate(${d.x},${d.y})`),
+    up=>up,
+    ex=>ex.transition(t).attr('opacity',0).remove()
+  ).each(function(d){upd(d3.select(this),d,t);})
+   .transition(t).attr('transform',d=>`translate(${d.x},${d.y})`).attr('opacity',d=>d.o??1);
+}
+
+/* moving packets: step.fly = [F(x1,y1,x2,y2,colour,{n,gap,dur,r,d0,per,once})] - loops until the step changes */
+let flyGen=0;
+function flyRun(svg,list){
+  const my=++flyGen,fx=svg.select('.fx');
+  fx.selectAll('circle').interrupt().remove();
+  (list||[]).forEach(f=>{
+    const n=f.n??3,gap=f.gap??380,dur=f.dur??1200,per=f.per??Math.max(n*gap+300,dur+300),r=f.r??6;
+    const col=f.c==='n'?'muted':f.c==='f'?'fg':(f.c||'a');
+    for(let i=0;i<n;i++){
+      const dot=fx.append('circle').attr('r',r).attr('cx',f.x1).attr('cy',f.y1).attr('opacity',0)
+        .style('fill',`var(--${col})`).style('stroke','var(--surface)').style('stroke-width',1.5);
+      const go=delay=>{
+        if(my!==flyGen)return;
+        dot.attr('cx',f.x1).attr('cy',f.y1).attr('opacity',0)
+          .transition().delay(delay).duration(0).attr('opacity',1)
+          .transition().duration(dur).ease(d3.easeLinear).attr('cx',f.x2).attr('cy',f.y2)
+          .transition().duration(0).attr('opacity',0)
+          .on('end',()=>{if(!f.once)go(per-dur);});
+      };
+      go((f.d0??500)+i*gap);
+    }
+  });
+}
+
+function mount(host,topic){
+  const tabs=topic.tabs||[{n:'',steps:topic.steps}];
+  host.innerHTML='<div class="tabs"></div><div class="stage"><svg viewBox="0 0 760 240" role="img"><g class="layer"></g><g class="fx"></g></svg></div><div class="cap"></div><div class="ctl"><button class="b prev" type="button">◀</button><button class="b pri next" type="button">Next ▶</button><span class="cnt"></span></div>';
+  const svg=d3.select(host).select('svg'),cap=host.querySelector('.cap'),cnt=host.querySelector('.cnt');
+  const prev=host.querySelector('.prev'),next=host.querySelector('.next'),tabBox=host.querySelector('.tabs');
+  let ti=0,si=0,steps;
+  function show(dur){
+    draw(svg,stateAt(steps,si),dur);
+    flyRun(svg,steps[si].fly);
+    cap.innerHTML=steps[si].cap;
+    cnt.textContent=`${si+1} / ${steps.length}`;
+    prev.disabled=si===0;
+    next.textContent=si===steps.length-1?'↻ আবার':'Next ▶';
+  }
+  function load(i){
+    ti=i;si=0;
+    const tb=tabs[ti];steps=typeof tb.steps==='function'?tb.steps():tb.steps;
+    tabBox.querySelectorAll('button').forEach((b,k)=>b.classList.toggle('on',k===ti));
+    show(0);
+  }
+  if(tabs.length>1){
+    tabs.forEach((tb,i)=>{const b=document.createElement('button');b.type='button';b.textContent=tb.n;b.onclick=()=>load(i);tabBox.appendChild(b);});
+  }else tabBox.remove();
+  const go=()=>{si=si===steps.length-1?0:si+1;show(600);};
+  next.onclick=go;svg.on('click',go);
+  prev.onclick=()=>{if(si>0){si--;show(600);}};
+  load(0);
+}
+
+/* ---------- content ---------- */
+const PARTS=[['A','মৌলিক ধারণা'],['B','Performance: Latency · Bandwidth · Throughput'],['C','Scaling'],['D','Reliability · Availability · SPOF · Maintainability'],['E','Distributed system: Partition · CAP'],['F','Content Delivery: CDN']];
+
+/* shared setup for the CP / AP tabs of the CAP question */
+function capSteps(kind){
+  const cp=kind==='cp',syn=[F(282,98,478,98,'g',{n:2,gap:600,dur:1300})];
+  return [
+   S('দুই node-এ একই data: <b>x = 1</b>। Link ঠিক আছে, তাই দুটো সবসময় মিলে থাকে।',{add:[B('na',150,70,130,56,'Node A\nx = 1','g'),B('nb',480,70,130,56,'Node B\nx = 1','g'),A('lk',282,98,478,98,'g'),T('sy',380,80,'data sync',{a:'middle',c:'g',s:'sm'})],fly:syn}),
+   S('<b>Partition!</b> Link ছিঁড়ল। A আর B এখন একে অপরকে জানাতে পারে না।',{mod:{lk:{c:'r',dash:1},sy:{label:'✂ partition',c:'r'}}}),
+   S('Client Node A-তে লিখল <b>x = 2</b>। Node B এই খবর পেল না, সে এখনো x = 1 জানে।',{mod:{na:{c:'o',label:'Node A\nx = 2',hl:1}},add:[B('w',20,70,90,56,'Client\n(write)','a'),A('wa',112,98,148,98,'a')],fly:[F(112,98,148,98,'a',{n:1,dur:500,per:1600})]}),
+   cp?S('অন্য client Node B থেকে পড়তে চাইল। <b>CP:</b> B ভুল data দেবে না, তাই <b>error</b>। Consistent ✓ · Available ✗',{mod:{na:{hl:0},nb:{c:'r',label:'Node B\nবলল: নিশ্চিত নই',hl:1}},add:[B('rd',650,70,90,56,'Client\n(read)','a'),A('ra',648,98,612,98,'a'),T('er',695,150,'Error 503',{a:'middle',c:'r',s:'b'}),B('res',200,170,360,44,'Consistency ✓  ·  Availability ✗','a',{hl:1})],fly:[F(648,98,612,98,'a',{n:1,dur:500,per:1600})]})
+     :S('অন্য client Node B থেকে পড়তে চাইল। <b>AP:</b> B যা জানে (x = 1) সেটাই দেয়: উত্তর পাওয়া গেল, কিন্তু <b>পুরনো</b>। Available ✓ · Consistent ✗',{mod:{na:{hl:0},nb:{hl:1}},add:[B('rd',650,70,90,56,'Client\n(read)','a'),A('ra',648,98,612,98,'a'),T('st',695,150,'x = 1 (পুরনো)',{a:'middle',c:'o',s:'b'}),B('res',200,170,360,44,'Availability ✓  ·  Consistency ✗','g',{hl:1})],fly:[F(648,98,612,98,'a',{n:1,dur:500,per:1600})]})
+  ];
+}
+
+const TOPICS=[
+{p:0,q:'Client-Server architecture কী?',
+ ans:'<b>Client</b> request পাঠায়, <b>server</b> সেটা process করে <b>response</b> ফেরত দেয়। Server সবসময় চালু থাকে আর একসাথে অনেক client-কে সেবা দেয়।',
+ pts:['Client = browser / mobile app; server = যে machine logic ও data সামলায়।','<b>Thin client:</b> logic server-এ। <b>Thick client:</b> logic client-এও।','<b>2-tier:</b> client ↔ DB। <b>3-tier:</b> client ↔ app server ↔ DB।'],
+ tabs:[
+  {n:'1. Request-Response',steps:[
+   S('দুই পক্ষ: <b>client</b> আর <b>server</b>।',{add:[B('cl',30,80,150,70,'Client\n(browser / app)','a'),B('sv',580,80,150,70,'Server\n(সবসময় চালু)','g')]}),
+   S('Client <b>request</b> পাঠায়।',{add:[A('rq',184,100,576,100,'a'),T('rql',380,84,'Request: GET /profile',{a:'middle',c:'a',s:'sm'})]}),
+   S('Server দরকারে <b>database</b> থেকে data আনে।',{mod:{sv:{hl:1,label:'Server\nprocess করছে'}},add:[B('db',590,185,130,44,'Database','o'),A('sd',655,152,655,183,'o')]}),
+   S('Server <b>response</b> ফেরত দেয়। Client সেটা দেখায়।',{mod:{sv:{hl:0,label:'Server\n(সবসময় চালু)'},cl:{hl:1}},add:[A('rs',576,130,184,130,'g'),T('rsl',380,148,'Response: 200 + data',{a:'middle',c:'g',s:'sm'})]})
+  ]},
+  {n:'2. Thin বনাম Thick',steps:[
+   S('<b>Thin client:</b> client শুধু UI দেখায়। সব logic আর data server-এ।',{add:[T('tl',20,16,'Thin client',{c:'a',s:'b'}),B('t1',20,60,130,70,'Browser\nশুধু UI','a'),B('t2',220,60,130,70,'Server\nlogic + data','g'),A('ta',152,95,218,95,'n'),T('tn',185,160,'client হালকা, server-এ চাপ বেশি',{a:'middle',s:'sm'})]}),
+   S('<b>Thick client:</b> client নিজেই logic চালায়। Server শুধু data দেয়।',{add:[T('kl',410,16,'Thick client',{c:'b',s:'b'}),B('k1',410,60,130,70,'Desktop app\nUI + logic','b'),B('k2',610,60,130,70,'Server\nশুধু data','g'),A('ka',542,95,608,95,'n'),T('kn',575,160,'client ভারী, server-এ চাপ কম',{a:'middle',s:'sm'})]}),
+   S('উদাহরণ: thin = ওয়েবসাইট, thick = desktop game / mobile app।',{add:[B('ex',20,192,720,38,'Thin = ওয়েবসাইট  ·  Thick = desktop game, mobile app','o',{s:'sm'})]})
+  ]},
+  {n:'3. 2-tier বনাম 3-tier',steps:[
+   S('<b>2-tier:</b> client সরাসরি database-এর সাথে কথা বলে, logic client-এই।',{add:[B('c',40,90,170,60,'Client\nUI + logic','a'),B('d',550,90,170,60,'Database','o'),A('a1',212,120,548,120,'n'),T('l',380,104,'সরাসরি query',{a:'middle',s:'sm'})]}),
+   S('<b>3-tier:</b> মাঝে <b>app server</b> বসে। Client শুধু UI, logic app server-এ।',{del:['a1','l'],mod:{c:{label:'Client\nশুধু UI'}},add:[B('s',300,90,160,60,'App server\nlogic','g'),A('a2',212,120,298,120,'n'),A('a3',462,120,548,120,'n'),T('p1',125,66,'Tier 1',{a:'middle',c:'a',s:'sm b'}),T('p2',380,66,'Tier 2',{a:'middle',c:'g',s:'sm b'}),T('p3',635,66,'Tier 3',{a:'middle',c:'o',s:'sm b'})]}),
+   S('লাভ: প্রতিটা tier আলাদা scale করা যায়, আর database সরাসরি বাইরে খোলা থাকে না।',{add:[B('bn',100,180,560,44,'আলাদা scale  ·  বেশি নিরাপদ  ·  logic এক জায়গায়','g',{s:'sm'})]})
+  ]}
+ ]},
+
+{p:0,q:'Functional বনাম Non-functional requirement কী?',
+ ans:'<b>Functional</b> = system <b>কী করবে</b> (feature)। <b>Non-functional</b> = সেটা <b>কেমন ভাবে</b> করবে (speed, নিরাপত্তা, availability-র মান)।',
+ pts:['Functional: "User login করতে পারবে", "Order দেওয়া যাবে"। না থাকলে product অসম্পূর্ণ।','Non-functional (quality): performance, scalability, reliability, security, maintainability।','Interview tip: requirement শুনলে আগে এই দুই ভাগে ভাগ করো, তারপর design শুরু।'],
+ tabs:[
+  {n:'1. পার্থক্য',steps:[
+   S('<b>Functional requirement:</b> system <b>কী কী করবে</b>, মানে feature বা behaviour।',{add:[T('ft',195,18,'Functional',{a:'middle',c:'a',s:'lg'}),B('fb',30,36,330,52,'system কী করবে?\n(feature / behaviour)','a')]}),
+   S('উদাহরণ: login, cart, payment: প্রতিটা একটা <b>কাজ</b>।',{add:[B('f1',30,104,330,32,'User login করতে পারবে','a',{s:'sm'}),B('f2',30,144,330,32,'Cart-এ product যোগ করা যাবে','a',{s:'sm'}),B('f3',30,184,330,32,'Payment করা যাবে','a',{s:'sm'})]}),
+   S('<b>Non-functional requirement:</b> কাজটা <b>কেমন মানে</b> হবে, মানে quality।',{add:[T('nt',565,18,'Non-functional',{a:'middle',c:'o',s:'lg'}),B('nb',400,36,330,52,'কেমন ভাবে করবে?\n(মান / quality)','o')]}),
+   S('উদাহরণ: speed, scale, নিরাপত্তা: সবই মাপা যায় এমন <b>লক্ষ্য</b>।',{add:[B('n1',400,104,330,32,'Page ২ সেকেন্ডের মধ্যে load হবে','o',{s:'sm'}),B('n2',400,144,330,32,'১ লক্ষ user একসাথে চলবে','o',{s:'sm'}),B('n3',400,184,330,32,'৯৯.৯% available ও data সুরক্ষিত','o',{s:'sm'})]}),
+   S('Functional ছাড়া product হয় না; non-functional ছাড়া product <b>ব্যবহারযোগ্য</b> হয় না।',{mod:{fb:{hl:1},nb:{hl:1}}})
+  ]},
+  {n:'2. কোনটা কোন দিকে?',steps:[
+   S('ছয়টা requirement। কোনটা functional, কোনটা non-functional? আগে নিজে ভাবো।',{add:[B('u1',30,24,340,42,'User login করতে পারবে','n',{s:'sm'}),B('u2',390,24,340,42,'Page ২ সেকেন্ডে load হবে','n',{s:'sm'}),B('u4',30,84,340,42,'১ লক্ষ user একসাথে চলবে','n',{s:'sm'}),B('u3',390,84,340,42,'Cart-এ item যোগ করা যাবে','n',{s:'sm'}),B('u5',30,144,340,42,'Email-এ receipt যাবে','n',{s:'sm'}),B('u6',390,144,340,42,'Password encrypted থাকবে','n',{s:'sm'})]}),
+   S('যেটা <b>feature / কাজ</b>, সেটা functional (নীল)।',{mod:{u1:{c:'a'},u3:{c:'a'},u5:{c:'a'}}}),
+   S('যেটা <b>মান বা সীমা</b> (speed, scale, security), সেটা non-functional (কমলা)।',{mod:{u2:{c:'o'},u4:{c:'o'},u6:{c:'o'}}}),
+   S('সহজ নিয়ম: "কী?" = functional, "কতটা ভালো?" = non-functional।',{add:[B('lg1',30,200,340,32,'কী করে? → Functional','a',{s:'sm',hl:1}),B('lg2',390,200,340,32,'কতটা ভালো? → Non-functional','o',{s:'sm',hl:1})]})
+  ]}
+ ]},
+
+{p:1,q:'Latency কী?',
+ ans:'<b>Latency</b> = একটা request পাঠানো থেকে response পাওয়া পর্যন্ত <b>সময় বা দেরি</b> (ms-এ মাপা হয়)। কম হলে ভালো।',
+ pts:['Latency = <b>কত তাড়াতাড়ি</b>; bandwidth/throughput = <b>কত বেশি</b>। দুটো আলাদা জিনিস।','জুড়ে থাকে: network যাওয়া + server processing + database query + network ফেরা।','কমানোর উপায়: CDN, caching, user-এর কাছের server, কম DB call।'],
+ tabs:[
+  {n:'1. Latency মাপা',steps:[
+   S('দুই পক্ষ: <b>client</b> আর <b>server</b>।',{add:[B('cl',30,80,130,60,'Client','a'),B('sv',600,80,130,60,'Server','g')]}),
+   S('<b>t = 0:</b> client request পাঠায়। ঘড়ি চালু।',{add:[A('rq',164,100,596,100,'a'),T('tq',380,82,'request',{a:'middle',c:'a',s:'sm'}),T('t0',95,168,'⏱ t = 0',{a:'middle',c:'o',s:'b'})],fly:[F(164,100,596,100,'a',{n:1,dur:1300,per:3400})]}),
+   S('Server কাজ শেষ করে <b>response</b> ফেরত পাঠায়।',{add:[A('rs',596,126,164,126,'g'),T('ts',380,146,'response',{a:'middle',c:'g',s:'sm'})],fly:[F(164,100,596,100,'a',{n:1,dur:1300,per:3400}),F(596,126,164,126,'g',{n:1,dur:1300,per:3400,d0:1900})]}),
+   S('Response পৌঁছাতে ঘড়ি থামে। এই পুরো সময়টাই <b>latency</b>।',{mod:{t0:{label:'⏱ t = 120 ms'}},add:[B('tm',30,180,700,38,'Latency = request পাঠানো → response পাওয়া = 120 ms','o',{hl:1})],fly:[F(164,100,596,100,'a',{n:1,dur:1300,per:3400}),F(596,126,164,126,'g',{n:1,dur:1300,per:3400,d0:1900})]})
+  ]},
+  {n:'2. কী কী জুড়ে আছে',steps:[
+   S('একটা request-এর যাত্রা চারটা ধাপে ভাগ করা যায়। ডানে মোট সময় যোগ হবে।',{add:[T('h',60,34,'একটা request-এর যাত্রা  →',{c:'f',s:'b'})]}),
+   S('<b>১. Network (যাওয়া):</b> request তারের ভিতর দিয়ে server-এ পৌঁছায়। 50 ms।',{add:[B('g1',60,80,180,60,'Network\nযাওয়া','s'),T('v1',150,162,'50 ms',{a:'middle',c:'s',s:'b m'})]}),
+   S('<b>২. Server processing:</b> logic চালানো। 30 ms।',{add:[B('g2',240,80,108,60,'Server\nprocess','g'),T('v2',294,162,'30 ms',{a:'middle',c:'g',s:'b m'})]}),
+   S('<b>৩. Database query:</b> data খোঁজা। 40 ms।',{add:[B('g3',348,80,144,60,'DB\nquery','o'),T('v3',420,162,'40 ms',{a:'middle',c:'o',s:'b m'})]}),
+   S('<b>৪. Network (ফেরা):</b> response ফিরে আসে। 50 ms।',{add:[B('g4',492,80,180,60,'Network\nফেরা','s'),T('v4',582,162,'50 ms',{a:'middle',c:'s',s:'b m'})]}),
+   S('যোগ করলেই মোট <b>latency = 170 ms</b>। যেকোনো ধাপ কমালেই মোট কমে।',{add:[B('sum',60,192,612,36,'50 + 30 + 40 + 50 = 170 ms','f',{s:'lg',hl:1})]})
+  ]},
+  {n:'3. কমানোর উপায়',steps:[
+   S('User ঢাকায়, server আমেরিকায়। দূরত্ব বেশি তাই latency প্রায় <b>250 ms</b>।',{add:[B('u',30,90,110,60,'User\nঢাকা','a'),B('o',590,90,140,60,'Origin server\nআমেরিকা','g'),A('far',144,120,586,120,'r'),T('fl',365,102,'≈ 250 ms (অনেক দূর)',{a:'middle',c:'r',s:'sm b'})],fly:[F(144,120,586,120,'r',{n:2,gap:700,dur:2400})]}),
+   S('<b>CDN edge</b> user-এর কাছেই বসানো হলো। ঢাকা থেকে ঢাকাতেই যাওয়া: প্রায় <b>20 ms</b>।',{mod:{far:{dash:1,c:'n'},fl:{c:'n'}},add:[B('cdn',230,170,130,50,'CDN edge\n(ঢাকা)','g'),A('near',90,152,260,168,'g'),T('nl',130,208,'≈ 20 ms',{a:'middle',c:'g',s:'sm b'})],fly:[F(90,152,260,168,'g',{n:2,gap:400,dur:700})]}),
+   S('<b>Cache hit:</b> CDN-এর কাছে উত্তর আগে থেকেই আছে, origin পর্যন্ত যেতেই হয় না।',{mod:{cdn:{label:'CDN edge\ncache ✓',hl:1}},add:[T('ok',470,196,'origin-এ যাওয়াই লাগল না',{c:'g',s:'b'})],fly:[F(90,152,260,168,'g',{n:2,gap:400,dur:700})]})
+  ]}
+ ]},
+
+{p:1,q:'Bandwidth কী?',
+ ans:'<b>Bandwidth</b> = একটা network link দিয়ে প্রতি সেকেন্ডে <b>সর্বোচ্চ কতটা data</b> পাঠানো সম্ভব, সেই ক্ষমতা (Mbps / Gbps)।',
+ pts:['পাইপের <b>প্রস্থ</b> ভাবো: যত চওড়া, তত বেশি data একসাথে যায়।','Bandwidth বাড়ালে বড় file দ্রুত নামে, কিন্তু একটা packet-এর <b>latency</b> আলাদা জিনিস।','এটা তাত্ত্বিক সর্বোচ্চ। বাস্তবে যা পাওয়া যায় সেটা <b>throughput</b>।'],
+ tabs:[
+  {n:'1. পাইপের উপমা',steps:[
+   S('<b>কম bandwidth = সরু পাইপ।</b> একসাথে অল্প data যায়।',{add:[T('l1',20,55,'১০ Mbps',{c:'a',s:'b'}),B('p1',130,40,540,30,'','a',{dash:1}),T('sd',690,55,'→',{c:'a',s:'lg'})],fly:[F(140,55,660,55,'a',{n:3,gap:450,dur:1400})]}),
+   S('<b>বেশি bandwidth = চওড়া পাইপ।</b> একসাথে অনেক data যায়।',{add:[T('l2',20,155,'১০০ Mbps',{c:'g',s:'b'}),B('p2',130,112,540,86,'','g',{dash:1})],fly:[F(140,55,660,55,'a',{n:3,gap:450,dur:1400}),F(140,128,660,128,'g',{n:3,gap:450,dur:1400}),F(140,155,660,155,'g',{n:3,gap:450,dur:1400,d0:700}),F(140,182,660,182,'g',{n:3,gap:450,dur:1400,d0:300})]}),
+   S('একই ১০০ MB file: সরু পাইপে ৮০ সেকেন্ড, চওড়া পাইপে মাত্র ৮ সেকেন্ড।',{add:[B('dl',130,208,540,30,'১০০ MB file  →  ১০ Mbps: ৮০ সেকেন্ড  ·  ১০০ Mbps: ৮ সেকেন্ড','o',{s:'sm',hl:1})],fly:[F(140,55,660,55,'a',{n:3,gap:450,dur:1400}),F(140,128,660,128,'g',{n:3,gap:450,dur:1400}),F(140,155,660,155,'g',{n:3,gap:450,dur:1400,d0:700}),F(140,182,660,182,'g',{n:3,gap:450,dur:1400,d0:300})]})
+  ]},
+  {n:'2. Bandwidth বনাম Latency',steps:[
+   S('<b>Latency:</b> একটা গাড়ি রাস্তা পার হতে কত সময় নেয়। এটা দূরত্বের উপর নির্ভর করে।',{add:[T('h1',40,22,'Latency = একটা গাড়ির যাত্রার সময়',{c:'o',s:'b'}),B('r1',40,38,680,36,'','o',{dash:1}),T('d1',380,92,'← রাস্তার দৈর্ঘ্য (দূরত্ব) →',{a:'middle',s:'sm'})],fly:[F(50,56,710,56,'o',{n:1,dur:2600,per:3600,r:8})]}),
+   S('<b>Bandwidth:</b> কয়টা lane আছে, মানে একসাথে কত গাড়ি যেতে পারে।',{add:[T('h2',40,122,'Bandwidth = lane সংখ্যা (একসাথে কত গাড়ি)',{c:'g',s:'b'}),B('r2',40,136,680,26,'','g',{dash:1}),B('r3',40,166,680,26,'','g',{dash:1}),B('r4',40,196,680,26,'','g',{dash:1})],fly:[F(50,56,710,56,'o',{n:1,dur:2600,per:3600,r:8}),F(50,149,710,149,'g',{n:3,gap:600,dur:2600,per:3600}),F(50,179,710,179,'g',{n:3,gap:600,dur:2600,per:3600,d0:300}),F(50,209,710,209,'g',{n:3,gap:600,dur:2600,per:3600,d0:900})]}),
+   S('Lane বাড়ালে বেশি গাড়ি যায়, কিন্তু প্রথম গাড়ির সময় একই। তাই bandwidth বাড়ালে <b>latency কমে না</b>।',{add:[T('nt',380,232,'বেশি lane ≠ ছোট রাস্তা',{a:'middle',c:'r',s:'b sm'})],fly:[F(50,56,710,56,'o',{n:1,dur:2600,per:3600,r:8}),F(50,149,710,149,'g',{n:3,gap:600,dur:2600,per:3600}),F(50,179,710,179,'g',{n:3,gap:600,dur:2600,per:3600,d0:300}),F(50,209,710,209,'g',{n:3,gap:600,dur:2600,per:3600,d0:900})]})
+  ]}
+ ]},
+
+{p:1,q:'Throughput কী?',
+ ans:'<b>Throughput</b> = একটা system প্রতি সেকেন্ডে <b>বাস্তবে কতটা কাজ</b> শেষ করে: data (Mbps) অথবা request (req/s) হিসেবে।',
+ pts:['<b>Bandwidth</b> = সর্বোচ্চ ক্ষমতা; <b>throughput</b> = আসলে যা পাওয়া গেল। Throughput ≤ bandwidth।','Server-এর ক্ষেত্রে মাপা হয় <b>RPS</b> (requests per second) বা TPS।','বাড়ানোর উপায়: worker/concurrency বাড়ানো, caching, batching, horizontal scaling।'],
+ tabs:[
+  {n:'1. Bandwidth বনাম Throughput',steps:[
+   S('Link-এর <b>bandwidth</b> (সর্বোচ্চ ক্ষমতা) = ১০০ Mbps।',{add:[B('cap',60,40,640,42,'Bandwidth (ক্ষমতা) = ১০০ Mbps','a',{dash:1})]}),
+   S('কিন্তু মেপে দেখা গেল বাস্তবে যাচ্ছে মাত্র ৬০ Mbps। এটাই <b>throughput</b>।',{add:[B('act',60,100,384,42,'Throughput (বাস্তব) = ৬০ Mbps','g',{hl:1}),T('gp',500,121,'বাকি ৪০ Mbps কাজে লাগছে না',{c:'r',s:'sm b'})],fly:[F(70,170,690,170,'g',{n:3,gap:900,dur:1800,per:3600})]}),
+   S('কেন কম? চারটা সাধারণ কারণ।',{add:[B('w1',60,196,150,34,'বেশি latency','o',{s:'sm'}),B('w2',230,196,150,34,'Packet loss','o',{s:'sm'}),B('w3',400,196,150,34,'Congestion','o',{s:'sm'}),B('w4',570,196,150,34,'ধীর server','o',{s:'sm'})],fly:[F(70,170,690,170,'g',{n:3,gap:900,dur:1800,per:3600})]})
+  ]},
+  {n:'2. Server throughput (RPS)',steps:[
+   S('একটা worker একটা request শেষ করতে <b>১০০ ms</b> নেয়।',{add:[B('q',20,85,100,60,'Request\nগুলো','a'),B('w1',330,85,140,60,'Worker 1\n১০০ ms / req','g'),A('qa',124,115,326,115,'a')],fly:[F(124,115,326,115,'a',{n:3,gap:300,dur:900})]}),
+   S('১ সেকেন্ডে সে ১০টা শেষ করে, মানে <b>throughput = ১০ req/s</b>।',{add:[B('res',590,85,140,60,'Throughput\n১০ req/s','o',{hl:1}),A('ra',472,115,588,115,'o')],fly:[F(124,115,326,115,'a',{n:3,gap:300,dur:900}),F(472,115,588,115,'o',{n:1,dur:700,per:1200,d0:1000})]}),
+   S('আরও ৩টা worker যোগ করলে একসাথে ৪টা কাজ চলে: <b>৪০ req/s</b>।',{del:['qa'],mod:{w1:{y:22,h:44,label:'Worker 1'},res:{label:'Throughput\n৪০ req/s'}},add:[B('w2',330,76,140,44,'Worker 2','g'),B('w3',330,130,140,44,'Worker 3','g'),B('w4',330,184,140,44,'Worker 4','g'),A('q1',124,105,326,44,'a'),A('q2',124,115,326,98,'a'),A('q3',124,125,326,152,'a'),A('q4',124,135,326,206,'a')],fly:[F(124,105,326,44,'a',{n:2,gap:300,dur:900}),F(124,115,326,98,'a',{n:2,gap:300,dur:900}),F(124,125,326,152,'a',{n:2,gap:300,dur:900}),F(124,135,326,206,'a',{n:2,gap:300,dur:900})]}),
+   S('সূত্র: <b>Throughput = কাজ ÷ সময়</b>। Worker বাড়ালে বা latency কমালে throughput বাড়ে।',{add:[B('fm',560,170,180,52,'Throughput =\nকাজ ÷ সময়','f',{s:'sm'})],fly:[F(124,105,326,44,'a',{n:2,gap:300,dur:900}),F(124,115,326,98,'a',{n:2,gap:300,dur:900}),F(124,125,326,152,'a',{n:2,gap:300,dur:900}),F(124,135,326,206,'a',{n:2,gap:300,dur:900})]})
+  ]}
+ ]},
+
+{p:2,q:'Scalability কী?',
+ ans:'<b>Scalability</b> = load (user, request, data) বাড়লে system-এর <b>performance না হারিয়ে</b> তা সামলাতে পারার ক্ষমতা, দরকারে resource যোগ করে।',
+ pts:['Scalable = load ১০ গুণ হলে resource বাড়িয়ে একই মানের সেবা দেওয়া যায়।','দুই ধরন: <b>vertical</b> (জোরালো machine) ও <b>horizontal</b> (বেশি machine)।','Scalability ≠ speed: একটা ধীর system-ও scalable হতে পারে।'],
+ tabs:[
+  {n:'1. Load বনাম Response time',steps:[
+   S('অনুভূমিক অক্ষে <b>load</b> (user/request), উল্লম্বে <b>response time</b>।',{add:[A('ax',80,200,710,200,'n'),A('ay',80,200,80,22,'n'),T('xl',710,220,'Load (user / request) →',{a:'end',s:'sm'}),T('yl',90,14,'Response time',{s:'sm'})]}),
+   S('<b>Scalable নয়:</b> load বাড়তেই response time হু হু করে বাড়ে, শেষে system crash।',{add:[P('bad','M80,190 C300,186 440,160 560,30','r'),T('bl',545,24,'Scalable নয়',{a:'end',c:'r',s:'b'})]}),
+   S('<b>Scalable:</b> load বাড়লে resource যোগ করা হয়, response time প্রায় স্থির থাকে।',{add:[P('good','M80,190 C300,189 500,186 700,176','g'),T('gl',700,158,'Scalable',{a:'end',c:'g',s:'b'})]})
+  ]},
+  {n:'2. Scale করার আগে ও পরে',steps:[
+   S('অল্প user: একটাই server যথেষ্ট।',{add:[B('u',30,95,120,50,'১০০ user','a'),B('s',450,95,140,50,'Server','g'),A('a0',152,120,448,120,'a')],fly:[F(152,120,448,120,'a',{n:2,gap:600,dur:1200})]}),
+   S('User বেড়ে ১০ লাখ: একটা server আর পারছে না, <b>overload</b>।',{mod:{u:{label:'১০ লাখ user',c:'o'},s:{c:'r',label:'Server\n💥 overload',hl:1},a0:{c:'r'}},fly:[F(152,120,448,120,'r',{n:6,gap:220,dur:1000,r:5})]}),
+   S('Load balancer + আরও server যোগ করা হলো। Load ভাগ হয়ে system আবার স্বচ্ছন্দ।',{del:['a0'],mod:{s:{c:'g',label:'Server 1',hl:0,y:25},u:{c:'a'}},add:[B('lb',230,95,110,50,'Load\nbalancer','a'),B('s2',450,95,140,50,'Server 2','g'),B('s3',450,165,140,50,'Server 3','g'),A('b0',152,120,228,120,'a'),A('b1',342,108,448,52,'g'),A('b2',342,120,448,120,'g'),A('b3',342,132,448,190,'g'),T('ok',665,120,'✓ স্বচ্ছন্দ',{a:'middle',c:'g',s:'b'})],fly:[F(152,120,228,120,'a',{n:3,gap:300,dur:600}),F(342,108,448,52,'g',{n:2,gap:500,dur:800}),F(342,120,448,120,'g',{n:2,gap:500,dur:800,d0:700}),F(342,132,448,190,'g',{n:2,gap:500,dur:800,d0:1100})]})
+  ]}
+ ]},
+
+{p:2,q:'Vertical বনাম Horizontal scaling কী?',
+ ans:'<b>Vertical (scale up)</b> = একটা machine-কে আরও শক্তিশালী করা (বেশি CPU/RAM)। <b>Horizontal (scale out)</b> = আরও machine যোগ করে load ভাগ করা।',
+ pts:['Vertical সহজ, কিন্তু একটা machine-এর হার্ডওয়্যার সীমা আছে।','Horizontal প্রায় সীমাহীন, কিন্তু load balancer ও stateless design লাগে।','বড় system সাধারণত horizontal scaling-ই বেছে নেয়।'],
+ extra:'<table class="cmp"><tr><th></th><th>Vertical (up)</th><th>Horizontal (out)</th></tr><tr><td>কীভাবে</td><td>একটা বড় machine</td><td>অনেকগুলো machine</td></tr><tr><td>সীমা</td><td>Hardware-এর সীমা আছে</td><td>প্রায় সীমাহীন</td></tr><tr><td>খরচ</td><td>বড় machine অনেক দামি</td><td>সস্তা machine অনেকগুলো</td></tr><tr><td>Downtime</td><td>Upgrade-এ restart লাগতে পারে</td><td>Zero-downtime সম্ভব</td></tr><tr><td>Failure</td><td>Single point of failure</td><td>একটা পড়লে বাকিরা চলে</td></tr><tr><td>জটিলতা</td><td>সহজ, code বদলায় না</td><td>বেশি: load balancer, stateless, data sync</td></tr></table>',
+ tabs:[
+  {n:'1. Vertical (scale up)',steps:[
+   S('একটা ছোট server, load বাড়ছে।',{add:[B('s',300,95,130,56,'Server\n2 CPU · 4 GB','o'),T('lt',365,70,'load বাড়ছে ↑',{a:'middle',c:'r',s:'b'})]}),
+   S('Machine-টাকেই বড় করা হলো: <b>16 CPU · 64 GB</b>। Server আগের চেয়ে ওজনদার।',{del:['lt'],mod:{s:{x:240,y:55,w:250,h:130,c:'g',label:'Server\n16 CPU · 64 GB',hl:1}}}),
+   S('কিন্তু একটা machine-এর <b>সীমা</b> আছে, upgrade-এ restart লাগে, আর একটাই machine মানে <b>SPOF</b>।',{add:[B('lim',210,30,310,180,'','r',{dash:1}),T('lt2',365,226,'Hardware limit · SPOF',{a:'middle',c:'r',s:'b'})]})
+  ]},
+  {n:'2. Horizontal (scale out)',steps:[
+   S('একটা server, load বাড়ছে।',{add:[B('u',30,95,110,50,'Users','a'),B('s1',450,95,140,50,'Server 1','o'),A('a0',142,120,448,120,'a'),T('lt',520,70,'load বাড়ছে ↑',{a:'middle',c:'r',s:'b'})]}),
+   S('আরও server যোগ + সামনে <b>load balancer</b>। Request ভাগ হয়ে যায়।',{del:['a0','lt'],mod:{s1:{c:'g',y:25}},add:[B('lb',230,95,110,50,'Load\nbalancer','a'),B('s2',450,95,140,50,'Server 2','g'),B('s3',450,165,140,50,'Server 3','g'),A('b0',142,120,228,120,'a'),A('b1',342,108,448,52,'g'),A('b2',342,120,448,120,'g'),A('b3',342,132,448,190,'g')],fly:[F(142,120,228,120,'a',{n:3,gap:300,dur:600}),F(342,108,448,52,'g',{n:2,gap:500,dur:800}),F(342,120,448,120,'g',{n:2,gap:500,dur:800,d0:700}),F(342,132,448,190,'g',{n:2,gap:500,dur:800,d0:1100})]}),
+   S('একটা পড়লে বাকিরা চলে, দরকারে আরও যোগ করা যায়। শর্ত: server-কে <b>stateless</b> রাখতে হবে।',{mod:{s2:{c:'r',label:'Server 2\n💥',hl:1}},add:[B('more',630,95,100,50,'+ আরও','n',{dash:1}),T('ok',630,190,'সেবা চালু ✓',{a:'middle',c:'g',s:'b'})],fly:[F(142,120,228,120,'a',{n:3,gap:300,dur:600}),F(342,108,448,52,'g',{n:2,gap:500,dur:800}),F(342,132,448,190,'g',{n:2,gap:500,dur:800,d0:1100})]})
+  ]}
+ ]},
+
+{p:3,q:'Reliability কী?',
+ ans:'<b>Reliability</b> = কোনো অংশ fail করলেও system <b>ঠিকমতো, সঠিক ফল</b> দিয়ে কাজ করা। কাজের মান ধরে রাখা।',
+ pts:['<b>Fault</b> = একটা অংশের সমস্যা; <b>failure</b> = পুরো system user-কে ঠিক সেবা দিতে না পারা।','লক্ষ্য: fault হবেই, কিন্তু যেন failure না হয় (<b>fault tolerance</b>)।','উপায়: redundancy (replica), retry, backup, monitoring।'],
+ tabs:[
+  {n:'1. Single point of failure',steps:[
+   S('একটাই server। User ঠিকমতো সেবা পাচ্ছে।',{add:[B('u',20,95,110,50,'User','a'),B('s1',330,95,150,50,'Server','g'),A('a',132,120,328,120,'g')]}),
+   S('Server-এ <b>fault</b>: সে crash করল।',{mod:{s1:{c:'r',label:'Server\n💥 crash',hl:1}}}),
+   S('Backup নেই, তাই fault <b>failure</b> হয়ে গেল। User error পায়।',{mod:{a:{c:'r',dash:1}},add:[T('x',520,120,'কোনো backup নেই → সেবা বন্ধ',{c:'r',s:'b'})]})
+  ]},
+  {n:'2. Replica দিয়ে সমাধান',steps:[
+   S('দুটো server (replica), সামনে load balancer।',{add:[B('u',20,95,110,50,'User','a'),B('lb',190,95,120,50,'Load\nbalancer','a'),B('r1',470,40,150,50,'Server 1','g'),B('r2',470,150,150,50,'Server 2','g'),A('a0',132,120,188,120,'a'),A('a1',312,110,468,70,'g'),A('a2',312,130,468,170,'g')]}),
+   S('Server 1 <b>fault</b>: crash।',{mod:{r1:{c:'r',label:'Server 1\n💥 crash',hl:1},a1:{c:'r',dash:1}}}),
+   S('Load balancer সব request Server 2-তে পাঠায়। User কিছুই টের পায় না: fault হলো, failure হলো না।',{mod:{r2:{hl:1,label:'Server 2\nএকাই সামলাচ্ছে'},a2:{hl:1}},add:[T('ok',690,120,'✓ সেবা চালু',{a:'middle',c:'g',s:'b'})]})
+  ]},
+  {n:'3. Retry + Timeout',steps:[
+   S('Client request পাঠায়, কিন্তু network-এ হারিয়ে যায়।',{add:[B('c',30,90,130,60,'Client','a'),B('s',600,90,130,60,'Server','g'),A('rq1',162,110,420,110,'a',{dash:1}),T('t1',290,92,'request #1',{a:'middle',c:'a',s:'sm'}),T('lost',440,110,'✗ হারাল',{c:'r',s:'b'})]}),
+   S('কোনো উত্তর আসে না। Client <b>timeout</b> পর্যন্ত অপেক্ষা করে।',{add:[T('to',95,180,'⏱ timeout...',{a:'middle',c:'o',s:'b'})]}),
+   S('Timeout হলে <b>retry</b>। এবার request পৌঁছায়, response আসে। Transient fault সামলানো গেল।',{del:['lost'],mod:{to:{label:'⏱ timeout → retry'}},add:[A('rq2',162,130,598,130,'g'),T('t2',380,148,'request #2 → 200 OK',{a:'middle',c:'g',s:'sm'})]})
+  ]}
+ ]},
+
+{p:3,q:'Availability কী?',
+ ans:'<b>Availability</b> = system কত সময় <b>চালু ও ব্যবহারের উপযোগী</b> থাকে, শতাংশে। <code>Uptime ÷ (Uptime + Downtime)</code>।',
+ pts:['<b>Reliability</b> = সঠিক কাজ করা; <b>availability</b> = দরকারের সময় পাওয়া যাওয়া। Server চালু কিন্তু ভুল ফল দিলে available, কিন্তু reliable না।','Industry-তে "nine" দিয়ে মাপে: 99.9% = three nines।','বাড়ানোর উপায়: redundancy, failover, health check।'],
+ tabs:[
+  {n:'1. Uptime শতাংশ',steps:[
+   S('সূত্র: <b>Availability = Uptime ÷ (Uptime + Downtime)</b>।',{add:[B('f',60,40,640,50,'Availability = Uptime ÷ (Uptime + Downtime)','a',{s:'lg'})]}),
+   S('একটা বছর: প্রায় সবটাই <b>uptime</b> (সবুজ)।',{add:[T('yl',20,130,'১ বছর',{c:'f',s:'sm b'}),B('up',20,148,712,44,'Uptime','g'),B('dn',732,148,8,44,'','r')]}),
+   S('ছোট লাল অংশটা <b>downtime</b>। বছরে ৮.৭৬ ঘণ্টা down মানে <b>99.9%</b> available।',{mod:{dn:{hl:1}},add:[A('ar',736,196,736,222,'r'),T('dl',730,232,'downtime ≈ ৮.৭৬ ঘণ্টা',{a:'end',c:'r',s:'sm b'})]})
+  ]},
+  {n:'2. Nine-এর হিসাব',steps:[
+   S('<b>99%</b> (two nines): বছরে প্রায় ৩.৬৫ দিন বন্ধ।',{add:[B('n1',20,30,150,36,'99%','a',{s:'sm'}),B('d1',185,30,520,36,'৩.৬৫ দিন','r',{s:'sm'})]}),
+   S('<b>99.9%</b> (three nines): ৮.৭৬ ঘণ্টা।',{add:[B('n2',20,84,150,36,'99.9%','a',{s:'sm'}),B('d2',185,84,330,36,'৮.৭৬ ঘণ্টা','r',{s:'sm'})]}),
+   S('<b>99.99%</b> (four nines): ৫২.৬ মিনিট।',{add:[B('n3',20,138,150,36,'99.99%','a',{s:'sm'}),B('d3',185,138,170,36,'৫২.৬ মিনিট','r',{s:'sm'})]}),
+   S('<b>99.999%</b> (five nines): ৫.২৬ মিনিট। প্রতি nine-এ downtime প্রায় ১০ গুণ কমে, খরচ অনেক বাড়ে।',{add:[B('n4',20,192,150,36,'99.999%','a',{s:'sm'}),B('d4',185,192,70,36,'৫.২৬ মিনিট','r',{s:'sm'})]})
+  ]},
+  {n:'3. Redundancy',steps:[
+   S('<b>Series:</b> দুটোই লাগলে একটা পড়লেই সব বন্ধ। Availability <b>কমে</b>: 99% × 99% = 98.01%।',{add:[T('sl',380,40,'Series (দুটোই দরকার)',{a:'middle',c:'r',s:'b'}),B('a',150,80,150,60,'Server A\n99%','g'),B('b',460,80,150,60,'Server B\n99%','g'),A('x',302,110,458,110,'n'),T('r',380,185,'99% × 99% = 98.01%',{a:'middle',c:'r',s:'lg'})]}),
+   S('<b>Parallel (redundancy):</b> একটা পড়লে অন্যটা চালায়। দুটোই একসাথে পড়ার সম্ভাবনা মাত্র 1% × 1%।',{del:['sl','a','b','x','r'],add:[T('pl',380,20,'Parallel (একটা থাকলেই চলে)',{a:'middle',c:'g',s:'b'}),B('lb',40,95,120,50,'Load\nbalancer','a'),B('p1',330,50,150,50,'Replica 1\n99%','g'),B('p2',330,140,150,50,'Replica 2\n99%','g'),A('q1',162,108,328,78,'g'),A('q2',162,132,328,162,'g')]}),
+   S('ফল: 1 − (0.01 × 0.01) = <b>99.99%</b>। Replica যোগ করে availability বাড়ে।',{add:[B('res',560,95,170,50,'99.99%\n≈ ৫২ মিনিট/বছর','g',{hl:1}),A('q3',482,125,558,120,'g'),T('fm',380,222,'1 − (0.01 × 0.01) = 0.9999',{a:'middle',c:'g',s:'sm b'})]})
+  ]}
+ ]},
+
+{p:3,q:'Single Point of Failure (SPOF) কী?',
+ ans:'<b>SPOF</b> = এমন একটা অংশ যেটা fail করলে <b>পুরো system বন্ধ</b> হয়ে যায়, কারণ তার কোনো বিকল্প (backup) নেই।',
+ pts:['চেনার প্রশ্ন: "এই অংশটা পড়লে কি সব বন্ধ?" উত্তর হ্যাঁ হলে সেটা SPOF।','উদাহরণ: একটাই database, একটাই load balancer, একটাই DNS বা একটাই data center।','সমাধান: <b>redundancy</b> (replica), failover, একাধিক zone/region।'],
+ tabs:[
+  {n:'1. SPOF চেনা',steps:[
+   S('সাধারণ চেহারা: client → load balancer → app server → database। প্রতিটা অংশ <b>একটাই</b>।',{add:[B('c',20,95,100,50,'Client','a'),B('lb',175,95,110,50,'Load\nbalancer','a'),B('ap',340,95,110,50,'App\nserver','a'),B('db',505,95,110,50,'Database','a'),A('a1',122,120,173,120,'g'),A('a2',287,120,338,120,'g'),A('a3',452,120,503,120,'g'),T('res',690,120,'সব ঠিক ✓',{a:'middle',c:'g',s:'b'})],fly:[F(122,120,173,120,'g',{n:2,gap:300,dur:500}),F(287,120,338,120,'g',{n:2,gap:300,dur:500,d0:700}),F(452,120,503,120,'g',{n:2,gap:300,dur:500,d0:1300})]}),
+   S('Database <b>crash</b> করল।',{mod:{db:{c:'r',label:'Database\n💥 crash',hl:1},a3:{c:'r',dash:1}}}),
+   S('Database নেই, তাই app কাজ করতে পারে না, user error পায়। <b>একটা অংশেই সব বন্ধ।</b>',{mod:{ap:{c:'o'},lb:{c:'o'},c:{c:'o'},a1:{c:'o'},a2:{c:'o'},res:{label:'সব বন্ধ ✗',c:'r'}}}),
+   S('এই চেহারায় প্রতিটা অংশই সম্ভাব্য <b>SPOF</b>, কারণ কারও backup নেই।',{mod:{c:{c:'a'},lb:{c:'a'},ap:{c:'a'},db:{c:'a',label:'Database',hl:0},a1:{c:'g'},a2:{c:'g'},a3:{c:'g',dash:0},res:{label:'',c:'g'}},add:[T('s1',230,170,'SPOF ⚠',{a:'middle',c:'o',s:'b'}),T('s2',395,170,'SPOF ⚠',{a:'middle',c:'o',s:'b'}),T('s3',560,170,'SPOF ⚠',{a:'middle',c:'o',s:'b'})]})
+  ]},
+  {n:'2. SPOF দূর করা',steps:[
+   S('শুরুতে সবই একটা করে: তিনটাই SPOF।',{add:[B('c',20,95,90,50,'Client','a'),B('lb',150,95,100,50,'Load\nbalancer','a'),B('a1',320,95,110,50,'App 1','a'),B('d1',520,95,120,50,'DB primary','a'),A('x1',112,120,148,120,'g'),A('x2',252,120,318,120,'g'),A('x3',432,120,518,120,'g')]}),
+   S('<b>App server:</b> দ্বিতীয় replica যোগ। একটা পড়লে অন্যটা চালায়।',{add:[B('a2',320,165,110,50,'App 2','g'),A('y1',252,132,318,178,'g'),A('y2',432,190,518,140,'g')],fly:[F(252,132,318,178,'g',{n:2,gap:500,dur:700}),F(432,190,518,140,'g',{n:2,gap:500,dur:700,d0:600})]}),
+   S('<b>Database:</b> replica যোগ। Primary পড়লে replica-ই primary হয়ে যায়।',{add:[B('d2',520,165,120,50,'DB replica','g'),A('z1',432,140,518,178,'g'),A('z2',432,190,518,190,'g'),A('rep',580,147,580,163,'o',{dash:1}),T('rt',660,157,'sync',{c:'o',s:'sm b'})]}),
+   S('<b>Load balancer:</b> standby যোগ। এবার প্রতিটা স্তরে বিকল্প আছে: <b>কোনো SPOF নেই</b>।',{add:[B('l2',150,165,100,50,'LB standby','g',{dash:1}),A('w1',100,146,155,170,'g',{dash:1}),A('w2',252,190,318,200,'g',{dash:1}),T('fin',740,229,'প্রতি স্তরে backup ✓',{a:'end',c:'g',s:'b'})]})
+  ]}
+ ]},
+
+{p:3,q:'Maintainability কী?',
+ ans:'<b>Maintainability</b> = system চালু রাখা, bug ঠিক করা আর নতুন feature যোগ করা কতটা <b>সহজ</b>, তার মাপ।',
+ pts:['তিন স্তম্ভ: <b>Operability</b> (চালানো সহজ), <b>Simplicity</b> (বোঝা সহজ), <b>Evolvability</b> (বদলানো সহজ)।','Software-এর খরচের বড় অংশই লেখার পরে (maintenance), তাই এটা জরুরি।','উপায়: clean code, modular design, test, logging/monitoring, documentation, CI/CD।'],
+ tabs:[
+  {n:'1. তিন স্তম্ভ',steps:[
+   S('<b>Maintainability</b>: তিনটা স্তম্ভের উপর দাঁড়িয়ে আছে।',{add:[B('top',270,14,220,38,'Maintainability','f',{s:'lg'})]}),
+   S('<b>Operability:</b> ops টিম যেন system সহজে চালাতে পারে।',{add:[A('e1',330,54,150,86,'a'),B('op',20,90,230,50,'Operability\nচালানো সহজ','a'),T('o1',135,162,'monitoring · logs',{a:'middle',c:'a',s:'sm'}),T('o2',135,182,'সহজ deploy · health check',{a:'middle',c:'a',s:'sm'})]}),
+   S('<b>Simplicity:</b> নতুন মানুষও যেন code বুঝতে পারে। জটিলতা কম।',{add:[A('e2',380,54,380,86,'g'),B('si',265,90,230,50,'Simplicity\nবোঝা সহজ','g'),T('s1',380,162,'clean code · ভালো নাম',{a:'middle',c:'g',s:'sm'}),T('s2',380,182,'ছোট ছোট module',{a:'middle',c:'g',s:'sm'})]}),
+   S('<b>Evolvability:</b> requirement বদলালে system সহজে বদলানো যায়।',{add:[A('e3',430,54,610,86,'o'),B('ev',510,90,230,50,'Evolvability\nবদলানো সহজ','o'),T('v1',625,162,'automated test',{a:'middle',c:'o',s:'sm'}),T('v2',625,182,'নতুন feature সহজে',{a:'middle',c:'o',s:'sm'})]})
+  ]},
+  {n:'2. জট বনাম modular',steps:[
+   S('<b>জটপাকানো code:</b> সব অংশ সবার সাথে জড়ানো (tightly coupled)।',{add:[T('lt',170,16,'জট (tightly coupled)',{a:'middle',c:'r',s:'b'}),B('l1',30,40,100,44,'Login','n'),B('l2',210,40,100,44,'Cart','n'),B('l3',30,150,100,44,'Payment','n'),B('l4',210,150,100,44,'Order','n'),A('la',132,62,208,62,'r'),A('lb',80,86,80,148,'r'),A('lc',260,86,260,148,'r'),A('ld',132,172,208,172,'r'),A('le',118,84,222,152,'r'),A('lf',222,84,118,152,'r')]}),
+   S('<b>Modular code:</b> প্রতিটা অংশ আলাদা, মাঝে পরিষ্কার interface (loosely coupled)।',{add:[T('rt',570,16,'আলাদা module (loosely coupled)',{a:'middle',c:'g',s:'b'}),B('r1',430,40,130,44,'Login','g'),B('r2',580,40,130,44,'Cart','g'),B('hub',430,100,280,36,'পরিষ্কার interface (API)','a',{s:'sm'}),B('r3',430,152,130,44,'Payment','g'),B('r4',580,152,130,44,'Order','g'),A('m1',495,86,495,98,'g'),A('m2',645,86,645,98,'g'),A('m3',495,150,495,138,'g'),A('m4',645,150,645,138,'g')]}),
+   S('এখন <b>Payment বদলাতে হবে</b>। জট code-এ সবখানে ভাঙার ঝুঁকি, modular-এ শুধু Payment-এ।',{mod:{l3:{c:'o',hl:1},l1:{c:'r'},l2:{c:'r'},l4:{c:'r'},r3:{c:'o',hl:1}},add:[T('lr',170,222,'সব জায়গা ভাঙতে পারে ✗',{a:'middle',c:'r',s:'b'}),T('rr',570,222,'শুধু Payment বদলায় ✓',{a:'middle',c:'g',s:'b'})]})
+  ]}
+ ]},
+
+{p:4,q:'Partition Tolerance কী?',
+ ans:'<b>Network partition</b> = network ছিঁড়ে system-এর node-গুলো আলাদা দলে ভাগ হয়ে যাওয়া। <b>Partition tolerance</b> = এমন হলেও system চালু থাকা।',
+ pts:['Network নির্ভরযোগ্য না: cable কাটা, switch নষ্ট, দুই data center-এর link ডাউন।','Partition-এ node ঠিকই চলছে, শুধু একে অন্যকে message পাঠাতে পারছে না।','বাস্তবে partition <b>এড়ানো যায় না</b>, তাই P সবসময় ধরে নিতে হয় (CAP theorem দেখো)।'],
+ tabs:[
+  {n:'1. Partition কী',steps:[
+   S('চারটা node নিজেদের মধ্যে data sync করছে।',{add:[C('n1',150,70,32,'Node 1','a'),C('n2',150,170,32,'Node 2','a'),C('n3',610,70,32,'Node 3','g'),C('n4',610,170,32,'Node 4','g'),A('h1',184,64,576,64,'n'),A('h2',576,76,184,76,'n'),A('h3',184,164,576,164,'n'),A('h4',576,176,184,176,'n'),A('v1',150,104,150,136,'n'),A('v2',610,104,610,136,'n')],fly:[F(184,64,576,64,'a',{n:2,gap:700,dur:1500}),F(576,176,184,176,'g',{n:2,gap:700,dur:1500,d0:300})]}),
+   S('মাঝের link <b>ছিঁড়ে</b> গেল।',{mod:{h1:{c:'r',dash:1},h2:{c:'r',dash:1},h3:{c:'r',dash:1},h4:{c:'r',dash:1}},add:[T('cut',380,120,'✂ network cut',{a:'middle',c:'r',s:'lg'})]}),
+   S('এখন দুটো আলাদা দল: <b>partition</b>। প্রতি দল নিজের ভিতরে ঠিক, কিন্তু অন্য দলের সাথে কথা বলতে পারে না।',{add:[B('g1',90,22,120,200,'','a',{dash:1}),B('g2',550,22,120,200,'','g',{dash:1}),T('g1l',150,232,'Partition A',{a:'middle',c:'a',s:'sm b'}),T('g2l',610,232,'Partition B',{a:'middle',c:'g',s:'sm b'})]})
+  ]},
+  {n:'2. Tolerant বনাম non-tolerant',steps:[
+   S('দুটো node, দুই পাশে client। মাঝের link দিয়ে data মেলানো হয়।',{add:[B('ca',20,95,90,50,'Client A','a'),B('na',150,95,130,50,'Node A','g'),B('nb',480,95,130,50,'Node B','g'),B('cb',650,95,90,50,'Client B','a'),A('p1',112,120,148,120,'a'),A('p2',612,120,648,120,'a'),A('lk',282,120,478,120,'g'),T('sy',380,100,'data sync',{a:'middle',c:'g',s:'sm'})],fly:[F(282,120,478,120,'g',{n:2,gap:600,dur:1300})]}),
+   S('Network <b>partition</b>: link কেটে গেল।',{mod:{lk:{c:'r',dash:1},sy:{label:'✂ partition',c:'r'}}}),
+   S('<b>Partition tolerant নয়:</b> link কাটতেই system নিজেকে বন্ধ করে দেয়। দুই client-ই error পায়।',{mod:{na:{c:'r',label:'Node A\n✗ বন্ধ'},nb:{c:'r',label:'Node B\n✗ বন্ধ'},ca:{c:'r',label:'Error'},cb:{c:'r',label:'Error'}}}),
+   S('<b>Partition tolerant:</b> link কাটলেও দুই পাশই request নিতে থাকে। পরে data মিলিয়ে নেওয়া হয়।',{mod:{na:{c:'g',label:'Node A\n✓ চলছে'},nb:{c:'g',label:'Node B\n✓ চলছে'},ca:{c:'g',label:'OK'},cb:{c:'g',label:'OK'}},fly:[F(112,120,148,120,'g',{n:1,dur:400,per:1400}),F(648,120,612,120,'g',{n:1,dur:400,per:1400,d0:300})]})
+  ]}
+ ]},
+
+{p:4,q:'CAP Theorem কী?',
+ ans:'Distributed system <b>Consistency, Availability, Partition tolerance</b> এই তিনটির মধ্যে একসাথে <b>সর্বোচ্চ দুটো</b> দিতে পারে। Partition হলে C ও A-র একটা ছাড়তে হয়।',
+ pts:['<b>C</b> = সব node একই latest data দেখে। <b>A</b> = প্রতিটা request উত্তর পায় (error ছাড়া)। <b>P</b> = network ছিঁড়লেও system চলে।','Partition এড়ানো যায় না, তাই আসল পছন্দ <b>CP</b> বনাম <b>AP</b>।','<b>CP:</b> ভুল data দেওয়ার চেয়ে error ভালো (ব্যাংক)। <b>AP:</b> পুরনো data হলেও উত্তর দাও (social feed)।'],
+ tabs:[
+  {n:'1. তিনটি অক্ষর',steps:[
+   S('<b>C - Consistency:</b> সব node একই latest data দেখে। যে-ই পড়ুক, একই উত্তর।',{add:[P('e1','M380,74 L206,138','n'),P('e2','M380,74 L554,138','n'),P('e3','M222,166 L538,166','n'),C('C',380,44,30,'C','a',{s:'lg',hl:1}),T('cd',430,44,'Consistency\nসবাই একই data দেখে',{c:'a',s:'sm'})]}),
+   S('<b>A - Availability:</b> প্রতিটা request-ই উত্তর পায়, error ছাড়া।',{add:[C('A',190,166,30,'A','g',{s:'lg',hl:1}),T('ad',190,216,'Availability\nসবাই উত্তর পায়',{a:'middle',c:'g',s:'sm'})],mod:{C:{hl:0}}}),
+   S('<b>P - Partition tolerance:</b> network ছিঁড়লেও system চলে।',{add:[C('P',570,166,30,'P','o',{s:'lg',hl:1}),T('pd',570,216,'Partition tolerance\nnetwork ছিঁড়লেও চলে',{a:'middle',c:'o',s:'sm'})],mod:{A:{hl:0}}}),
+   S('তিনটি একসাথে নয়, সর্বোচ্চ <b>দুটো</b>: CP বা AP। (CA মানে partition নেই ধরা, অর্থাৎ একটা machine: distributed-এ বাস্তব নয়।)',{mod:{P:{hl:0}},add:[T('cp',500,88,'CP',{a:'middle',c:'a',s:'lg'}),T('ap',380,186,'AP',{a:'middle',c:'g',s:'lg'}),T('ca',260,88,'CA*',{a:'middle',c:'n',s:'lg'})]})
+  ]},
+  {n:'2. Partition-এ CP বাছলে',steps:() => capSteps('cp')},
+  {n:'3. Partition-এ AP বাছলে',steps:() => capSteps('ap')},
+  {n:'4. উদাহরণ',steps:[
+   S('<b>CP:</b> Consistency আগে। Partition-এ দরকারে request ফিরিয়ে দেয়।',{add:[B('cp',30,24,330,160,'CP: Consistency আগে\n\nব্যাংক · payment · inventory\nZooKeeper · HBase · etcd\n\nভুল data-র চেয়ে error ভালো','a')]}),
+   S('<b>AP:</b> Availability আগে। পুরনো data হলেও উত্তর দেয়, পরে মিলিয়ে নেয়।',{add:[B('ap',400,24,330,160,'AP: Availability আগে\n\nSocial feed · like count\nCassandra · DynamoDB · CouchDB\n\nপুরনো data হলেও উত্তর দাও','g')]}),
+   S('বাস্তবে এটা সাদা-কালো নয়: অনেক database-এ consistency level বেছে নেওয়া যায়।',{add:[B('tn',30,198,700,34,'কোন data-র জন্য কোনটা: টাকার হিসাব = CP, like সংখ্যা = AP','o',{s:'sm',hl:1})]})
+  ]}
+ ]},
+
+{p:5,q:'CDN কী ও কীভাবে কাজ করে?',
+ ans:'<b>CDN</b> (Content Delivery Network) হলো পৃথিবীর নানা শহরে বসানো অনেক <b>edge server</b>-এর জাল, যেখানে website-এর ছবি, video, CSS/JS-এর <b>কপি</b> আগে থেকে রাখা থাকে। User-এর request দূরের মূল server-এ না গিয়ে <b>সবচেয়ে কাছের edge server</b> থেকেই উত্তর পায়। যেমন একটা বড় গুদামের বদলে প্রতি এলাকায় একটা করে দোকান।',
+ pts:['<b>কেন:</b> দূরত্ব কমলে latency কমে, আর মূল (origin) server-এ চাপও কমে।','<b>Cache hit</b> = edge-এ কপি আছে, সাথে সাথে উত্তর। <b>Cache miss</b> = নেই, তাই edge origin থেকে এনে কপি রেখে দেয়, পরের জন সহজেই পায়।','<b>কী রাখে:</b> ছবি, video, CSS, JS, font (সবার জন্য একই জিনিস)। উদাহরণ: Cloudflare, Akamai, AWS CloudFront।'],
+ tabs:[
+  {n:'1. CDN ছাড়া বনাম CDN সহ',steps:[
+   S('<b>CDN ছাড়া:</b> ঢাকার user-এর প্রতিটা request (ছবি, video, CSS) সাগর পেরিয়ে আমেরিকার মূল server-এ যায়। দূরত্ব বেশি, তাই ধীর: প্রায় <b>250 ms</b>।',{add:[T('h',380,22,'CDN ছাড়া',{a:'middle',c:'r',s:'lg'}),B('u',30,90,110,60,'User\nঢাকা','a'),B('o',590,90,140,60,'Origin server\nআমেরিকা','g'),A('far',144,120,586,120,'r'),T('fl',365,102,'≈ 250 ms',{a:'middle',c:'r',s:'sm b'})],fly:[F(144,120,586,120,'r',{n:2,gap:800,dur:2400,per:3600})]}),
+   S('হাজার হাজার user একসাথে এলে সবার request একই মূল server-এ গিয়ে জমে। Server-এ <b>চাপ</b> বেড়ে যায়।',{mod:{o:{c:'r',label:'Origin server\n💥 চাপ বেশি',hl:1}},fly:[F(144,120,586,120,'r',{n:6,gap:260,dur:2000,per:3200,r:5})]}),
+   S('<b>CDN সহ:</b> ঢাকাতেই একটা <b>edge server</b> (এলাকার দোকান) বসানো হলো। User এখন কাছের edge-এর সাথে কথা বলে: প্রায় <b>20 ms</b>।',{del:['far','fl'],mod:{h:{label:'CDN সহ',c:'g'},o:{c:'g',label:'Origin server\nআমেরিকা',hl:0}},add:[B('e',280,90,150,60,'CDN edge\nঢাকা','g'),A('n1',144,120,278,120,'g'),A('n2',432,120,586,120,'n',{dash:1}),T('nl',211,102,'≈ 20 ms',{a:'middle',c:'g',s:'sm b'})],fly:[F(144,120,278,120,'g',{n:3,gap:350,dur:700,per:1700})]}),
+   S('বেশিরভাগ request edge থেকেই মিটে যায়। মূল server-এ যায় শুধু সেটাই, যা edge-এর কাছে নেই। ফল: <b>দ্রুত</b> আর মূল server-এ <b>চাপ কম</b>।',{mod:{e:{hl:1}},add:[T('ok',380,200,'দ্রুত  +  মূল server-এ চাপ কম',{a:'middle',c:'g',s:'b'})],fly:[F(144,120,278,120,'g',{n:3,gap:350,dur:700,per:1700})]})
+  ]},
+  {n:'2. বিশ্বজুড়ে edge',steps:[
+   S('মূল server আমেরিকায়। CDN পৃথিবীর নানা শহরে নিজের <b>edge server</b> বসায়: ঢাকা, লন্ডন, টোকিও। প্রতিটা একটা এলাকার দোকানের মতো।',{add:[B('o',310,12,140,46,'Origin server\nআমেরিকা','g'),B('e1',45,100,130,46,'Edge\nঢাকা','b'),B('e2',315,100,130,46,'Edge\nলন্ডন','b'),B('e3',585,100,130,46,'Edge\nটোকিও','b'),A('c1',350,60,150,98,'n',{dash:1}),A('c2',380,60,380,98,'n',{dash:1}),A('c3',410,60,610,98,'n',{dash:1})]}),
+   S('প্রতিটা user নিজের <b>সবচেয়ে কাছের edge</b> থেকে content নেয়: ঢাকার user ঢাকা থেকে, লন্ডনের user লন্ডন থেকে।',{add:[B('u1',60,190,100,40,'User ঢাকা','a',{s:'sm'}),B('u2',330,190,100,40,'User লন্ডন','a',{s:'sm'}),B('u3',600,190,100,40,'User টোকিও','a',{s:'sm'}),A('d1',110,188,110,148,'g'),A('d2',380,188,380,148,'g'),A('d3',650,188,650,148,'g')],fly:[F(110,188,110,148,'g',{n:2,gap:500,dur:600,per:1500}),F(380,188,380,148,'g',{n:2,gap:500,dur:600,per:1500,d0:300}),F(650,188,650,148,'g',{n:2,gap:500,dur:600,per:1500,d0:600})]}),
+   S('Edge-এর কাছে content <b>না থাকলে</b> তবেই সে পেছনের মূল server-কে জিজ্ঞেস করে (ছোট ধূসর দাগ)। বেশিরভাগ সময় এটা লাগেই না।',{mod:{c1:{c:'o',dash:0},c2:{c:'o',dash:0},c3:{c:'o',dash:0}},fly:[F(110,188,110,148,'g',{n:2,gap:500,dur:600,per:1500}),F(380,188,380,148,'g',{n:2,gap:500,dur:600,per:1500,d0:300}),F(650,188,650,148,'g',{n:2,gap:500,dur:600,per:1500,d0:600}),F(150,98,350,60,'o',{n:1,dur:1400,per:4200,d0:900}),F(610,98,410,60,'o',{n:1,dur:1400,per:4200,d0:2300})]}),
+   S('<b>ফল:</b> সবাই কাছের server থেকে পায়। দেরি কম (প্রায় 20 ms), আর মূল server একা সব user সামলাতে হয় না।',{add:[T('l1',122,168,'≈ 20 ms',{c:'g',s:'sm b'}),T('l2',392,168,'≈ 20 ms',{c:'g',s:'sm b'}),T('l3',662,168,'≈ 20 ms',{c:'g',s:'sm b'})]})
+  ]},
+  {n:'3. Cache miss → hit',steps:[
+   S('তিনজন: User, <b>CDN edge</b> (এখনো cache খালি), আর মূল <b>origin server</b>।',{add:[B('u',20,90,100,60,'User','a'),B('e',300,60,170,110,'CDN edge\nCache:\n(খালি)','g'),B('o',620,90,120,60,'Origin\nserver','n'),A('ue',122,120,298,120,'n'),A('eo',472,120,618,120,'n')]}),
+   S('User <code>logo.png</code> চাইল। Request আগে <b>edge-এ</b> যায়।',{add:[T('r1',210,102,'logo.png?',{a:'middle',c:'a',s:'sm b'})],mod:{u:{hl:1},ue:{c:'a'}},fly:[F(122,120,298,120,'a',{n:1,dur:900,per:5200})]}),
+   S('<b>Cache miss:</b> edge-এ ফাইলটা নেই। তাই সে মূল server-কে জিজ্ঞেস করে।',{mod:{u:{hl:0},e:{c:'o',label:'CDN edge\nCache: খালি\n✗ miss',hl:1},eo:{c:'o'}},fly:[F(472,120,618,120,'o',{n:1,dur:900,per:5200})]}),
+   S('Origin ফাইল পাঠায়। Edge এক <b>কপি নিজের কাছে রেখে</b> User-কে দেয়।',{del:['r1'],mod:{e:{c:'g',label:'CDN edge\nCache:\nlogo.png ✓',hl:1},eo:{c:'g'},ue:{c:'g'}},fly:[F(618,120,472,120,'g',{n:1,dur:900,per:5200,d0:300}),F(298,120,122,120,'g',{n:1,dur:900,per:5200,d0:1500})]}),
+   S('<b>পরের user</b> একই ফাইল চাইল। <b>Cache hit:</b> edge-এ কপি আছে, সাথে সাথে উত্তর। মূল server-এ যেতেই হয়নি।',{mod:{u:{label:'পরের user'},e:{label:'CDN edge\nCache:\nlogo.png ✓ hit',hl:1},eo:{c:'n',dash:1}},fly:[F(122,120,298,120,'a',{n:1,dur:500,per:2600}),F(298,132,122,132,'g',{n:1,dur:500,per:2600,d0:700})]}),
+   S('কপি চিরকাল থাকে না। <b>TTL</b> (যেমন ১ ঘণ্টা) শেষ হলে edge আবার origin থেকে নতুন কপি আনে, যাতে পুরনো ফাইল না থেকে যায়।',{mod:{e:{c:'o',label:'CDN edge\nCache:\n⏱ TTL শেষ',hl:0},eo:{c:'o',dash:0}},add:[T('ttl',380,208,'TTL শেষ → আবার origin থেকে নতুন কপি',{a:'middle',c:'o',s:'b'})],fly:[F(472,120,618,120,'o',{n:1,dur:900,per:2800})]})
+  ]},
+  {n:'4. কোন edge-এ যাবে?',steps:[
+   S('User <code>cdn.example.com</code> খুলতে চায়। কিন্তু পৃথিবীর এত edge-এর মধ্যে কোনটায় যাবে? এটা ঠিক করে দেয় <b>CDN-এর DNS</b>।',{add:[B('u',20,100,110,60,'User\n(ঢাকা)','a'),B('dns',300,20,170,50,'CDN-এর DNS','b'),B('e1',600,60,130,50,'Edge\nঢাকা','g'),B('e2',600,150,130,50,'Edge\nলন্ডন','n')]}),
+   S('User DNS-কে জিজ্ঞেস করে: <b>"cdn.example.com-এর IP কী?"</b>',{add:[A('q',132,105,298,52,'a'),T('qt',170,64,'IP কী?',{c:'a',s:'sm b'})],mod:{u:{hl:1}},fly:[F(132,105,298,52,'a',{n:1,dur:1000,per:4000})]}),
+   S('DNS দেখে user কোথা থেকে এসেছে (তার IP থেকে বোঝা যায়): ঢাকা। তাই <b>সবচেয়ে কাছের edge</b> বাছে।',{mod:{dns:{hl:1},u:{hl:0},e1:{hl:1}}}),
+   S('DNS user-কে <b>ঢাকার edge-এর IP</b> দেয়। User সোজা ঢাকার edge-এ যায়, লন্ডনে নয়।',{add:[A('an',298,64,132,118,'b'),A('g1',132,130,598,85,'g'),A('g2',132,145,598,175,'n',{dash:1}),T('no',380,170,'যায় না',{a:'middle',c:'n',s:'sm'})],mod:{dns:{hl:0}},fly:[F(298,64,132,118,'b',{n:1,dur:900,per:4500}),F(132,130,598,85,'g',{n:2,gap:700,dur:1400,per:4500,d0:1400})]}),
+   S('অনেক CDN এই কাজ <b>Anycast</b> দিয়েও করে: একই IP বহু শহরে ঘোষণা করা থাকে, আর network নিজেই user-কে সবচেয়ে কাছেরটায় পৌঁছে দেয়।',{fly:[F(132,130,598,85,'g',{n:2,gap:700,dur:1400,per:3000})]})
+  ]},
+  {n:'5. কী রাখে, কী রাখে না',steps:[
+   S('<b>Static content:</b> যে জিনিস সব user-এর জন্য একই: ছবি, video, CSS, JS, font, PDF। এগুলো CDN-এ রাখা যায়।',{add:[B('s',30,24,330,130,'CDN-এ রাখা যায়\n\nছবি · video · CSS · JS\nfont · PDF\n\nসবার জন্য একই','g')]}),
+   S('<b>Dynamic / ব্যক্তিগত content:</b> প্রতি user-এর জন্য আলাদা: তোমার account, cart, ব্যক্তিগত API উত্তর। এগুলো সাধারণত origin থেকেই আসে।',{add:[B('d',400,24,330,130,'সাধারণত origin থেকে\n\naccount পাতা · cart\nব্যক্তিগত API\n\nপ্রতি user আলাদা','o')]}),
+   S('নতুন logo দিলে edge-এ পুরনোটা থেকে যেতে পারে। তখন CDN-কে বলা হয় <b>purge</b> (পুরনো কপি মুছে ফেলো)। তারপর edge নতুনটা আনে।',{add:[B('pg',30,172,700,44,'নতুন ফাইল দিলে → purge / invalidate → edge পুরনো কপি মুছে নতুন আনে','b',{s:'sm'})]}),
+   S('<b>বাড়তি সুবিধা:</b> হঠাৎ ভিড় (traffic spike) edge-গুলো ভাগ করে সামলায়, আক্রমণের (DDoS) ঝাপটা মূল server-এ পৌঁছানোর আগেই আটকায়।',{del:['s','d','pg'],add:[B('x1',30,50,220,100,'দ্রুত\nকম latency','g'),B('x2',270,50,220,100,'মূল server-এ\nচাপ কম','a'),B('x3',510,50,220,100,'ভিড় ও আক্রমণ\nসামলানো','o')]})
+  ]}
+ ]}
+];
+
+/* ---------- build page ---------- */
+const app=document.getElementById('app'),jump=document.getElementById('jump'),partsNav=document.getElementById('parts');
+PARTS.forEach((pt,pi)=>{
+  const a=document.createElement('a');a.href='#part'+pi;a.innerHTML=`<b>${pt[0]}</b>${pt[1]}`;partsNav.appendChild(a);
+  const sec=document.createElement('section');sec.className='part';sec.id='part'+pi;
+  sec.innerHTML=`<h2><span>${pt[0]}</span>${pt[1]}</h2>`;app.appendChild(sec);
+});
+TOPICS.forEach((t,i)=>{
+  const n=String(i+1);
+  const j=document.createElement('a');j.href='#q'+n;j.textContent=n;j.title=t.q;jump.appendChild(j);
+  const card=document.createElement('article');card.className='q';card.id='q'+n;
+  card.innerHTML=`<h3><span class="num">${n}</span><span>${t.q}</span></h3><p class="ans">${t.ans}</p><ul>${t.pts.map(x=>`<li>${x}</li>`).join('')}</ul>${t.extra?`<div class="extra">${t.extra}</div>`:''}<div class="viz"></div>`;
+  document.getElementById('part'+t.p).appendChild(card);
+  mount(card.querySelector('.viz'),t);
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,619 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Idempotency</title>
+<meta name="description" content="Idempotency: একই কাজ একবার বা দশবার চালালেও ফল একই। Timeout-এর পর retry-তে double charge ঠেকানোর উপায়, ধাপে ধাপে D3 animation-এ।">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<style>
+/* One card per interview question: short answer, 2-3 bullets, and a step-by-step D3 scene.
+   Scenes are plain data (see TOPICS at the bottom): each step adds / modifies / deletes nodes by id
+   and the tiny engine animates the difference. */
+:root{
+  --bg:#f5f7fc; --surface:#ffffff; --surface-2:#f1f4fa; --fg:#0f172a; --muted:#5b6478; --faint:#94a0b8; --line:#e4e8f1;
+  --accent:#6366f1;
+  --a:#4f46e5; --b:#db2777; --g:#059669; --o:#d97706; --r:#e11d48; --s:#0284c7;
+  --hero:linear-gradient(135deg,#4f46e5 0%,#7c3aed 45%,#db2777 100%);
+  --shadow:0 1px 2px rgba(15,23,42,.04),0 10px 30px -12px rgba(15,23,42,.14);
+  --sans:"Inter","Hind Siliguri",system-ui,sans-serif; --bn:"Hind Siliguri","Inter",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0b0f1a; --surface:#121827; --surface-2:#182033; --fg:#e7ecf6; --muted:#9aa6bf; --faint:#66728c; --line:#232c42;
+  --accent:#818cf8; --a:#818cf8; --b:#f472b6; --g:#34d399; --o:#fbbf24; --r:#fb7185; --s:#38bdf8;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6);
+}}
+:root[data-theme="dark"]{
+  --bg:#0b0f1a; --surface:#121827; --surface-2:#182033; --fg:#e7ecf6; --muted:#9aa6bf; --faint:#66728c; --line:#232c42;
+  --accent:#818cf8; --a:#818cf8; --b:#f472b6; --g:#34d399; --o:#fbbf24; --r:#fb7185; --s:#38bdf8;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.7 var(--bn);-webkit-font-smoothing:antialiased}
+a{color:var(--accent)}
+button{font:inherit;color:inherit}
+code{font-family:var(--mono);font-size:.86em;font-weight:500;background:color-mix(in srgb,var(--accent) 10%,var(--surface));color:color-mix(in srgb,var(--accent) 72%,var(--fg));padding:.1em .4em;border-radius:6px}
+.wrap{max-width:1000px;margin:0 auto;padding:20px 18px 70px}
+
+.topnav{display:flex;align-items:center;gap:10px}
+.brand{display:flex;align-items:center;gap:10px;color:var(--fg);text-decoration:none;font:800 16px var(--sans);letter-spacing:-.02em}
+.logo{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:#fff;font:800 13px var(--mono);background:var(--hero)}
+.topnav .sp{flex:1}
+.pill{border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:6px 14px;font:600 13px var(--sans);cursor:pointer;text-decoration:none}
+.pill:hover{color:var(--fg)}
+
+.hero{margin-top:20px;border-radius:22px;padding:26px 30px;color:#fff;background:var(--hero)}
+.hero .eyebrow{font:600 12px var(--sans);letter-spacing:.1em;text-transform:uppercase;opacity:.85}
+.hero h1{margin:6px 0 8px;font:800 clamp(26px,4.2vw,38px)/1.15 var(--sans);letter-spacing:-.03em}
+.hero p{margin:0;max-width:680px;opacity:.94}
+.jump{display:flex;flex-wrap:wrap;gap:6px;margin-top:16px}
+.jump a{min-width:32px;padding:0 6px;height:32px;display:grid;place-items:center;border-radius:9px;text-decoration:none;font:700 13px var(--sans);color:#fff;background:rgba(255,255,255,.18)}
+.jump a:hover{background:rgba(255,255,255,.34)}
+
+.parts{position:sticky;top:0;z-index:5;margin:14px -18px 0;padding:10px 18px;display:flex;gap:8px;overflow-x:auto;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);scrollbar-width:none}
+.parts a{flex:none;text-decoration:none;font:600 13px var(--sans);color:var(--muted);border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 13px}
+.parts a:hover{color:var(--fg)}
+.parts a b{color:var(--accent);margin-right:4px}
+
+.part{margin-top:44px;scroll-margin-top:60px}
+.part>h2{margin:0;font:800 clamp(20px,2.6vw,25px)/1.25 var(--sans);letter-spacing:-.02em}
+.part>h2 span{color:var(--accent);margin-right:8px}
+
+.q{margin-top:16px;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:20px 22px;box-shadow:var(--shadow);scroll-margin-top:64px}
+.q h3{display:flex;gap:12px;align-items:flex-start;margin:0 0 10px;font:700 18px/1.4 var(--sans);letter-spacing:-.01em}
+.skip{display:inline-block;margin-left:8px;padding:1px 10px;border-radius:999px;font:600 12px var(--sans);font-style:normal;white-space:nowrap;color:var(--muted);background:var(--surface-2);border:1px dashed var(--faint);vertical-align:middle}
+.num{flex:none;min-width:34px;height:34px;padding:0 8px;border-radius:10px;display:grid;place-items:center;color:#fff;font:800 14px var(--sans);background:var(--hero)}
+.ans{margin:0 0 10px;padding:10px 14px;border-left:4px solid var(--accent);border-radius:0 10px 10px 0;background:color-mix(in srgb,var(--accent) 8%,var(--surface))}
+.q ul{margin:0 0 12px;padding-left:20px;color:var(--muted)}
+.q li{margin:2px 0}
+.q li b,.ans b{color:var(--fg)}
+.extra{margin:0 0 12px;overflow-x:auto}
+.extra table{border-collapse:collapse;font:500 13px var(--mono)}
+.extra th,.extra td{border:1px solid var(--line);padding:3px 10px;text-align:center}
+.extra th{background:var(--surface-2)}
+.extra .cmp td,.extra .cmp th{text-align:left;vertical-align:top;font:500 13.5px/1.55 var(--bn);min-width:150px}
+.extra .cmp td:first-child{font-weight:700;white-space:nowrap;min-width:0}
+.extra .deep{margin-top:14px;border:1px solid var(--line);border-radius:12px;background:var(--surface);text-align:left}
+.extra .deep summary{cursor:pointer;padding:10px 14px;font:700 14px var(--bn);color:var(--fg)}
+.extra .deep-body{padding:2px 16px 12px;font:500 14px/1.75 var(--bn);color:var(--fg)}
+.extra .deep-body h4{margin:18px 0 6px;font:800 15px var(--bn);color:var(--accent)}
+.extra .deep-body p,.extra .deep-body li{margin:6px 0}
+.extra .deep-body ol,.extra .deep-body ul{padding-left:22px;margin:6px 0}
+.extra .deep-body pre{margin:8px 0;padding:10px 12px;border-radius:10px;background:var(--surface-2);overflow-x:auto;font:500 12.5px/1.6 var(--mono);white-space:pre}
+.extra .deep-body code{font:600 12.5px var(--mono);background:var(--surface-2);padding:1px 5px;border-radius:5px}
+.extra .deep-body pre code{background:none;padding:0}
+.extra .deep-body table{width:100%}
+.extra .deep-body .qq{margin:16px 0 4px;padding:6px 12px;border-left:4px solid var(--accent);border-radius:0 8px 8px 0;background:color-mix(in srgb,var(--accent) 8%,var(--surface));font-weight:700}
+.extra .deep-body .aa{margin:6px 0}
+.extra .deep-body h4.sec{margin:26px 0 4px;padding-bottom:4px;border-bottom:2px solid var(--line);font-size:16px}
+.extra .faq{border:1px solid var(--line);border-radius:12px;background:var(--surface);text-align:left;padding-top:4px}
+.extra .faq table{margin:8px 0}
+
+.viz{border:1px solid var(--line);border-radius:14px;background:var(--surface-2);overflow:hidden}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;padding:10px 12px 0}
+.tabs button{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:3px 12px;font:600 12.5px var(--sans);color:var(--muted);cursor:pointer}
+.tabs button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.stage{overflow-x:auto;padding-top:8px}
+.stage svg{display:block;width:100%;min-width:680px;height:auto;cursor:pointer;user-select:none}
+.cap{padding:10px 16px;min-height:3.4em;border-top:1px dashed var(--line);font-size:15px}
+.ctl{display:flex;align-items:center;gap:8px;padding:0 12px 12px}
+.b{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:5px 14px;font:600 13px var(--sans);cursor:pointer}
+.b:hover:not(:disabled){border-color:var(--accent)}
+.b:disabled{opacity:.4;cursor:default}
+.b.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+.cnt{margin-left:auto;font:500 12px var(--mono);color:var(--faint)}
+
+/* svg scene */
+svg text,svg tspan{white-space:pre}
+svg text{font-family:var(--sans);font-size:13px;fill:var(--fg);dominant-baseline:central}
+.c-n{--cc:var(--muted)} .c-a{--cc:var(--a)} .c-b{--cc:var(--b)} .c-g{--cc:var(--g)}
+.c-o{--cc:var(--o)} .c-r{--cc:var(--r)} .c-s{--cc:var(--s)} .c-f{--cc:var(--fg)}
+.box rect,.circ circle{fill:color-mix(in srgb,var(--cc) 14%,var(--surface));stroke:var(--cc);stroke-width:1.6;transition:fill .45s,stroke .45s}
+.dash rect,.dash circle{stroke-dasharray:6 4;fill:color-mix(in srgb,var(--cc) 4%,transparent)}
+.hl rect,.hl circle{stroke-width:3.4;filter:drop-shadow(0 0 7px color-mix(in srgb,var(--cc) 65%,transparent))}
+.text text{fill:var(--cc);transition:fill .45s}
+.text.b text,.text.lg text{font-weight:700}
+.text.lg text{font-size:15px}
+.sm text{font-size:11.5px}
+.m text{font-family:var(--mono);font-size:12px}
+.path path{fill:none;stroke:var(--cc);stroke-width:3.4;stroke-linecap:round}
+.arrow line{stroke:var(--cc);stroke-width:2.2;transition:stroke .4s}
+.arrow.dash line{stroke-dasharray:6 4}
+.arrow.hl line{stroke-width:3.4}
+footer{margin-top:50px;text-align:center;color:var(--faint);font:500 13px var(--sans)}
+
+.q .ans code,.q li code{white-space:nowrap}
+.hero{background:linear-gradient(135deg,#059669 0%,#0ea5e9 55%,#6366f1 100%)}
+/* bn-type: Bengali glyphs/digits need normal tracking */
+h1,h2,h3,h4,h5{letter-spacing:0!important}
+.hero h1,.page-head h1,.p-hero h1,.prose h1,header.top h1{line-height:1.32!important}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs id="defs"></defs></svg>
+<div class="wrap">
+  <nav class="topnav">
+    <a class="brand" href="../../index.html"><span class="logo">W</span>WellDev</a>
+    <span class="sp"></span>
+    <button class="pill" id="theme" type="button">Theme</button>
+  </nav>
+  <header class="hero">
+    <div class="eyebrow">DBMS · Interactive</div>
+    <h1>Idempotency: একবার বা দশবার, ফল একই</h1>
+    <p>"Pay" বোতাম দুবার চাপা পড়ল, বা network timeout-এ app নিজেই আবার পাঠাল। টাকা কাটবে <b>একবারই</b>। কীভাবে? প্রতিটা ধাপে animation, scene-এ ক্লিক করো বা <b>Next</b> চাপো।</p>
+  </header>
+  <nav class="parts" id="parts"></nav>
+  <main id="app"></main>
+  <footer>DBMS · Idempotency</footer>
+</div>
+<script>
+/* ---------- theme ---------- */
+(function(){
+  const root=document.documentElement,btn=document.getElementById('theme');
+  try{const t=localStorage.getItem('theme');if(t)root.dataset.theme=t;}catch(e){}
+  const dark=()=>root.dataset.theme?root.dataset.theme==='dark':matchMedia('(prefers-color-scheme:dark)').matches;
+  const label=()=>btn.textContent=dark()?'Light':'Dark';
+  btn.onclick=()=>{root.dataset.theme=dark()?'light':'dark';try{localStorage.setItem('theme',root.dataset.theme);}catch(e){}label();};
+  label();
+})();
+
+/* ---------- scene engine ---------- */
+const COLORS=['n','a','b','g','o','r','s','f'];
+document.getElementById('defs').innerHTML=COLORS.map(c=>
+  `<marker id="ah-${c}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" style="fill:var(--${c==='n'?'muted':c==='f'?'fg':c})"/></marker>`).join('');
+
+const B=(id,x,y,w,h,label,c='n',o={})=>({id,k:'box',x,y,w,h,label,c,...o});
+const T=(id,x,y,label,o={})=>({id,k:'text',x,y,label,c:'n',...o});
+const A=(id,x1,y1,x2,y2,c='n',o={})=>({id,k:'arrow',x:0,y:0,x1,y1,x2,y2,c,...o});
+const C=(id,x,y,r,label,c='n',o={})=>({id,k:'circ',x,y,r,label,c,...o});
+const S=(cap,o={})=>({cap,...o});
+const P=(id,d,c='n',o={})=>({id,k:'path',x:0,y:0,d,c,...o});
+
+function stateAt(steps,i){
+  const m=new Map();
+  for(let k=0;k<=i;k++){
+    const s=steps[k];
+    (s.del||[]).forEach(id=>m.delete(id));
+    (s.add||[]).forEach(n=>m.set(n.id,{...n}));
+    Object.entries(s.mod||{}).forEach(([id,p])=>{if(m.has(id))Object.assign(m.get(id),p);});
+  }
+  return [...m.values()];
+}
+
+function setText(g,cls,str,x,y,anchor,lh=15.5){
+  let tx=g.select('text.'+cls);
+  if(tx.empty())tx=g.append('text').attr('class',cls);
+  const ls=String(str??'').split('\n');
+  tx.attr('text-anchor',anchor);
+  tx.selectAll('tspan').data(ls).join('tspan').attr('x',x).attr('y',(d,i)=>y-(ls.length-1)*lh/2+i*lh).text(d=>d);
+}
+
+function upd(g,d,t){
+  g.attr('class',`n ${d.k} c-${d.c||'n'}${d.dash?' dash':''}${d.hl?' hl':''}${d.s?' '+d.s:''}${d.m?' m':''}`);
+  if(d.k==='box'){
+    let r=g.select('rect');
+    if(r.empty())r=g.insert('rect',':first-child').attr('rx',9).attr('width',d.w).attr('height',d.h);
+    r.transition(t).attr('width',d.w).attr('height',d.h);
+    setText(g,'lb',d.label,d.w/2,d.h/2,'middle');
+  }else if(d.k==='circ'){
+    let r=g.select('circle');
+    if(r.empty())r=g.insert('circle',':first-child').attr('r',d.r);
+    r.transition(t).attr('r',d.r);
+    setText(g,'lb',d.label,0,0,'middle');
+  }else if(d.k==='text'){
+    setText(g,'lb',d.label,0,0,d.a||'start');
+  }else if(d.k==='path'){
+    let p=g.select('path');
+    if(p.empty()){p=g.append('path').attr('d',d.d);const L=p.node().getTotalLength();p.attr('stroke-dasharray',L).attr('stroke-dashoffset',L).transition(t).attr('stroke-dashoffset',0);}
+  }else if(d.k==='arrow'){
+    let l=g.select('line');
+    if(l.empty())l=g.append('line').attr('x1',d.x1).attr('y1',d.y1).attr('x2',d.x2).attr('y2',d.y2);
+    l.attr('marker-end',`url(#ah-${d.c||'n'})`).transition(t).attr('x1',d.x1).attr('y1',d.y1).attr('x2',d.x2).attr('y2',d.y2);
+  }
+}
+
+function draw(svg,nodes,dur){
+  const t=d3.transition().duration(dur).ease(d3.easeCubicInOut);
+  svg.select('.layer').selectAll('g.n').data(nodes,d=>d.id).join(
+    en=>en.append('g').attr('opacity',0).attr('transform',d=>`translate(${d.x},${d.y})`),
+    up=>up,
+    ex=>ex.transition(t).attr('opacity',0).remove()
+  ).each(function(d){upd(d3.select(this),d,t);})
+   .transition(t).attr('transform',d=>`translate(${d.x},${d.y})`).attr('opacity',d=>d.o??1);
+}
+
+function mount(host,topic){
+  const tabs=topic.tabs||[{n:'',steps:topic.steps}];
+  host.innerHTML='<div class="tabs"></div><div class="stage"><svg viewBox="0 0 760 240" role="img"><g class="layer"></g></svg></div><div class="cap"></div><div class="ctl"><button class="b prev" type="button">◀</button><button class="b pri next" type="button">Next ▶</button><span class="cnt"></span></div>';
+  const svg=d3.select(host).select('svg'),cap=host.querySelector('.cap'),cnt=host.querySelector('.cnt');
+  const prev=host.querySelector('.prev'),next=host.querySelector('.next'),tabBox=host.querySelector('.tabs');
+  let ti=0,si=0,steps;
+  function show(dur){
+    draw(svg,stateAt(steps,si),dur);
+    cap.innerHTML=steps[si].cap;
+    cnt.textContent=`${si+1} / ${steps.length}`;
+    prev.disabled=si===0;
+    next.textContent=si===steps.length-1?'↻ আবার':'Next ▶';
+  }
+  function load(i){
+    ti=i;si=0;
+    const tb=tabs[ti];steps=typeof tb.steps==='function'?tb.steps():tb.steps;
+    tabBox.querySelectorAll('button').forEach((b,k)=>b.classList.toggle('on',k===ti));
+    show(0);
+  }
+  if(tabs.length>1){
+    tabs.forEach((tb,i)=>{const b=document.createElement('button');b.type='button';b.textContent=tb.n;b.onclick=()=>load(i);tabBox.appendChild(b);});
+  }else tabBox.remove();
+  const go=()=>{si=si===steps.length-1?0:si+1;show(600);};
+  next.onclick=go;svg.on('click',go);
+  prev.onclick=()=>{if(si>0){si--;show(600);}};
+  load(0);
+}
+
+
+/* ---------- content ---------- */
+const PARTS=[['1','Idempotency কী'],['2','সমস্যা'],['3','সমাধান: Key'],['4','আরও দুই সমাধান'],['5','HTTP ও সারকথা'],['6','প্রশ্ন-উত্তর: retry কেন, Serializable কেন নয়']];
+// repeated-run scene: one statement, run n times, history chips show the value after each run
+function runScene(stmt,start,vals,good,intro,outro){
+  const steps=[S(intro,{add:[B('op',20,14,720,48,stmt,'a',{m:1}),B('db',300,90,160,80,'balance\n'+start,'g'),T('cnt',380,192,'চালানো হয়েছে: 0 বার',{a:'middle',c:'f',s:'b'})]})];
+  vals.forEach((v,i)=>steps.push(S(`<b>${i+1}ম বার</b> চালালাম, balance হল <b>${v}</b>।`+(i>0?(good?' আগের মতোই, কিছু বদলায়নি ✓':' আবার বদলে গেল ✗'):''),{
+    add:[B('h'+i,230+i*100,210,84,26,'#'+(i+1)+':  '+v,good?'g':'r',{s:'sm'})],
+    mod:{db:{label:'balance\n'+v,c:good?'g':'r',hl:1},cnt:{label:`চালানো হয়েছে: ${i+1} বার`}}})));
+  steps.push(S(outro,{mod:{db:{hl:0}}}));
+  return steps;
+}
+
+// HTTP method scene: client repeats a request; chips show the server state after each run
+function httpScene(o){
+  const steps=[S(o.intro,{add:[B('cl',20,70,150,110,'Client\n(app)','a'),B('sv',590,40,150,150,o.title+'\n'+o.start,'g'),T('rq',380,74,'',{a:'middle',c:'a',s:'sm b'}),T('rs',380,172,'',{a:'middle',c:'g',s:'sm b'}),A('ra',172,96,588,96,'a'),A('rb',588,150,172,150,'g',{dash:1})]})];
+  let ch=[];
+  o.runs.forEach((r,i)=>{
+    if(r.reset){steps.push(S(r.cap,{del:ch,mod:{sv:{label:o.title+'\n'+r.state,c:'g',hl:0},rq:{label:''},rs:{label:''}}}));ch=[];return;}
+    const id='h'+i;const k=ch.length;ch.push(id);
+    steps.push(S(r.cap,{add:[B(id,200+k*112,206,104,26,'#'+(k+1)+':  '+r.chip,r.ok?'g':'r',{s:'sm'})],mod:{rq:{label:r.req},rs:{label:'response: '+r.resp,c:r.ok?'g':'r'},sv:{label:o.title+'\n'+r.state,c:r.ok?'g':'r',hl:1}}}));
+  });
+  steps.push(S(o.outro,{mod:{sv:{hl:0}}}));
+  return steps;
+}
+const TOPICS=[
+{p:0,q:'Idempotency কী?',
+ ans:'একই কাজ <b>একবার চালাও বা দশবার</b>, system-এর শেষ অবস্থা (state) একই থাকে। উদাহরণ: "balance = 500 করো" যতবারই চালাও 500। কিন্তু "balance-এ 100 যোগ করো" প্রতিবার বদলায়।',
+ pts:['<b>কেন দরকার:</b> network timeout-এ client retry করে। কাজটা idempotent না হলে একই কাজ দুবার হয়ে যায়।','<b>Idempotent:</b> <code>SET balance = 500</code>, <code>DELETE WHERE id = 1</code>, <code>INSERT ... ON CONFLICT DO NOTHING</code>।','<b>Idempotent না:</b> <code>balance = balance + 100</code>, সাধারণ <code>INSERT</code> (auto id সহ)।'],
+ tabs:[
+  {n:'Idempotent: SET',steps:()=>runScene('UPDATE accounts SET balance = 500 WHERE id = 1;',1000,[500,500,500],true,'Statement: <b>balance = 500</b> করো। শুরুতে balance 1000। এটা তিনবার চালাব।','<b>ফল:</b> একবার চালাও বা তিনবার, শেষে 500। এটাই <b>idempotent</b>।')},
+  {n:'Idempotent না: +100',steps:()=>runScene('UPDATE accounts SET balance = balance + 100 WHERE id = 1;',500,[600,700,800],false,'Statement: <b>balance-এ 100 যোগ করো</b>। শুরুতে balance 500। এটাও তিনবার চালাব।','<b>ফল:</b> প্রতিবার ফল বদলায়: 600, 700, 800। এটা <b>idempotent না</b>, তাই retry বিপজ্জনক।')}
+ ]},
+
+{p:1,q:'সমস্যা: timeout-এর পর retry = double charge',
+ ans:'Server টাকা কেটে ফেলেছে, কিন্তু সফল response <b>network-এ হারিয়ে</b> গেছে। Client উত্তর না পেয়ে ভাবে "হয়নি" এবং আবার পাঠায়। Server নতুন request ভেবে <b>আবার টাকা কাটে</b>।',
+ pts:['Client জানে না request পৌঁছায়নি, নাকি কাজ হয়ে গেছে কিন্তু উত্তর আসেনি।','তাই retry নিরাপদ করতে কাজটা <b>idempotent</b> বানাতে হয়।','<b>কেন retry আসেই? Unit of Work বা Serializable দিয়ে কেন ঠেকানো যায় না?</b> উত্তর <a href="#s5">পার্ট ৬ (প্রশ্ন-উত্তর)</a>-এ।'],
+ tabs:[{n:'কী ঘটে',steps:[
+  S('Customer 500 টাকা pay করবে। Balance 1000। তিনটা পক্ষ: client app, server, database।',{add:[B('cl',20,70,130,100,'Client\n(app)','a'),B('sv',320,70,130,100,'Server','o'),B('db',610,70,130,100,'Database\nbalance 1000','g')]}),
+  S('<b>১.</b> Client server-কে পাঠায়: "Pay 500"।',{add:[A('a1',152,100,318,100,'a'),T('a1l',235,84,'Pay 500',{a:'middle',c:'a',s:'sm b'})]}),
+  S('<b>২.</b> Server database-এ টাকা কাটে: balance 1000 → 500 ✓।',{add:[A('a2',452,100,608,100,'o'),T('a2l',530,84,'charge 500',{a:'middle',c:'o',s:'sm b'})],mod:{db:{label:'Database\nbalance 500',c:'g',hl:1}}}),
+  S('<b>৩.</b> Server "সফল" response পাঠায়, কিন্তু <b>network-এ হারিয়ে যায়</b>। Client কিছুই পায় না।',{add:[A('a3',318,150,152,150,'r',{dash:1}),T('a3l',235,166,'response হারাল ✗',{a:'middle',c:'r',s:'sm b'})],mod:{db:{hl:0}}}),
+  S('<b>৪.</b> Client timeout পায়, ভাবে "হয়তো হয়নি", তাই <b>আবার</b> "Pay 500" পাঠায়।',{add:[A('a4',152,124,318,124,'a',{dash:1}),T('a4l',235,112,'retry',{a:'middle',c:'a',s:'sm b'})],mod:{cl:{label:'Client\ntimeout → retry',c:'o'}}}),
+  S('<b>৫.</b> Server এটা নতুন request ভাবে এবং আবার টাকা কাটে: 500 → 0। <b>Double charge!</b>',{add:[A('a5',452,124,608,124,'r')],mod:{db:{label:'Database\nbalance 0 ✗',c:'r',hl:1}}})
+ ]}]},
+
+{p:2,q:'সমাধান: Idempotency key',
+ ans:'Client প্রতিটা request-এর সাথে একটা <b>unique key</b> (UUID) পাঠায়। Server আগে key টা database-এ <b>দাবি</b> করে। key নতুন হলে কাজ করে, আগেই থাকলে <b>কাজ না করে আগের response ফেরত</b> দেয়। তাই retry-তে আবার টাকা কাটে না।',
+ pts:['<b>Key কে বানাবে:</b> client। Server বানালে timeout-এর পর client সেই key জানতই না।','<b>Key আর টাকা কাটা একই transaction-এ।</b> নইলে মাঝে crash হলে key আছে কিন্তু টাকা কাটেনি।','Table বাড়ে, তাই পুরনো key (যেমন ২৪ ঘণ্টা পর) মুছে ফেলা হয়।'],
+ tabs:[
+  {n:'1. প্রথম request',steps:[
+    S('Client নিজে একটা unique <b>key</b> বানায়, যেমন <code>K1</code>। প্রতিটা request-এর সাথে এটা পাঠায়।',{add:[B('cl',20,70,130,100,'Client\nkey = K1','a'),B('sv',250,70,130,100,'Server','o'),B('dp',430,8,320,224,'','g',{dash:1}),T('dpl',444,22,'Database',{c:'g',s:'sm b'}),B('kt',446,40,288,76,'idempotency_keys\n(খালি)','b',{m:1,s:'sm'}),B('ac',446,128,288,76,'accounts\nbalance 1000','g',{m:1,s:'sm'})]}),
+    S('<b>Request:</b> "Pay 500", key = K1।',{add:[A('a1',152,110,248,110,'a')]}),
+    S('Server transaction শুরু করে, আগে key দাবি করে: <code>INSERT key ... ON CONFLICT DO NOTHING</code>। K1 <b>নতুন</b>, তাই insert সফল (1 row)।',{add:[A('a2',382,90,444,78,'o')],mod:{kt:{label:'idempotency_keys\nK1  (in progress)',c:'o',hl:1}}}),
+    S('<b>একই transaction-এ</b> টাকা কাটে: 1000 → 500। আর response (OK) key-র সাথে সংরক্ষণ করে।',{add:[A('a3',382,130,444,160,'o')],mod:{kt:{label:'idempotency_keys\nK1 → response: OK',c:'g',hl:0},ac:{label:'accounts\nbalance 500',c:'g',hl:1}}}),
+    S('<b>COMMIT:</b> key আর টাকা কাটা <b>একসাথে</b> স্থায়ী। Client-কে response পাঠানো হয়।',{del:['a2','a3'],mod:{ac:{hl:0},cl:{label:'Client\nresponse: OK ✓',c:'g'}},add:[A('a4',248,140,152,140,'g')]})
+  ]},
+  {n:'2. Timeout-এর পর retry',steps:[
+    S('আগের অবস্থা: database-এ <b>K1</b> আছে, balance 500। কিন্তু response network-এ <b>হারিয়ে</b> গেছে, client timeout পেয়েছে।',{add:[B('cl',20,70,130,100,'Client\nkey = K1\ntimeout!','o'),B('sv',250,70,130,100,'Server','o'),B('dp',430,8,320,224,'','g',{dash:1}),T('dpl',444,22,'Database',{c:'g',s:'sm b'}),B('kt',446,40,288,76,'idempotency_keys\nK1 → response: OK','g',{m:1,s:'sm'}),B('ac',446,128,288,76,'accounts\nbalance 500','g',{m:1,s:'sm'})]}),
+    S('Client <b>একই key K1</b> দিয়ে আবার পাঠায়: "Pay 500, key = K1"।',{add:[A('a1',152,110,248,110,'a',{dash:1})]}),
+    S('Server key দাবি করতে চায়: <code>INSERT K1 ... ON CONFLICT DO NOTHING</code>। K1 <b>আগে থেকেই আছে</b>, তাই <b>0 row</b> insert হল।',{add:[A('a2',382,90,444,78,'o')],mod:{kt:{hl:1,c:'o'}}}),
+    S('0 row মানে "এই কাজ আগেই হয়ে গেছে"। তাই Server <b>টাকা কাটে না</b>, শুধু সংরক্ষিত response (OK) ফেরত দেয়।',{mod:{kt:{hl:0,c:'g'},ac:{hl:1,label:'accounts\nbalance 500 (বদলায়নি ✓)'}},add:[A('a3',248,140,152,140,'g')]}),
+    S('<b>ফল:</b> Client সফল response পেল, আর টাকা কাটল <b>একবারই</b>। Retry এখন নিরাপদ।',{mod:{ac:{hl:0},cl:{label:'Client\nresponse: OK ✓',c:'g'}}})
+  ]},
+  {n:'3. একসাথে দুই request',steps:[
+    S('Client একই key K1 দিয়ে <b>প্রায় একই মুহূর্তে</b> দুটো request পাঠিয়ে ফেলেছে (যেমন Pay বোতাম দুবার চাপা পড়েছে)।',{add:[B('r1',20,30,170,70,'Request 1\nkey = K1','a'),B('r2',20,140,170,70,'Request 2\nkey = K1','b'),B('kt',300,50,200,140,'idempotency_keys\nPRIMARY KEY (key)\n\n(খালি)','b',{m:1,s:'sm'}),B('ac',560,70,180,100,'accounts\nbalance 1000','g',{m:1,s:'sm'})]}),
+    S('দুটোই একসাথে <code>INSERT K1</code> করতে যায়। Key column-এ <b>PRIMARY KEY (unique)</b>, তাই database একটাকেই ঢুকতে দেয়।',{add:[A('x1',192,65,298,95,'a'),A('x2',192,175,298,145,'b')],mod:{kt:{hl:1,c:'o'}}}),
+    S('<b>Request 1</b> জেতে: insert সফল। <b>Request 2</b>-এর insert আটকে যায়, প্রথমজনের transaction শেষ হওয়া পর্যন্ত অপেক্ষা করে।',{mod:{kt:{label:'idempotency_keys\nPRIMARY KEY (key)\n\nK1 (Request 1)',c:'g'},r1:{c:'g',label:'Request 1\nজিতল ✓'},r2:{c:'o',label:'Request 2\nঅপেক্ষায়...',dash:1}}}),
+    S('Request 1 টাকা কাটে (1000 → 500) ও commit করে। এবার Request 2 দেখে K1 আগেই আছে: <b>কাজ না করে</b> সংরক্ষিত response ফেরত দেয়।',{add:[A('x3',502,120,558,120,'g')],mod:{ac:{label:'accounts\nbalance 500',hl:1},r2:{c:'g',label:'Request 2\nকাজ না করে\nআগের response ✓',dash:0}}}),
+    S('<b>ফল:</b> দুটো request এলেও টাকা কাটল <b>একবার</b>। Database-এর unique constraint-ই এটা নিশ্চিত করে, আলাদা lock-এর দরকার নেই।',{mod:{ac:{hl:0}}})
+  ]}
+ ]},
+
+{p:3,q:'আরও দুই সমাধান: UNIQUE আর conditional update',
+ ans:'সবসময় আলাদা key বানাতে হয় না। দুটো সহজ উপায় আছে: ডেটাবেজকে বলে রাখা "একই জিনিস দুবার ঢুকতে দেবে না" (<b>UNIQUE</b>), অথবা "আগের অবস্থায় থাকলে তবেই বদলাও" শর্ত দেওয়া (<b>conditional update</b>)।',
+ pts:['<b>UNIQUE:</b> পরীক্ষার রোল নম্বরের মতো। একই রোল নম্বরে দুজন বসতে পারে না। একই <code>order_id</code>-র দ্বিতীয় payment ডেটাবেজ ঢুকতেই দেয় না। কাজের নিজস্ব id (order_id, email) থাকলে এটা ব্যবহার করো।','<b>Conditional update:</b> "তালা বন্ধ থাকলে তবেই খোলো"। <code>WHERE status = \'pending\'</code> দিলে প্রথমবার 1 row বদলায়, retry-তে status আর pending না, তাই 0 row। যেখানে অবস্থা এক ধাপ করে এগোয় (pending → paid), সেখানে এটা ব্যবহার করো।'],
+ tabs:[
+  {n:'UNIQUE constraint',steps:[
+    S('Table: <code>payments</code>, যেখানে <b>UNIQUE (order_id)</b>। অর্থাৎ একটা order-এর payment একটাই থাকতে পারে।',{add:[B('app',20,70,170,100,'Application','a'),B('tb',380,30,360,180,'payments\nUNIQUE (order_id)\n\n(খালি)','g',{m:1,s:'sm'})]}),
+    S('<b>প্রথম বার:</b> <code>INSERT payment (order 42, 500)</code>। নতুন order, তাই row ঢুকল।',{add:[A('a1',192,100,378,100,'a')],mod:{tb:{label:'payments\nUNIQUE (order_id)\n\norder 42 | 500',hl:1}}}),
+    S('<b>Retry:</b> একই <code>INSERT (order 42, 500)</code> আবার। <code>order_id = 42</code> আগেই আছে, database <b>duplicate key</b> বলে প্রত্যাখ্যান করে।',{add:[A('a2',192,130,378,130,'r',{dash:1})],mod:{tb:{hl:0},app:{label:'Application\nduplicate key ✗',c:'r'}}}),
+    S('<code>ON CONFLICT DO NOTHING</code> দিলে error না এসে শুধু <b>0 row</b> insert হয়। Application বোঝে "আগেই হয়ে গেছে"। Table-এ payment <b>একটাই</b>।',{mod:{app:{label:'Application\n0 row → আগেই হয়েছে ✓',c:'g'},tb:{label:'payments\nUNIQUE (order_id)\n\norder 42 | 500  (একটাই)',c:'g'}}})
+  ]},
+  {n:'Conditional update',steps:[
+    S('Order-এর <b>status</b> আছে: <code>pending</code> → <code>paid</code>। Payment শুধু pending order-এর ওপরেই চলবে।',{add:[B('app',20,70,170,100,'Application','a'),B('od',380,50,360,140,'orders\nid = 42\nstatus = pending','o',{m:1,s:'sm'})]}),
+    S('<b>প্রথম বার:</b> <code>UPDATE orders SET status = \'paid\' WHERE id = 42 AND status = \'pending\'</code>। শর্ত মেলে, <b>1 row</b> বদলাল।',{add:[A('a1',192,100,378,100,'a')],mod:{od:{label:'orders\nid = 42\nstatus = paid',c:'g',hl:1},app:{label:'Application\n1 row affected\n→ টাকা কাটো',c:'g'}}}),
+    S('<b>Retry:</b> একই UPDATE। এবার status আর <code>pending</code> না, শর্ত মেলে না, <b>0 row</b> বদলাল।',{add:[A('a2',192,130,378,130,'r',{dash:1})],mod:{od:{hl:0},app:{label:'Application\n0 row affected\n→ আর কিছু করো না',c:'o'}}}),
+    S('0 row মানে "আগেই হয়ে গেছে", তাই টাকা কাটা হয় না। Status-ই এখানে "কাজটা হয়েছে কি না"-র প্রমাণ।',{mod:{app:{label:'Application\nduplicate কাজ নেই ✓',c:'g'}}})
+  ]}
+ ]},
+
+{p:4,q:'HTTP method আর সারকথা',
+ ans:'একটাই প্রশ্ন: একই request ৩ বার পাঠালে <b>ডেটাবেজের অবস্থা (state)</b> কি ১ বারের মতোই থাকে? থাকলে idempotent। Response-এর কোড (200, 404) কী এল তা দেখার দরকার নেই, শুধু state দেখো। সূত্র: <b>"রাখো / সেট করো / মুছো"</b> = idempotent। <b>"যোগ করো / তৈরি করো"</b> = idempotent না। প্রতিটা tab-এ একই request বারবার পাঠিয়ে দেখো।',
+ pts:['<b>GET, HEAD, OPTIONS:</b> হ্যাঁ। শুধু দেখে, মেনু ১০ বার দেখলেও রেস্টুরেন্ট একই থাকে।','<b>PUT:</b> হ্যাঁ। "ছবিটা এই জায়গায় রাখো", দশবার বললেও একই জায়গায়।','<b>DELETE:</b> হ্যাঁ। ময়লা একবার ফেললে ঘর পরিষ্কার, আবার ফেলতে গেলে "ফেলার কিছু নেই" (404)। উত্তর আলাদা, অবস্থা এক।','<b>POST:</b> না। প্রতিবার নতুন একটা তৈরি হয়। Idempotency-Key দিয়ে ঠিক করতে হয়।','<b>PATCH:</b> নির্ভর করে। "ঘড়িতে ৫টা বাজাও" (সেট) = হ্যাঁ। "ঘড়ি ১ ঘণ্টা এগিয়ে দাও" (যোগ) = না।'],
+ extra:'<table class="cmp"><tr><th>কোন সমাধান</th><th>এক লাইনে</th><th>কখন</th></tr>'
+  +'<tr><td>Idempotency key</td><td>"এই টোকেন আগে দেখেছি, আবার করব না"</td><td>payment, retry হওয়া যেকোনো POST। সবচেয়ে সাধারণ</td></tr>'
+  +'<tr><td>UNIQUE constraint</td><td>"ডেটাবেজ একই জিনিস দুবার ঢুকতে দেবে না"</td><td>কাজের নিজস্ব id আছে (order_id, email)</td></tr>'
+  +'<tr><td>Conditional update</td><td>"আগের অবস্থায় থাকলে তবেই বদলাও"</td><td>status বদলের কাজ (pending → paid)</td></tr></table>'
+  +`<details class="deep" open><summary>বিস্তারিত: তিন সমাধান কীভাবে কাজ করে (গল্প ধরে)</summary>
+<div class="deep-body">
+<h4>গল্প: "Pay" বোতাম</h4>
+<p>আপনি ৫০০ টাকার অর্ডার (order 42) দিয়ে "Pay" চাপলেন। টাকা কেটে গেল, কিন্তু "OK" উত্তরটা নেট গিয়ে হারিয়ে গেল। অ্যাপ জানে না কাজ হয়েছে কি না, তাই <b>একই request আবার পাঠাল (retry)</b>। Server-এর কাছে এটা নতুন request মনে হয়, তাই আবার ৫০০ কাটে। মোট ১০০০ টাকা কাটা গেল।</p>
+<p><b>আসল সমস্যা একটাই:</b> server বুঝতে পারছে না "এই request আগে একবার এসেছিল।" তিনটা সমাধান আসলে এক প্রশ্নের তিন উত্তর: <b>"server কীভাবে চিনবে যে এটা repeat?"</b></p>
+<ol>
+<li>টোকেন নম্বর দিয়ে → <b>Idempotency Key</b></li>
+<li>জিনিসটার নিজস্ব পরিচয় (order_id) দিয়ে → <b>UNIQUE constraint</b></li>
+<li>জিনিসটার বর্তমান অবস্থা (status) দেখে → <b>Conditional update</b></li>
+</ol>
+
+<h4>১) Idempotency Key: "ব্যাংকের টোকেন নম্বর"</h4>
+<p>ব্যাংকে আপনি বললেন "আমার টোকেন 42।" ক্লার্ক খাতা দেখে বলে, "42 তো আগেই সামলে দিয়েছি।" এখানেও তাই।</p>
+<ol>
+<li><b>আগে থেকে একটা টেবিল থাকে:</b> <code>idempotency_keys (key, response)</code>। শুরুতে খালি।</li>
+<li><b>Client নিজেই একটা unique key বানায়</b> (যেমন <code>K1</code>) এবং request-এর সাথে পাঠায়: <code>POST /pay  Idempotency-Key: K1</code></li>
+<li><b>Server আগে key টেবিলে <code>K1</code> ঢোকায়।</b> K1 নতুন, তাই ঢুকল। এর মানে "প্রথমবার", তাই সে টাকা কাটে (১০০০ → ৫০০) এবং টেবিলে লেখে <code>K1 → "OK, ৫০০ কাটা হয়েছে"</code>। এই দুটো কাজ <b>একই transaction-এ</b>, হয় দুটোই হবে নয়তো কোনোটাই না।</li>
+<li><b>উত্তর হারিয়ে গেল, client retry করল</b> একই <code>K1</code> দিয়ে।</li>
+<li><b>Server আবার K1 ঢোকাতে চায়, কিন্তু K1 আগেই আছে।</b> বুঝে ফেলে "এটা repeat।" টাকা কাটে না, শুধু টেবিল থেকে আগের response ফেরত দেয়। <b>ফল:</b> client "OK" পেল, টাকা কাটল একবারই।</li>
+</ol>
+<p><b>Response-ও কেন সেভ করে?</b> Client-এর উত্তর দরকার। আগের response হুবহু ফেরত দিলে client-এর মনে হয় এটা প্রথমবারের মতোই সফল।</p>
+<p><b>দুটো request একসাথে এলে?</b> ("Pay" দুবার চাপা পড়ল।) যদি server আগে "K1 আছে কি?" দেখে তারপর ঢোকায়, দুটোই "নেই" দেখবে আর দুটোই কাজ করবে। তাই <code>key</code> কলামে <b>PRIMARY KEY</b> থাকে। ডেটাবেজ নিজেই নিশ্চিত করে একই K1 একবারই ঢুকবে, জেতে একটাই।</p>
+<p><b>কখন:</b> কাজটার নিজস্ব পরিচয় নেই, কিন্তু retry হতে পারে (payment, "অর্ডার করো" বোতাম)। সবচেয়ে সাধারণ ও নিরাপদ।</p>
+
+<h4>২) UNIQUE constraint: "পরীক্ষার রোল নম্বর"</h4>
+<p>এখানে আলাদা টোকেন লাগে না, কারণ কাজটার নিজস্ব পরিচয় আছে: <code>order_id = 42</code>। একটা order-এর payment একটাই হওয়ার কথা। তাই ডেটাবেজকে নিয়ম বলে দিন। রোল 42-এ একজনই বসতে পারে, দ্বিতীয়জনকে সিস্টেম ঢুকতেই দেয় না।</p>
+<pre><code>CREATE TABLE payments (
+  order_id INT UNIQUE,   -- আসল নিয়ম: একই order_id দুবার না
+  amount   INT
+);
+
+-- প্রথমবার: order 42 নতুন, তাই ঢুকল ✅
+INSERT INTO payments (order_id, amount) VALUES (42, 500);
+
+-- retry: order 42 আগেই আছে, ডেটাবেজ নিজেই ঠেকায় ❌ (duplicate key)
+INSERT INTO payments (order_id, amount) VALUES (42, 500);</code></pre>
+<p><b>Error না চাইলে</b> <code>ON CONFLICT (order_id) DO NOTHING</code> যোগ করুন। তখন error আসে না, শুধু "0 row insert" হয়। অ্যাপ বোঝে 0 row মানে "আগেই হয়ে গেছে", তাই চুপচাপ সফল ধরে নেয়।</p>
+<p><b>কখন:</b> কাজের মধ্যেই স্বাভাবিক পরিচয় আছে (<code>order_id</code>, <code>email</code>, <code>invoice_no</code>)। আলাদা টোকেন বানানোর ঝামেলা নেই, ডেটাবেজই পাহারা দেয়।</p>
+
+<h4>৩) Conditional update: "তালা বন্ধ থাকলে তবেই খোলো"</h4>
+<p>এখানে চেনা হয় জিনিসটার <b>অবস্থা (status)</b> দিয়ে। Order-এর status এক ধাপ করে এগোয়: <code>pending → paid</code>। দরজার তালা একবার খুলে ফেললে আবার "বন্ধ থাকলে খোলো" বললে শর্ত আর মেলে না, তাই কিছু হয় না।</p>
+<p>শুরুতে order 42-এর <code>status = 'pending'</code>।</p>
+<pre><code>UPDATE orders
+SET status = 'paid'
+WHERE id = 42 AND status = 'pending';   -- শর্ত: এখনো pending থাকলে তবেই</code></pre>
+<ul>
+<li><b>প্রথমবার:</b> status এখন pending, শর্ত মিলল, <code>paid</code> হলো। ডেটাবেজ বলে <b>"1 row affected"</b>। অ্যাপ বোঝে "আমিই প্রথম, এবার টাকা কাটি।" ✅</li>
+<li><b>retry:</b> status এখন <code>paid</code>, শর্ত মেলে না, ডেটাবেজ বলে <b>"0 row affected"</b>। অ্যাপ বোঝে "আগেই হয়ে গেছে, আর কিছু করব না।" টাকা আবার কাটে না। ✅</li>
+</ul>
+<p>"কাজ হয়েছে কি না"-র প্রমাণ এখানে <code>status</code> নিজেই। আলাদা টেবিল বা key লাগে না।</p>
+<p><b>কখন:</b> কাজটা অবস্থা বদলানোর, আর অবস্থা এক ধাপ করে এগোয় (<code>pending → paid → shipped → delivered</code>)।</p>
+
+<h4>কোনটা কখন? নিজেকে এই প্রশ্নগুলো করুন</h4>
+<table class="cmp"><tr><th>প্রশ্ন</th><th>হ্যাঁ হলে</th></tr>
+<tr><td>কাজটার নিজস্ব id আছে (<code>order_id</code>, <code>email</code>) আর "একটাই থাকবে" চাই?</td><td><b>UNIQUE constraint</b></td></tr>
+<tr><td>কাজটা status এক ধাপ এগোনো (<code>pending → paid</code>)?</td><td><b>Conditional update</b></td></tr>
+<tr><td>কোনোটাই খাটে না, কিন্তু retry হতে পারে?</td><td><b>Idempotency Key</b></td></tr></table>
+<p>তিনটারই শেষ ফল এক: retry হলেও কাজ <b>একবারই</b> হয়।</p>
+</div></details>`,
+ tabs:[
+  {n:'GET, HEAD, OPTIONS: হ্যাঁ',steps:()=>httpScene({title:'User #1',start:'name = Rahim',
+    intro:'এগুলো শুধু <b>পড়ে</b>, server-এর কিছু বদলায় না। তাই যতবারই পাঠাও, অবস্থা একই। User #1-এর নাম Rahim।',
+    runs:[
+     {req:'GET /users/1',resp:'200 {name: Rahim}',state:'name = Rahim',chip:'Rahim',ok:1,cap:'<b>GET:</b> user পড়ল। Response Rahim। Server-এ কিছু বদলাল না।'},
+     {req:'GET /users/1',resp:'200 {name: Rahim}',state:'name = Rahim',chip:'Rahim',ok:1,cap:'<b>আবার GET:</b> একই response, একই অবস্থা।'},
+     {req:'HEAD /users/1',resp:'200 (শুধু header)',state:'name = Rahim',chip:'Rahim',ok:1,cap:'<b>HEAD:</b> GET-এর মতোই, কিন্তু শুধু header আসে, body না। কিছু বদলায় না।'},
+     {req:'OPTIONS /users/1',resp:'200 Allow: GET, PUT, DELETE',state:'name = Rahim',chip:'Rahim',ok:1,cap:'<b>OPTIONS:</b> "কোন method চলে?" জানতে চায়। এটাও কিছু বদলায় না।'}],
+    outro:'<b>হ্যাঁ, idempotent।</b> এগুলো <b>safe</b>-ও (কিছু বদলায়ই না), তাই retry সবচেয়ে নিরাপদ।'})},
+  {n:'PUT: হ্যাঁ',steps:()=>httpScene({title:'User #1',start:'name = Rahim',
+    intro:'<b>PUT</b> মানে "resource-টা <b>এই অবস্থায় রাখো</b>"। পুরো নতুন মান বসিয়ে দেয়। শুরুতে নাম Rahim।',
+    runs:[
+     {req:'PUT /users/1  {name: Karim}',resp:'200 OK',state:'name = Karim',chip:'Karim',ok:1,cap:'<b>প্রথম PUT:</b> নাম Karim করো। Server নাম বদলে Karim করল।'},
+     {req:'PUT /users/1  {name: Karim}',resp:'200 OK',state:'name = Karim',chip:'Karim',ok:1,cap:'<b>আবার PUT:</b> "Karim রাখো", কিন্তু আছেই Karim। কিছু বদলাল না।'},
+     {req:'PUT /users/1  {name: Karim}',resp:'200 OK',state:'name = Karim',chip:'Karim',ok:1,cap:'<b>তৃতীয় বার:</b> একই। যতবারই পাঠাও, শেষ অবস্থা Karim।'}],
+    outro:'<b>হ্যাঁ, idempotent।</b> "এই অবস্থায় রাখো" বারবার বললেও অবস্থা একই। এটা <code>SET balance = 500</code>-এর মতো।'})},
+  {n:'DELETE: হ্যাঁ',steps:()=>httpScene({title:'User #1',start:'আছে',
+    intro:'<b>DELETE</b> মানে "মুছে দাও"। User #1 এখন আছে।',
+    runs:[
+     {req:'DELETE /users/1',resp:'200 deleted',state:'নেই (মুছে গেছে)',chip:'নেই',ok:1,cap:'<b>প্রথম DELETE:</b> user মুছে গেল। Response 200।'},
+     {req:'DELETE /users/1',resp:'404 not found',state:'নেই (মুছে গেছে)',chip:'নেই',ok:1,cap:'<b>আবার DELETE:</b> user আগেই নেই, তাই response <b>404</b>। Response বদলাল, কিন্তু server-এর <b>অবস্থা একই</b>: user নেই।'},
+     {req:'DELETE /users/1',resp:'404 not found',state:'নেই (মুছে গেছে)',chip:'নেই',ok:1,cap:'<b>তৃতীয় বার:</b> আবার 404, অবস্থা একই।'}],
+    outro:'<b>হ্যাঁ, idempotent।</b> Idempotency মানে <b>অবস্থা (state)</b> একই থাকা, উত্তর একই থাকা না। প্রথমবার 200, পরে 404, কিন্তু প্রতিবারই অবস্থা "user নেই"। আর কিছু বদলায়নি।'})},
+  {n:'POST: না',steps:()=>httpScene({title:'Orders',start:'orders: 0',
+    intro:'<b>POST</b> মানে "নতুন কিছু তৈরি করো"। এখানে order তৈরি। শুরুতে কোনো order নেই।',
+    runs:[
+     {req:'POST /orders',resp:'201 order #1',state:'orders: 1',chip:'1 order',ok:1,cap:'<b>প্রথম POST:</b> order #1 তৈরি হল।'},
+     {req:'POST /orders',resp:'201 order #2',state:'orders: 2',chip:'2 order',ok:0,cap:'<b>আবার POST</b> (retry): server নতুন request ভাবে, <b>আরেকটা order</b> তৈরি করে। অবস্থা বদলে গেল।'},
+     {req:'POST /orders',resp:'201 order #3',state:'orders: 3',chip:'3 order',ok:0,cap:'<b>তৃতীয় বার:</b> আবার নতুন order। প্রতিবার একটা করে বাড়ছে।'},
+     {reset:1,state:'orders: 0',cap:'<b>ঠিক করার উপায়:</b> POST-এর সাথে <code>Idempotency-Key</code> header পাঠাও। আবার শুরু থেকে (orders: 0)।'},
+     {req:'POST /orders  Idempotency-Key: K1',resp:'201 order #1',state:'orders: 1',chip:'1 order',ok:1,cap:'<b>key সহ প্রথম POST:</b> order #1 তৈরি, key K1 মনে রাখা হল।'},
+     {req:'POST /orders  Idempotency-Key: K1',resp:'200 order #1 (আগেরটা)',state:'orders: 1',chip:'1 order',ok:1,cap:'<b>retry, একই key K1:</b> server চেনে, নতুন order বানায় না, আগের response ফেরত দেয়। অবস্থা একই।'}],
+    outro:'<b>না, POST নিজে idempotent না।</b> প্রতিবার নতুন order তৈরি হয় (#1, #2, #3)। কিন্তু <b>Idempotency-Key</b> দিয়ে retry নিরাপদ করা যায়।'})},
+  {n:'PATCH: হ্যাঁ বা না',steps:()=>httpScene({title:'Account',start:'balance = 1000',
+    intro:'<b>PATCH</b> মানে "আংশিক বদলাও"। এটা idempotent কি না <b>নির্ভর করে কী বদলাচ্ছ</b> তার ওপর। শুরুতে balance 1000।',
+    runs:[
+     {req:'PATCH  {balance: 500}',resp:'200 OK',state:'balance = 500',chip:'500',ok:1,cap:'<b>"balance = 500" PATCH:</b> মান বসিয়ে দেয়। Balance হল 500।'},
+     {req:'PATCH  {balance: 500}',resp:'200 OK',state:'balance = 500',chip:'500',ok:1,cap:'<b>আবার একই PATCH:</b> আছেই 500। কিছু বদলাল না। এই ধরনের PATCH <b>idempotent</b>।'},
+     {reset:1,state:'balance = 500',cap:'<b>এবার অন্য ধরনের PATCH:</b> "100 যোগ করো"। Balance এখন 500।'},
+     {req:'PATCH  {add: 100}',resp:'200 OK',state:'balance = 600',chip:'600',ok:1,cap:'<b>"100 যোগ করো":</b> 500 → 600।'},
+     {req:'PATCH  {add: 100}',resp:'200 OK',state:'balance = 700',chip:'700',ok:0,cap:'<b>retry:</b> আবার 100 যোগ হল, 600 → 700। প্রতিবার বদলায়। এই ধরনের PATCH <b>idempotent না</b>।'},
+     {req:'PATCH  {add: 100}',resp:'200 OK',state:'balance = 800',chip:'800',ok:0,cap:'<b>তৃতীয় বার:</b> 800। আবার বদলে গেল।'}],
+    outro:'<b>PATCH: হ্যাঁ বা না।</b> "মান বসাও" ধরনের হলে হ্যাঁ (<code>balance = 500</code>, ঘড়িতে ৫টা বাজাও)। "যোগ/কমাও" ধরনের হলে না (<code>balance + 100</code>, ঘড়ি এগিয়ে দাও)।'})}
+ ]},
+
+{p:5,q:'প্রশ্ন-উত্তর: retry কেন আসে, Serializable দিয়ে কেন হয় না',
+ ans:'এখানে প্রশ্ন-উত্তরে তিনটা জিনিস পরিষ্কার করা হয়েছে: (ক) <b>retry কেন আসেই</b>, commit হয়ে গেলেও; (খ) <b>Unit of Work / Serializable দিয়ে কেন ঠেকানো যায় না</b>; (গ) <b>Idempotency দিয়ে কীভাবে ঠেকানো যায়</b>, আর এটা কেন শুধু retry-র জন্যই লাগে; (ঘ) <b>কোন কাজ নিজে idempotent, কোনটায় key লাগে</b> (PUT, POST, <code>balance + 100</code>) আর POST কি retry করা যায়।',
+ pts:[],
+ extra:`<div class="deep-body faq">
+
+<h4 class="sec">ক) মূল সমস্যা: retry কেন আসেই?</h4>
+
+<p class="qq">প্রশ্ন ১: Commit তো হয়েই গেছে, তাহলে retry করার দরকার কী?</p>
+<p class="aa"><b>কারণ client জানে না commit হয়েছে কি না।</b> তার কাছে শুধু এটুকু তথ্য: "request পাঠিয়েছি, উত্তর পাইনি।" এর পেছনে তিনটা সম্ভাবনা:</p>
+<pre><code>১) Request-ই server-এ পৌঁছায়নি       → টাকা কাটেনি
+২) Server কাজ করেছে, উত্তর হারিয়েছে   → টাকা কেটেছে ✅
+৩) Server কাজের মাঝে crash করেছে       → টাকা কাটেনি (rollback)</code></pre>
+<p class="aa">Client-এর চোখে তিনটাই হুবহু এক: "timeout"। Retry না করলে ১ বা ৩ হলে কাজটা হারিয়ে যায় (পেমেন্ট ফেল)। Retry করলে ২ হলে দুবার হয়ে যায়। তাই সমাধান: <b>retry-টা এমন বানাও যেন করলেও ক্ষতি না হয়।</b></p>
+
+<p class="qq">প্রশ্ন ২: Retry কি শুধু আমার কোড ইচ্ছা করে করে?</p>
+<p class="aa">না। অনেক retry আপনার অজান্তেই ঘটে:</p>
+<ul>
+<li><b>ব্যবহারকারী:</b> "Pay" দুবার চাপল, বা রিফ্রেশ করল।</li>
+<li><b>HTTP library / SDK:</b> timeout হলে নিজেই আবার পাঠায়।</li>
+<li><b>Load balancer / gateway:</b> এক server সাড়া না দিলে অন্য server-এ পাঠিয়ে দেয়।</li>
+<li><b>Message queue (Kafka, RabbitMQ, SQS):</b> "at-least-once" ডেলিভারি, মানে একই মেসেজ একাধিকবার আসতে পারে।</li>
+</ul>
+<p class="aa">এগুলো পুরোপুরি বন্ধ করা যায় না। তাই "retry আসবেই না" ধরে কোড লেখা বিপজ্জনক।</p>
+
+<h4 class="sec">খ) Transaction / UoW / Isolation Level দিয়ে কেন হয় না?</h4>
+
+<p class="qq">প্রশ্ন ৩: Unit of Work বা Transaction দিয়ে কি এটা ঠেকানো যায় না?</p>
+<p class="aa"><b>না।</b> Retry মানে একটা <b>নতুন, আলাদা request, নতুন transaction</b>:</p>
+<pre><code>Request 1:  BEGIN → টাকা কাটো → COMMIT ✅   (উত্তর হারাল)
+Request 2:  BEGIN → টাকা কাটো → COMMIT ✅   (retry)</code></pre>
+<p class="aa">দুটো transaction-ই নিজের জায়গায় <b>পুরোপুরি সঠিক</b>। Transaction শুধু নিজের ভেতরের ধাপগুলো সামলায় (সব হবে, নয়তো কিছুই না)। সে <b>আগের কোনো transaction-এর কথা মনে রাখে না</b>। ATM-এ "টাকা কাটা + নোট বের হওয়া" একসাথে হয় ঠিক, কিন্তু আপনি দুবার বোতাম চাপলে ATM দুটো আলাদা উত্তোলন ধরে নেয়।</p>
+
+<p class="qq">প্রশ্ন ৪: সবচেয়ে কড়া isolation level <code>SERIALIZABLE</code> দিলে?</p>
+<p class="aa"><b>তাও হয় না।</b> Isolation level সমাধান করে <b>একসাথে চলা</b> transaction-দের ঝামেলা (একে অন্যের কাঁচা ডেটা দেখা, lost update ইত্যাদি)। কিন্তু:</p>
+<ul>
+<li>Retry-তে প্রায়ই দুটো request <b>একসাথে চলেই না</b>। Request 1 আগেই শেষ, তারপর Request 2 আসে। Overlap নেই, isolation-এর করার কিছু নেই।</li>
+<li>যদি একসাথেও চলে, <code>SERIALIZABLE</code> শুধু নিশ্চিত করে "ফল এমন হবে যেন একটার পর আরেকটা চলেছে।" আর একটার পর আরেকটা চললে? <b>দুটোই ৫০০ কাটে।</b> ডেটাবেজের চোখে দুটো বৈধ, আলাদা কাজ। সে জানে না দ্বিতীয়টা ভুলে পাঠানো duplicate।</li>
+</ul>
+<table class="cmp"><tr><th></th><th>কী ঠেকায়</th><th>retry-র duplicate ঠেকায়?</th></tr>
+<tr><td>Transaction / UoW</td><td>এক request-এর ধাপ অর্ধেক হয়ে ঝুলে থাকা</td><td>না</td></tr>
+<tr><td>Isolation level</td><td>একসাথে চলা transaction-দের ঝামেলা</td><td>না</td></tr>
+<tr><td>Idempotency</td><td>একই কাজ দুবার হয়ে যাওয়া</td><td><b>হ্যাঁ</b></td></tr></table>
+<p class="aa"><b>এক লাইনে:</b> transaction/isolation নিশ্চিত করে কাজটা <b>ঠিকভাবে</b> হোক। Idempotency নিশ্চিত করে কাজটা <b>একবারই</b> হোক। "ঠিকভাবে" আর "একবার" আলাদা দাবি। একটা কাজ ঠিকভাবে দুবারও হতে পারে।</p>
+
+<p class="qq">প্রশ্ন ৫: তাহলে transaction আর isolation কি অকেজো?</p>
+<p class="aa">মোটেই না। Idempotency-র সমাধানগুলো নিজেই এদের ওপর দাঁড়িয়ে: Key-এর ক্ষেত্রে "key ঢোকানো + টাকা কাটা" <b>একই transaction-এ</b> হয়। <code>UNIQUE</code>/<code>PRIMARY KEY</code> একসাথে আসা দুটো request-কে ডেটাবেজের concurrency নিয়ন্ত্রণ দিয়ে ঠেকায়। Conditional update ডেটাবেজ atomically করে। অর্থাৎ <b>ভেতরের ধাপ সামলায় transaction, বাইরের retry সামলায় idempotency।</b> একটা অন্যটার বিকল্প না, দুটো একসাথে লাগে।</p>
+
+<h4 class="sec">গ) Idempotency দিয়ে কীভাবে কাজ হয়?</h4>
+
+<p class="qq">প্রশ্ন ৬: Idempotency কীভাবে double charge ঠেকায়?</p>
+<p class="aa">মূল কৌশল: <b>server-কে একটা স্মৃতি দেওয়া</b>, যেন সে বলতে পারে "এই request আমি আগেই সামলেছি।" Transaction-এর সেই স্মৃতি নেই, এটাই পার্থক্য। প্রবাহ:</p>
+<pre><code>Request 1 (Key K1):  K1 নতুন → টাকা কাটো + "K1 হয়েছে" লিখে রাখো → COMMIT → ✅
+Request 2 (Key K1):  K1 আগেই আছে! → টাকা কাটে না → আগের উত্তর ফেরত দেয় ✅
+ফল: টাকা কাটল একবারই</code></pre>
+<p class="aa">তিনভাবে এই "স্মৃতি" রাখা যায়: Key টেবিলে টোকেন (Idempotency Key), টেবিলে একই id দুবার ঢুকতে না দেওয়া (<code>UNIQUE</code>), বা status দেখে (<code>WHERE status = 'pending'</code>)। বিস্তারিত পার্ট ৩, ৪ ও ৫-এ আছে।</p>
+
+<p class="qq">প্রশ্ন ৭: Key দিয়ে server কীভাবে বোঝে কোনটা repeat, কোনটা নতুন কাজ?</p>
+<p class="aa"><b>একই key = একই কাজের পুনরাবৃত্তি। নতুন key = নতুন কাজ।</b> Client প্রতিটা আলাদা কাজের জন্য একটা নতুন key বানায় (লম্বা random string, UUID), কিন্তু সেই কাজের retry-তে <b>একই key-টাই</b> পাঠায়। তাই রহিমের ৫০০ টাকার পেমেন্টের key <code>K1</code> আর পরে দেওয়া আরেকটা ৫০০ টাকার পেমেন্টের key <code>K2</code> আলাদা, দুটোই আলাদা কাজ হিসেবে চলে।</p>
+
+<p class="qq">প্রশ্ন ৮: Idempotency কি শুধু retry-র জন্যই লাগে?</p>
+<p class="aa"><b>হ্যাঁ, মূলত তাই।</b> Retry না থাকলে idempotency-র কোনো দরকারই হতো না। Network নিখুঁত হলে, উত্তর কখনো না হারালে, কেউ দুবার চাপ না দিলে, প্রতিটা request ঠিক একবারই আসত, তখন "দ্বিতীয়বার চেনার" প্রশ্ন ওঠে না। Retry (বা একই request আবার আসা) আছে বলেই idempotency লাগে।</p>
+<p class="aa">একটু সূক্ষ্ম কথা: "retry" বলতে এখানে শুধু client-এর নিজে পাঠানো retry বোঝানো হচ্ছে না, বরং <b>একই request একাধিকবার এসে পৌঁছানো</b>। যার কারণ হতে পারে retry, double click, load balancer-এর re-send, বা queue-র redelivery। সবগুলোর সমাধান এক: idempotent বানানো।</p>
+
+<p class="qq">প্রশ্ন ৯: সব API-তে কি idempotency key লাগে?</p>
+<p class="aa">না। <b>GET</b> শুধু পড়ে, কিছু বদলায় না, তাই retry-তে ক্ষতি নেই। <b>PUT, DELETE</b> স্বভাবতই idempotent। দরকার সেখানে, যেখানে কাজটা "নতুন কিছু তৈরি/যোগ করা" (POST, <code>balance + 100</code>) এবং ভুলে দুবার হলে ক্ষতি হয়: payment, অর্ডার তৈরি, ইমেইল/SMS পাঠানো।</p>
+<h4 class="sec">ঘ) কোনটা idempotent, কোনটা না, আর retry-safe বানাব কীভাবে?</h4>
+
+<p class="qq">প্রশ্ন ১০: কোন কাজ নিজে থেকেই idempotent, কোনটা না? মনে রাখার সহজ নিয়ম কী?</p>
+<p class="aa">একটাই প্রশ্ন করুন: <b>কাজটা কি "মান বসানো/সেট করা", নাকি "যোগ/তৈরি করা"?</b></p>
+<table class="cmp"><tr><th>কাজের ধরন</th><th>উদাহরণ</th><th>নিজে idempotent?</th></tr>
+<tr><td>শুধু দেখা</td><td><code>GET</code></td><td>✅ হ্যাঁ</td></tr>
+<tr><td>সেট করা</td><td><code>PUT {balance: 600}</code>, <code>SET balance = 600</code></td><td>✅ হ্যাঁ</td></tr>
+<tr><td>মোছা</td><td><code>DELETE /users/1</code></td><td>✅ হ্যাঁ (state একই, যদিও 200 → 404)</td></tr>
+<tr><td>যোগ/কমানো</td><td><code>balance = balance + 100</code></td><td>❌ না</td></tr>
+<tr><td>নতুন তৈরি</td><td><code>POST /orders</code></td><td>❌ না</td></tr></table>
+<p class="aa"><b>সূত্র:</b> "রাখো / সেট করো / মুছো" = idempotent। "যোগ করো / তৈরি করো" = idempotent না।</p>
+
+<p class="qq">প্রশ্ন ১১: PUT-এ key লাগে না, কিন্তু POST-এ লাগে কেন?</p>
+<p class="aa">PUT-এর কাজ "এই মানে সেট করো", তাই দ্বিতীয়বার করলেও ফল একই। Server-কে মনে রাখতে হয় না যে এটা আগে এসেছিল, কাজটার প্রকৃতিই idempotent। POST-এর কাজ "নতুন কিছু তৈরি করো", প্রতিবার সত্যিই নতুন কিছু তৈরি হয়। তাই server-কে মনে রাখতে হয় "এটা আগে করেছি" আর সেই স্মৃতিই হলো Idempotency Key।</p>
+<pre><code>PUT  {name: Karim}              → retry করলেও নাম Karim-ই। key লাগে না ✅
+POST /orders + Key: K1          → retry করলে K1 চিনে নতুন order বানায় না ✅
+POST /orders (key ছাড়া)         → retry করলে আরেকটা order ❌</code></pre>
+
+<p class="qq">প্রশ্ন ১২: PUT-এর ভেতরে <code>balance = balance + 100</code> লিখলে কী হয়?</p>
+<p class="aa">তখন সেটা আর idempotent থাকে না, retry করলে প্রতিবার ১০০ বাড়ে (600 → 700 → 800)। Method-এর নাম PUT হলেই idempotent হয় না, <b>ভেতরের কোডটাই আসল</b>। PUT-এ পাঠাতে হয় <b>চূড়ান্ত মান</b> (<code>{balance: 600}</code>), পরিবর্তনের পরিমাণ না। "১০০ যোগ করো" কাজটা দরকার হলে PUT না, <b>POST (বা PATCH) + Idempotency Key</b> ব্যবহার করুন।</p>
+
+<p class="qq">প্রশ্ন ১৩: Key থাকলে <code>balance = balance + 100</code> কি নিরাপদ? কাজ হয়ে উত্তর হারালেও?</p>
+<p class="aa"><b>হ্যাঁ, নিরাপদ।</b> কাজটা নিজে idempotent না, কিন্তু key সেটাকে <b>একবারই চলতে দেয়</b>। শুরুতে balance = 500, request: <code>POST /deposit  Idempotency-Key: K1  {amount: 100}</code></p>
+<pre><code>ক্ষেত্র ১: কাজ হয়েছে, উত্তর হারিয়েছে
+  Server: K1 নতুন → 500 + 100 = 600 → "K1 হয়েছে" লিখে রাখল → COMMIT
+  Client: retry (K1)
+  Server: K1 আগেই আছে → যোগ করে না → আগের উত্তর "OK, 600" দেয়
+  ফল: 600 ✅
+
+ক্ষেত্র ২: request-ই পৌঁছায়নি
+  Client: retry (K1)
+  Server: K1 নতুন → 500 + 100 = 600 → COMMIT
+  ফল: 600 ✅</code></pre>
+<p class="aa">দুই ক্ষেত্রেই ফল ৬০০, ৭০০ না। Client জানে না কোন ক্ষেত্র ঘটেছে, জানার দরকারও নেই। কোডে এটা <b>একই transaction-এ</b> হয়:</p>
+<pre><code>BEGIN;
+INSERT INTO idempotency_keys (key) VALUES ('K1');       -- K1 আগে থাকলে এখানেই আটকে যায়
+UPDATE accounts SET balance = balance + 100 WHERE id = 1;
+COMMIT;</code></pre>
+<table class="cmp"><tr><th>কাজ</th><th>key আছে?</th><th>retry-তে ফল</th></tr>
+<tr><td><code>balance + 100</code></td><td>না</td><td>700, 800... ❌</td></tr>
+<tr><td><code>balance + 100</code></td><td><b>হ্যাঁ</b></td><td>600 ✅</td></tr>
+<tr><td><code>balance = 600</code></td><td>লাগে না</td><td>600 ✅</td></tr></table>
+<p class="aa"><b>এক লাইনে:</b> কাজ নিজে idempotent না হলেও key থাকলে retry নিরাপদ, কারণ key-ই পাহারা দেয় যে কাজটা একবারই চলবে।</p>
+
+<p class="qq">প্রশ্ন ১৪: POST কি retry করা যায়?</p>
+<p class="aa"><b>এমনিতে না, key দিলে হ্যাঁ।</b> POST নিজে idempotent না, তাই key ছাড়া retry করলে duplicate তৈরি হতে পারে। এই কারণে অনেক HTTP library নিজে থেকে POST retry করে না (GET, PUT, DELETE করে)। POST-এ <code>Idempotency-Key</code> header দিলে retry নিরাপদ, Stripe-এর মতো payment API ঠিক এভাবেই কাজ করে।</p>
+
+<p class="qq">প্রশ্ন ১৫: PUT retry করলে কি কোনো সমস্যাই নেই?</p>
+<p class="aa">double charge-এর ধরনের সমস্যা নেই, কিন্তু একটা সূক্ষ্ম সতর্কতা আছে। Retry-র মাঝে অন্য কেউ ওই মান বদলে দিলে আপনার retry-টা তার পরিবর্তন মুছে দিতে পারে (last write wins)।</p>
+<pre><code>আপনি:    PUT {name: Karim}   (উত্তর হারাল)
+অন্য কেউ: PUT {name: Rahim}   ← এর মধ্যে বদলে দিল
+আপনি:    PUT {name: Karim}   (retry) → Rahim-এর পরিবর্তন মুছে গেল</code></pre>
+<p class="aa">এটা retry-র নয়, concurrent update-এর সমস্যা। সমাধান: <code>ETag</code> / <code>If-Match</code> বা version number দিয়ে শর্ত দেওয়া। টাকার ব্যালেন্সের মতো জায়গায় তাই সরাসরি PUT না করে "জমা/উত্তোলন" লেনদেন POST + key দিয়ে করা হয়।</p>
+
+<p class="qq">প্রশ্ন ১৬: Idempotency key ঠিক কখন লাগে?</p>
+<p class="aa"><b>যখন কাজটা নিজে idempotent না, মানে একই request বারবার চালালে প্রতিবার ফল বদলে যায়</b> (যেমন <code>balance = balance + 100</code>: 600 → 700 → 800)। পরীক্ষা: কাজটা ৩ বার চালালে ফল ১ বারের মতো থাকে? থাকলে key লাগে না, বদলালে লাগে।</p>
+<table class="cmp"><tr><th>কাজ</th><th>প্রতিবার ফল</th><th>key লাগে?</th></tr>
+<tr><td><code>balance = balance + 100</code></td><td>600 → 700 → 800</td><td><b>হ্যাঁ</b></td></tr>
+<tr><td><code>POST /orders</code> (নতুন অর্ডার)</td><td>#1 → #2 → #3</td><td><b>হ্যাঁ</b></td></tr>
+<tr><td>payment charge, টাকা পাঠানো</td><td>বারবার কাটে</td><td><b>হ্যাঁ</b></td></tr>
+<tr><td>ইমেইল / SMS পাঠানো</td><td>বারবার যায়</td><td><b>হ্যাঁ</b></td></tr>
+<tr><td><code>balance = 600</code> (PUT)</td><td>600 → 600 → 600</td><td>না</td></tr>
+<tr><td><code>DELETE</code>, <code>GET</code></td><td>অবস্থা একই</td><td>না</td></tr></table>
+<p class="aa"><b>দুটো সূক্ষ্ম কথা:</b></p>
+<ul>
+<li><b>Retry আসার সম্ভাবনা থাকলেই key দরকার।</b> API, queue, মোবাইল অ্যাপ বা payment-এ retry আসবেই, তাই সেখানে ধরে নিন লাগবে। যেখানে কেউ কখনো retry করবে না (একবার চালানো নিজের script), সেখানে না হলেও চলে।</li>
+<li><b>Key শুধু retry-র জন্য, নতুন কাজের জন্য নতুন key।</b> আজ ১০০ জমা: <code>K1</code>, কাল আরও ১০০ জমা: <code>K2</code>। একই key আবার দিলে server ভাববে এটা আগের কাজেরই retry।</li>
+</ul>
+<p class="aa"><b>Key ছাড়া বিকল্প:</b> কাজের নিজস্ব id থাকলে (<code>order_id</code>) <b>UNIQUE constraint</b>, status এক ধাপ এগোলে (<code>pending → paid</code>) <b>Conditional update</b>, কোনোটাই না থাকলে <b>Idempotency Key</b>।</p>
+
+<p class="qq">প্রশ্ন ১৭: সব মিলিয়ে সংক্ষেপে কোন কাজে কী করব?</p>
+<table class="cmp"><tr><th>কাজ</th><th>Method</th><th>retry করলে</th><th>key লাগে?</th></tr>
+<tr><td>তথ্য দেখা</td><td>GET</td><td>নিরাপদ</td><td>না</td></tr>
+<tr><td>"এই মানে সেট করো"</td><td>PUT</td><td>নিরাপদ</td><td>না</td></tr>
+<tr><td>মুছে ফেলা</td><td>DELETE</td><td>নিরাপদ (200 এর পর 404)</td><td>না</td></tr>
+<tr><td>নতুন তৈরি (order, payment)</td><td>POST</td><td>key ছাড়া ঝুঁকিপূর্ণ</td><td><b>হ্যাঁ</b></td></tr>
+<tr><td>যোগ/কমানো (<code>balance + 100</code>)</td><td>POST/PATCH</td><td>key ছাড়া ঝুঁকিপূর্ণ</td><td><b>হ্যাঁ</b></td></tr></table>
+
+
+</div>`}
+];
+
+/* ---------- build page ---------- */
+const app=document.getElementById('app'),partsNav=document.getElementById('parts');
+PARTS.forEach((pt,i)=>{const a=document.createElement('a');a.href='#s'+i;a.innerHTML=`<b>${pt[0]}</b>${pt[1]}`;partsNav.appendChild(a);});
+TOPICS.forEach((t,i)=>{
+  const card=document.createElement('article');card.className='q';card.id='s'+i;
+  card.innerHTML=`<h3><span class="num">${t.p+1}</span><span>${t.q}</span></h3><p class="ans">${t.ans}</p>${t.pts&&t.pts.length?'<ul>'+t.pts.map(x=>`<li>${x}</li>`).join('')+'</ul>':''}${t.extra?`<div class="extra">${t.extra}</div>`:''}${t.tabs?'<div class="viz"></div>':''}`;
+  app.appendChild(card);
+  if(t.tabs)mount(card.querySelector('.viz'),t);
+});
+
+</script>
+</body>
+</html>
