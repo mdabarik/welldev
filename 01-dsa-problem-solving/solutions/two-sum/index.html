@@ -266,24 +266,40 @@ let nums = [], target = 0, steps = [], cur = 0, timer = null;
 function layout() {
   const rowW = nums.length * CELL + (nums.length - 1) * GAP;
   const x0 = Math.max(20, (W - rowW) / 2);
-  return { ax: i => x0 + i * (CELL + GAP), mx: k => 20 + k * (CELL + GAP) };
+  return { ax: i => x0 + i * (CELL + GAP) };
 }
+
+const TBL = { x: 20, y: 206, colW: 120, headH: 34, rowH: 32 };
 
 function initSvg() {
   const width = Math.max(W, nums.length * (CELL + GAP) + 40);
-  svg.attr('viewBox', `0 0 ${width} 330`).selectAll('*').remove();
+  const maxRows = Math.max(1, nums.length - 1);
+  const height = TBL.y + TBL.headH + maxRows * TBL.rowH + 44;
+  svg.attr('viewBox', `0 0 ${width} ${height}`).selectAll('*').remove();
   svg.append('text').attr('x', 20).attr('y', 26).attr('class', 'lbl').text('nums');
   svg.append('text').attr('x', width - 20).attr('y', 26).attr('text-anchor', 'end').attr('class', 'lbl tgt').text(`target = ${target}`);
   svg.append('g').attr('class', 'arr');
   svg.append('g').attr('class', 'ptr');
-  svg.append('text').attr('x', 20).attr('y', 196).attr('class', 'lbl').text('mp  (value → index)');
+  svg.append('text').attr('x', TBL.x).attr('y', TBL.y - 10).attr('class', 'lbl').text('unordered_map mp');
+
+  const head = svg.append('g').attr('class', 'map-head');
+  head.append('rect').attr('x', TBL.x).attr('y', TBL.y).attr('width', TBL.colW * 2).attr('height', TBL.headH).attr('rx', 8)
+    .attr('fill', 'var(--accent-soft)').attr('stroke', 'var(--accent)').attr('stroke-width', 1.5);
+  head.append('line').attr('x1', TBL.x + TBL.colW).attr('x2', TBL.x + TBL.colW).attr('y1', TBL.y).attr('y2', TBL.y + TBL.headH)
+    .attr('stroke', 'var(--accent)').attr('stroke-width', 1.5);
+  [['key', 'nums[i]'], ['value', 'index i']].forEach(([t, sub], c) => {
+    const tx = head.append('text').attr('x', TBL.x + c * TBL.colW + TBL.colW / 2).attr('y', TBL.y + 22).attr('text-anchor', 'middle')
+      .attr('fill', 'var(--accent-dark)').attr('font-size', 14).attr('font-weight', 800).attr('font-family', 'Inter, system-ui, sans-serif');
+    tx.append('tspan').text(t);
+    tx.append('tspan').attr('dx', 5).attr('font-size', 11).attr('font-weight', 600).attr('fill', 'var(--muted)').text(`(${sub})`);
+  });
   svg.append('g').attr('class', 'map');
-  svg.append('text').attr('x', 20).attr('y', 312).attr('class', 'lbl res-lbl');
+  svg.append('text').attr('x', TBL.x).attr('y', height - 14).attr('class', 'lbl res-lbl');
   svg.selectAll('.lbl').attr('fill', 'var(--muted)').attr('font-size', 13).attr('font-weight', 700).attr('font-family', 'Inter, system-ui, sans-serif');
 }
 
 function draw() {
-  const s = steps[cur], { ax, mx } = layout();
+  const s = steps[cur], { ax } = layout();
   const t = svg.transition().duration(380);
   const inPair = i => s.pair && s.pair.includes(i);
   const cellFill = i => inPair(i) ? 'var(--found-soft)' : i === s.i ? 'var(--accent-soft)' : 'var(--surface)';
@@ -314,19 +330,28 @@ function draw() {
 
   const entries = s.map.map(([k, v], idx) => ({ k, v, idx }));
   const mapG = svg.select('.map');
+  const rowY = idx => TBL.y + TBL.headH + idx * TBL.rowH;
+  const mono = 'JetBrains Mono, ui-monospace, monospace';
   mapG.selectAll('text.empty').data(entries.length ? [] : [0]).join('text').attr('class', 'empty')
-    .attr('x', 20).attr('y', 240).attr('fill', 'var(--muted)').attr('font-size', 14).text('{ } খালি');
+    .attr('x', TBL.x + TBL.colW).attr('y', rowY(0) + 21).attr('text-anchor', 'middle')
+    .attr('fill', 'var(--muted)').attr('font-size', 13).text('খালি — কোনো entry নেই');
   const me = mapG.selectAll('g.e').data(entries, d => d.k).join(enter => {
-    const g = enter.append('g').attr('class', 'e').attr('opacity', 0).attr('transform', d => `translate(${mx(d.idx)},226)`);
-    g.append('rect').attr('y', -14).attr('width', CELL).attr('height', CELL).attr('rx', 12).attr('stroke-width', 2);
-    g.append('text').attr('class', 'k').attr('x', CELL / 2).attr('y', 18).attr('text-anchor', 'middle').attr('font-size', 19).attr('font-weight', 800).attr('fill', 'var(--text)').attr('font-family', 'JetBrains Mono, ui-monospace, monospace').text(d => d.k);
-    g.append('text').attr('x', CELL / 2).attr('y', 38).attr('text-anchor', 'middle').attr('font-size', 11).attr('fill', 'var(--muted)').attr('font-family', 'JetBrains Mono, ui-monospace, monospace').text(d => `→ ${d.v}`);
+    const g = enter.append('g').attr('class', 'e').attr('opacity', 0).attr('transform', d => `translate(${TBL.x - 14},${rowY(d.idx)})`);
+    g.append('rect').attr('width', TBL.colW * 2).attr('height', TBL.rowH).attr('stroke-width', 1.5);
+    g.append('line').attr('x1', TBL.colW).attr('x2', TBL.colW).attr('y2', TBL.rowH).attr('stroke', 'var(--line)').attr('stroke-width', 1.5);
+    g.append('text').attr('class', 'k').attr('x', TBL.colW / 2).attr('y', 21).attr('text-anchor', 'middle').attr('font-size', 15).attr('font-weight', 800).attr('fill', 'var(--text)').attr('font-family', mono).text(d => d.k);
+    g.append('text').attr('class', 'v').attr('x', TBL.colW * 1.5).attr('y', 21).attr('text-anchor', 'middle').attr('font-size', 15).attr('font-weight', 600).attr('fill', 'var(--muted)').attr('font-family', mono).text(d => d.v);
     return g;
   });
-  me.transition(t).attr('opacity', 1).attr('transform', d => `translate(${mx(d.idx)},${d.k === s.added ? 216 : 216})`);
+  me.transition(t).attr('opacity', 1).attr('transform', d => `translate(${TBL.x},${rowY(d.idx)})`);
   me.select('rect').transition(t)
     .attr('fill', d => d.k === s.hit ? 'var(--found-soft)' : d.k === s.added ? 'var(--accent-soft)' : 'var(--surface)')
     .attr('stroke', d => d.k === s.hit ? 'var(--found)' : d.k === s.added ? 'var(--accent)' : 'var(--line)');
+  mapG.selectAll('g.e').filter(d => d.k === s.hit || d.k === s.added).raise();
+  mapG.selectAll('text.look').data(s.look !== undefined && s.hit === undefined ? [s.look] : []).join('text').attr('class', 'look')
+    .attr('x', TBL.x + TBL.colW * 2 + 14).attr('y', TBL.y + 22).attr('fill', 'var(--miss)').attr('font-size', 13).attr('font-weight', 700)
+    .attr('font-family', mono).text(d => `find(${d}) → নেই`);
+  mapG.selectAll('g.e').select('.k').attr('fill', d => d.k === s.hit ? 'var(--found)' : 'var(--text)');
 
   svg.select('.res-lbl').text(`res = [${s.res.join(', ')}]`).attr('fill', s.res.length ? 'var(--found)' : 'var(--muted)');
 
