@@ -155,7 +155,7 @@
           <span class="problem-number">${String(number).padStart(2, '0')}</span>
           <input class="problem-check" type="checkbox" aria-label="${escapeHtml(problem.title)} complete" ${checked ? 'checked' : ''}>
           <div class="problem-main">
-            <a class="problem-title" href="${escapeHtml(problem.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(problem.title)}</a>
+            <a class="problem-title" href="${escapeHtml(problem.solution || problem.url)}"${problem.solution ? '' : ' target="_blank" rel="noopener noreferrer"'}>${escapeHtml(problem.title)}</a>
             <div class="problem-meta">
               <span class="badge difficulty ${problem.difficulty}">${difficultyNames[problem.difficulty]}</span>
               ${state.source === 'all' ? listBadges(problem) : ''}
