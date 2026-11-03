@@ -155,12 +155,12 @@
           <span class="problem-number">${String(number).padStart(2, '0')}</span>
           <input class="problem-check" type="checkbox" aria-label="${escapeHtml(problem.title)} complete" ${checked ? 'checked' : ''}>
           <div class="problem-main">
-            <a class="problem-title" href="${escapeHtml(problem.solution || problem.url)}"${problem.solution ? '' : ' target="_blank" rel="noopener noreferrer"'}>${escapeHtml(problem.title)}</a>
+            <a class="problem-title" href="${escapeHtml(problem.solution || problem.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(problem.title)}</a>
             <div class="problem-meta">
               <span class="badge difficulty ${problem.difficulty}">${difficultyNames[problem.difficulty]}</span>
               ${state.source === 'all' ? listBadges(problem) : ''}
               ${problem.premium ? '<span class="badge premium">Premium</span>' : ''}
-              ${problem.solution ? `<a class="badge solution-link" href="${escapeHtml(problem.solution)}">Solution →</a>` : ''}
+              ${problem.solution ? `<a class="badge solution-link" href="${escapeHtml(problem.solution)}" target="_blank" rel="noopener noreferrer">Solution →</a>` : ''}
             </div>
           </div>
           <span class="problem-category" title="${escapeHtml(category.name)}">${escapeHtml(category.name)}</span>
