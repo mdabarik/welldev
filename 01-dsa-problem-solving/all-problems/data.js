@@ -28,6 +28,7 @@ window.WELLDEV_PROBLEMS = {
     "two-sum": {
       "title": "Two Sum",
       "url": "https://leetcode.com/problems/two-sum/",
+      "solution": "../solutions/two-sum/index.html",
       "difficulty": "E",
       "premium": false,
       "lists": [

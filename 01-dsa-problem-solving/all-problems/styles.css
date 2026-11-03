@@ -153,6 +153,8 @@ kbd { position: absolute; top: 50%; right: 14px; min-width: 25px; padding: 1px 7
 .list-badge.LC150 { background: var(--leetcode); }
 .list-badge.NC150 { background: var(--neetcode); }
 .premium { color: var(--muted); border: 1px dashed var(--muted); background: transparent; }
+.solution-link { color: var(--accent-dark); background: var(--accent-soft); text-decoration: none; }
+.solution-link:hover { color: #fff; background: var(--accent); }
 .problem-category { max-width: 190px; overflow: hidden; color: var(--muted); text-overflow: ellipsis; font-size: 12px; font-weight: 650; white-space: nowrap; }
 .external-arrow { color: var(--muted); font-size: 18px; text-decoration: none; }
 .external-arrow:hover { color: var(--accent); }

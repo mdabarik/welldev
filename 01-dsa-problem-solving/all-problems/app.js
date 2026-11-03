@@ -160,6 +160,7 @@
               <span class="badge difficulty ${problem.difficulty}">${difficultyNames[problem.difficulty]}</span>
               ${state.source === 'all' ? listBadges(problem) : ''}
               ${problem.premium ? '<span class="badge premium">Premium</span>' : ''}
+              ${problem.solution ? `<a class="badge solution-link" href="${escapeHtml(problem.solution)}">Solution →</a>` : ''}
             </div>
           </div>
           <span class="problem-category" title="${escapeHtml(category.name)}">${escapeHtml(category.name)}</span>

@@ -1,0 +1,394 @@
+<!doctype html>
+<html lang="bn">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Two Sum solution: hash map দিয়ে O(n) সমাধান, example আর D3 step-by-step animation, C++ code।">
+  <meta name="color-scheme" content="light dark">
+  <title>Two Sum Solution · WellDev</title>
+  <link rel="stylesheet" href="../../all-problems/styles.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+  <style>
+    :root { --code-bg: #ffffff; --code-line: #f3f4f8; --code-hl: #fff4c2; --code-hl-bar: #e5a50a;
+      --tk-kw: #0000ff; --tk-ctl: #af00db; --tk-ty: #267f99; --tk-fn: #795e26; --tk-var: #001080; --tk-num: #098658; --tk-txt: #1f1f1f;
+      --found: #087f5b; --found-soft: #e7f8f1; --miss: #c2255c; --miss-soft: #fff0f5; }
+    :root[data-theme="dark"] { --code-bg: #1e1e1e; --code-line: #252526; --code-hl: #3a3d1e; --code-hl-bar: #e5c07b;
+      --tk-kw: #569cd6; --tk-ctl: #c586c0; --tk-ty: #4ec9b0; --tk-fn: #dcdcaa; --tk-var: #9cdcfe; --tk-num: #b5cea8; --tk-txt: #d4d4d4;
+      --found: #5ee0b1; --found-soft: #17352d; --miss: #ff87ad; --miss-soft: #3e1d2a; }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) { --code-bg: #1e1e1e; --code-line: #252526; --code-hl: #3a3d1e; --code-hl-bar: #e5c07b;
+        --tk-kw: #569cd6; --tk-ctl: #c586c0; --tk-ty: #4ec9b0; --tk-fn: #dcdcaa; --tk-var: #9cdcfe; --tk-num: #b5cea8; --tk-txt: #d4d4d4;
+        --found: #5ee0b1; --found-soft: #17352d; --miss: #ff87ad; --miss-soft: #3e1d2a; }
+    }
+
+    .hero { grid-template-columns: minmax(0, 1fr); }
+    .hero .badges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 16px; }
+    .hero .badge { min-height: 24px; padding: 3px 10px; font-size: 11px; }
+    .hero a.badge { color: #fff; background: rgba(255,255,255,.16); text-decoration: none; }
+
+    .card { margin-top: 18px; padding: clamp(18px, 3vw, 28px); border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow); }
+    .card h2 { margin: 0 0 10px; font-size: 21px; letter-spacing: -.02em; }
+    .card p { margin: 8px 0; }
+    .muted { color: var(--muted); }
+    code.inline { padding: 1px 6px; border-radius: 6px; background: var(--surface-soft); font-family: "JetBrains Mono", ui-monospace, Menlo, monospace; font-size: .9em; }
+
+    .examples { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; margin-top: 12px; }
+    .example { padding: 14px 16px; border-radius: 14px; background: var(--surface-soft); font-family: "JetBrains Mono", ui-monospace, Menlo, monospace; font-size: 13px; line-height: 1.7; }
+    .example b { font-family: Inter, system-ui, sans-serif; display: block; margin-bottom: 4px; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+
+    .idea { display: grid; gap: 10px; margin: 12px 0 0; padding: 0; list-style: none; counter-reset: idea; }
+    .idea li { position: relative; padding-left: 38px; }
+    .idea li::before { counter-increment: idea; content: counter(idea); position: absolute; left: 0; top: 1px; display: grid; width: 26px; height: 26px; place-items: center; border-radius: 8px; color: var(--accent-dark); background: var(--accent-soft); font-size: 13px; font-weight: 800; }
+
+    .viz-grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+    .inputs { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; margin-bottom: 14px; }
+    .inputs label { display: grid; gap: 4px; color: var(--muted); font-size: 12px; font-weight: 700; }
+    .inputs input { min-height: 38px; padding: 6px 11px; color: var(--text); border: 1px solid var(--line); border-radius: 10px; background: var(--surface-soft); font-family: "JetBrains Mono", ui-monospace, Menlo, monospace; font-size: 14px; }
+    .inputs input#nums { width: 210px; }
+    .inputs input#target { width: 80px; }
+    .btn { min-height: 38px; padding: 7px 14px; color: var(--text); border: 1px solid var(--line); border-radius: 10px; background: var(--surface); font-weight: 700; cursor: pointer; }
+    .btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent-dark); }
+    .btn:disabled { opacity: .45; cursor: default; }
+    .btn.primary { color: #fff; border-color: var(--accent); background: var(--accent); }
+    .btn.primary:hover { color: #fff; background: var(--accent-dark); }
+    .input-error { width: 100%; margin: 0; color: var(--miss); font-size: 13px; }
+
+    .stage { border: 1px solid var(--line); border-radius: 16px; background: var(--surface-soft); }
+    .stage svg { display: block; width: 100%; height: auto; }
+    .status { min-height: 74px; margin-top: 12px; padding: 12px 14px; border-left: 4px solid var(--accent); border-radius: 10px; background: var(--accent-soft); }
+    .status.found { border-color: var(--found); background: var(--found-soft); }
+    .status.miss { border-color: var(--miss); background: var(--miss-soft); }
+    .status .step-no { color: var(--muted); font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+    .status .msg { margin-top: 3px; }
+    .status .calc { margin-top: 4px; font-family: "JetBrains Mono", ui-monospace, Menlo, monospace; font-size: 13px; }
+    .controls-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 12px; }
+    .controls-row input[type=range] { flex: 1; min-width: 120px; accent-color: var(--accent); }
+
+    .code { overflow-x: auto; padding: 12px 0; border: 1px solid var(--line); border-radius: 16px; background: var(--code-bg); font-family: "JetBrains Mono", ui-monospace, Menlo, monospace; font-size: 13px; line-height: 1.65; }
+    .code .ln { display: flex; min-width: max-content; padding-right: 16px; border-left: 3px solid transparent; transition: background .2s; }
+    .code .ln.active { border-left-color: var(--code-hl-bar); background: var(--code-hl); }
+    .code .no { width: 40px; padding-right: 14px; color: var(--muted); text-align: right; user-select: none; opacity: .7; }
+    .code .src { white-space: pre; color: var(--tk-txt); }
+    .tk-kw { color: var(--tk-kw); } .tk-ctl { color: var(--tk-ctl); } .tk-ty { color: var(--tk-ty); }
+    .tk-fn { color: var(--tk-fn); } .tk-var { color: var(--tk-var); } .tk-num { color: var(--tk-num); }
+    .code-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+    .code-head span { color: var(--muted); font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+
+    table.cx { width: 100%; margin-top: 8px; border-collapse: collapse; font-size: 14px; }
+    table.cx th, table.cx td { padding: 9px 10px; border-bottom: 1px solid var(--line); text-align: left; }
+    table.cx th { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .06em; }
+
+    @media (max-width: 860px) { .viz-grid { grid-template-columns: minmax(0, 1fr); } }
+    @media (max-width: 520px) { .inputs input#nums { width: 100%; } .inputs label:first-child { flex: 1; } }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <nav class="topbar" aria-label="Primary navigation">
+      <a class="brand" href="../../../index.html" aria-label="WellDev home">
+        <span class="brand-mark" aria-hidden="true">W</span>
+        <span>WellDev</span>
+      </a>
+      <button class="icon-button" id="theme-toggle" type="button" aria-label="Theme পরিবর্তন করুন">
+        <span class="theme-icon" aria-hidden="true">◐</span>
+        <span class="theme-label">Theme</span>
+      </button>
+    </nav>
+
+    <header class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow"><a href="../../all-problems/index.html" style="color:inherit">Problem Lists</a> · Arrays &amp; Hashing</p>
+        <h1>Two Sum</h1>
+        <p class="hero-description">Array-র দুইটা সংখ্যা খুঁজতে হবে যাদের যোগফল <code>target</code>। Hash map দিয়ে এক pass-এই উত্তর: O(n) time।</p>
+        <div class="badges">
+          <span class="badge difficulty E">Easy</span>
+          <span class="badge list-badge B75">Blind 75</span>
+          <span class="badge list-badge LC150">Top 150</span>
+          <span class="badge list-badge NC150">NeetCode 150</span>
+          <a class="badge" href="https://leetcode.com/problems/two-sum/" target="_blank" rel="noopener noreferrer">LeetCode ↗</a>
+        </div>
+      </div>
+    </header>
+
+    <section class="card">
+      <h2>Problem</h2>
+      <p>একটা integer array <code class="inline">nums</code> আর একটা integer <code class="inline">target</code> দেওয়া আছে। এমন দুইটা <b>আলাদা index</b> return করো যাদের মান যোগ করলে <code class="inline">target</code> হয়। ঠিক একটাই উত্তর আছে, আর একই element দুইবার ব্যবহার করা যাবে না। Index যেকোনো order-এ return করা যায়।</p>
+      <div class="examples">
+        <div class="example"><b>Example 1</b>nums = [2,7,11,15], target = 9<br>Output: [1,0]<br><span class="muted">2 + 7 = 9</span></div>
+        <div class="example"><b>Example 2</b>nums = [3,2,4], target = 6<br>Output: [2,1]<br><span class="muted">2 + 4 = 6</span></div>
+        <div class="example"><b>Example 3</b>nums = [3,3], target = 6<br>Output: [1,0]<br><span class="muted">3 + 3 = 6</span></div>
+      </div>
+      <p class="muted" style="font-size:13px">এই code আগে <code class="inline">second</code> (বর্তমান index) push করে, তারপর <code class="inline">first</code>, তাই output-এ বড় index আগে আসে। LeetCode যেকোনো order accept করে।</p>
+    </section>
+
+    <section class="card">
+      <h2>Idea</h2>
+      <ul class="idea">
+        <li>Brute force-এ সব জোড়া check করলে O(n²)। প্রতিটা <code class="inline">nums[i]</code>-এর জন্য আসলে একটাই প্রশ্ন: <b><code class="inline">target - nums[i]</code> (complement) আগে দেখেছি কি না?</b></li>
+        <li>আগে দেখা সংখ্যাগুলো একটা <code class="inline">unordered_map</code>-এ রাখি: <b>value → index</b>। তাহলে "আগে দেখেছি কি না" check করা O(1)।</li>
+        <li>Complement map-এ না থাকলে বর্তমান সংখ্যাটা map-এ রাখি। থাকলে উত্তর পেয়ে গেছি: <code class="inline">mp[complement]</code> আর <code class="inline">i</code>।</li>
+        <li>আগে check, পরে insert: তাই একই element নিজের সাথে জোড়া হয় না। <code class="inline">[3,3]</code>-এ প্রথম 3 map-এ যায়, দ্বিতীয় 3 সেটাকে খুঁজে পায়।</li>
+      </ul>
+    </section>
+
+    <section class="card">
+      <h2>Step-by-step animation</h2>
+      <div class="inputs">
+        <label>nums (comma দিয়ে)<input id="nums" value="3, 5, 9, 2, 7" inputmode="numeric" autocomplete="off"></label>
+        <label>target<input id="target" value="9" inputmode="numeric" autocomplete="off"></label>
+        <button class="btn" id="apply" type="button">Apply</button>
+        <button class="btn" data-example="2,7,11,15|9" type="button">Ex 1</button>
+        <button class="btn" data-example="3,2,4|6" type="button">Ex 2</button>
+        <button class="btn" data-example="3,3|6" type="button">Ex 3</button>
+        <p class="input-error" id="input-error" hidden></p>
+      </div>
+      <div class="viz-grid">
+        <div>
+          <div class="stage"><svg id="viz" role="img" aria-label="Two Sum animation"></svg></div>
+          <div class="status" id="status" aria-live="polite">
+            <div class="step-no" id="step-no"></div>
+            <div class="msg" id="msg"></div>
+            <div class="calc" id="calc"></div>
+          </div>
+          <div class="controls-row">
+            <button class="btn" id="reset" type="button" aria-label="শুরুতে যাও">⏮</button>
+            <button class="btn" id="prev" type="button">◀ Prev</button>
+            <button class="btn primary" id="play" type="button">▶ Play</button>
+            <button class="btn" id="next" type="button">Next ▶</button>
+            <input type="range" id="scrub" min="0" value="0" aria-label="Step">
+          </div>
+        </div>
+        <div>
+          <div class="code-head"><span>C++ · Hash map</span><button class="btn" id="copy" type="button">Copy</button></div>
+          <div class="code" id="code"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Complexity</h2>
+      <table class="cx">
+        <thead><tr><th>Approach</th><th>Time</th><th>Space</th></tr></thead>
+        <tbody>
+          <tr><td>Brute force (দুইটা loop)</td><td>O(n²)</td><td>O(1)</td></tr>
+          <tr><td><b>One-pass hash map (এই code)</b></td><td><b>O(n)</b></td><td><b>O(n)</b></td></tr>
+        </tbody>
+      </table>
+      <p class="muted">প্রতিটা element একবার দেখা হয়, আর <code class="inline">find</code> ও insert দুটোই average O(1)। Map-এ সর্বোচ্চ n-1টা entry থাকে।</p>
+    </section>
+  </div>
+
+<script>
+const CODE = `class Solution {
+public:
+    vector<int> twoSum(vector<int>& nums, int target) {
+        int n = nums.size();
+        vector<int> res;
+        unordered_map<int,int> mp;
+        for (int i=0; i<n; i++) {
+            int complement = target - nums[i];
+            if (mp.find(complement) == mp.end()) {
+                mp[nums[i]] = i;
+            } else {
+                int first = mp[complement];
+                int second = i;
+                res.push_back(second);
+                res.push_back(first);
+                break;
+            }
+        }
+        return res;
+    }
+};`;
+
+(function theme() {
+  const root = document.documentElement;
+  try { const t = localStorage.getItem('welldev-theme'); if (t === 'light' || t === 'dark') root.dataset.theme = t; } catch (e) {}
+  document.getElementById('theme-toggle').addEventListener('click', () => {
+    const systemDark = matchMedia('(prefers-color-scheme: dark)').matches;
+    const dark = root.dataset.theme ? root.dataset.theme === 'dark' : systemDark;
+    root.dataset.theme = dark ? 'light' : 'dark';
+    try { localStorage.setItem('welldev-theme', root.dataset.theme); } catch (e) {}
+  });
+})();
+
+const esc = s => s.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+function highlight(line) {
+  const re = /\b(class|public|int)\b|\b(for|if|else|break|return)\b|\b(vector|unordered_map|Solution)\b|\b(twoSum|size|find|end|push_back)\b|\b(nums|target|n|res|mp|i|complement|first|second)\b|\b(\d+)\b/g;
+  let out = '', last = 0, m;
+  while ((m = re.exec(line))) {
+    out += esc(line.slice(last, m.index));
+    const cls = ['kw', 'ctl', 'ty', 'fn', 'var', 'num'][m.slice(1).findIndex(Boolean)];
+    out += `<span class="tk-${cls}">${esc(m[0])}</span>`;
+    last = re.lastIndex;
+  }
+  return out + esc(line.slice(last));
+}
+const codeEl = document.getElementById('code');
+codeEl.innerHTML = CODE.split('\n').map((l, i) =>
+  `<div class="ln" data-line="${i + 1}"><span class="no">${i + 1}</span><span class="src">${highlight(l) || ' '}</span></div>`).join('');
+document.getElementById('copy').addEventListener('click', e => {
+  navigator.clipboard.writeText(CODE).then(() => { e.target.textContent = 'Copied'; setTimeout(() => e.target.textContent = 'Copy', 1200); });
+});
+
+// Run the C++ logic and record one frame per meaningful line.
+function buildSteps(nums, target) {
+  const steps = [], mp = new Map();
+  const snap = () => [...mp.entries()];
+  const push = (o) => steps.push({ map: snap(), res: [], ...o });
+  push({ line: [4, 5, 6], i: null, kind: 'info', msg: `n = ${nums.length}, খালি <b>res</b> আর খালি map <b>mp</b> (value → index) তৈরি।` });
+  for (let i = 0; i < nums.length; i++) {
+    const c = target - nums[i];
+    push({ line: [7], i, kind: 'info', msg: `Loop: <b>i = ${i}</b>, nums[${i}] = ${nums[i]}` });
+    push({ line: [8], i, comp: c, kind: 'info', msg: `Complement বের করি: এই সংখ্যার সাথে কত যোগ করলে ${target} হবে?`, calc: `complement = ${target} - ${nums[i]} = ${c}` });
+    if (!mp.has(c)) {
+      push({ line: [9], i, comp: c, look: c, kind: 'miss', msg: `Map-এ <b>${c}</b> নেই, মানে এর জোড়া আগে দেখিনি।`, calc: `mp.find(${c}) == mp.end() → true` });
+      mp.set(nums[i], i);
+      push({ line: [10], i, comp: c, added: nums[i], kind: 'info', msg: `পরে কেউ যেন এটা খুঁজে পায়, তাই <b>${nums[i]}</b> → index ${i} map-এ রাখি।`, calc: `mp[${nums[i]}] = ${i}` });
+    } else {
+      const first = mp.get(c);
+      push({ line: [9], i, comp: c, look: c, hit: c, kind: 'found', msg: `Map-এ <b>${c}</b> আছে! index ${first}-এ ${c}, আর এখন index ${i}-এ ${nums[i]}।`, calc: `mp.find(${c}) != mp.end() → else branch` });
+      push({ line: [12, 13], i, comp: c, hit: c, pair: [first, i], kind: 'found', msg: `first = mp[${c}] = ${first}, second = i = ${i}`, calc: `${nums[first]} + ${nums[i]} = ${target} ✓` });
+      push({ line: [14, 15], i, comp: c, hit: c, pair: [first, i], res: [i, first], kind: 'found', msg: `আগে second, পরে first push: res = [${i}, ${first}]` });
+      push({ line: [16], i, hit: c, pair: [first, i], res: [i, first], kind: 'found', msg: `উত্তর পেয়ে গেছি, তাই <b>break</b>: বাকি element দেখার দরকার নেই।` });
+      push({ line: [19], i: null, hit: c, pair: [first, i], res: [i, first], kind: 'found', msg: `Return <b>[${i}, ${first}]</b>`, calc: `nums[${i}] + nums[${first}] = ${nums[i]} + ${nums[first]} = ${target}` });
+      return steps;
+    }
+  }
+  push({ line: [19], i: null, kind: 'miss', msg: `Loop শেষ, কোনো জোড়া পাওয়া যায়নি: খালি res return।`, calc: `return []` });
+  return steps;
+}
+
+const svg = d3.select('#viz');
+const W = 640, CELL = 62, GAP = 8;
+let nums = [], target = 0, steps = [], cur = 0, timer = null;
+
+function layout() {
+  const rowW = nums.length * CELL + (nums.length - 1) * GAP;
+  const x0 = Math.max(20, (W - rowW) / 2);
+  return { ax: i => x0 + i * (CELL + GAP), mx: k => 20 + k * (CELL + GAP) };
+}
+
+function initSvg() {
+  const width = Math.max(W, nums.length * (CELL + GAP) + 40);
+  svg.attr('viewBox', `0 0 ${width} 330`).selectAll('*').remove();
+  svg.append('text').attr('x', 20).attr('y', 26).attr('class', 'lbl').text('nums');
+  svg.append('text').attr('x', width - 20).attr('y', 26).attr('text-anchor', 'end').attr('class', 'lbl tgt').text(`target = ${target}`);
+  svg.append('g').attr('class', 'arr');
+  svg.append('g').attr('class', 'ptr');
+  svg.append('text').attr('x', 20).attr('y', 196).attr('class', 'lbl').text('mp  (value → index)');
+  svg.append('g').attr('class', 'map');
+  svg.append('text').attr('x', 20).attr('y', 312).attr('class', 'lbl res-lbl');
+  svg.selectAll('.lbl').attr('fill', 'var(--muted)').attr('font-size', 13).attr('font-weight', 700).attr('font-family', 'Inter, system-ui, sans-serif');
+}
+
+function draw() {
+  const s = steps[cur], { ax, mx } = layout();
+  const t = svg.transition().duration(380);
+  const inPair = i => s.pair && s.pair.includes(i);
+  const cellFill = i => inPair(i) ? 'var(--found-soft)' : i === s.i ? 'var(--accent-soft)' : 'var(--surface)';
+  const cellStroke = i => inPair(i) ? 'var(--found)' : i === s.i ? 'var(--accent)' : 'var(--line)';
+
+  const cells = svg.select('.arr').selectAll('g.cell').data(nums.map((v, i) => ({ v, i })), d => d.i)
+    .join(enter => {
+      const g = enter.append('g').attr('class', 'cell');
+      g.append('rect').attr('y', 50).attr('width', CELL).attr('height', CELL).attr('rx', 12).attr('stroke-width', 2);
+      g.append('text').attr('class', 'v').attr('y', 50 + CELL / 2 + 7).attr('text-anchor', 'middle').attr('font-size', 21).attr('font-weight', 800).attr('fill', 'var(--text)').attr('font-family', 'JetBrains Mono, ui-monospace, monospace');
+      g.append('text').attr('class', 'ix').attr('y', 46 + CELL + 20).attr('text-anchor', 'middle').attr('font-size', 12).attr('fill', 'var(--muted)').attr('font-family', 'JetBrains Mono, ui-monospace, monospace');
+      return g;
+    });
+  cells.attr('transform', d => `translate(${ax(d.i)},0)`);
+  cells.select('.v').attr('x', CELL / 2).text(d => d.v);
+  cells.select('.ix').attr('x', CELL / 2).text(d => d.i);
+  cells.select('rect').transition(t).attr('fill', d => cellFill(d.i)).attr('stroke', d => cellStroke(d.i))
+    .attr('opacity', d => s.i !== null && d.i > s.i && !inPair(d.i) ? 0.45 : 1);
+
+  const ptr = svg.select('.ptr').selectAll('g.p').data(s.i === null ? [] : [s.i]).join(enter => {
+    const g = enter.append('g').attr('class', 'p').attr('opacity', 0);
+    g.append('path').attr('d', `M${CELL / 2},134 l-7,10 h14 z`).attr('fill', 'var(--accent)');
+    g.append('text').attr('class', 'pt').attr('x', CELL / 2).attr('y', 162).attr('text-anchor', 'middle').attr('font-size', 13).attr('font-weight', 800).attr('fill', 'var(--accent)').attr('font-family', 'JetBrains Mono, ui-monospace, monospace');
+    return g;
+  });
+  ptr.select('.pt').text(s.comp !== undefined ? `i  · need ${s.comp}` : 'i');
+  ptr.transition(t).attr('opacity', 1).attr('transform', d => `translate(${ax(d)},0)`);
+
+  const entries = s.map.map(([k, v], idx) => ({ k, v, idx }));
+  const mapG = svg.select('.map');
+  mapG.selectAll('text.empty').data(entries.length ? [] : [0]).join('text').attr('class', 'empty')
+    .attr('x', 20).attr('y', 240).attr('fill', 'var(--muted)').attr('font-size', 14).text('{ } খালি');
+  const me = mapG.selectAll('g.e').data(entries, d => d.k).join(enter => {
+    const g = enter.append('g').attr('class', 'e').attr('opacity', 0).attr('transform', d => `translate(${mx(d.idx)},226)`);
+    g.append('rect').attr('y', -14).attr('width', CELL).attr('height', CELL).attr('rx', 12).attr('stroke-width', 2);
+    g.append('text').attr('class', 'k').attr('x', CELL / 2).attr('y', 18).attr('text-anchor', 'middle').attr('font-size', 19).attr('font-weight', 800).attr('fill', 'var(--text)').attr('font-family', 'JetBrains Mono, ui-monospace, monospace').text(d => d.k);
+    g.append('text').attr('x', CELL / 2).attr('y', 38).attr('text-anchor', 'middle').attr('font-size', 11).attr('fill', 'var(--muted)').attr('font-family', 'JetBrains Mono, ui-monospace, monospace').text(d => `→ ${d.v}`);
+    return g;
+  });
+  me.transition(t).attr('opacity', 1).attr('transform', d => `translate(${mx(d.idx)},${d.k === s.added ? 216 : 216})`);
+  me.select('rect').transition(t)
+    .attr('fill', d => d.k === s.hit ? 'var(--found-soft)' : d.k === s.added ? 'var(--accent-soft)' : 'var(--surface)')
+    .attr('stroke', d => d.k === s.hit ? 'var(--found)' : d.k === s.added ? 'var(--accent)' : 'var(--line)');
+
+  svg.select('.res-lbl').text(`res = [${s.res.join(', ')}]`).attr('fill', s.res.length ? 'var(--found)' : 'var(--muted)');
+
+  const status = document.getElementById('status');
+  status.className = 'status' + (s.kind === 'found' ? ' found' : s.kind === 'miss' ? ' miss' : '');
+  document.getElementById('step-no').textContent = `Step ${cur + 1} / ${steps.length} · line ${s.line.join(', ')}`;
+  document.getElementById('msg').innerHTML = s.msg;
+  document.getElementById('calc').textContent = s.calc || '';
+
+  codeEl.querySelectorAll('.ln').forEach(el => el.classList.toggle('active', s.line.includes(+el.dataset.line)));
+  document.getElementById('prev').disabled = cur === 0;
+  document.getElementById('next').disabled = cur === steps.length - 1;
+  document.getElementById('scrub').value = cur;
+}
+
+function go(i) { cur = Math.max(0, Math.min(steps.length - 1, i)); draw(); }
+function stop() { clearInterval(timer); timer = null; document.getElementById('play').textContent = '▶ Play'; }
+function play() {
+  if (timer) return stop();
+  if (cur === steps.length - 1) go(0);
+  document.getElementById('play').textContent = '⏸ Pause';
+  timer = setInterval(() => { if (cur >= steps.length - 1) stop(); else go(cur + 1); }, 1300);
+}
+
+function load(numsText, targetText) {
+  const err = document.getElementById('input-error');
+  const parsed = numsText.split(/[\s,]+/).filter(Boolean).map(Number);
+  const tgt = Number(targetText.trim());
+  if (parsed.length < 2 || parsed.length > 10 || parsed.some(n => !Number.isInteger(n)) || !Number.isInteger(tgt) || targetText.trim() === '') {
+    err.textContent = '২ থেকে ১০টা integer দাও (যেমন 3, 5, 9, 2, 7) আর একটা integer target।';
+    err.hidden = false;
+    return;
+  }
+  err.hidden = true;
+  stop();
+  nums = parsed; target = tgt;
+  steps = buildSteps(nums, target);
+  document.getElementById('scrub').max = steps.length - 1;
+  initSvg();
+  go(0);
+}
+
+const numsIn = document.getElementById('nums'), targetIn = document.getElementById('target');
+document.getElementById('apply').addEventListener('click', () => load(numsIn.value, targetIn.value));
+[numsIn, targetIn].forEach(el => el.addEventListener('keydown', e => { if (e.key === 'Enter') load(numsIn.value, targetIn.value); }));
+document.querySelectorAll('[data-example]').forEach(b => b.addEventListener('click', () => {
+  const [a, t] = b.dataset.example.split('|');
+  numsIn.value = a.replace(/,/g, ', '); targetIn.value = t;
+  load(numsIn.value, targetIn.value);
+}));
+document.getElementById('prev').addEventListener('click', () => { stop(); go(cur - 1); });
+document.getElementById('next').addEventListener('click', () => { stop(); go(cur + 1); });
+document.getElementById('reset').addEventListener('click', () => { stop(); go(0); });
+document.getElementById('play').addEventListener('click', play);
+document.getElementById('scrub').addEventListener('input', e => { stop(); go(+e.target.value); });
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' && e.target.type !== 'range') return;
+  if (e.key === 'ArrowRight') { stop(); go(cur + 1); }
+  if (e.key === 'ArrowLeft') { stop(); go(cur - 1); }
+});
+
+load(numsIn.value, targetIn.value);
+</script>
+</body>
+</html>
