@@ -1,0 +1,476 @@
+<!doctype html>
+<html lang="bn">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Detect Squares solution: point count map দিয়ে diagonal corner খুঁজে square গোনা, example আর D3 step-by-step animation, C++ code।">
+  <meta name="color-scheme" content="light dark">
+  <title>Detect Squares Solution · WellDev</title>
+  <link rel="stylesheet" href="../../all-problems/styles.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+  <style>
+    :root { --code-bg: #ffffff; --code-line: #f3f4f8; --code-hl: #fff4c2; --code-hl-bar: #e5a50a;
+      --tk-kw: #0000ff; --tk-ctl: #af00db; --tk-ty: #267f99; --tk-fn: #795e26; --tk-var: #001080; --tk-num: #098658; --tk-txt: #1f1f1f;
+      --found: #087f5b; --found-soft: #e7f8f1; --miss: #c2255c; --miss-soft: #fff0f5; --query: #d9480f; }
+    :root[data-theme="dark"] { --code-bg: #1e1e1e; --code-line: #252526; --code-hl: #3a3d1e; --code-hl-bar: #e5c07b;
+      --tk-kw: #569cd6; --tk-ctl: #c586c0; --tk-ty: #4ec9b0; --tk-fn: #dcdcaa; --tk-var: #9cdcfe; --tk-num: #b5cea8; --tk-txt: #d4d4d4;
+      --found: #5ee0b1; --found-soft: #17352d; --miss: #ff87ad; --miss-soft: #3e1d2a; --query: #ffa94d; }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) { --code-bg: #1e1e1e; --code-line: #252526; --code-hl: #3a3d1e; --code-hl-bar: #e5c07b;
+        --tk-kw: #569cd6; --tk-ctl: #c586c0; --tk-ty: #4ec9b0; --tk-fn: #dcdcaa; --tk-var: #9cdcfe; --tk-num: #b5cea8; --tk-txt: #d4d4d4;
+        --found: #5ee0b1; --found-soft: #17352d; --miss: #ff87ad; --miss-soft: #3e1d2a; --query: #ffa94d; }
+    }
+
+    .hero { grid-template-columns: minmax(0, 1fr); }
+    .hero .badges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 16px; }
+    .hero .badge { min-height: 24px; padding: 3px 10px; font-size: 11px; }
+    .hero a.badge { color: #fff; background: rgba(255,255,255,.16); text-decoration: none; }
+
+    .card { margin-top: 18px; padding: clamp(18px, 3vw, 28px); border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow); }
+    .card h2 { margin: 0 0 10px; font-size: 21px; letter-spacing: -.02em; }
+    .card p { margin: 8px 0; }
+    .muted { color: var(--muted); }
+    code.inline { padding: 1px 6px; border-radius: 6px; background: var(--surface-soft); font-family: "JetBrains Mono", ui-monospace, Menlo, monospace; font-size: .9em; }
+
+    .examples { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; margin-top: 12px; }
+    .example { padding: 14px 16px; border-radius: 14px; background: var(--surface-soft); font-family: "JetBrains Mono", ui-monospace, Menlo, monospace; font-size: 13px; line-height: 1.7; overflow-x: auto; }
+    .example b { font-family: Inter, system-ui, sans-serif; display: block; margin-bottom: 4px; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+
+    .idea { display: grid; gap: 10px; margin: 12px 0 0; padding: 0; list-style: none; counter-reset: idea; }
+    .idea li { position: relative; padding-left: 38px; }
+    .idea li::before { counter-increment: idea; content: counter(idea); position: absolute; left: 0; top: 1px; display: grid; width: 26px; height: 26px; place-items: center; border-radius: 8px; color: var(--accent-dark); background: var(--accent-soft); font-size: 13px; font-weight: 800; }
+
+    .viz-grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+    .inputs { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; margin-bottom: 14px; }
+    .inputs label { display: grid; gap: 4px; flex: 1; min-width: 240px; color: var(--muted); font-size: 12px; font-weight: 700; }
+    .inputs textarea { min-height: 62px; padding: 8px 11px; color: var(--text); border: 1px solid var(--line); border-radius: 10px; background: var(--surface-soft); font-family: "JetBrains Mono", ui-monospace, Menlo, monospace; font-size: 13px; resize: vertical; }
+    .btn { min-height: 38px; padding: 7px 14px; color: var(--text); border: 1px solid var(--line); border-radius: 10px; background: var(--surface); font-weight: 700; cursor: pointer; }
+    .btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent-dark); }
+    .btn:disabled { opacity: .45; cursor: default; }
+    .btn.primary { color: #fff; border-color: var(--accent); background: var(--accent); }
+    .btn.primary:hover { color: #fff; background: var(--accent-dark); }
+    .input-error { width: 100%; margin: 0; color: var(--miss); font-size: 13px; }
+
+    .stage { border: 1px solid var(--line); border-radius: 16px; background: var(--surface-soft); }
+    .stage svg { display: block; width: 100%; height: auto; }
+    .ops { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+    .op { padding: 3px 9px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); font-family: "JetBrains Mono", ui-monospace, Menlo, monospace; font-size: 12px; }
+    .op.cur { border-color: var(--accent); background: var(--accent-soft); }
+    .op .out { margin-left: 6px; color: var(--muted); }
+    .op .out.pos { color: var(--found); font-weight: 800; }
+    .status { min-height: 74px; margin-top: 12px; padding: 12px 14px; border-left: 4px solid var(--accent); border-radius: 10px; background: var(--accent-soft); }
+    .status.found { border-color: var(--found); background: var(--found-soft); }
+    .status.miss { border-color: var(--miss); background: var(--miss-soft); }
+    .status .step-no { color: var(--muted); font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+    .status .msg { margin-top: 3px; }
+    .status .calc { margin-top: 4px; font-family: "JetBrains Mono", ui-monospace, Menlo, monospace; font-size: 13px; }
+    .controls-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 12px; }
+    .controls-row input[type=range] { flex: 1; min-width: 120px; accent-color: var(--accent); }
+
+    .code { overflow-x: auto; padding: 12px 0; border: 1px solid var(--line); border-radius: 16px; background: var(--code-bg); font-family: "JetBrains Mono", ui-monospace, Menlo, monospace; font-size: 13px; line-height: 1.65; }
+    .code .ln { display: flex; min-width: max-content; padding-right: 16px; border-left: 3px solid transparent; transition: background .2s; }
+    .code .ln.active { border-left-color: var(--code-hl-bar); background: var(--code-hl); }
+    .code .no { width: 40px; padding-right: 14px; color: var(--muted); text-align: right; user-select: none; opacity: .7; }
+    .code .src { white-space: pre; color: var(--tk-txt); }
+    .tk-kw { color: var(--tk-kw); } .tk-ctl { color: var(--tk-ctl); } .tk-ty { color: var(--tk-ty); }
+    .tk-fn { color: var(--tk-fn); } .tk-var { color: var(--tk-var); } .tk-num { color: var(--tk-num); }
+    .code-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+    .code-head span { color: var(--muted); font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+
+    table.cx { width: 100%; margin-top: 8px; border-collapse: collapse; font-size: 14px; }
+    table.cx th, table.cx td { padding: 9px 10px; border-bottom: 1px solid var(--line); text-align: left; }
+    table.cx th { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .06em; }
+
+    @media (max-width: 860px) { .viz-grid { grid-template-columns: minmax(0, 1fr); } }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <nav class="topbar" aria-label="Primary navigation">
+      <a class="brand" href="../../../index.html" aria-label="WellDev home">
+        <span class="brand-mark" aria-hidden="true">W</span>
+        <span>WellDev</span>
+      </a>
+      <button class="icon-button" id="theme-toggle" type="button" aria-label="Theme পরিবর্তন করুন">
+        <span class="theme-icon" aria-hidden="true">◐</span>
+        <span class="theme-label">Theme</span>
+      </button>
+    </nav>
+
+    <header class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow"><a href="../../all-problems/index.html" style="color:inherit">Problem Lists</a> · Math &amp; Geometry</p>
+        <h1>2013. Detect Squares</h1>
+        <p class="hero-description">Point add করতে থাকো, আর query point দিলে বলো কয়টা axis-aligned square বানানো যায়। Query-কে এক corner ধরে diagonal-এর উল্টো corner খুঁজলেই বাকি দুই corner ঠিক হয়ে যায়।</p>
+        <div class="badges">
+          <span class="badge difficulty M">Medium</span>
+          <span class="badge list-badge NC150">NeetCode 150</span>
+          <a class="badge" href="https://leetcode.com/problems/detect-squares/" target="_blank" rel="noopener noreferrer">LeetCode ↗</a>
+        </div>
+      </div>
+    </header>
+
+    <section class="card">
+      <h2>Problem</h2>
+      <p>একটা <code class="inline">DetectSquares</code> class বানাতে হবে:</p>
+      <ul>
+        <li><code class="inline">add(point)</code>: plane-এ একটা point <code class="inline">[x, y]</code> যোগ করো। <b>একই point একাধিকবার</b> যোগ হতে পারে, প্রতিটা আলাদা point হিসেবে গোনা হয়।</li>
+        <li><code class="inline">count(point)</code>: query point-কে এক corner ধরে, আগে add করা point থেকে বাকি তিন corner বেছে কয়টা উপায়ে <b>positive area-র axis-aligned square</b> বানানো যায়, সেটা return করো।</li>
+      </ul>
+      <p class="muted">Axis-aligned মানে square-এর বাহুগুলো x-axis আর y-axis-এর সাথে parallel (কাত করা square গোনা হবে না)।</p>
+      <div class="examples">
+        <div class="example"><b>Example (LeetCode)</b>add([3,10]), add([11,2]), add([3,2])<br>count([11,10]) → 1<br>count([14,8]) &nbsp;→ 0<br>add([11,2])<br>count([11,10]) → 2</div>
+        <div class="example"><b>কেন শেষে 2?</b>(11,2) দুইবার add হয়েছে।<br>Square: (11,10), (3,10), (3,2), (11,2)<br>(11,2)-এর দুই copy থেকে<br>দুইটা আলাদা square হয়।</div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Idea</h2>
+      <ul class="idea">
+        <li>Query point <b>q = (px, py)</b>। Square-এর যে corner q-এর <b>diagonal-এর উল্টো দিকে</b>, ধরো <b>d = (x, y)</b>, সেটা জানলে বাকি দুই corner আপনাআপনি ঠিক: <code class="inline">(x, py)</code> আর <code class="inline">(px, y)</code>।</li>
+        <li>d valid diagonal corner শুধু তখন, যখন <code class="inline">|px − x| == |py − y|</code> (দুই দিকে দূরত্ব সমান, তাই square) আর <code class="inline">x != px</code> (দূরত্ব 0 হলে area 0)।</li>
+        <li>Duplicate point আলাদা গুনতে হয়, তাই <code class="inline">cnt</code> map-এ point → কতবার add হয়েছে রাখি। একটা diagonal থেকে square-এর সংখ্যা <code class="inline">cnt[d] × cnt[(x, py)] × cnt[(px, y)]</code>। কোনো corner না থাকলে গুণফল 0।</li>
+        <li><code class="inline">count</code>-এ map-এর প্রতিটা আলাদা point-কে d হিসেবে try করি আর সব গুণফল যোগ করি।</li>
+      </ul>
+    </section>
+
+    <section class="card">
+      <h2>Step-by-step animation</h2>
+      <div class="inputs">
+        <label>Operations (প্রতি লাইনে বা ; দিয়ে: add x y / count x y)<textarea id="ops-in" spellcheck="false">add 3 10; add 11 2; add 3 2; count 11 10; count 14 8; add 11 2; count 11 10</textarea></label>
+        <button class="btn" id="apply" type="button">Apply</button>
+        <button class="btn" data-example="add 3 10; add 11 2; add 3 2; count 11 10; count 14 8; add 11 2; count 11 10" type="button">Ex 1</button>
+        <button class="btn" data-example="add 1 1; add 1 1; add 1 4; add 4 1; add 6 6; add 7 2; count 4 4" type="button">Ex 2</button>
+        <p class="input-error" id="input-error" hidden></p>
+      </div>
+      <div class="viz-grid">
+        <div>
+          <div class="stage"><svg id="viz" role="img" aria-label="Detect Squares animation"></svg></div>
+          <div class="ops" id="ops"></div>
+          <div class="status" id="status" aria-live="polite">
+            <div class="step-no" id="step-no"></div>
+            <div class="msg" id="msg"></div>
+            <div class="calc" id="calc"></div>
+          </div>
+          <div class="controls-row">
+            <button class="btn" id="reset" type="button" aria-label="শুরুতে যাও">⏮</button>
+            <button class="btn" id="prev" type="button">◀ Prev</button>
+            <button class="btn primary" id="play" type="button">▶ Play</button>
+            <button class="btn" id="next" type="button">Next ▶</button>
+            <input type="range" id="scrub" min="0" value="0" aria-label="Step">
+          </div>
+        </div>
+        <div>
+          <div class="code-head"><span>C++ · Point count map</span><button class="btn" id="copy" type="button">Copy</button></div>
+          <div class="code" id="code"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Complexity</h2>
+      <table class="cx">
+        <thead><tr><th>Operation</th><th>Time</th><th>Space</th></tr></thead>
+        <tbody>
+          <tr><td><code class="inline">add</code></td><td>O(log n)</td><td rowspan="2">O(n)</td></tr>
+          <tr><td><code class="inline">count</code></td><td>O(n log n)</td></tr>
+        </tbody>
+      </table>
+      <p class="muted">n = আলাদা (unique) point-এর সংখ্যা। <code class="inline">count</code> প্রতিটা unique point একবার দেখে, আর প্রতিবার <code class="inline">get</code> দুইবার <code class="inline">map::find</code> করে (O(log n))। Hash map ব্যবহার করলে average-এ <code class="inline">count</code> O(n)।</p>
+    </section>
+  </div>
+
+<script>
+const CODE = `class DetectSquares {
+public:
+    map<pair<int,int>, int> cnt;
+
+    DetectSquares() {}
+
+    void add(vector<int> point) {
+        cnt[{point[0], point[1]}]++;
+    }
+
+    int count(vector<int> point) {
+        int px = point[0], py = point[1];
+        auto get = [&](int x, int y) {
+            auto it = cnt.find({x, y});
+            return it == cnt.end() ? 0 : it->second;
+        };
+        int res = 0;
+        for (auto& [p, c] : cnt) {
+            int x = p.first, y = p.second;
+            if (x == px || abs(px - x) != abs(py - y)) continue;
+            res += c * get(x, py) * get(px, y);
+        }
+        return res;
+    }
+};`;
+
+(function theme() {
+  const root = document.documentElement;
+  try { const t = localStorage.getItem('welldev-theme'); if (t === 'light' || t === 'dark') root.dataset.theme = t; } catch (e) {}
+  document.getElementById('theme-toggle').addEventListener('click', () => {
+    const systemDark = matchMedia('(prefers-color-scheme: dark)').matches;
+    const dark = root.dataset.theme ? root.dataset.theme === 'dark' : systemDark;
+    root.dataset.theme = dark ? 'light' : 'dark';
+    try { localStorage.setItem('welldev-theme', root.dataset.theme); } catch (e) {}
+  });
+})();
+
+const esc = s => s.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+function highlight(line) {
+  const re = /\b(class|public|int|void|auto)\b|\b(for|if|continue|return)\b|\b(map|pair|vector|DetectSquares)\b|\b(add|count|find|end|abs|get)\b|\b(cnt|point|px|py|x|y|p|c|res|it|first|second)\b|\b(\d+)\b/g;
+  let out = '', last = 0, m;
+  while ((m = re.exec(line))) {
+    out += esc(line.slice(last, m.index));
+    const cls = ['kw', 'ctl', 'ty', 'fn', 'var', 'num'][m.slice(1).findIndex(Boolean)];
+    out += `<span class="tk-${cls}">${esc(m[0])}</span>`;
+    last = re.lastIndex;
+  }
+  return out + esc(line.slice(last));
+}
+const codeEl = document.getElementById('code');
+codeEl.innerHTML = CODE.split('\n').map((l, i) =>
+  `<div class="ln" data-line="${i + 1}"><span class="no">${i + 1}</span><span class="src">${highlight(l) || ' '}</span></div>`).join('');
+document.getElementById('copy').addEventListener('click', e => {
+  navigator.clipboard.writeText(CODE).then(() => { e.target.textContent = 'Copied'; setTimeout(() => e.target.textContent = 'Copy', 1200); });
+});
+
+const key = (x, y) => `${x},${y}`;
+
+// Run the C++ logic and record one frame per meaningful line.
+function buildSteps(ops) {
+  const steps = [], cnt = new Map(), outs = ['null'];
+  const snap = () => [...cnt.entries()].map(([k, c]) => { const [x, y] = k.split(',').map(Number); return { k, x, y, c }; })
+    .sort((a, b) => a.x - b.x || a.y - b.y);
+  const get = (x, y) => cnt.get(key(x, y)) || 0;
+  const push = o => steps.push({ cnt: snap(), outs: outs.slice(), ...o });
+  push({ op: -1, line: [3, 5], kind: 'info', msg: 'Object তৈরি: <b>cnt</b> খালি map। Key = point (x, y), value = সেই point কতবার add হয়েছে।' });
+
+  ops.forEach((o, oi) => {
+    if (o.type === 'add') {
+      const k = key(o.x, o.y);
+      cnt.set(k, get(o.x, o.y) + 1);
+      outs.push('null');
+      push({ op: oi, line: [7, 8], added: k, kind: 'info',
+        msg: `<b>add(${o.x}, ${o.y})</b>: point-টা map-এ গুনে রাখি। একই point আবার এলে শুধু count বাড়ে, কারণ duplicate আলাদা square বানায়।`,
+        calc: `cnt[(${o.x}, ${o.y})]++  →  ${cnt.get(k)}` });
+      return;
+    }
+    const px = o.x, py = o.y, q = { x: px, y: py };
+    let res = 0;
+    push({ op: oi, line: [11, 12], q, kind: 'info', msg: `<b>count(${px}, ${py})</b>: query point <b>q = (${px}, ${py})</b>। q-কে এক corner ধরে কয়টা square হয় গুনব।` });
+    push({ op: oi, line: [17], q, res, kind: 'info', msg: 'res = 0। এখন map-এর প্রতিটা point-কে q-এর <b>diagonal-এর উল্টো corner</b> হিসেবে try করি।' });
+    for (const p of snap()) {
+      const { x, y, c } = p, dx = Math.abs(px - x), dy = Math.abs(py - y), cand = p.k;
+      if (x === px) {
+        push({ op: oi, line: [18, 19, 20], q, res, cand, kind: 'miss',
+          msg: `(${x}, ${y}): x == px, q-এর সাথে একই vertical line-এ। Diagonal corner হতে পারে না, <b>continue</b>।`, calc: `${x} == ${px}` });
+        continue;
+      }
+      if (dx !== dy) {
+        push({ op: oi, line: [18, 19, 20], q, res, cand, kind: 'miss', diag: true,
+          msg: `(${x}, ${y}): x-এ দূরত্ব ${dx}, y-এ দূরত্ব ${dy}। সমান না, তাই এটা square-এর diagonal না, <b>continue</b>।`, calc: `|${px} - ${x}| = ${dx}  !=  |${py} - ${y}| = ${dy}` });
+        continue;
+      }
+      const a = get(x, py), b = get(px, y), prod = c * a * b;
+      const corners = [{ x, y: py, c: a }, { x: px, y, c: b }];
+      push({ op: oi, line: [18, 19, 20], q, res, cand, diag: true, corners, kind: 'info',
+        msg: `(${x}, ${y}) diagonal-এ আছে: দুই দিকেই দূরত্ব ${dx}। তাহলে বাকি দুই corner হবে <b>(${x}, ${py})</b> আর <b>(${px}, ${y})</b>।`, calc: `|${px} - ${x}| == |${py} - ${y}| == ${dx}` });
+      res += prod;
+      const missing = corners.filter(k => !k.c).map(k => `(${k.x}, ${k.y})`).join(' আর ');
+      push({ op: oi, line: [21], q, res, cand, corners, square: { x, y, prod }, kind: prod ? 'found' : 'miss',
+        msg: prod ? `দুই corner-ই আছে, square পাওয়া গেছে! ${c} × ${a} × ${b} = <b>${prod}</b>টা square (duplicate থাকলে প্রতিটা combination আলাদা)।`
+                  : `${missing} map-এ নেই, তাই এই diagonal থেকে 0টা square।`,
+        calc: `res += ${c} * get(${x}, ${py}) * get(${px}, ${y}) = ${c} * ${a} * ${b}  →  res = ${res}` });
+    }
+    outs.push(String(res));
+    push({ op: oi, line: [23], q, res, kind: res ? 'found' : 'miss', msg: `সব point দেখা শেষ: return <b>${res}</b>` });
+  });
+  return steps;
+}
+
+const svg = d3.select('#viz');
+const W = 640, PL = 44, PT = 34, PS = 330, TX = 412, COLW = 104, HEADH = 32, ROWH = 30;
+const mono = 'JetBrains Mono, ui-monospace, monospace';
+let ops = [], steps = [], cur = 0, timer = null, sx, sy, height;
+
+function initSvg() {
+  const xs = ops.map(o => o.x), ys = ops.map(o => o.y);
+  const minX = Math.min(...xs), minY = Math.min(...ys);
+  const span = Math.max(Math.max(...xs) - minX, Math.max(...ys) - minY) + 2;
+  const k = PS / span, x0 = minX - 1, y0 = minY - 1;
+  sx = v => PL + (v - x0) * k;
+  sy = v => PT + PS - (v - y0) * k;
+  const rows = new Set(ops.filter(o => o.type === 'add').map(o => key(o.x, o.y))).size;
+  height = Math.max(PT + PS + 34, PT + HEADH + rows * ROWH + 24);
+  svg.attr('viewBox', `0 0 ${W} ${height}`).selectAll('*').remove();
+
+  const grid = svg.append('g');
+  const every = span > 16 ? 2 : 1;
+  d3.range(0, span + 1).forEach(i => {
+    const vx = x0 + i, vy = y0 + i;
+    grid.append('line').attr('x1', sx(vx)).attr('x2', sx(vx)).attr('y1', PT).attr('y2', PT + PS).attr('stroke', 'var(--line)');
+    grid.append('line').attr('x1', PL).attr('x2', PL + PS).attr('y1', sy(vy)).attr('y2', sy(vy)).attr('stroke', 'var(--line)');
+    if (i % every) return;
+    grid.append('text').attr('x', sx(vx)).attr('y', PT + PS + 16).attr('text-anchor', 'middle').text(vx);
+    grid.append('text').attr('x', PL - 8).attr('y', sy(vy) + 4).attr('text-anchor', 'end').text(vy);
+  });
+  grid.selectAll('text').attr('fill', 'var(--muted)').attr('font-size', 10).attr('font-family', mono);
+  grid.append('text').attr('x', PL).attr('y', PT - 12).attr('class', 'lbl').text('plane');
+
+  svg.append('g').attr('class', 'sq');
+  svg.append('g').attr('class', 'pts');
+  svg.append('g').attr('class', 'marks');
+
+  svg.append('text').attr('x', TX).attr('y', PT - 12).attr('class', 'lbl').text('map cnt');
+  svg.append('text').attr('x', TX + COLW * 2).attr('y', PT - 12).attr('text-anchor', 'end').attr('class', 'lbl res-lbl');
+  const head = svg.append('g');
+  head.append('rect').attr('x', TX).attr('y', PT).attr('width', COLW * 2).attr('height', HEADH).attr('rx', 8)
+    .attr('fill', 'var(--accent-soft)').attr('stroke', 'var(--accent)').attr('stroke-width', 1.5);
+  head.append('line').attr('x1', TX + COLW).attr('x2', TX + COLW).attr('y1', PT).attr('y2', PT + HEADH).attr('stroke', 'var(--accent)').attr('stroke-width', 1.5);
+  [['key', '(x, y)'], ['value', 'count']].forEach(([t, sub], c) => {
+    const tx = head.append('text').attr('x', TX + c * COLW + COLW / 2).attr('y', PT + 21).attr('text-anchor', 'middle')
+      .attr('fill', 'var(--accent-dark)').attr('font-size', 13).attr('font-weight', 800).attr('font-family', 'Inter, system-ui, sans-serif');
+    tx.append('tspan').text(t);
+    tx.append('tspan').attr('dx', 4).attr('font-size', 10).attr('font-weight', 600).attr('fill', 'var(--muted)').text(sub);
+  });
+  svg.append('g').attr('class', 'tbl');
+  svg.selectAll('.lbl').attr('fill', 'var(--muted)').attr('font-size', 13).attr('font-weight', 700).attr('font-family', 'Inter, system-ui, sans-serif');
+}
+
+function draw() {
+  const s = steps[cur], t = svg.transition().duration(350);
+  const cornerKeys = new Map((s.corners || []).map(c => [key(c.x, c.y), c]));
+  const role = k => k === s.cand ? 'cand' : cornerKeys.has(k) ? 'corner' : k === s.added ? 'added' : '';
+  const color = r => r === 'cand' || r === 'added' ? 'var(--accent)' : r === 'corner' ? 'var(--found)' : 'var(--text)';
+
+  // Square through q, (x, py), d, (px, y); dashed red when a corner is missing.
+  const cxy = s.cand ? s.cand.split(',').map(Number) : null;
+  const sqData = s.square ? [s.square] : s.corners ? [{ x: cxy[0], y: cxy[1], preview: true }] : [];
+  svg.select('.sq').selectAll('path').data(sqData).join('path')
+    .attr('d', d => `M${sx(s.q.x)},${sy(s.q.y)} L${sx(d.x)},${sy(s.q.y)} L${sx(d.x)},${sy(d.y)} L${sx(s.q.x)},${sy(d.y)} Z`)
+    .attr('fill', d => d.prod ? 'var(--found-soft)' : 'none').attr('fill-opacity', .8)
+    .attr('stroke', d => d.preview ? 'var(--accent)' : d.prod ? 'var(--found)' : 'var(--miss)')
+    .attr('stroke-width', 2.5).attr('stroke-dasharray', d => d.prod ? null : '7 5');
+  svg.select('.sq').selectAll('line').data(s.diag ? [cxy] : []).join('line')
+    .attr('x1', () => sx(s.q.x)).attr('y1', () => sy(s.q.y)).attr('x2', d => sx(d[0])).attr('y2', d => sy(d[1]))
+    .attr('stroke', s.corners ? 'var(--accent)' : 'var(--miss)').attr('stroke-width', 2).attr('stroke-dasharray', '3 4');
+
+  const pts = svg.select('.pts').selectAll('g.pt').data(s.cnt, d => d.k).join(enter => {
+    const g = enter.append('g').attr('class', 'pt').attr('opacity', 0).attr('transform', d => `translate(${sx(d.x)},${sy(d.y)})`);
+    g.append('circle').attr('class', 'ring').attr('r', 14).attr('fill', 'none').attr('stroke-width', 2);
+    g.append('circle').attr('class', 'dot').attr('r', 7);
+    g.append('text').attr('class', 'cnt').attr('x', 10).attr('y', -10).attr('font-size', 12).attr('font-weight', 800).attr('font-family', mono);
+    g.append('text').attr('class', 'xy').attr('y', 24).attr('text-anchor', 'middle').attr('font-size', 10).attr('fill', 'var(--muted)').attr('font-family', mono).text(d => `(${d.x},${d.y})`);
+    return g;
+  });
+  pts.transition(t).attr('opacity', 1);
+  pts.select('.dot').transition(t).attr('fill', d => color(role(d.k)));
+  pts.select('.ring').attr('stroke', d => color(role(d.k))).attr('opacity', d => role(d.k) ? 1 : 0);
+  pts.select('.cnt').text(d => d.c > 1 ? `×${d.c}` : '').attr('fill', d => color(role(d.k)));
+
+  const marks = svg.select('.marks');
+  const missing = (s.corners || []).filter(c => !c.c);
+  marks.selectAll('g.missing').data(missing, d => key(d.x, d.y)).join(enter => {
+    const g = enter.append('g').attr('class', 'missing');
+    g.append('circle').attr('r', 8).attr('fill', 'var(--surface)').attr('stroke', 'var(--miss)').attr('stroke-width', 2).attr('stroke-dasharray', '3 3');
+    g.append('text').attr('y', 4).attr('text-anchor', 'middle').attr('font-size', 11).attr('font-weight', 800).attr('fill', 'var(--miss)').attr('font-family', mono).text('0');
+    return g;
+  }).attr('transform', d => `translate(${sx(d.x)},${sy(d.y)})`);
+  const qm = marks.selectAll('g.q').data(s.q ? [s.q] : []).join(enter => {
+    const g = enter.append('g').attr('class', 'q');
+    g.append('rect').attr('x', -9).attr('y', -9).attr('width', 18).attr('height', 18).attr('rx', 4).attr('transform', 'rotate(45)')
+      .attr('fill', 'var(--query)').attr('stroke', 'var(--surface)').attr('stroke-width', 2);
+    g.append('text').attr('x', -14).attr('y', -12).attr('text-anchor', 'end').attr('font-size', 13).attr('font-weight', 800).attr('fill', 'var(--query)').attr('font-family', mono).text('q');
+    return g;
+  });
+  qm.attr('transform', d => `translate(${sx(d.x)},${sy(d.y)})`);
+
+  const rowY = i => PT + HEADH + i * ROWH;
+  const rows = svg.select('.tbl').selectAll('g.row').data(s.cnt, d => d.k).join(enter => {
+    const g = enter.append('g').attr('class', 'row').attr('opacity', 0).attr('transform', (d, i) => `translate(${TX - 14},${rowY(i)})`);
+    g.append('rect').attr('width', COLW * 2).attr('height', ROWH).attr('stroke-width', 1.5);
+    g.append('line').attr('x1', COLW).attr('x2', COLW).attr('y2', ROWH).attr('stroke', 'var(--line)').attr('stroke-width', 1.5);
+    g.append('text').attr('x', COLW / 2).attr('y', 20).attr('text-anchor', 'middle').attr('font-size', 14).attr('font-weight', 800).attr('fill', 'var(--text)').attr('font-family', mono).text(d => `(${d.x}, ${d.y})`);
+    g.append('text').attr('class', 'v').attr('x', COLW * 1.5).attr('y', 20).attr('text-anchor', 'middle').attr('font-size', 14).attr('font-weight', 600).attr('font-family', mono);
+    return g;
+  });
+  rows.transition(t).attr('opacity', 1).attr('transform', (d, i) => `translate(${TX},${rowY(i)})`);
+  rows.select('.v').text(d => d.c).attr('fill', d => d.k === s.added ? 'var(--accent-dark)' : 'var(--muted)');
+  const soft = r => r === 'corner' ? 'var(--found-soft)' : r ? 'var(--accent-soft)' : 'var(--surface)';
+  const edge = r => r === 'corner' ? 'var(--found)' : r ? 'var(--accent)' : 'var(--line)';
+  rows.select('rect').transition(t).attr('fill', d => soft(role(d.k))).attr('stroke', d => edge(role(d.k)));
+  svg.select('.tbl').selectAll('g.row').filter(d => role(d.k)).raise();
+  svg.select('.tbl').selectAll('text.empty').data(s.cnt.length ? [] : [0]).join('text').attr('class', 'empty')
+    .attr('x', TX + COLW).attr('y', rowY(0) + 20).attr('text-anchor', 'middle').attr('fill', 'var(--muted)').attr('font-size', 13).text('খালি — কোনো point নেই');
+  svg.select('.res-lbl').text(s.res !== undefined ? `res = ${s.res}` : '').attr('fill', s.res ? 'var(--found)' : 'var(--muted)');
+
+  document.getElementById('ops').innerHTML = [{ label: 'DetectSquares()' }, ...ops.map(o => ({ label: `${o.type}(${o.x}, ${o.y})` }))]
+    .map((o, i) => {
+      const out = i < s.outs.length ? `<span class="out${s.outs[i] !== 'null' && s.outs[i] !== '0' ? ' pos' : ''}">→ ${s.outs[i]}</span>` : '';
+      return `<span class="op${i - 1 === s.op ? ' cur' : ''}">${o.label}${out}</span>`;
+    }).join('');
+
+  const status = document.getElementById('status');
+  status.className = 'status' + (s.kind === 'found' ? ' found' : s.kind === 'miss' ? ' miss' : '');
+  document.getElementById('step-no').textContent = `Step ${cur + 1} / ${steps.length} · line ${s.line.join(', ')}`;
+  document.getElementById('msg').innerHTML = s.msg;
+  document.getElementById('calc').textContent = s.calc || '';
+
+  codeEl.querySelectorAll('.ln').forEach(el => el.classList.toggle('active', s.line.includes(+el.dataset.line)));
+  document.getElementById('prev').disabled = cur === 0;
+  document.getElementById('next').disabled = cur === steps.length - 1;
+  document.getElementById('scrub').value = cur;
+}
+
+function go(i) { cur = Math.max(0, Math.min(steps.length - 1, i)); draw(); }
+function stop() { clearInterval(timer); timer = null; document.getElementById('play').textContent = '▶ Play'; }
+function play() {
+  if (timer) return stop();
+  if (cur === steps.length - 1) go(0);
+  document.getElementById('play').textContent = '⏸ Pause';
+  timer = setInterval(() => { if (cur >= steps.length - 1) stop(); else go(cur + 1); }, 1400);
+}
+
+function load(text) {
+  const err = document.getElementById('input-error');
+  const parsed = text.split(/[;\n]+/).map(s => s.trim()).filter(Boolean).map(s => {
+    const m = s.match(/^(add|count)\s*\(?\s*(-?\d+)\s*[ ,]\s*(-?\d+)\s*\)?$/i);
+    return m && { type: m[1].toLowerCase(), x: +m[2], y: +m[3] };
+  });
+  const bad = !parsed.length || parsed.length > 14 || parsed.some(o => !o || o.x < 0 || o.y < 0 || o.x > 30 || o.y > 30)
+    || !parsed.some(o => o.type === 'count');
+  if (bad) {
+    err.textContent = '১৪টা পর্যন্ত operation দাও, যেমন "add 3 10; count 11 10" (coordinate 0–30, অন্তত একটা count)।';
+    err.hidden = false;
+    return;
+  }
+  err.hidden = true;
+  stop();
+  ops = parsed;
+  steps = buildSteps(ops);
+  document.getElementById('scrub').max = steps.length - 1;
+  initSvg();
+  go(0);
+}
+
+const opsIn = document.getElementById('ops-in');
+document.getElementById('apply').addEventListener('click', () => load(opsIn.value));
+document.querySelectorAll('[data-example]').forEach(b => b.addEventListener('click', () => { opsIn.value = b.dataset.example; load(opsIn.value); }));
+document.getElementById('prev').addEventListener('click', () => { stop(); go(cur - 1); });
+document.getElementById('next').addEventListener('click', () => { stop(); go(cur + 1); });
+document.getElementById('reset').addEventListener('click', () => { stop(); go(0); });
+document.getElementById('play').addEventListener('click', play);
+document.getElementById('scrub').addEventListener('input', e => { stop(); go(+e.target.value); });
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'TEXTAREA' || (e.target.tagName === 'INPUT' && e.target.type !== 'range')) return;
+  if (e.key === 'ArrowRight') { stop(); go(cur + 1); }
+  if (e.key === 'ArrowLeft') { stop(); go(cur - 1); }
+});
+
+load(opsIn.value);
+</script>
+</body>
+</html>

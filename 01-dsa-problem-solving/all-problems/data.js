@@ -2302,6 +2302,7 @@ window.WELLDEV_PROBLEMS = {
     "detect-squares": {
       "title": "Detect Squares",
       "url": "https://leetcode.com/problems/detect-squares/",
+      "solution": "../solutions/detect-squares/index.html",
       "difficulty": "M",
       "premium": false,
       "lists": [
