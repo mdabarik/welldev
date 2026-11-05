@@ -1,0 +1,490 @@
+<!doctype html>
+<html lang="bn">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Multiply Strings solution: খাতায় গুণ করার মতো digit-by-digit গুণ, nums array-তে i + j + 1 position, carry; example আর D3 step-by-step animation, C++ code।">
+  <meta name="color-scheme" content="light dark">
+  <title>Multiply Strings Solution · WellDev</title>
+  <link rel="stylesheet" href="../../all-problems/styles.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+  <style>
+    :root { --code-bg: #ffffff; --code-line: #f3f4f8; --code-hl: #fff4c2; --code-hl-bar: #e5a50a;
+      --tk-kw: #0000ff; --tk-ctl: #af00db; --tk-ty: #267f99; --tk-fn: #795e26; --tk-var: #001080; --tk-num: #098658; --tk-str: #a31515; --tk-txt: #1f1f1f;
+      --found: #087f5b; --found-soft: #e7f8f1; --miss: #c2255c; --miss-soft: #fff0f5; --two: #d9480f; --two-soft: #fff0e6; --carry: #a15c00; --carry-soft: #fff4dd; }
+    :root[data-theme="dark"] { --code-bg: #1e1e1e; --code-line: #252526; --code-hl: #3a3d1e; --code-hl-bar: #e5c07b;
+      --tk-kw: #569cd6; --tk-ctl: #c586c0; --tk-ty: #4ec9b0; --tk-fn: #dcdcaa; --tk-var: #9cdcfe; --tk-num: #b5cea8; --tk-str: #ce9178; --tk-txt: #d4d4d4;
+      --found: #5ee0b1; --found-soft: #17352d; --miss: #ff87ad; --miss-soft: #3e1d2a; --two: #ffa94d; --two-soft: #3b2616; --carry: #ffc66d; --carry-soft: #3b2c16; }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) { --code-bg: #1e1e1e; --code-line: #252526; --code-hl: #3a3d1e; --code-hl-bar: #e5c07b;
+        --tk-kw: #569cd6; --tk-ctl: #c586c0; --tk-ty: #4ec9b0; --tk-fn: #dcdcaa; --tk-var: #9cdcfe; --tk-num: #b5cea8; --tk-str: #ce9178; --tk-txt: #d4d4d4;
+        --found: #5ee0b1; --found-soft: #17352d; --miss: #ff87ad; --miss-soft: #3e1d2a; --two: #ffa94d; --two-soft: #3b2616; --carry: #ffc66d; --carry-soft: #3b2c16; }
+    }
+
+    .hero { grid-template-columns: minmax(0, 1fr); }
+    .hero .badges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 16px; }
+    .hero .badge { min-height: 24px; padding: 3px 10px; font-size: 11px; }
+    .hero a.badge { color: #fff; background: rgba(255,255,255,.16); text-decoration: none; }
+
+    .card { margin-top: 18px; padding: clamp(18px, 3vw, 28px); border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow); }
+    .card h2 { margin: 0 0 10px; font-size: 21px; letter-spacing: -.02em; }
+    .card p { margin: 8px 0; }
+    .muted { color: var(--muted); }
+    code.inline { padding: 1px 6px; border-radius: 6px; background: var(--surface-soft); font-family: "JetBrains Mono", ui-monospace, Menlo, monospace; font-size: .9em; }
+
+    .examples { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; margin-top: 12px; }
+    .example { padding: 14px 16px; border-radius: 14px; background: var(--surface-soft); font-family: "JetBrains Mono", ui-monospace, Menlo, monospace; font-size: 13px; line-height: 1.7; }
+    .example b { font-family: Inter, system-ui, sans-serif; display: block; margin-bottom: 4px; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+
+    .idea { display: grid; gap: 10px; margin: 12px 0 0; padding: 0; list-style: none; counter-reset: idea; }
+    .idea li { position: relative; padding-left: 38px; }
+    .idea li::before { counter-increment: idea; content: counter(idea); position: absolute; left: 0; top: 1px; display: grid; width: 26px; height: 26px; place-items: center; border-radius: 8px; color: var(--accent-dark); background: var(--accent-soft); font-size: 13px; font-weight: 800; }
+
+    .viz-grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+    .inputs { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; margin-bottom: 14px; }
+    .inputs label { display: grid; gap: 4px; color: var(--muted); font-size: 12px; font-weight: 700; }
+    .inputs input { width: 130px; min-height: 38px; padding: 6px 11px; color: var(--text); border: 1px solid var(--line); border-radius: 10px; background: var(--surface-soft); font-family: "JetBrains Mono", ui-monospace, Menlo, monospace; font-size: 14px; }
+    .btn { min-height: 38px; padding: 7px 14px; color: var(--text); border: 1px solid var(--line); border-radius: 10px; background: var(--surface); font-weight: 700; cursor: pointer; }
+    .btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent-dark); }
+    .btn:disabled { opacity: .45; cursor: default; }
+    .btn.primary { color: #fff; border-color: var(--accent); background: var(--accent); }
+    .btn.primary:hover { color: #fff; background: var(--accent-dark); }
+    .input-error { width: 100%; margin: 0; color: var(--miss); font-size: 13px; }
+
+    .stage { border: 1px solid var(--line); border-radius: 16px; background: var(--surface-soft); }
+    .stage svg { display: block; width: 100%; height: auto; }
+    .legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 10px; color: var(--muted); font-size: 12px; font-weight: 600; }
+    .legend span { display: inline-flex; align-items: center; gap: 6px; }
+    .legend i { width: 12px; height: 12px; border: 2px solid; border-radius: 4px; }
+    .phase { display: flex; gap: 6px; margin-top: 10px; }
+    .phase span { flex: 1; padding: 5px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--muted); font-size: 12px; font-weight: 700; text-align: center; }
+    .phase span.on { color: var(--accent-dark); border-color: var(--accent); background: var(--accent-soft); }
+    .phase span.done { color: var(--found); border-color: var(--found); }
+    .status { min-height: 92px; margin-top: 12px; padding: 12px 14px; border-left: 4px solid var(--accent); border-radius: 10px; background: var(--accent-soft); }
+    .status.found { border-color: var(--found); background: var(--found-soft); }
+    .status.miss { border-color: var(--miss); background: var(--miss-soft); }
+    .status.carry { border-color: var(--carry); background: var(--carry-soft); }
+    .status .step-no { color: var(--muted); font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+    .status .msg { margin-top: 3px; }
+    .status .calc { margin-top: 4px; font-family: "JetBrains Mono", ui-monospace, Menlo, monospace; font-size: 13px; white-space: pre-line; }
+    .controls-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 12px; }
+    .controls-row input[type=range] { flex: 1; min-width: 120px; accent-color: var(--accent); }
+    .speed { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 12px; font-weight: 700; }
+    .speed select { min-height: 32px; padding: 3px 6px; color: var(--text); border: 1px solid var(--line); border-radius: 8px; background: var(--surface); font: inherit; }
+
+    .code { overflow-x: auto; padding: 12px 0; border: 1px solid var(--line); border-radius: 16px; background: var(--code-bg); font-family: "JetBrains Mono", ui-monospace, Menlo, monospace; font-size: 13px; line-height: 1.65; }
+    .code .ln { display: flex; min-width: max-content; padding-right: 16px; border-left: 3px solid transparent; transition: background .2s; }
+    .code .ln.active { border-left-color: var(--code-hl-bar); background: var(--code-hl); }
+    .code .no { width: 40px; padding-right: 14px; color: var(--muted); text-align: right; user-select: none; opacity: .7; }
+    .code .src { white-space: pre; color: var(--tk-txt); }
+    .tk-kw { color: var(--tk-kw); } .tk-ctl { color: var(--tk-ctl); } .tk-ty { color: var(--tk-ty); }
+    .tk-fn { color: var(--tk-fn); } .tk-var { color: var(--tk-var); } .tk-num { color: var(--tk-num); } .tk-str { color: var(--tk-str); }
+    .code-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+    .code-head span { color: var(--muted); font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+
+    table.cx { width: 100%; margin-top: 8px; border-collapse: collapse; font-size: 14px; }
+    table.cx th, table.cx td { padding: 9px 10px; border-bottom: 1px solid var(--line); text-align: left; }
+    table.cx th { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .06em; }
+
+    @media (max-width: 860px) { .viz-grid { grid-template-columns: minmax(0, 1fr); } }
+    @media (max-width: 520px) { .inputs label { flex: 1; } .inputs input { width: 100%; } }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <nav class="topbar" aria-label="Primary navigation">
+      <a class="brand" href="../../../index.html" aria-label="WellDev home">
+        <span class="brand-mark" aria-hidden="true">W</span>
+        <span>WellDev</span>
+      </a>
+      <button class="icon-button" id="theme-toggle" type="button" aria-label="Theme পরিবর্তন করুন">
+        <span class="theme-icon" aria-hidden="true">◐</span>
+        <span class="theme-label">Theme</span>
+      </button>
+    </nav>
+
+    <header class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow"><a href="../../all-problems/index.html" style="color:inherit">Problem Lists</a> · Math &amp; Geometry</p>
+        <h1>43. Multiply Strings</h1>
+        <p class="hero-description">দুইটা বড় সংখ্যা string হিসেবে দেওয়া, integer-এ convert না করে গুণফল string-এ বের করতে হবে। ঠিক খাতায় যেভাবে গুণ করি: digit × digit, তারপর carry।</p>
+        <div class="badges">
+          <span class="badge difficulty M">Medium</span>
+          <span class="badge list-badge NC150">NeetCode 150</span>
+          <a class="badge" href="https://leetcode.com/problems/multiply-strings/" target="_blank" rel="noopener noreferrer">LeetCode ↗</a>
+        </div>
+      </div>
+    </header>
+
+    <section class="card">
+      <h2>Problem</h2>
+      <p>দুইটা non-negative integer <code class="inline">num1</code> আর <code class="inline">num2</code> string হিসেবে দেওয়া আছে। তাদের গুণফল string হিসেবে return করো। কোনো built-in BigInteger library ব্যবহার করা যাবে না, আর input সরাসরি integer-এ convert করা যাবে না (200 digit পর্যন্ত হতে পারে, <code class="inline">long long</code>-এও ধরবে না)।</p>
+      <div class="examples">
+        <div class="example"><b>Example 1</b>num1 = "2", num2 = "3"<br>Output: "6"</div>
+        <div class="example"><b>Example 2</b>num1 = "123", num2 = "456"<br>Output: "56088"</div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Idea</h2>
+      <ul class="idea">
+        <li>m digit × n digit-এর গুণফলে সর্বোচ্চ <b>m + n</b> digit হয় (যেমন 99 × 99 = 9801)। তাই <code class="inline">nums</code> নামে m + n size-এর একটা array নিই, সব 0।</li>
+        <li><code class="inline">num1[i] × num2[j]</code>-এর ফল বসে <b><code class="inline">nums[i + j + 1]</code></b>-এ, আর carry যায় তার ঠিক বাঁয়ে <code class="inline">nums[i + j]</code>-এ। খাতায় গুণ করার সময় ডান দিক থেকে a-তম আর b-তম digit-এর গুণ যেমন (a + b)-তম column-এ বসে, এটা ঠিক সেই নিয়ম।</li>
+        <li>প্রতিবার <code class="inline">sum = nums[i+j+1] + product</code>: আগে যা জমা ছিল তার সাথে যোগ। <code class="inline">sum % 10</code> সেখানেই থাকে, <code class="inline">sum / 10</code> বাঁয়ে carry হয়। বাঁয়ের ঘরটা কিছুক্ষণের জন্য 9-এর বেশি হতে পারে, পরের গুণে সেটা আবার ঠিক হয়ে যায়।</li>
+        <li>শেষে <code class="inline">nums</code>-এর শুরুর 0 বাদ দিয়ে বাকি digit জুড়লেই উত্তর। কোনো input "0" হলে শুরুতেই "0" return।</li>
+      </ul>
+    </section>
+
+    <section class="card">
+      <h2>Step-by-step animation</h2>
+      <div class="inputs">
+        <label>num1<input id="num1" value="123" inputmode="numeric" autocomplete="off"></label>
+        <label>num2<input id="num2" value="456" inputmode="numeric" autocomplete="off"></label>
+        <button class="btn" id="apply" type="button">Apply</button>
+        <button class="btn" data-example="2|3" type="button">Ex 1</button>
+        <button class="btn" data-example="123|456" type="button">Ex 2</button>
+        <button class="btn" data-example="99|99" type="button">99 × 99</button>
+        <button class="btn" data-example="0|52" type="button">0 × 52</button>
+        <p class="input-error" id="input-error" hidden></p>
+      </div>
+      <div class="viz-grid">
+        <div>
+          <div class="stage"><svg id="viz" role="img" aria-label="Multiply Strings animation"></svg></div>
+          <div class="legend">
+            <span><i style="border-color:var(--accent);background:var(--accent-soft)"></i>num1[i]</span>
+            <span><i style="border-color:var(--two);background:var(--two-soft)"></i>num2[j]</span>
+            <span><i style="border-color:var(--found);background:var(--found-soft)"></i>nums[i + j + 1]</span>
+            <span><i style="border-color:var(--carry);background:var(--carry-soft)"></i>carry → nums[i + j]</span>
+          </div>
+          <div class="phase" id="phase"><span>1 · Check "0"</span><span>2 · Digit গুণ</span><span>3 · String বানানো</span></div>
+          <div class="status" id="status" aria-live="polite">
+            <div class="step-no" id="step-no"></div>
+            <div class="msg" id="msg"></div>
+            <div class="calc" id="calc"></div>
+          </div>
+          <div class="controls-row">
+            <button class="btn" id="reset" type="button" aria-label="শুরুতে যাও">⏮</button>
+            <button class="btn" id="prev" type="button">◀ Prev</button>
+            <button class="btn primary" id="play" type="button">▶ Play</button>
+            <button class="btn" id="next" type="button">Next ▶</button>
+            <label class="speed">Speed <select id="speed"><option value="2000">0.5×</option><option value="1300" selected>1×</option><option value="700">2×</option></select></label>
+            <input type="range" id="scrub" min="0" value="0" aria-label="Step">
+          </div>
+        </div>
+        <div>
+          <div class="code-head"><span>C++ · Grade-school multiply</span><button class="btn" id="copy" type="button">Copy</button></div>
+          <div class="code" id="code"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Complexity</h2>
+      <table class="cx">
+        <thead><tr><th>Part</th><th>Time</th><th>Space</th></tr></thead>
+        <tbody>
+          <tr><td>দুইটা nested loop (প্রতিটা digit জোড়া একবার)</td><td>O(m × n)</td><td rowspan="2">O(m + n)</td></tr>
+          <tr><td>nums থেকে result string বানানো</td><td>O(m + n)</td></tr>
+        </tbody>
+      </table>
+      <p class="muted">মোট O(m × n) time। Extra জায়গা শুধু m + n size-এর <code class="inline">nums</code> আর result string।</p>
+    </section>
+  </div>
+
+<script>
+const CODE = `class Solution {
+public:
+    string multiply(string num1, string num2) {
+        if (num1 == "0" || num2 == "0") return "0";
+
+        int m = num1.size();
+        int n = num2.size();
+
+        vector<int> nums(m + n, 0);
+        for (int i = m - 1; i >= 0; i--) {
+            for (int j = n - 1; j >= 0; j--) {
+                int product = (num1[i] - '0') * (num2[j] - '0');
+                int sum = nums[i + j + 1] + product;
+                nums[i + j + 1] = sum % 10;
+                nums[i + j] += sum / 10;
+            }
+        }
+
+        string result = "";
+        for (int num : nums) {
+            if (result.empty() && num == 0) continue;
+            result += (num + '0');
+        }
+
+        return result;
+    }
+};`;
+
+(function theme() {
+  const root = document.documentElement;
+  try { const t = localStorage.getItem('welldev-theme'); if (t === 'light' || t === 'dark') root.dataset.theme = t; } catch (e) {}
+  document.getElementById('theme-toggle').addEventListener('click', () => {
+    const systemDark = matchMedia('(prefers-color-scheme: dark)').matches;
+    const dark = root.dataset.theme ? root.dataset.theme === 'dark' : systemDark;
+    root.dataset.theme = dark ? 'light' : 'dark';
+    try { localStorage.setItem('welldev-theme', root.dataset.theme); } catch (e) {}
+  });
+})();
+
+const esc = s => s.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+function highlight(line) {
+  const re = /("[^"]*"|'[^']*')|\b(class|public|int)\b|\b(for|if|continue|return)\b|\b(string|vector|Solution)\b|\b(multiply|size|empty)\b|\b(num1|num2|m|n|nums|i|j|product|sum|result|num)\b|\b(\d+)\b/g;
+  let out = '', last = 0, mt;
+  while ((mt = re.exec(line))) {
+    out += esc(line.slice(last, mt.index));
+    const cls = ['str', 'kw', 'ctl', 'ty', 'fn', 'var', 'num'][mt.slice(1).findIndex(Boolean)];
+    out += `<span class="tk-${cls}">${esc(mt[0])}</span>`;
+    last = re.lastIndex;
+  }
+  return out + esc(line.slice(last));
+}
+const codeEl = document.getElementById('code');
+codeEl.innerHTML = CODE.split('\n').map((l, i) =>
+  `<div class="ln" data-line="${i + 1}"><span class="no">${i + 1}</span><span class="src">${highlight(l) || ' '}</span></div>`).join('');
+document.getElementById('copy').addEventListener('click', e => {
+  navigator.clipboard.writeText(CODE).then(() => { e.target.textContent = 'Copied'; setTimeout(() => e.target.textContent = 'Copy', 1200); });
+});
+
+// Run the C++ logic and record one frame per meaningful line.
+function buildSteps(a, b) {
+  const steps = [], m = a.length, n = b.length;
+  let nums = null, result = '';
+  const push = o => steps.push({ nums: nums && nums.slice(), result, phase: 0, ...o });
+  if (a === '0' || b === '0') {
+    push({ line: [4], kind: 'found', done: true, result: '0',
+      msg: `একটা input "0", তাই গুণফল সরাসরি <b>"0"</b>। কোনো loop লাগে না।`, calc: `num1 == "0" || num2 == "0"  →  return "0"` });
+    return steps;
+  }
+  push({ line: [4], kind: 'info', msg: 'কোনো input "0" না, তাই digit ধরে গুণ শুরু।', calc: `"${a}" × "${b}"` });
+  nums = new Array(m + n).fill(0);
+  push({ line: [6, 7, 9], kind: 'info', phase: 1,
+    msg: `m = ${m}, n = ${n}। গুণফলে সর্বোচ্চ m + n = <b>${m + n}</b> digit হতে পারে, তাই ${m + n} ঘরের <b>nums</b>, সব 0।`,
+    calc: `vector<int> nums(${m + n}, 0)` });
+  for (let i = m - 1; i >= 0; i--) {
+    for (let j = n - 1; j >= 0; j--) {
+      const da = +a[i], db = +b[j], product = da * db, pos = i + j + 1, before = nums[pos], sum = before + product;
+      push({ line: [10, 11, 12, 13], kind: 'info', phase: 1, i, j, pos, product,
+        msg: `i = ${i}, j = ${j}: <b>${da} × ${db} = ${product}</b>। এটা যাবে <b>nums[${i} + ${j} + 1] = nums[${pos}]</b>-এ, যেখানে আগে থেকে ${before} জমা আছে।`,
+        calc: `product = ${da} * ${db} = ${product}\nsum = nums[${pos}] + product = ${before} + ${product} = ${sum}` });
+      const carry = Math.floor(sum / 10), leftBefore = nums[pos - 1];
+      nums[pos] = sum % 10;
+      nums[pos - 1] += carry;
+      push({ line: [14, 15], kind: carry ? 'carry' : 'info', phase: 1, i, j, pos, carry, written: true,
+        msg: carry ? `nums[${pos}]-এ রাখি ${sum} % 10 = <b>${nums[pos]}</b>, আর carry <b>${carry}</b> যোগ হয় বাঁয়ের ঘর nums[${pos - 1}]-এ।${nums[pos - 1] > 9 ? ` (এখন ${nums[pos - 1]}, 9-এর বেশি, পরের গুণে ঠিক হবে)` : ''}`
+                   : `nums[${pos}]-এ রাখি ${sum} % 10 = <b>${nums[pos]}</b>। Carry 0, বাঁয়ের ঘর বদলায় না।`,
+        calc: `nums[${pos}] = ${sum} % 10 = ${nums[pos]}\nnums[${pos - 1}] += ${sum} / 10  →  ${leftBefore} + ${carry} = ${nums[pos - 1]}` });
+    }
+  }
+  push({ line: [19], kind: 'info', phase: 2, msg: `সব digit জোড়া শেষ। nums = [${nums.join(', ')}]। এখন বাঁ থেকে digit জুড়ে string বানাই।`, calc: 'result = ""' });
+  nums.forEach((v, k) => {
+    if (!result && v === 0) {
+      push({ line: [20, 21], kind: 'miss', phase: 2, k, skip: true, msg: `nums[${k}] = 0 আর result এখনো খালি: এটা শুরুর (leading) zero, <b>continue</b>।`, calc: 'result.empty() && num == 0  →  skip' });
+      return;
+    }
+    result += v;
+    push({ line: [20, 22], kind: 'info', phase: 2, k, msg: `nums[${k}] = ${v}, result-এ জুড়ি।`, calc: `result += '${v}'  →  "${result}"` });
+  });
+  const check = (BigInt(a) * BigInt(b)).toString();
+  push({ line: [25], kind: 'found', phase: 3, done: true,
+    msg: `Return <b>"${result}"</b>${result === check ? ' ✓' : ''}`, calc: `${a} × ${b} = ${check}` });
+  return steps;
+}
+
+const svg = d3.select('#viz');
+const W = 640, GAP = 6, LX = 18, mono = 'JetBrains Mono, ui-monospace, monospace';
+let A = '', B = '', steps = [], cur = 0, timer = null, G = {};
+
+function initSvg() {
+  const m = A.length, n = B.length, cols = (A === '0' || B === '0') ? Math.max(m, n) : m + n;
+  const CELL = Math.min(50, Math.floor((W - 110) / cols) - GAP);
+  const R = W - 24;
+  const colX = fromRight => R - (fromRight + 1) * (CELL + GAP) + GAP;
+  const y1 = 40, y2 = y1 + CELL + 26, lineY = y2 + CELL + 14, yN = lineY + 50, yR = yN + CELL + 56;
+  G = { CELL, colX, y1, y2, lineY, yN, yR, m, n };
+  const height = yR + CELL + 18;
+  svg.attr('viewBox', `0 0 ${W} ${height}`).selectAll('*').remove();
+
+  const label = (y, t) => svg.append('text').attr('x', LX).attr('y', y + CELL / 2 + 5).attr('class', 'lbl').text(t);
+  label(y1, 'num1'); label(y2, 'num2'); label(yN, 'nums'); label(yR, 'result');
+  svg.append('text').attr('x', colX(n - 1) - 14).attr('y', y2 + CELL / 2 + 8).attr('text-anchor', 'end')
+    .attr('font-size', 24).attr('font-weight', 700).attr('fill', 'var(--muted)').text('×');
+  svg.append('line').attr('x1', colX(cols - 1) - 8).attr('x2', R + 4).attr('y1', lineY).attr('y2', lineY)
+    .attr('stroke', 'var(--muted)').attr('stroke-width', 2).attr('stroke-linecap', 'round');
+  svg.selectAll('.lbl').attr('fill', 'var(--muted)').attr('font-size', 13).attr('font-weight', 700).attr('font-family', 'Inter, system-ui, sans-serif');
+
+  svg.append('g').attr('class', 'links');
+  const digits = (cls, s, y, idxDy) => {
+    const g = svg.append('g').attr('class', cls);
+    s.split('').forEach((d, i) => {
+      const c = g.append('g').attr('class', 'cell').attr('transform', `translate(${colX(s.length - 1 - i)},${y})`);
+      c.append('rect').attr('width', CELL).attr('height', CELL).attr('rx', 10).attr('stroke-width', 2);
+      c.append('text').attr('class', 'v').attr('x', CELL / 2).attr('y', CELL / 2 + 7).attr('text-anchor', 'middle')
+        .attr('font-size', Math.min(22, CELL * .48)).attr('font-weight', 800).attr('fill', 'var(--text)').attr('font-family', mono).text(d);
+      c.append('text').attr('x', CELL / 2).attr('y', idxDy).attr('text-anchor', 'middle').attr('font-size', 10).attr('fill', 'var(--muted)').attr('font-family', mono).text(i);
+    });
+  };
+  digits('n1', A, y1, -6);
+  digits('n2', B, y2, CELL + 13);
+  svg.append('g').attr('class', 'nums');
+  svg.append('g').attr('class', 'res');
+  svg.append('g').attr('class', 'fx');
+}
+
+function draw() {
+  const s = steps[cur], { CELL, colX, y1, y2, yN, yR, m, n } = G, t = svg.transition().duration(380);
+  const N = s.nums ? s.nums.length : 0, numX = k => colX(N - 1 - k);
+
+  svg.select('.n1').selectAll('g.cell').each(function (_, i) {
+    const on = i === s.i;
+    d3.select(this).select('rect').transition(t).attr('fill', on ? 'var(--accent-soft)' : 'var(--surface)').attr('stroke', on ? 'var(--accent)' : 'var(--line)');
+  });
+  svg.select('.n2').selectAll('g.cell').each(function (_, j) {
+    const on = j === s.j;
+    d3.select(this).select('rect').transition(t).attr('fill', on ? 'var(--two-soft)' : 'var(--surface)').attr('stroke', on ? 'var(--two)' : 'var(--line)');
+  });
+
+  // Dashed guides from the two digits down to nums[i + j + 1].
+  const links = s.pos !== undefined ? [
+    { x: colX(m - 1 - s.i) + CELL / 2, y: y1 + CELL, c: 'var(--accent)' },
+    { x: colX(n - 1 - s.j) + CELL / 2, y: y2 + CELL, c: 'var(--two)' }] : [];
+  svg.select('.links').selectAll('path').data(links).join('path')
+    .attr('fill', 'none').attr('stroke-width', 2).attr('stroke-dasharray', '4 4').attr('opacity', .8)
+    .attr('stroke', d => d.c)
+    .attr('d', d => { const tx = numX(s.pos) + CELL / 2, ty = yN - 4; return `M${d.x},${d.y} C${d.x},${(d.y + ty) / 2} ${tx},${(d.y + ty) / 2} ${tx},${ty}`; });
+
+  const numsData = s.nums ? s.nums.map((v, k) => ({ v, k })) : [];
+  const role = k => k === s.pos ? 'pos' : (s.written && s.carry && k === s.pos - 1) ? 'carry' : '';
+  const fill = k => ({ pos: 'var(--found-soft)', carry: 'var(--carry-soft)' }[role(k)] || 'var(--surface)');
+  const edge = k => ({ pos: 'var(--found)', carry: 'var(--carry)' }[role(k)] || 'var(--line)');
+  const cells = svg.select('.nums').selectAll('g.cell').data(numsData, d => d.k).join(enter => {
+    const g = enter.append('g').attr('class', 'cell').attr('opacity', 0).attr('transform', d => `translate(${numX(d.k)},${yN})`);
+    g.append('rect').attr('width', CELL).attr('height', CELL).attr('rx', 10).attr('stroke-width', 2);
+    g.append('text').attr('class', 'v').attr('x', CELL / 2).attr('y', CELL / 2 + 7).attr('text-anchor', 'middle')
+      .attr('font-size', Math.min(22, CELL * .48)).attr('font-weight', 800).attr('font-family', mono);
+    g.append('text').attr('x', CELL / 2).attr('y', CELL + 14).attr('text-anchor', 'middle').attr('font-size', 10).attr('fill', 'var(--muted)').attr('font-family', mono).text(d => d.k);
+    return g;
+  });
+  cells.transition(t).attr('opacity', d => s.phase >= 2 && s.k !== undefined && d.k > s.k ? .55 : 1);
+  cells.select('rect').transition(t).attr('fill', d => s.k === d.k ? (s.skip ? 'var(--miss-soft)' : 'var(--found-soft)') : fill(d.k))
+    .attr('stroke', d => s.k === d.k ? (s.skip ? 'var(--miss)' : 'var(--found)') : edge(d.k));
+  cells.select('.v').text(d => d.v).attr('fill', d => d.v > 9 ? 'var(--carry)' : 'var(--text)');
+  const changed = s.written ? [s.pos, s.carry ? s.pos - 1 : -1] : [];
+  cells.filter(d => changed.includes(d.k)).select('.v')
+    .attr('transform', `translate(${CELL / 2},${CELL / 2}) scale(1.45) translate(${-CELL / 2},${-CELL / 2})`)
+    .transition().duration(420).attr('transform', null);
+
+  // Floating "+product" chip and the carry arc above nums.
+  const fx = svg.select('.fx');
+  fx.selectAll('g.chip').data(s.pos !== undefined && !s.written ? [s] : []).join(enter => {
+    const g = enter.append('g').attr('class', 'chip');
+    g.append('rect').attr('height', 22).attr('rx', 11).attr('fill', 'var(--found)');
+    g.append('text').attr('y', 15).attr('text-anchor', 'middle').attr('font-size', 12).attr('font-weight', 800).attr('fill', 'var(--surface)').attr('font-family', mono);
+    return g;
+  }).each(function (d) {
+    const g = d3.select(this), label = `+${d.product}`, w = 14 + label.length * 8, cx = numX(d.pos) + CELL / 2;
+    g.attr('transform', `translate(${cx},${yN - 34})`);
+    g.select('rect').attr('x', -w / 2).attr('width', w);
+    g.select('text').text(label);
+  });
+  const arc = s.written && s.carry ? [s] : [];
+  fx.selectAll('path.carry').data(arc).join('path').attr('class', 'carry')
+    .attr('fill', 'none').attr('stroke', 'var(--carry)').attr('stroke-width', 2.5).attr('marker-end', 'url(#arrow)')
+    .attr('d', d => { const x1 = numX(d.pos) + CELL / 2, x2 = numX(d.pos - 1) + CELL / 2, y = yN - 4; return `M${x1},${y} Q${(x1 + x2) / 2},${y - 34} ${x2 + 4},${y - 2}`; });
+  fx.selectAll('text.carry').data(arc).join('text').attr('class', 'carry')
+    .attr('x', d => (numX(d.pos) + numX(d.pos - 1)) / 2 + CELL / 2).attr('y', yN - 28).attr('text-anchor', 'middle')
+    .attr('font-size', 12).attr('font-weight', 800).attr('fill', 'var(--carry)').attr('font-family', mono).text(d => `+${d.carry}`);
+  if (svg.select('defs').empty()) {
+    svg.append('defs').append('marker').attr('id', 'arrow').attr('viewBox', '0 0 10 10').attr('refX', 7).attr('refY', 5)
+      .attr('markerWidth', 7).attr('markerHeight', 7).attr('orient', 'auto-start-reverse')
+      .append('path').attr('d', 'M0,0 L10,5 L0,10 z').attr('fill', 'var(--carry)');
+  }
+
+  // Result chars sit under the nums column they came from; leading zeros show as a dash.
+  const skipped = s.nums ? s.nums.findIndex(v => v !== 0) : 0;
+  const resData = s.nums && s.phase >= 2
+    ? s.nums.map((v, k) => ({ k, ch: k < skipped ? '–' : String(v), skip: k < skipped })).filter(d => d.k <= (s.k === undefined ? (s.phase === 3 ? N : -1) : s.k))
+    : (s.result ? [{ k: 0, ch: s.result, zero: true }] : []);
+  const rc = svg.select('.res').selectAll('g.cell').data(resData, d => d.k).join(enter => {
+    const g = enter.append('g').attr('class', 'cell').attr('opacity', 0)
+      .attr('transform', d => `translate(${d.zero ? colX(0) : numX(d.k)},${yR - 16})`);
+    g.append('rect').attr('width', CELL).attr('height', CELL).attr('rx', 10).attr('stroke-width', 2);
+    g.append('text').attr('x', CELL / 2).attr('y', CELL / 2 + 7).attr('text-anchor', 'middle')
+      .attr('font-size', Math.min(22, CELL * .48)).attr('font-weight', 800).attr('font-family', mono);
+    return g;
+  });
+  rc.transition(t).attr('opacity', 1).attr('transform', d => `translate(${d.zero ? colX(0) : numX(d.k)},${yR})`);
+  rc.select('rect').attr('fill', d => d.skip ? 'none' : 'var(--found-soft)').attr('stroke', d => d.skip ? 'var(--line)' : 'var(--found)')
+    .attr('stroke-dasharray', d => d.skip ? '4 4' : null);
+  rc.select('text').text(d => d.ch).attr('fill', d => d.skip ? 'var(--muted)' : 'var(--found)');
+
+  const status = document.getElementById('status');
+  status.className = 'status' + ({ found: ' found', miss: ' miss', carry: ' carry' }[s.kind] || '');
+  document.getElementById('step-no').textContent = `Step ${cur + 1} / ${steps.length} · line ${s.line.join(', ')}`;
+  document.getElementById('msg').innerHTML = s.msg;
+  document.getElementById('calc').textContent = s.calc || '';
+  const ph = Math.min(s.phase, 2);
+  document.querySelectorAll('#phase span').forEach((el, p) => {
+    el.className = p < ph || (s.done && p === ph) ? 'done' : p === ph ? 'on' : '';
+  });
+
+  codeEl.querySelectorAll('.ln').forEach(el => el.classList.toggle('active', s.line.includes(+el.dataset.line)));
+  document.getElementById('prev').disabled = cur === 0;
+  document.getElementById('next').disabled = cur === steps.length - 1;
+  document.getElementById('scrub').value = cur;
+}
+
+function go(i) { cur = Math.max(0, Math.min(steps.length - 1, i)); draw(); }
+function stop() { clearInterval(timer); timer = null; document.getElementById('play').textContent = '▶ Play'; }
+function play() {
+  if (timer) return stop();
+  if (cur === steps.length - 1) go(0);
+  document.getElementById('play').textContent = '⏸ Pause';
+  timer = setInterval(() => { if (cur >= steps.length - 1) stop(); else go(cur + 1); }, +document.getElementById('speed').value);
+}
+
+function load(x, y) {
+  const err = document.getElementById('input-error');
+  const ok = s => /^(0|[1-9]\d{0,5})$/.test(s);
+  x = x.trim(); y = y.trim();
+  if (!ok(x) || !ok(y)) {
+    err.textContent = 'দুইটাই ১ থেকে ৬ digit-এর non-negative সংখ্যা দাও, শুরুতে 0 ছাড়া (যেমন 123 আর 456)।';
+    err.hidden = false;
+    return;
+  }
+  err.hidden = true;
+  stop();
+  A = x; B = y;
+  steps = buildSteps(A, B);
+  document.getElementById('scrub').max = steps.length - 1;
+  initSvg();
+  go(0);
+}
+
+const in1 = document.getElementById('num1'), in2 = document.getElementById('num2');
+document.getElementById('apply').addEventListener('click', () => load(in1.value, in2.value));
+[in1, in2].forEach(el => el.addEventListener('keydown', e => { if (e.key === 'Enter') load(in1.value, in2.value); }));
+document.querySelectorAll('[data-example]').forEach(b => b.addEventListener('click', () => {
+  [in1.value, in2.value] = b.dataset.example.split('|');
+  load(in1.value, in2.value);
+}));
+document.getElementById('prev').addEventListener('click', () => { stop(); go(cur - 1); });
+document.getElementById('next').addEventListener('click', () => { stop(); go(cur + 1); });
+document.getElementById('reset').addEventListener('click', () => { stop(); go(0); });
+document.getElementById('play').addEventListener('click', play);
+document.getElementById('speed').addEventListener('change', () => { if (timer) { stop(); play(); } });
+document.getElementById('scrub').addEventListener('input', e => { stop(); go(+e.target.value); });
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' && e.target.type !== 'range') return;
+  if (e.key === 'ArrowRight') { stop(); go(cur + 1); }
+  if (e.key === 'ArrowLeft') { stop(); go(cur - 1); }
+});
+
+load(in1.value, in2.value);
+</script>
+</body>
+</html>

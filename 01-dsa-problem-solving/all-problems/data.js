@@ -2292,6 +2292,7 @@ window.WELLDEV_PROBLEMS = {
     "multiply-strings": {
       "title": "Multiply Strings",
       "url": "https://leetcode.com/problems/multiply-strings/",
+      "solution": "../solutions/multiply-strings/index.html",
       "difficulty": "M",
       "premium": false,
       "lists": [
