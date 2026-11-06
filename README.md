@@ -64,3 +64,7 @@ Software engineering interview prep — বাংলায় ব্যাখ্
 
 - ★ **Core** · [LeetCode Onsite](08-4th-round/01-leetcode-onsite/index.html) - final round-এ ১ ঘণ্টায় ৩টি problem: candidate-দের জানানো ১৩টি problem, C++ solution ও complexity, random mock set, 60 মিনিটের timer আর code review checklist
 - ★ **Core** · [COO Round](08-4th-round/02-coo-round/index.html) - COO-র সাথে behavioral আলাপ: ১৪টি প্রশ্ন, STAR কাঠামো, নমুনা উত্তর, practice drill আর শেষ মুহূর্তের checklist
+
+## 08 · English Communication
+
+- [English Communication-এর ৩টি Course](09-english-communication/index.html) - Coursera: Improve Your English Communication Skills (Georgia Tech), English for Career Development (UPenn), The Pronunciation of American English (UC Irvine)
